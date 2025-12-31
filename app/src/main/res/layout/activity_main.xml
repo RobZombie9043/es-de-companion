@@ -56,7 +56,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_arrow_back"
                     android:contentDescription="Close App Drawer"
-                    android:tint="#FFFFFF" />
+                    app:tint="#FFFFFF" />
 
                 <FrameLayout
                     android:layout_width="match_parent"
@@ -89,7 +89,7 @@
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@android:drawable/ic_menu_close_clear_cancel"
                         android:contentDescription="Clear Search"
-                        android:tint="#FFFFFF"
+                        app:tint="#FFFFFF"
                         android:visibility="gone" />
 
                 </FrameLayout>
@@ -103,7 +103,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_settings"
                     android:contentDescription="Android Settings"
-                    android:tint="#FFFFFF" />
+                    app:tint="#FFFFFF" />
 
                 <ImageButton
                     android:id="@+id/settingsButton"
@@ -113,7 +113,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_menu"
                     android:contentDescription="App Settings"
-                    android:tint="#FFFFFF" />
+                    app:tint="#FFFFFF" />
 
             </RelativeLayout>
 

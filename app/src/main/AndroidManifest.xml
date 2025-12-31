@@ -4,8 +4,6 @@
 
     <!-- Storage permissions for reading media and creating scripts -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
 
     <!-- Android 11+ (API 30+) requires this for managing external storage -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
