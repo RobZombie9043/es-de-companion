@@ -12,6 +12,7 @@ A companion app for [ES-DE](https://es-de.org/) that displays beautiful game art
 - **Real-time artwork display** - Shows game fanart, screenshots, and marquees as you browse in ES-DE
 - **System view support** - Displays custom system images or random game artwork when browsing systems
 - **Smooth animations** - Configurable fade and scale effects with custom timing options
+- **Intelligent loading** - Smart debouncing prevents image flashing during fast scrolling while maintaining instant response for slow browsing
 - **Background customization** - Adjustable dimming and blur effects
 
 ### App Drawer
