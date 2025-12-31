@@ -41,208 +41,6 @@
             android:padding="16dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- 1. PATHS CARD -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="#1A1A1A"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <!-- Section Header -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@android:drawable/ic_menu_save"
-                        android:tint="#BB86FC"
-                        android:layout_marginEnd="12dp" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="PATHS"
-                        android:textColor="#BB86FC"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.1" />
-                </LinearLayout>
-
-                <!-- Media Path -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Downloaded Media Path"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:id="@+id/mediaPathText"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="Default: /storage/emulated/0/ES-DE/downloaded_media"
-                        android:textColor="#999999"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/mediaStatusText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="●"
-                        android:textSize="24sp"
-                        android:textColor="#666666"
-                        android:layout_marginStart="8dp" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/mediaStatusDescription"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Folder not found"
-                    android:textColor="#666666"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="12dp" />
-
-                <Button
-                    android:id="@+id/selectMediaPathButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Select Directory"
-                    android:textColor="#FFFFFF"
-                    android:backgroundTint="#BB86FC"
-                    android:layout_marginBottom="24dp" />
-
-                <!-- System Path -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="System Images Path"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/systemPathText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Default: /storage/emulated/0/ES-DE/downloaded_media/systems"
-                    android:textColor="#999999"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="ℹ️ User-supplied images. Filenames must match ES-DE system shortnames (e.g., snes.png). Falls back to random game image if not found."
-                    android:textColor="#666666"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="12dp" />
-
-                <Button
-                    android:id="@+id/selectSystemPathButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Select Directory"
-                    android:textColor="#FFFFFF"
-                    android:backgroundTint="#BB86FC" />
-
-                <!-- Scripts Path -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="ES-DE Scripts"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="4dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:id="@+id/scriptsPathText"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="Default: /storage/emulated/0/ES-DE/scripts"
-                        android:textColor="#999999"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/scriptsStatusText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="●"
-                        android:textSize="24sp"
-                        android:textColor="#666666"
-                        android:layout_marginStart="8dp" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/scriptsStatusDescription"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Scripts not found"
-                    android:textColor="#666666"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="12dp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/selectScriptsPathButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Select Directory"
-                        android:textColor="#FFFFFF"
-                        android:backgroundTint="#BB86FC"
-                        android:layout_marginEnd="12dp" />
-
-                    <Button
-                        android:id="@+id/createScriptsButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Create Scripts"
-                        android:textColor="#FFFFFF"
-                        android:backgroundTint="#03DAC6" />
-
-                </LinearLayout>
-
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
 
         <!-- 2. IMAGE SETTINGS CARD -->
         <androidx.cardview.widget.CardView
@@ -570,13 +368,6 @@
                     android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
 
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@android:drawable/ic_menu_zoom"
-                        android:tint="#FFFFFF"
-                        android:layout_marginEnd="12dp" />
-
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -597,11 +388,20 @@
                         android:gravity="end" />
                 </LinearLayout>
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Adjusts size of game marquee/logo overlay"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
                 <SeekBar
                     android:id="@+id/logoSizeSeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
                     android:thumbTint="#FFB74D"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
@@ -664,13 +464,6 @@
                     android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
 
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@android:drawable/ic_menu_day"
-                        android:tint="#FFFFFF"
-                        android:layout_marginEnd="12dp" />
-
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -694,17 +487,17 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="ℹ️ Darkens background image which helps visibility of logo."
-                    android:textColor="#666666"
-                    android:textSize="11sp"
-                    android:layout_marginStart="32dp"
+                    android:text="Darkens background image which helps visibility of logo"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
                     android:layout_marginBottom="8dp" />
 
                 <SeekBar
                     android:id="@+id/dimmingSeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
                     android:layout_marginBottom="24dp"
                     android:thumbTint="#03DAC6"
                     android:paddingTop="8dp"
@@ -722,13 +515,6 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@android:drawable/ic_menu_crop"
-                        android:tint="#FFFFFF"
-                        android:layout_marginEnd="12dp" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -753,17 +539,17 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="ℹ️ Applies blur effect to background."
-                    android:textColor="#666666"
-                    android:textSize="11sp"
-                    android:layout_marginStart="32dp"
+                    android:text="Applies blur effect to background"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
                     android:layout_marginBottom="8dp" />
 
                 <SeekBar
                     android:id="@+id/blurSeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
                     android:thumbTint="#03DAC6"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
@@ -852,13 +638,6 @@
                     android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
 
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@android:drawable/ic_menu_upload"
-                        android:tint="#FFFFFF"
-                        android:layout_marginEnd="12dp" />
-
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -879,11 +658,20 @@
                         android:gravity="end" />
                 </LinearLayout>
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Controls transparency of app drawer background"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
                 <SeekBar
                     android:id="@+id/drawerTransparencySeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
                     android:layout_marginBottom="24dp"
                     android:thumbTint="#CF6679"
                     android:paddingTop="8dp"
@@ -901,13 +689,6 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@android:drawable/ic_menu_gallery"
-                        android:tint="#FFFFFF"
-                        android:layout_marginEnd="12dp" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -929,11 +710,20 @@
                         android:gravity="end" />
                 </LinearLayout>
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Number of columns in app drawer grid"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
                 <SeekBar
                     android:id="@+id/columnCountSeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
                     android:thumbTint="#CF6679"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
@@ -945,6 +735,225 @@
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
+        <!-- 1. PATHS CARD -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#1A1A1A"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Section Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_save"
+                        android:tint="#BB86FC"
+                        android:layout_marginEnd="12dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="PATHS"
+                        android:textColor="#BB86FC"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+                </LinearLayout>
+
+                <!-- Media Path -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Downloaded Media Path"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Location of game artwork (fanart, screenshots, marquees)"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/mediaPathText"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="Default: /storage/emulated/0/ES-DE/downloaded_media"
+                        android:textColor="#999999"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/mediaStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="●"
+                        android:textSize="24sp"
+                        android:textColor="#666666"
+                        android:layout_marginStart="8dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/mediaStatusDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Folder not found"
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="12dp" />
+
+                <Button
+                    android:id="@+id/selectMediaPathButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select Directory"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#BB86FC"
+                    android:layout_marginBottom="24dp" />
+
+                <!-- System Path -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="System Images Path"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="User-supplied images. Filenames must match ES-DE system shortnames (e.g., snes.png). Falls back to random game image if not found"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/systemPathText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Default: /storage/emulated/0/ES-DE/downloaded_media/systems"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="12dp" />
+
+                <Button
+                    android:id="@+id/selectSystemPathButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select Directory"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#BB86FC" />
+
+                <!-- Scripts Path -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="ES-DE Scripts"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Integration scripts that connect ES-DE with this app"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/scriptsPathText"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="Default: /storage/emulated/0/ES-DE/scripts"
+                        android:textColor="#999999"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/scriptsStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="●"
+                        android:textSize="24sp"
+                        android:textColor="#666666"
+                        android:layout_marginStart="8dp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/scriptsStatusDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Scripts not found"
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/selectScriptsPathButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select Directory"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#BB86FC"
+                        android:layout_marginEnd="12dp" />
+
+                    <Button
+                        android:id="@+id/createScriptsButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Create Scripts"
+                        android:textColor="#FFFFFF"
+                        android:backgroundTint="#03DAC6" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
 
     </LinearLayout>
 
