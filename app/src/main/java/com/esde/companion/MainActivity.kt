@@ -285,7 +285,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDrawerTransparency() {
-        val transparencyPercent = prefs.getInt("drawer_transparency", 65)
+        val transparencyPercent = prefs.getInt("drawer_transparency", 70)
         // Convert percentage (0-100) to hex alpha (00-FF)
         val alpha = (transparencyPercent * 255 / 100).coerceIn(0, 255)
         val hexAlpha = String.format("%02x", alpha)

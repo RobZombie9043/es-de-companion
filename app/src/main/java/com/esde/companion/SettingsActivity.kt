@@ -218,9 +218,9 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d("SettingsActivity", "Prefs initialized")
 
             // Store initial values
-            initialDimming = prefs.getInt(DIMMING_KEY, 20)
+            initialDimming = prefs.getInt(DIMMING_KEY, 25)
             initialBlur = prefs.getInt(BLUR_KEY, 0)
-            initialDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 67)
+            initialDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
 
             setupWizardButton = findViewById(R.id.setupWizardButton)
             setupWizardButton.setOnClickListener {
@@ -319,9 +319,9 @@ class SettingsActivity : AppCompatActivity() {
             onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     // Check if dimming, blur, or drawer transparency changed
-                    val currentDimming = prefs.getInt(DIMMING_KEY, 20)
+                    val currentDimming = prefs.getInt(DIMMING_KEY, 25)
                     val currentBlur = prefs.getInt(BLUR_KEY, 0)
-                    val currentDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 67)
+                    val currentDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
                     val currentHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
 
                     val intent = Intent()
@@ -394,7 +394,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupDimmingSlider() {
-        val currentDimming = prefs.getInt(DIMMING_KEY, 20)
+        val currentDimming = prefs.getInt(DIMMING_KEY, 25)
         dimmingSeekBar.min = 0
         dimmingSeekBar.max = 20  // 0-20 range = 0-100% in 5% increments
         dimmingSeekBar.progress = currentDimming / 5
@@ -440,7 +440,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupDrawerTransparencySlider() {
-        val currentTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 67)
+        val currentTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
         drawerTransparencySeekBar.min = 0
         drawerTransparencySeekBar.max = 20  // 0-20 range = 0-100% in 5% increments
         drawerTransparencySeekBar.progress = currentTransparency / 5
@@ -515,7 +515,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupCrossfadeChips() {
-        val currentCrossfade = prefs.getString(CROSSFADE_KEY, "on") ?: "on"
+        val currentCrossfade = prefs.getString(CROSSFADE_KEY, "off") ?: "off"
 
         val chipToCheck = when (currentCrossfade) {
             "off" -> R.id.crossfadeOff
@@ -1069,7 +1069,8 @@ printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_scroll.txt" &
                     "2. Select ES-DE scripts folder\n" +
                     "3. Create script files\n" +
                     "4. Select downloaded media folder\n" +
-                    "5. Select system images folder\n\n" +
+                    "5. Select system images folder\n" +
+                    "6. Enable scripts in ES-DE\n\n" +
                     "Ready to begin?")
             .setPositiveButton("Start Setup") { _, _ ->
                 continueSetupWizard()
@@ -1209,6 +1210,23 @@ printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_scroll.txt" &
                 )
             }
             6 -> {
+                // Step 6: Enable scripts in ES-DE
+                showWizardDialogRequired(
+                    "Step 6: Enable Scripts in ES-DE",
+                    "Final step! You need to enable custom scripts in ES-DE:\n\n" +
+                            "1. Open ES-DE\n" +
+                            "2. Press START to open Main Menu\n" +
+                            "3. Go to Other Settings\n" +
+                            "4. Toggle ON 'Custom Event Scripts'\n" +
+                            "5. Toggle ON 'Browsing Custom Events'\n\n" +
+                            "Once enabled, ES-DE will send game/system information to this app!\n\n" +
+                            "Click 'I've Enabled Scripts' when done.",
+                    "I've Enabled Scripts"
+                ) {
+                    continueSetupWizard()
+                }
+            }
+            7 -> {
                 // Setup complete!
                 isInSetupWizard = false
 
