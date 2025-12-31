@@ -13,6 +13,9 @@ import android.provider.Settings
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.LinearLayout
+import android.widget.RadioGroup
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -47,8 +50,14 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var drawerTransparencyText: TextView
     private lateinit var logoSizeSeekBar: SeekBar
     private lateinit var logoSizeText: TextView
-    private lateinit var crossfadeChipGroup: ChipGroup
+    private lateinit var animationStyleChipGroup: ChipGroup
     private lateinit var imagePreferenceChipGroup: ChipGroup
+    private lateinit var customAnimationSettings: LinearLayout
+    private lateinit var animationDurationSeekBar: SeekBar
+    private lateinit var animationDurationText: TextView
+    private lateinit var animationScaleSeekBar: SeekBar
+    private lateinit var animationScaleText: TextView
+    private lateinit var customEffectTypeGroup: RadioGroup
 
     private var initialDimming: Int = 0
     private var initialBlur: Int = 0
@@ -254,10 +263,18 @@ class SettingsActivity : AppCompatActivity() {
             logoSizeText = findViewById(R.id.logoSizeText)
             android.util.Log.d("SettingsActivity", "All views found")
 
-            crossfadeChipGroup = findViewById(R.id.crossfadeChipGroup)
-            android.util.Log.d("SettingsActivity", "Crossfade chip group found")
+            animationStyleChipGroup = findViewById<ChipGroup>(R.id.animationStyleChipGroup)
+            android.util.Log.d("SettingsActivity", "Animation style chip group found")
 
-            imagePreferenceChipGroup = findViewById(R.id.imagePreferenceChipGroup)
+            customAnimationSettings = findViewById<LinearLayout>(R.id.customAnimationSettings)
+            animationDurationSeekBar = findViewById<SeekBar>(R.id.animationDurationSeekBar)
+            animationDurationText = findViewById<TextView>(R.id.animationDurationText)
+            animationScaleSeekBar = findViewById<SeekBar>(R.id.animationScaleSeekBar)
+            animationScaleText = findViewById<TextView>(R.id.animationScaleText)
+            customEffectTypeGroup = findViewById<RadioGroup>(R.id.customEffectTypeGroup)
+            android.util.Log.d("SettingsActivity", "Custom animation controls found")
+
+            imagePreferenceChipGroup = findViewById<ChipGroup>(R.id.imagePreferenceChipGroup)
             android.util.Log.d("SettingsActivity", "Image preference chip group found")
 
             selectMediaPathButton.setOnClickListener {
@@ -289,8 +306,10 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d("SettingsActivity", "Drawer transparency setup")
             setupLogoSizeSlider()
             android.util.Log.d("SettingsActivity", "Logo size setup")
-            setupCrossfadeChips()
-            android.util.Log.d("SettingsActivity", "Crossfade chips setup")
+            setupAnimationStyleChips()
+            android.util.Log.d("SettingsActivity", "Animation style chips setup")
+            setupCustomAnimationControls()
+            android.util.Log.d("SettingsActivity", "Custom animation controls setup")
             setupImagePreferenceChips()
             android.util.Log.d("SettingsActivity", "Image preference chips setup")
 
@@ -514,24 +533,116 @@ class SettingsActivity : AppCompatActivity() {
         })
     }
 
-    private fun setupCrossfadeChips() {
-        val currentCrossfade = prefs.getString(CROSSFADE_KEY, "off") ?: "off"
+    private fun setupAnimationStyleChips() {
+        val currentStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
 
-        val chipToCheck = when (currentCrossfade) {
-            "off" -> R.id.crossfadeOff
-            else -> R.id.crossfadeOn
+        val chipToCheck = when (currentStyle) {
+            "none" -> R.id.animationNone
+            "fade" -> R.id.animationFade
+            "scale_fade" -> R.id.animationScaleFade
+            "custom" -> R.id.animationCustom
+            else -> R.id.animationScaleFade
         }
-        crossfadeChipGroup.check(chipToCheck)
+        animationStyleChipGroup.check(chipToCheck)
 
-        crossfadeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+        // Show/hide custom settings based on initial selection
+        if (currentStyle == "custom") {
+            customAnimationSettings.visibility = View.VISIBLE
+        } else {
+            customAnimationSettings.visibility = View.GONE
+        }
+
+        animationStyleChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
-                val crossfade = when (checkedIds[0]) {
-                    R.id.crossfadeOff -> "off"
-                    R.id.crossfadeOn -> "on"
-                    else -> "on"
+                val style = when (checkedIds[0]) {
+                    R.id.animationNone -> "none"
+                    R.id.animationFade -> "fade"
+                    R.id.animationScaleFade -> "scale_fade"
+                    R.id.animationCustom -> "custom"
+                    else -> "scale_fade"
                 }
-                prefs.edit().putString(CROSSFADE_KEY, crossfade).apply()
+                prefs.edit().putString("animation_style", style).apply()
+
+                // Show/hide custom settings with animation
+                if (style == "custom") {
+                    customAnimationSettings.visibility = View.VISIBLE
+                    customAnimationSettings.alpha = 0f
+                    customAnimationSettings.animate()
+                        .alpha(1f)
+                        .setDuration(200)
+                        .start()
+                } else {
+                    customAnimationSettings.animate()
+                        .alpha(0f)
+                        .setDuration(150)
+                        .withEndAction {
+                            customAnimationSettings.visibility = View.GONE
+                        }
+                        .start()
+                }
             }
+        }
+    }
+
+    private fun setupCustomAnimationControls() {
+        // Duration Slider (100ms - 500ms, in 10ms steps)
+        val currentDuration = prefs.getInt("animation_duration", 250)
+        animationDurationSeekBar.max = 40  // 0-40 = 100ms-500ms (10ms steps)
+        animationDurationSeekBar.progress = (currentDuration - 100) / 10
+        animationDurationText.text = "${currentDuration}ms"
+
+        animationDurationSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val duration = 100 + (progress * 10)  // 100ms to 500ms
+                animationDurationText.text = "${duration}ms"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    val duration = 100 + (it.progress * 10)
+                    prefs.edit().putInt("animation_duration", duration).apply()
+                }
+            }
+        })
+
+        // Scale Amount Slider (85% - 100%, in 1% steps)
+        val currentScale = prefs.getInt("animation_scale", 95)
+        animationScaleSeekBar.max = 15  // 0-15 = 85%-100%
+        animationScaleSeekBar.progress = currentScale - 85
+        animationScaleText.text = "${currentScale}%"
+
+        animationScaleSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val scale = 85 + progress  // 85% to 100%
+                animationScaleText.text = "${scale}%"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    val scale = 85 + it.progress
+                    prefs.edit().putInt("animation_scale", scale).apply()
+                }
+            }
+        })
+
+        // Effect Type Radio Group
+        val currentEffect = prefs.getString("animation_effect", "scale_fade") ?: "scale_fade"
+        when (currentEffect) {
+            "fade" -> customEffectTypeGroup.check(R.id.customEffectFade)
+            else -> customEffectTypeGroup.check(R.id.customEffectScaleFade)
+        }
+
+        customEffectTypeGroup.setOnCheckedChangeListener { _, checkedId ->
+            val effect = when (checkedId) {
+                R.id.customEffectFade -> "fade"
+                R.id.customEffectScaleFade -> "scale_fade"
+                else -> "scale_fade"
+            }
+            prefs.edit().putString("animation_effect", effect).apply()
         }
     }
 

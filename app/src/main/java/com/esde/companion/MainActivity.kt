@@ -30,6 +30,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import android.graphics.drawable.Drawable
+import android.view.animation.DecelerateInterpolator
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
@@ -316,6 +321,148 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Load an image with animation based on user preference
+     */
+    private fun loadImageWithAnimation(
+        imageFile: File,
+        targetView: ImageView,
+        onComplete: (() -> Unit)? = null
+    ) {
+        val animationStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
+
+        // Get custom settings if using custom style
+        val duration = if (animationStyle == "custom") {
+            prefs.getInt("animation_duration", 250)
+        } else {
+            250
+        }
+
+        val scaleAmount = if (animationStyle == "custom") {
+            prefs.getInt("animation_scale", 95) / 100f
+        } else {
+            0.95f
+        }
+
+        val effectType = if (animationStyle == "custom") {
+            prefs.getString("animation_effect", "scale_fade") ?: "scale_fade"
+        } else {
+            animationStyle
+        }
+
+        when (if (animationStyle == "custom") effectType else animationStyle) {
+            "none" -> {
+                // No animation - instant display
+                Glide.with(this)
+                    .load(imageFile)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .listener(object : RequestListener<Drawable> {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: com.bumptech.glide.request.target.Target<Drawable>,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            onComplete?.invoke()
+                            return false
+                        }
+
+                        override fun onResourceReady(
+                            resource: Drawable,
+                            model: Any,
+                            target: com.bumptech.glide.request.target.Target<Drawable>?,
+                            dataSource: DataSource,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            onComplete?.invoke()
+                            return false
+                        }
+                    })
+                    .into(targetView)
+            }
+            "fade" -> {
+                // Fade only - no scale
+                Glide.with(this)
+                    .load(imageFile)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .listener(object : RequestListener<Drawable> {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: com.bumptech.glide.request.target.Target<Drawable>,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            onComplete?.invoke()
+                            return false
+                        }
+
+                        override fun onResourceReady(
+                            resource: Drawable,
+                            model: Any,
+                            target: com.bumptech.glide.request.target.Target<Drawable>?,
+                            dataSource: DataSource,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            // Apply fade-in animation only
+                            targetView.alpha = 0f
+                            targetView.animate()
+                                .alpha(1f)
+                                .setDuration(duration.toLong())
+                                .setInterpolator(DecelerateInterpolator())
+                                .withEndAction {
+                                    onComplete?.invoke()
+                                }
+                                .start()
+                            return false
+                        }
+                    })
+                    .into(targetView)
+            }
+            else -> {
+                // "scale_fade" - default with scale + fade
+                Glide.with(this)
+                    .load(imageFile)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .listener(object : RequestListener<Drawable> {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: com.bumptech.glide.request.target.Target<Drawable>,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            onComplete?.invoke()
+                            return false
+                        }
+
+                        override fun onResourceReady(
+                            resource: Drawable,
+                            model: Any,
+                            target: com.bumptech.glide.request.target.Target<Drawable>?,
+                            dataSource: DataSource,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            // Apply scale + fade-in animation
+                            targetView.alpha = 0f
+                            targetView.scaleX = scaleAmount
+                            targetView.scaleY = scaleAmount
+                            targetView.animate()
+                                .alpha(1f)
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(duration.toLong())
+                                .setInterpolator(DecelerateInterpolator())
+                                .withEndAction {
+                                    onComplete?.invoke()
+                                }
+                                .start()
+                            return false
+                        }
+                    })
+                    .into(targetView)
+            }
+        }
+    }
+
     private fun setupGestureDetector() {
         gestureDetector = GestureDetectorCompat(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onDown(e: MotionEvent): Boolean {
@@ -576,12 +723,7 @@ class MainActivity : AppCompatActivity() {
 
             if (imageToUse != null && imageToUse.exists()) {
                 isSystemScrollActive = true
-                val crossfadeDuration = getCrossfadeDuration()
-                Glide.with(this)
-                    .load(imageToUse)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .transition(DrawableTransitionOptions.withCrossFade(crossfadeDuration))
-                    .into(gameImageView)
+                loadImageWithAnimation(imageToUse, gameImageView)
             } else {
                 isSystemScrollActive = false
                 Glide.with(this).clear(gameImageView)
@@ -596,12 +738,7 @@ class MainActivity : AppCompatActivity() {
                     marqueeImageView.setImageDrawable(null)
                 } else {
                     marqueeImageView.visibility = View.VISIBLE
-                    val crossfadeDuration = getCrossfadeDuration()
-                    Glide.with(this)
-                        .load(marqueeToUse)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .transition(DrawableTransitionOptions.withCrossFade(crossfadeDuration))
-                        .into(marqueeImageView)
+                    loadImageWithAnimation(marqueeToUse, marqueeImageView)
                 }
             } else {
                 val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
@@ -655,23 +792,13 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 if (allImages.isNotEmpty()) {
-                    val crossfadeDuration = getCrossfadeDuration()
-                    Glide.with(this)
-                        .load(allImages.random())
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .transition(DrawableTransitionOptions.withCrossFade(crossfadeDuration))
-                        .into(gameImageView)
+                    loadImageWithAnimation(allImages.random(), gameImageView)
                 } else {
                     Glide.with(this).clear(gameImageView)
                     gameImageView.setImageDrawable(null)
                 }
             } else {
-                val crossfadeDuration = getCrossfadeDuration()
-                Glide.with(this)
-                    .load(gameImage)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .transition(DrawableTransitionOptions.withCrossFade(crossfadeDuration))
-                    .into(gameImageView)
+                loadImageWithAnimation(gameImage, gameImageView)
             }
 
             val marqueeFile = findMarqueeImage(sdcard, systemName, gameName, gameNameRaw)
@@ -683,12 +810,7 @@ class MainActivity : AppCompatActivity() {
                     marqueeImageView.setImageDrawable(null)
                 } else {
                     marqueeImageView.visibility = View.VISIBLE
-                    val crossfadeDuration = getCrossfadeDuration()
-                    Glide.with(this)
-                        .load(marqueeFile)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .transition(DrawableTransitionOptions.withCrossFade(crossfadeDuration))
-                        .into(marqueeImageView)
+                    loadImageWithAnimation(marqueeFile, marqueeImageView)
                 }
             } else {
                 val logoSize = prefs.getString("logo_size", "medium") ?: "medium"

@@ -68,7 +68,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_save"
-                        app:tint="#BB86FC"
+                        android:tint="#BB86FC"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -271,7 +271,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_gallery"
-                        app:tint="#FFB74D"
+                        android:tint="#FFB74D"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -339,7 +339,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Image Crossfade"
+                    android:text="Animation Style"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -348,13 +348,13 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Smooth transition between images"
+                    android:text="Choose how images appear when browsing"
                     android:textColor="#999999"
                     android:textSize="13sp"
                     android:layout_marginBottom="8dp" />
 
                 <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/crossfadeChipGroup"
+                    android:id="@+id/animationStyleChipGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="20dp"
@@ -362,10 +362,10 @@
                     app:selectionRequired="true">
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/crossfadeOff"
+                        android:id="@+id/animationNone"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Instant"
+                        android:text="None"
                         android:textColor="#FFFFFF"
                         android:checkable="true"
                         app:chipBackgroundColor="@color/chip_background_selector"
@@ -373,10 +373,34 @@
                         app:chipStrokeWidth="2dp" />
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/crossfadeOn"
+                        android:id="@+id/animationFade"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Smooth"
+                        android:text="Fade"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/animationScaleFade"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Scale + Fade"
+                        android:checked="true"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/animationCustom"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom"
                         android:textColor="#FFFFFF"
                         android:checkable="true"
                         app:chipBackgroundColor="@color/chip_background_selector"
@@ -384,6 +408,159 @@
                         app:chipStrokeWidth="2dp" />
 
                 </com.google.android.material.chip.ChipGroup>
+
+                <!-- Custom Animation Settings (Hidden by default) -->
+                <LinearLayout
+                    android:id="@+id/customAnimationSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="16dp"
+                    android:padding="16dp"
+                    android:background="#252525">
+
+                    <!-- Duration Slider -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_menu_recent_history"
+                            app:tint="#FFFFFF"
+                            android:layout_marginEnd="12dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Duration"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/animationDurationText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="250ms"
+                            android:textColor="#FFB74D"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:minWidth="60dp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/animationDurationSeekBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="16dp"
+                        android:max="40"
+                        android:progress="15"
+                        android:thumbTint="#FFB74D"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:minHeight="32dp"
+                        android:progressDrawable="@drawable/slider_progress_orange"
+                        android:thumb="@drawable/slider_thumb"
+                        android:splitTrack="false"
+                        android:thumbOffset="0dp" />
+
+                    <!-- Scale Amount Slider -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_menu_zoom"
+                            app:tint="#FFFFFF"
+                            android:layout_marginEnd="12dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Scale Amount"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/animationScaleText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="95%"
+                            android:textColor="#FFB74D"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:minWidth="60dp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/animationScaleSeekBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="16dp"
+                        android:max="15"
+                        android:progress="5"
+                        android:thumbTint="#FFB74D"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:minHeight="32dp"
+                        android:progressDrawable="@drawable/slider_progress_orange"
+                        android:thumb="@drawable/slider_thumb"
+                        android:splitTrack="false"
+                        android:thumbOffset="0dp" />
+
+                    <!-- Effect Type -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Effect Type"
+                        android:textColor="#FFFFFF"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <RadioGroup
+                        android:id="@+id/customEffectTypeGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp">
+
+                        <RadioButton
+                            android:id="@+id/customEffectFade"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Fade Only"
+                            android:textColor="#CCCCCC"
+                            android:textSize="14sp" />
+
+                        <RadioButton
+                            android:id="@+id/customEffectScaleFade"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Scale + Fade"
+                            android:textColor="#CCCCCC"
+                            android:textSize="14sp"
+                            android:checked="true" />
+                    </RadioGroup>
+
+                </LinearLayout>
+
 
                 <!-- Logo Size -->
                 <LinearLayout
@@ -397,7 +574,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/ic_menu_zoom"
-                        app:tint="#FFFFFF"
+                        android:tint="#FFFFFF"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -465,7 +642,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_view"
-                        app:tint="#03DAC6"
+                        android:tint="#03DAC6"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -491,7 +668,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/ic_menu_day"
-                        app:tint="#FFFFFF"
+                        android:tint="#FFFFFF"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -550,7 +727,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/ic_menu_crop"
-                        app:tint="#FFFFFF"
+                        android:tint="#FFFFFF"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -626,7 +803,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_sort_by_size"
-                        app:tint="#CF6679"
+                        android:tint="#CF6679"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -679,7 +856,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/ic_menu_upload"
-                        app:tint="#FFFFFF"
+                        android:tint="#FFFFFF"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -729,7 +906,7 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@android:drawable/ic_menu_gallery"
-                        app:tint="#FFFFFF"
+                        android:tint="#FFFFFF"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
