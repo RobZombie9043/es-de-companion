@@ -959,20 +959,20 @@ class MainActivity : AppCompatActivity() {
                         marqueeImageView.setImageDrawable(logoDrawable)
                     }
                 } else {
-                    // No built-in logo found - show system name as text
+                    // No built-in logo found - show fallback with or without text
+                    isSystemScrollActive = true
+                    loadFallbackBackground() // Always show fallback (regardless of logo setting)
+
                     val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
                     if (prefs.getBoolean("system_logo_enabled", true)) {
-                        isSystemScrollActive = true
-
-                        // Set solid background color
-                        loadFallbackBackground() // Use fallback image instead of solid color
-
-                        // Create text drawable with system name
+                        // Logo enabled - show text overlay
                         val textDrawable = createTextDrawable(systemName, logoSize)
                         marqueeImageView.visibility = View.VISIBLE
                         marqueeImageView.setImageDrawable(textDrawable)
+                    } else {
+                        // Logo disabled - just show fallback, no overlay
+                        marqueeImageView.visibility = View.GONE
                     }
-                    // else: logo size is "off" - keep last image displayed
                 }
             }
 
@@ -1037,24 +1037,24 @@ class MainActivity : AppCompatActivity() {
                     }
                     gameImageLoaded = true
                 } else {
-                    // No artwork and no marquee - show game name as text on dark background
-                    if (prefs.getBoolean("game_logo_enabled", true)) {
-                        loadFallbackBackground() // Use fallback image instead of solid color
+                    // No artwork and no marquee - show fallback with or without text
+                    loadFallbackBackground() // Always load fallback (regardless of logo setting)
 
-                        // Use the display name from ES-DE if available
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
+                        // Logo enabled - show game name as text overlay
                         val displayName = currentGameName ?: gameName
                         val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
                         val textDrawable = createTextDrawable(displayName, logoSize)
 
                         marqueeImageView.visibility = View.VISIBLE
                         marqueeImageView.setImageDrawable(textDrawable)
-                        gameImageLoaded = true
+                    } else {
+                        // Logo disabled - just show fallback, no text
+                        marqueeImageView.visibility = View.GONE
                     }
-                    // else: logo disabled - keep last image displayed
+                    gameImageLoaded = true
                 }
             }
-
-            // Only update marquee if we successfully loaded game artwork (not marquee fallback)
             // This prevents clearing marquee during fast scroll when no data available
             if (gameImageLoaded && gameImage != null && gameImage.exists()) {
                 val marqueeFile = findMarqueeImage(sdcard, systemName, gameName, gameNameRaw)
