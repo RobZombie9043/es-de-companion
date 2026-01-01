@@ -1065,6 +1065,32 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- Version Info Footer -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/versionText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ES-DE Companion v0.1.0"
+                android:textColor="#666666"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ES-DE dual-screen enhancement"
+                android:textColor="#444444"
+                android:textSize="11sp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
