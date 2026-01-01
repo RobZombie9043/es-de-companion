@@ -245,7 +245,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateMarqueeSize() {
-        val logoSize = if (isSystemScrollActive) { prefs.getString("system_logo_size", "medium") ?: "medium" } else { prefs.getString("game_logo_size", "medium") ?: "medium" }
+        val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
         val layoutParams = marqueeImageView.layoutParams
 
         when (logoSize) {
@@ -870,8 +870,8 @@ class MainActivity : AppCompatActivity() {
                 loadImageWithAnimation(imageToUse, gameImageView)
 
                 // Use built-in system logo as marquee overlay
-                val logoSize = prefs.getString("system_logo_size", "medium") ?: "medium"
-                if (logoSize != "off") {
+                val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                if (prefs.getBoolean("system_logo_enabled", true)) {
                     val logoDrawable = loadSystemLogoFromAssets(systemName)
                     if (logoDrawable != null) {
                         marqueeImageView.visibility = View.VISIBLE
@@ -890,15 +890,15 @@ class MainActivity : AppCompatActivity() {
                     gameImageView.setImageDrawable(null) // Clear any background image
 
                     // Show logo as overlay (respects logo size setting)
-                    val logoSize = prefs.getString("system_logo_size", "medium") ?: "medium"
-                    if (logoSize != "off") {
+                    val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                    if (prefs.getBoolean("system_logo_enabled", true)) {
                         marqueeImageView.visibility = View.VISIBLE
                         marqueeImageView.setImageDrawable(logoDrawable)
                     }
                 } else {
                     // No built-in logo found - show system name as text
-                    val logoSize = prefs.getString("system_logo_size", "medium") ?: "medium"
-                    if (logoSize != "off") {
+                    val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                    if (prefs.getBoolean("system_logo_enabled", true)) {
                         isSystemScrollActive = true
 
                         // Set solid background color
@@ -971,8 +971,8 @@ class MainActivity : AppCompatActivity() {
             if (gameImageLoaded) {
                 val marqueeFile = findMarqueeImage(sdcard, systemName, gameName, gameNameRaw)
                 if (marqueeFile != null && marqueeFile.exists()) {
-                    val logoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                    if (logoSize == "off") {
+                    val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                    if (!prefs.getBoolean("game_logo_enabled", true)) {
                         marqueeImageView.visibility = View.GONE
                         Glide.with(this).clear(marqueeImageView)
                         marqueeImageView.setImageDrawable(null)
@@ -982,8 +982,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 } else {
                     // Game has no marquee - clear it (don't show wrong marquee from previous game)
-                    val logoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                    if (logoSize != "off") {
+                    val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
                         // Only clear if logo is supposed to be shown
                         // If logo is off, it's already hidden
                         Glide.with(this).clear(marqueeImageView)

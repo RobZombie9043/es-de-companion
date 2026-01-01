@@ -360,7 +360,73 @@
                 </LinearLayout>
 
 
-                <!-- System Logo Size -->
+                <!-- System Logo Toggle -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="4dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="System Logo"
+                        android:textColor="#FFFFFF"
+                        android:textSize="16sp" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/systemLogoSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        app:thumbTint="#FFB74D"
+                        app:trackTint="#4D4D4D" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Show system logos on system view"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Game Logo Toggle -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="4dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Game Logo"
+                        android:textColor="#FFFFFF"
+                        android:textSize="16sp" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/gameLogoSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        app:thumbTint="#FFB74D"
+                        app:trackTint="#4D4D4D" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Show marquee logos on game view"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Shared Logo Size -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -372,12 +438,12 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="System Logo Size"
+                        android:text="Logo Size"
                         android:textColor="#FFFFFF"
                         android:textSize="16sp" />
 
                     <TextView
-                        android:id="@+id/systemLogoSizeText"
+                        android:id="@+id/logoSizeText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Medium"
@@ -391,13 +457,13 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Size of logos on system view (no games, auto-collections)"
+                    android:text="Size of logos when enabled"
                     android:textColor="#999999"
                     android:textSize="13sp"
                     android:layout_marginBottom="8dp" />
 
                 <SeekBar
-                    android:id="@+id/systemLogoSizeSeekBar"
+                    android:id="@+id/logoSizeSeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
@@ -406,60 +472,7 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp"
                     android:minHeight="32dp"
-                    android:max="3"
-                    android:progressDrawable="@drawable/slider_progress_orange"
-                    android:thumb="@drawable/slider_thumb"
-                    android:splitTrack="false"
-                    android:thumbOffset="0dp"
-                    android:layout_marginBottom="24dp" />
-
-                <!-- Game Logo Size -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Game Logo Size"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:id="@+id/gameLogoSizeText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Medium"
-                        android:textColor="#FFB74D"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:minWidth="70dp"
-                        android:gravity="end" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Size of game marquee/logo overlay on game view"
-                    android:textColor="#999999"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
-
-                <SeekBar
-                    android:id="@+id/gameLogoSizeSeekBar"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:thumbTint="#FFB74D"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:minHeight="32dp"
-                    android:max="3"
+                    android:max="2"
                     android:progressDrawable="@drawable/slider_progress_orange"
                     android:thumb="@drawable/slider_thumb"
                     android:splitTrack="false"
