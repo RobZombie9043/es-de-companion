@@ -10,9 +10,8 @@ A companion app for [ES-DE](https://es-de.org/) that displays beautiful game art
 
 ### Dynamic Display
 - **Real-time artwork display** - Shows game fanart, screenshots, and marquees as you browse in ES-DE
-- **System view support** - Displays custom system images or random game artwork when browsing systems
+- **System view support** - Displays built-in system logos, custom images, or random game artwork when browsing systems
 - **Smooth animations** - Configurable fade and scale effects with custom timing options
-- **Intelligent loading** - Smart debouncing prevents image flashing during fast scrolling while maintaining instant response for slow browsing
 - **Background customization** - Adjustable dimming and blur effects
 
 ### App Drawer
@@ -31,8 +30,8 @@ A companion app for [ES-DE](https://es-de.org/) that displays beautiful game art
 
 ### Visual Customization
 - **Background priority** - Choose between Fanart or Screenshot priority
-- **Animation styles** - Choose from None, Fade, Scale + Fade, or Custom with adjustable duration and scale
-- **Logo sizing** - Adjustable marquee/logo size
+- **Animation styles** - None, Fade, Scale + Fade, or Custom with adjustable duration and scale
+- **Logo controls** - Independent on/off for system/game logos with shared size control
 - **Dimming control** - 0-100% background darkening
 - **Blur effects** - Optional background blur (Android 12+)
 - **Drawer opacity** - Customize app drawer transparency
@@ -68,6 +67,9 @@ For the best experience, use [Mjolnir](https://github.com/blacksheepmvp/mjolnir)
 - **Drawer Opacity**: 70%
 - **Background Priority**: Fanart
 - **Grid Columns**: 4
+- **System Logo**: On
+- **Game Logo**: On
+- **Logo Size**: Medium
 
 All settings can be customized in the Settings screen.
 
@@ -78,18 +80,15 @@ The app uses these default paths (configurable in settings):
 | Path | Default Location | Purpose |
 |------|-----------------|---------|
 | **Downloaded Media** | `/storage/emulated/0/ES-DE/downloaded_media` | Game artwork - fanart, screenshots, marquees |
-| **System Images** | `/storage/emulated/0/ES-DE/downloaded_media/systems` | Custom system images (optional) |
+| **System Images** | `/storage/emulated/0/ES-DE/downloaded_media/systems` | Custom system images (optional override) |
 | **Scripts** | `/storage/emulated/0/ES-DE/scripts` | Integration scripts |
 
-### System Images (Optional)
+### Custom System Images (Optional Override)
 
-Place custom system images in the system images folder with filenames matching ES-DE system shortnames:
-- `snes.png` - Super Nintendo
-- `arcade.png` - Arcade
-- `psx.png` - PlayStation
-- etc.
-
-If a system image isn't found, the app displays a random game from that system instead.
+To override random game artwork in system view with your own images:
+1. Place custom images in the system images folder
+2. Use filenames matching ES-DE system shortnames: `snes.webp`, `arcade.png`, `psx.jpg`, etc.
+3. These will take priority over built-in logos
 
 ## 🎨 How It Works
 
@@ -109,16 +108,6 @@ ES-DE/scripts/
     └── system-select.sh     # Triggered when browsing systems
 ```
 
-## 🔧 Technical Details
-
-- **Language**: Kotlin
-- **Min SDK**: 29 (Android 10)
-- **Target SDK**: 34 (Android 14)
-- **Architecture**: Single Activity with BottomSheet app drawer
-- **Image Loading**: Glide with caching
-- **File Monitoring**: FileObserver for real-time updates
-- **Multi-Display**: ActivityOptions.launchDisplayId (API 26+)
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to open an Issue or submit a Pull Request.
@@ -132,7 +121,8 @@ This project is open source and available under the [MIT License](LICENSE).
 - Built for [ES-DE](https://es-de.org/) by Leon Styhre
 - Works best in a dual home sceen set up using [Mjolnir](https://github.com/blacksheepmvp/mjolnir) home screen manager
 - Uses [Glide](https://github.com/bumptech/glide) for efficient image loading
-
+- Uses [AndroidSVG](https://github.com/BigBadaboom/androidsvg) for SVG rendering
+- 
 ## 📞 Support
 
 If you encounter any issues or have questions:
@@ -142,6 +132,10 @@ If you encounter any issues or have questions:
 ## 🔄 Changelog
 
 ### Latest Release
+- ✨ Added built-in system logos for all supported ES-DE systems (SVG format)
+- 🔧 Separate on/off controls for system and game logos
+- 📏 Shared logo size control (Small/Medium/Large)
+- 🎨 Text fallback display for systems without logos
 - ✨ Advanced animation system with 4 styles (None, Fade, Scale + Fade, Custom)
 - ⚙️ Custom animation controls (adjustable duration 100-500ms, scale amount 85-100%)
 - ✨ Added long-press menu in app drawer
