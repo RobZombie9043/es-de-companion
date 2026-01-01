@@ -1110,12 +1110,14 @@ class SettingsActivity : AppCompatActivity() {
             systemSelectDir.mkdirs()
 
             // Create game-select.sh script
+            // Create game-select.sh script
             gameSelectScript.writeText("""#!/bin/bash
 SCRIPT_DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")" && pwd)"
 LOG_DIR="${'$'}SCRIPT_DIR/../../logs"
 filename="${'$'}(basename "${'$'}1")"
-echo -n "${'$'}filename" > "${'$'}LOG_DIR/esde_game_scroll.txt"
-echo -n "${'$'}3"        > "${'$'}LOG_DIR/esde_system.txt"
+echo -n "${'$'}filename" > "${'$'}LOG_DIR/esde_game_filename.txt"
+echo -n "${'$'}2"        > "${'$'}LOG_DIR/esde_game_name.txt"
+echo -n "${'$'}3"        > "${'$'}LOG_DIR/esde_game_system.txt"
 """)
 
             // Make executable
@@ -1125,7 +1127,7 @@ echo -n "${'$'}3"        > "${'$'}LOG_DIR/esde_system.txt"
             systemSelectScript.writeText("""#!/bin/bash
 SCRIPT_DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")" && pwd)"
 LOG_DIR="${'$'}SCRIPT_DIR/../../logs"
-printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_scroll.txt" &
+printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_name.txt" &
 """)
 
             // Make executable

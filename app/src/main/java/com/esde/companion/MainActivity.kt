@@ -67,6 +67,9 @@ class MainActivity : AppCompatActivity() {
 
     private var fileObserver: FileObserver? = null
     private var isSystemScrollActive = false
+    private var currentGameName: String? = null  // Display name from ES-DE
+    private var currentGameFilename: String? = null  // Filename
+    private var currentSystemName: String? = null  // Current system
     private var allApps = listOf<ResolveInfo>()  // Store all apps for search filtering
 
     // Dynamic debouncing for fast scrolling
@@ -145,8 +148,8 @@ class MainActivity : AppCompatActivity() {
         updateDrawerTransparency()
 
         val sdcard = Environment.getExternalStorageDirectory()
-        val systemScrollFile = File(sdcard, "ES-DE/logs/esde_system_scroll.txt")
-        val gameScrollFile = File(sdcard, "ES-DE/logs/esde_game_scroll.txt")
+        val systemScrollFile = File(sdcard, "ES-DE/logs/esde_system_name.txt")
+        val gameScrollFile = File(sdcard, "ES-DE/logs/esde_game_filename.txt")
 
         // Check which file was modified most recently to determine which mode to use
         val systemScrollExists = systemScrollFile.exists()
@@ -333,6 +336,23 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("ESDESecondScreen", "System logos path: $path")
         return path
     }
+    private fun loadFallbackBackground() {
+        // Try to load from assets first (since you added default_background.webp)
+        try {
+            val assetPath = "fallback/default_background.webp"
+            Glide.with(this)
+                .load(android.net.Uri.parse("file:///android_asset/$assetPath"))
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .into(gameImageView)
+            android.util.Log.d("MainActivity", "Loaded fallback image from assets")
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "Failed to load fallback image, using solid color", e)
+            // Final fallback: solid color
+            gameImageView.setBackgroundColor(android.graphics.Color.parseColor("#1A1A1A"))
+            gameImageView.setImageDrawable(null)
+        }
+    }
+
 
 
     private fun getCrossfadeDuration(): Int {
@@ -643,7 +663,7 @@ class MainActivity : AppCompatActivity() {
             private var lastEventTime = 0L
 
             override fun onEvent(event: Int, path: String?) {
-                if (path != null && (path == "esde_game_scroll.txt" || path == "esde_system_scroll.txt")) {
+                if (path != null && (path == "esde_game_filename.txt" || path == "esde_system_name.txt")) {
                     // Debounce: ignore events that happen too quickly
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastEventTime < 100) {
@@ -654,16 +674,16 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         // Small delay to ensure file is fully written
                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            val systemScrollFile = File(watchDir, "esde_system_scroll.txt")
-                            val gameScrollFile = File(watchDir, "esde_game_scroll.txt")
+                            val systemScrollFile = File(watchDir, "esde_system_name.txt")
+                            val gameScrollFile = File(watchDir, "esde_game_filename.txt")
 
                             // Determine which mode based on which file was modified
                             when (path) {
-                                "esde_system_scroll.txt" -> {
+                                "esde_system_name.txt" -> {
                                     android.util.Log.d("MainActivity", "System scroll detected")
                                     loadSystemImageDebounced()
                                 }
-                                "esde_game_scroll.txt" -> {
+                                "esde_game_filename.txt" -> {
                                     android.util.Log.d("MainActivity", "Game scroll detected")
                                     loadGameInfoDebounced()
                                 }
@@ -867,7 +887,7 @@ class MainActivity : AppCompatActivity() {
     private fun loadSystemImage() {
         try {
             val sdcard = Environment.getExternalStorageDirectory()
-            val systemFile = File(sdcard, "ES-DE/logs/esde_system_scroll.txt")
+            val systemFile = File(sdcard, "ES-DE/logs/esde_system_name.txt")
             if (!systemFile.exists()) return
 
             // Clear marquee when loading system image (systems don't have marquees)
@@ -876,6 +896,11 @@ class MainActivity : AppCompatActivity() {
             marqueeImageView.setImageDrawable(null)
 
             val systemName = systemFile.readText().trim()
+
+            // Store current system name for later reference
+            currentSystemName = systemName
+            currentGameName = null  // Clear game info when in system view
+            currentGameFilename = null
             val imageFile = File(getSystemImagePath(), "$systemName.webp")
 
             var imageToUse: File? = imageFile
@@ -925,8 +950,7 @@ class MainActivity : AppCompatActivity() {
                     isSystemScrollActive = true
 
                     // Set solid background color
-                    gameImageView.setBackgroundColor(android.graphics.Color.parseColor("#1A1A1A"))
-                    gameImageView.setImageDrawable(null) // Clear any background image
+                    loadFallbackBackground() // Use fallback image instead of solid color
 
                     // Show logo as overlay (respects logo size setting)
                     val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
@@ -941,8 +965,7 @@ class MainActivity : AppCompatActivity() {
                         isSystemScrollActive = true
 
                         // Set solid background color
-                        gameImageView.setBackgroundColor(android.graphics.Color.parseColor("#1A1A1A"))
-                        gameImageView.setImageDrawable(null)
+                        loadFallbackBackground() // Use fallback image instead of solid color
 
                         // Create text drawable with system name
                         val textDrawable = createTextDrawable(systemName, logoSize)
@@ -964,53 +987,78 @@ class MainActivity : AppCompatActivity() {
 
         try {
             val sdcard = Environment.getExternalStorageDirectory()
-            val gameFile = File(sdcard, "ES-DE/logs/esde_game_scroll.txt")
+            val gameFile = File(sdcard, "ES-DE/logs/esde_game_filename.txt")
             if (!gameFile.exists()) return
 
             val gameNameRaw = gameFile.readText().trim()
             val gameName = gameNameRaw.substringBeforeLast('.')
 
-            val systemFile = File(sdcard, "ES-DE/logs/esde_system.txt")
+            // Read the display name from ES-DE if available
+            val gameDisplayNameFile = File(sdcard, "ES-DE/logs/esde_game_name.txt")
+            val gameDisplayName = if (gameDisplayNameFile.exists()) {
+                gameDisplayNameFile.readText().trim()
+            } else {
+                gameName  // Fallback to filename-based name
+            }
+
+            // Store current game info for later reference
+            currentGameName = gameDisplayName
+            currentGameFilename = gameNameRaw
+
+            val systemFile = File(sdcard, "ES-DE/logs/esde_game_system.txt")
             if (!systemFile.exists()) return
             val systemName = systemFile.readText().trim()
 
+            // Store current system name
+            currentSystemName = systemName
+
+
+            // Try to find game-specific artwork first
             val gameImage = findGameImage(sdcard, systemName, gameName, gameNameRaw)
-                ?: File(getSystemImagePath(), "$systemName.webp")
 
             var gameImageLoaded = false
-            if (!gameImage.exists()) {
-                val mediaBase = File(getMediaBasePath(), systemName)
-                val imagePref = prefs.getString("image_preference", "fanart") ?: "fanart"
-                val prioritizedFolders = if (imagePref == "screenshot") {
-                    listOf("screenshots", "fanart")
-                } else {
-                    listOf("fanart", "screenshots")
-                }
-                val allImages = mutableListOf<File>()
-                prioritizedFolders.forEach { dirName ->
-                    val dir = File(mediaBase, dirName)
-                    if (dir.exists() && dir.isDirectory) {
-                        allImages.addAll(dir.listFiles { f ->
-                            f.extension.lowercase() in listOf("jpg", "png", "webp")
-                        } ?: emptyArray())
-                    }
-                }
-                if (allImages.isNotEmpty()) {
-                    loadImageWithAnimation(allImages.random(), gameImageView)
-                    gameImageLoaded = true
-                }
-                // Don't clear if no images found - keep last image displayed
-            } else {
+
+            if (gameImage != null && gameImage.exists()) {
+                // Game has its own artwork - use it
                 loadImageWithAnimation(gameImage, gameImageView)
                 gameImageLoaded = true
+            } else {
+                // Game has no artwork - check for game marquee to display on dark background
+                val marqueeFile = findMarqueeImage(sdcard, systemName, gameName, gameNameRaw)
+
+                if (marqueeFile != null && marqueeFile.exists()) {
+                    // Game has marquee - show it centered on dark background
+                    loadFallbackBackground() // Use fallback image instead of solid color
+
+                    // Show marquee as overlay
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
+                        marqueeImageView.visibility = View.VISIBLE
+                        loadImageWithAnimation(marqueeFile, marqueeImageView)
+                    }
+                    gameImageLoaded = true
+                } else {
+                    // No artwork and no marquee - show game name as text on dark background
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
+                        loadFallbackBackground() // Use fallback image instead of solid color
+
+                        // Use the display name from ES-DE if available
+                        val displayName = currentGameName ?: gameName
+                        val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                        val textDrawable = createTextDrawable(displayName, logoSize)
+
+                        marqueeImageView.visibility = View.VISIBLE
+                        marqueeImageView.setImageDrawable(textDrawable)
+                        gameImageLoaded = true
+                    }
+                    // else: logo disabled - keep last image displayed
+                }
             }
 
-            // Only update marquee if we successfully loaded game data
+            // Only update marquee if we successfully loaded game artwork (not marquee fallback)
             // This prevents clearing marquee during fast scroll when no data available
-            if (gameImageLoaded) {
+            if (gameImageLoaded && gameImage != null && gameImage.exists()) {
                 val marqueeFile = findMarqueeImage(sdcard, systemName, gameName, gameNameRaw)
                 if (marqueeFile != null && marqueeFile.exists()) {
-                    val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
                     if (!prefs.getBoolean("game_logo_enabled", true)) {
                         marqueeImageView.visibility = View.GONE
                         Glide.with(this).clear(marqueeImageView)
@@ -1021,7 +1069,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 } else {
                     // Game has no marquee - clear it (don't show wrong marquee from previous game)
-                    val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
                     if (prefs.getBoolean("game_logo_enabled", true)) {
                         // Only clear if logo is supposed to be shown
                         // If logo is off, it's already hidden
