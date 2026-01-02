@@ -104,8 +104,8 @@ class MainActivity : AppCompatActivity() {
 
     // System scrolling: Enable debouncing to reduce rapid updates
     private val SYSTEM_FAST_SCROLL_THRESHOLD = 250L // If scrolling faster than 250ms between changes, it's "fast"
-    private val SYSTEM_FAST_SCROLL_DELAY = 250L // 150ms delay for fast system scrolling
-    private val SYSTEM_SLOW_SCROLL_DELAY = 50L // 50ms delay for slow system scrolling
+    private val SYSTEM_FAST_SCROLL_DELAY = 300L // 300ms delay for fast system scrolling
+    private val SYSTEM_SLOW_SCROLL_DELAY = 150L // 150ms delay for slow system scrolling
 
     // Game scrolling: No debouncing for instant response
     private val GAME_FAST_SCROLL_THRESHOLD = 250L
@@ -732,7 +732,7 @@ class MainActivity : AppCompatActivity() {
             // Show a subtle toast as well
             Toast.makeText(
                 this,
-                "Tip: Tap ☰ to customize your experience",
+                "Tip: Tap ☰ to open the app settings",
                 Toast.LENGTH_LONG
             ).show()
 
