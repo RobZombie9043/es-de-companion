@@ -1,6 +1,6 @@
 # ES-DE Second Screen Companion
 
-![Version](https://img.shields.io/badge/version-0.1.2-blue)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 A companion app for [ES-DE](https://es-de.org/) that displays beautiful game artwork and marquees on a secondary display, transforming your dual-screen device into an immersive retro gaming interface.
