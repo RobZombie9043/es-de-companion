@@ -196,9 +196,17 @@ class MainActivity : AppCompatActivity() {
         // Apply drawer transparency
         updateDrawerTransparency()
 
-        val sdcard = Environment.getExternalStorageDirectory()
-        val systemScrollFile = File(sdcard, "ES-DE/logs/esde_system_name.txt")
-        val gameScrollFile = File(sdcard, "ES-DE/logs/esde_game_filename.txt")
+        val logsDir = File(getLogsPath())
+        android.util.Log.d("MainActivity", "Logs directory: ${logsDir.absolutePath}")
+        android.util.Log.d("MainActivity", "Logs directory exists: ${logsDir.exists()}")
+
+        val systemScrollFile = File(logsDir, "esde_system_name.txt")
+        val gameScrollFile = File(logsDir, "esde_game_filename.txt")
+
+        android.util.Log.d("MainActivity", "System scroll file: ${systemScrollFile.absolutePath}")
+        android.util.Log.d("MainActivity", "System scroll file exists: ${systemScrollFile.exists()}")
+        android.util.Log.d("MainActivity", "Game scroll file: ${gameScrollFile.absolutePath}")
+        android.util.Log.d("MainActivity", "Game scroll file exists: ${gameScrollFile.exists()}")
 
         // Check which file was modified most recently to determine which mode to use
         val systemScrollExists = systemScrollFile.exists()
@@ -408,10 +416,19 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("ESDESecondScreen", "System image path: $path")
         return path
     }
+
     private fun getSystemLogosPath(): String {
         val customPath = prefs.getString("system_logos_path", null)
         val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE/downloaded_media/system_logos"
         android.util.Log.d("ESDESecondScreen", "System logos path: $path")
+        return path
+    }
+
+    private fun getLogsPath(): String {
+        // Always use fixed internal storage location for logs
+        // This ensures FileObserver works reliably (doesn't work well on SD card)
+        val path = "/storage/emulated/0/Android/ES-DE/logs"
+        android.util.Log.d("MainActivity", "Logs path: $path")
         return path
     }
     private fun loadFallbackBackground() {
@@ -823,8 +840,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startFileMonitoring() {
-        val sdcard = Environment.getExternalStorageDirectory()
-        val watchDir = File(sdcard, "ES-DE/logs")
+        val watchDir = File(getLogsPath())
+        android.util.Log.d("MainActivity", "Starting file monitoring on: ${watchDir.absolutePath}")
+        android.util.Log.d("MainActivity", "Watch directory exists: ${watchDir.exists()}")
+
+        // Create logs directory if it doesn't exist
+        if (!watchDir.exists()) {
+            watchDir.mkdirs()
+            android.util.Log.d("MainActivity", "Created logs directory")
+        }
 
         fileObserver = object : FileObserver(watchDir, MODIFY or CLOSE_WRITE) {
             private var lastEventTime = 0L
@@ -841,9 +865,6 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         // Small delay to ensure file is fully written
                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            val systemScrollFile = File(watchDir, "esde_system_name.txt")
-                            val gameScrollFile = File(watchDir, "esde_game_filename.txt")
-
                             // Determine which mode based on which file was modified
                             when (path) {
                                 "esde_system_name.txt" -> {
@@ -861,6 +882,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         fileObserver?.startWatching()
+        android.util.Log.d("MainActivity", "FileObserver started")
     }
 
     private fun setupBackHandling() {
@@ -1098,8 +1120,8 @@ class MainActivity : AppCompatActivity() {
             // Stop any video playback when switching to system view
             releasePlayer()
 
-            val sdcard = Environment.getExternalStorageDirectory()
-            val systemFile = File(sdcard, "ES-DE/logs/esde_system_name.txt")
+            val logsDir = File(getLogsPath())
+            val systemFile = File(logsDir, "esde_system_name.txt")
             if (!systemFile.exists()) return
 
             // Clear marquee when loading system image (systems don't have marquees)
@@ -1213,15 +1235,15 @@ class MainActivity : AppCompatActivity() {
         isSystemScrollActive = false
 
         try {
-            val sdcard = Environment.getExternalStorageDirectory()
-            val gameFile = File(sdcard, "ES-DE/logs/esde_game_filename.txt")
+            val logsDir = File(getLogsPath())
+            val gameFile = File(logsDir, "esde_game_filename.txt")
             if (!gameFile.exists()) return
 
             val gameNameRaw = gameFile.readText().trim()
             val gameName = gameNameRaw.substringBeforeLast('.')
 
             // Read the display name from ES-DE if available
-            val gameDisplayNameFile = File(sdcard, "ES-DE/logs/esde_game_name.txt")
+            val gameDisplayNameFile = File(logsDir, "esde_game_name.txt")
             val gameDisplayName = if (gameDisplayNameFile.exists()) {
                 gameDisplayNameFile.readText().trim()
             } else {
@@ -1232,7 +1254,7 @@ class MainActivity : AppCompatActivity() {
             currentGameName = gameDisplayName
             currentGameFilename = gameNameRaw
 
-            val systemFile = File(sdcard, "ES-DE/logs/esde_game_system.txt")
+            val systemFile = File(logsDir, "esde_game_system.txt")
             if (!systemFile.exists()) return
             val systemName = systemFile.readText().trim()
 
@@ -1241,7 +1263,7 @@ class MainActivity : AppCompatActivity() {
 
 
             // Try to find game-specific artwork first
-            val gameImage = findGameImage(sdcard, systemName, gameName, gameNameRaw)
+            val gameImage = findGameImage(systemName, gameName, gameNameRaw)
 
             var gameImageLoaded = false
 
@@ -1251,7 +1273,7 @@ class MainActivity : AppCompatActivity() {
                 gameImageLoaded = true
             } else {
                 // Game has no artwork - check for game marquee to display on dark background
-                val marqueeFile = findMarqueeImage(sdcard, systemName, gameName, gameNameRaw)
+                val marqueeFile = findMarqueeImage(systemName, gameName, gameNameRaw)
 
                 if (marqueeFile != null && marqueeFile.exists()) {
                     // Game has marquee - show it centered on dark background
@@ -1298,7 +1320,7 @@ class MainActivity : AppCompatActivity() {
             }
             // This prevents clearing marquee during fast scroll when no data available
             if (gameImageLoaded && gameImage != null && gameImage.exists()) {
-                val marqueeFile = findMarqueeImage(sdcard, systemName, gameName, gameNameRaw)
+                val marqueeFile = findMarqueeImage(systemName, gameName, gameNameRaw)
                 if (marqueeFile != null && marqueeFile.exists()) {
                     if (!prefs.getBoolean("game_logo_enabled", true)) {
                         marqueeImageView.visibility = View.GONE
@@ -1338,7 +1360,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun findGameImage(sdcard: File, systemName: String, gameName: String, fullGameName: String): File? {
+    private fun findGameImage(systemName: String, gameName: String, fullGameName: String): File? {
         val extensions = listOf("jpg", "png", "webp")
         val mediaBase = File(getMediaBasePath(), systemName)
         val imagePref = prefs.getString("image_preference", "fanart") ?: "fanart"
@@ -1355,7 +1377,7 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
-    private fun findMarqueeImage(sdcard: File, systemName: String, gameName: String, fullGameName: String): File? {
+    private fun findMarqueeImage(systemName: String, gameName: String, fullGameName: String): File? {
         val extensions = listOf("jpg", "png", "webp")
         return findImageInDir(File(getMediaBasePath(), "$systemName/marquees"), gameName, fullGameName, extensions)
     }

@@ -1265,8 +1265,8 @@ class SettingsActivity : AppCompatActivity() {
             // Create game-select.sh script
             // Create game-select.sh script
             gameSelectScript.writeText("""#!/bin/bash
-SCRIPT_DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")" && pwd)"
-LOG_DIR="${'$'}SCRIPT_DIR/../../logs"
+LOG_DIR="/storage/emulated/0/Android/ES-DE/logs"
+mkdir -p "${'$'}LOG_DIR"
 filename="${'$'}(basename "${'$'}1")"
 echo -n "${'$'}filename" > "${'$'}LOG_DIR/esde_game_filename.txt"
 echo -n "${'$'}2"        > "${'$'}LOG_DIR/esde_game_name.txt"
@@ -1278,8 +1278,8 @@ echo -n "${'$'}3"        > "${'$'}LOG_DIR/esde_game_system.txt"
 
             // Create system-select.sh script
             systemSelectScript.writeText("""#!/bin/bash
-SCRIPT_DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")" && pwd)"
-LOG_DIR="${'$'}SCRIPT_DIR/../../logs"
+LOG_DIR="/storage/emulated/0/Android/ES-DE/logs"
+mkdir -p "${'$'}LOG_DIR"
 printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_name.txt" &
 """)
 
