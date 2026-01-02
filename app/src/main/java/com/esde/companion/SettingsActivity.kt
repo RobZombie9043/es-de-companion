@@ -112,7 +112,11 @@ class SettingsActivity : AppCompatActivity() {
 
                     // Warn if path doesn't look like ES-DE downloaded_media folder
                     if (!path.contains("downloaded_media", ignoreCase = true)) {
-                        showNonStandardMediaPathWarningForWizard(path)
+                        if (isInSetupWizard) {
+                            showNonStandardMediaPathWarningForWizard(path)
+                        } else {
+                            showNonStandardMediaPathWarning(path)
+                        }
                     } else {
                         // Path looks good, continue wizard if active
                         if (isInSetupWizard) {
@@ -135,7 +139,11 @@ class SettingsActivity : AppCompatActivity() {
 
                     // Warn if path doesn't look like ES-DE scripts folder
                     if (!path.contains("ES-DE", ignoreCase = true) || !path.contains("scripts", ignoreCase = true)) {
-                        showNonStandardScriptsPathWarningForWizard(path)
+                        if (isInSetupWizard) {
+                            showNonStandardScriptsPathWarningForWizard(path)
+                        } else {
+                            showNonStandardScriptsPathWarning(path)
+                        }
                     } else {
                         // Path looks good, continue wizard if active
                         if (isInSetupWizard) {

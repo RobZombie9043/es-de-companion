@@ -922,17 +922,17 @@ class MainActivity : AppCompatActivity() {
     private fun createTextDrawable(systemName: String, logoSize: String): android.graphics.drawable.Drawable {
         // Determine text size based on logo size setting
         val textSizePx = when (logoSize) {
-            "small" -> 60f
-            "medium" -> 80f
-            "large" -> 100f
-            else -> 80f // default to medium
+            "small" -> 90f
+            "medium" -> 120f
+            "large" -> 150f
+            else -> 120f // default to medium
         }
 
         // Define max width wider than logo container sizes to reduce wrapping
         val maxWidthDp = when (logoSize) {
-            "small" -> 400
-            "large" -> 600
-            else -> 500  // medium
+            "small" -> 400    // Back to original
+            "large" -> 600    // Back to original
+            else -> 500       // Back to original (medium)
         }
         val maxWidth = (maxWidthDp * resources.displayMetrics.density).toInt()
 
