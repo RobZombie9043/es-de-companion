@@ -5,6 +5,8 @@
 
 A companion app for [ES-DE](https://es-de.org/) that displays beautiful game artwork and marquees on a secondary display, transforming your dual-screen device into an immersive retro gaming interface.
 
+> **Note**: This is a semi-official companion app designed to enhance your ES-DE experience on dual-screen devices.
+
 > **Note**: This app was developed using AI assistance, the full source code has been made available.
 
 ## 🎮 Features
