@@ -136,8 +136,8 @@ If you encounter any issues or have questions:
 ## 🔄 Changelog
 
 ### [0.2.1] - 2026-01-XX - SD Card Fix
-- Fixed SD card compatibility by moving logs to internal storage for reliable monitoring
-- **Note**: Re-create scripts in Settings after updating ig game images were not loading
+- Fixed compatibility with having ES-DE application folder installed to SD card by moving logs to internal storage for reliable FileObserver monitoring
+- **Note**: Re-create scripts in Settings after updating if game images were not loading
 
 ### [0.2.0] - 2026-01-04 - First release, UX Improvements Release
 - 🎓 **Enhanced onboarding** - Comprehensive tutorial dialog at end of setup wizard
