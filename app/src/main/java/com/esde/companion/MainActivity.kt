@@ -1062,7 +1062,6 @@ class MainActivity : AppCompatActivity() {
                 loadImageWithAnimation(imageToUse, gameImageView)
 
                 // Use built-in system logo as marquee overlay
-                val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
                 if (prefs.getBoolean("system_logo_enabled", true)) {
                     val logoDrawable = loadSystemLogoFromAssets(systemName)
                     if (logoDrawable != null) {
@@ -1085,7 +1084,6 @@ class MainActivity : AppCompatActivity() {
                     loadFallbackBackground() // Use fallback image instead of solid color
 
                     // Show logo as overlay (respects logo size setting)
-                    val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
                     if (prefs.getBoolean("system_logo_enabled", true)) {
                         // Restore fixed size for actual logo images
                         updateMarqueeSize()
