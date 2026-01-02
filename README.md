@@ -1,6 +1,6 @@
 # ES-DE Second Screen Companion
 
-![Version](https://img.shields.io/badge/version-0.1.1-blue)
+![Version](https://img.shields.io/badge/version-0.1.2-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 A companion app for [ES-DE](https://es-de.org/) that displays beautiful game artwork and marquees on a secondary display, transforming your dual-screen device into an immersive retro gaming interface.
@@ -154,6 +154,8 @@ If you encounter any issues or have questions:
 2. Create a new issue with details about your problem
 
 ## 🔄 Changelog
+
+### [0.1.2] - 2026-01-03 - Various Presentation and Bug Fixes
 
 ### [0.1.1] - 2026-01-03 - Video Playback Release
 - 🎬 **Video playback support** - Play game videos (MP4, MKV, AVI, WMV, MOV, WebM)
