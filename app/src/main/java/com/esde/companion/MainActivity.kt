@@ -45,6 +45,12 @@ import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import java.io.File
 import kotlin.math.abs
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.ui.PlayerView
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : AppCompatActivity() {
 
@@ -71,6 +77,16 @@ class MainActivity : AppCompatActivity() {
     private var currentGameFilename: String? = null  // Filename
     private var currentSystemName: String? = null  // Current system
     private var allApps = listOf<ResolveInfo>()  // Store all apps for search filtering
+
+    // Video playback variables
+    private var player: ExoPlayer? = null
+    private lateinit var videoView: PlayerView
+    private var videoDelayHandler: Handler? = null
+    private var videoDelayRunnable: Runnable? = null
+    private var currentVideoPath: String? = null
+
+    // Flag to skip reload in onResume (used when returning from settings with no changes)
+    private var skipNextReload = false
 
     // Dynamic debouncing for fast scrolling
     private val imageLoadHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -102,6 +118,7 @@ class MainActivity : AppCompatActivity() {
             val needsRecreate = result.data?.getBooleanExtra("NEEDS_RECREATE", false) ?: false
             val appsHiddenChanged = result.data?.getBooleanExtra("APPS_HIDDEN_CHANGED", false) ?: false
             val closeDrawer = result.data?.getBooleanExtra("CLOSE_DRAWER", false) ?: false
+            val videoSettingsChanged = result.data?.getBooleanExtra("VIDEO_SETTINGS_CHANGED", false) ?: false
 
             // Close drawer if requested (before recreate to avoid visual glitch)
             if (closeDrawer && ::bottomSheetBehavior.isInitialized) {
@@ -114,7 +131,14 @@ class MainActivity : AppCompatActivity() {
             } else if (appsHiddenChanged) {
                 // Refresh app drawer to apply hidden apps changes
                 setupAppDrawer()
+            } else if (videoSettingsChanged) {
+                // Video enabled/disabled or delay changed - reload game info
+                loadGameInfo()
+            } else {
+                // No settings changed that require reload - skip the reload in onResume
+                skipNextReload = true
             }
+            // Note: Video audio changes are handled automatically in onResume
         }
     }
 
@@ -136,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         drawerBackButton = findViewById(R.id.drawerBackButton)
         settingsButton = findViewById(R.id.settingsButton)
         androidSettingsButton = findViewById(R.id.androidSettingsButton)
+        videoView = findViewById(R.id.videoView)
 
         // Log display information at startup
         logDisplayInfo()
@@ -220,6 +245,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        // Cancel any pending video delay timers (prevent video loading while in settings)
+        videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
+        // Pause video playback when app goes to background
+        player?.pause()
+    }
+
     override fun onResume() {
         super.onResume()
 
@@ -229,6 +262,13 @@ class MainActivity : AppCompatActivity() {
             bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         }
+
+        // Update video volume in case audio setting changed
+        val audioEnabled = prefs.getBoolean("video_audio_enabled", false)
+        player?.volume = if (audioEnabled) 1f else 0f
+
+        // Resume video playback if paused
+        player?.play()
 
         // Clear search bar
         if (::appSearchBar.isInitialized) {
@@ -243,10 +283,16 @@ class MainActivity : AppCompatActivity() {
         updateMarqueeSize()
 
         // Reload images based on current state (don't change modes)
-        if (isSystemScrollActive) {
-            loadSystemImage()
+        // Skip reload if returning from settings with no changes
+        if (skipNextReload) {
+            skipNextReload = false
+            android.util.Log.d("MainActivity", "Skipping reload - no settings changed")
         } else {
-            loadGameInfo()
+            if (isSystemScrollActive) {
+                loadSystemImage()
+            } else {
+                loadGameInfo()
+            }
         }
     }
 
@@ -388,13 +434,7 @@ class MainActivity : AppCompatActivity() {
             0.95f
         }
 
-        val effectType = if (animationStyle == "custom") {
-            prefs.getString("animation_effect", "scale_fade") ?: "scale_fade"
-        } else {
-            animationStyle
-        }
-
-        when (if (animationStyle == "custom") effectType else animationStyle) {
+        when (animationStyle) {
             "none" -> {
                 // No animation - instant display
                 Glide.with(this)
@@ -740,6 +780,9 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(appChangeReceiver)
         // Cancel any pending image loads
         imageLoadRunnable?.let { imageLoadHandler.removeCallbacks(it) }
+        // Release video player
+        releasePlayer()
+        videoDelayHandler = null
     }
 
     /**
@@ -911,6 +954,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadSystemImage() {
         try {
+            // Stop any video playback when switching to system view
+            releasePlayer()
+
             val sdcard = Environment.getExternalStorageDirectory()
             val systemFile = File(sdcard, "ES-DE/logs/esde_system_name.txt")
             if (!systemFile.exists()) return
@@ -1055,10 +1101,11 @@ class MainActivity : AppCompatActivity() {
                     // Game has marquee - show it centered on dark background
                     loadFallbackBackground() // Use fallback image instead of solid color
 
-                    // Show marquee as overlay
+                    // Load marquee content (even if video is playing - just keep it hidden)
                     if (prefs.getBoolean("game_logo_enabled", true)) {
-                        marqueeImageView.visibility = View.VISIBLE
                         loadImageWithAnimation(marqueeFile, marqueeImageView)
+                        // Only show if video is NOT playing
+                        marqueeImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
                     }
                     gameImageLoaded = true
                 } else {
@@ -1071,8 +1118,9 @@ class MainActivity : AppCompatActivity() {
                         val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
                         val textDrawable = createTextDrawable(displayName, logoSize)
 
-                        marqueeImageView.visibility = View.VISIBLE
                         marqueeImageView.setImageDrawable(textDrawable)
+                        // Only show if video is NOT playing
+                        marqueeImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
                     } else {
                         // Logo disabled - just show fallback, no text
                         marqueeImageView.visibility = View.GONE
@@ -1089,14 +1137,16 @@ class MainActivity : AppCompatActivity() {
                         Glide.with(this).clear(marqueeImageView)
                         marqueeImageView.setImageDrawable(null)
                     } else {
-                        marqueeImageView.visibility = View.VISIBLE
+                        // Load marquee content
                         loadImageWithAnimation(marqueeFile, marqueeImageView)
+                        // Only show if video is NOT playing
+                        marqueeImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
                     }
                 } else {
                     // Game has no marquee - clear it (don't show wrong marquee from previous game)
                     if (prefs.getBoolean("game_logo_enabled", true)) {
                         // Only clear if logo is supposed to be shown
-                        // If logo is off, it's already hidden
+                        // If logo is off or video is playing, it's already hidden
                         Glide.with(this).clear(marqueeImageView)
                         marqueeImageView.setImageDrawable(null)
                     }
@@ -1104,6 +1154,10 @@ class MainActivity : AppCompatActivity() {
             }
             // If gameImageLoaded is false, we couldn't load new game data
             // Keep last marquee displayed (prevents disappearing during fast scroll)
+
+            // Handle video playback for the current game
+            // Pass both stripped name and raw filename (like images do)
+            handleVideoForGame(currentSystemName, gameName, gameNameRaw)
 
         } catch (e: Exception) {
             // Don't clear images on exception - keep last valid images
@@ -1431,6 +1485,247 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "Failed to open app info", e)
+        }
+    }
+
+    // ========== VIDEO PLAYBACK FUNCTIONS ==========
+
+    /**
+     * Check if video is enabled in settings
+     */
+    private fun isVideoEnabled(): Boolean {
+        return prefs.getBoolean("video_enabled", false)
+    }
+
+    /**
+     * Check if video is currently playing
+     */
+    private fun isVideoPlaying(): Boolean {
+        return player != null && currentVideoPath != null
+    }
+
+    /**
+     * Get video delay in milliseconds
+     */
+    private fun getVideoDelay(): Long {
+        val progress = prefs.getInt("video_delay", 0) // 0-10
+        return (progress * 500L) // Convert to milliseconds (0-5000ms)
+    }
+
+    /**
+     * Find video file for a game
+     * @param systemName ES-DE system name (e.g., "snes", "arcade")
+     * @param strippedName Game filename without extension (e.g., "Super Mario World")
+     * @param rawName Game filename with extension (e.g., "Super Mario World.zip")
+     * @return Video file path or null if not found
+     */
+    private fun findVideoForGame(systemName: String?, strippedName: String?, rawName: String?): String? {
+        if (systemName == null || strippedName == null) return null
+
+        val mediaPath = prefs.getString("media_path", "/storage/emulated/0/ES-DE/downloaded_media")
+            ?: return null
+
+        val videoExtensions = listOf("mp4", "mkv", "avi", "wmv", "mov", "webm")
+        val videoDir = File(mediaPath, "$systemName/videos")
+
+        if (!videoDir.exists()) {
+            android.util.Log.d("MainActivity", "Video directory does not exist: ${videoDir.absolutePath}")
+            return null
+        }
+
+        // Try both stripped name and raw name (like images do)
+        for (name in listOf(strippedName, rawName)) {
+            if (name == null) continue
+            for (ext in videoExtensions) {
+                val videoFile = File(videoDir, "$name.$ext")
+                if (videoFile.exists()) {
+                    android.util.Log.d("MainActivity", "Found video: ${videoFile.absolutePath}")
+                    return videoFile.absolutePath
+                }
+            }
+        }
+
+        android.util.Log.d("MainActivity", "No video found for $strippedName in $videoDir")
+        return null
+    }
+
+    /**
+     * Load and play video with animation based on settings
+     */
+    private fun loadVideo(videoPath: String) {
+        try {
+            // If same video is already playing, don't reload
+            if (currentVideoPath == videoPath && player != null) {
+                android.util.Log.d("MainActivity", "Same video already playing: $videoPath")
+                return
+            }
+
+            // Stop previous player without animation
+            player?.release()
+            player = null
+
+            // Create new player
+            player = ExoPlayer.Builder(this).build()
+            videoView.player = player
+
+            // Set volume based on settings
+            val audioEnabled = prefs.getBoolean("video_audio_enabled", false)
+            player?.volume = if (audioEnabled) 1f else 0f
+            android.util.Log.d("MainActivity", "Video audio: ${if (audioEnabled) "ON" else "OFF"}")
+
+            // Create media item
+            val mediaItem = MediaItem.fromUri(videoPath)
+            player?.setMediaItem(mediaItem)
+            player?.prepare()
+            player?.playWhenReady = true
+            player?.repeatMode = Player.REPEAT_MODE_ONE // Loop video
+
+            // Hide the game image view and marquee so video is visible
+            gameImageView.visibility = View.GONE
+            marqueeImageView.visibility = View.GONE
+
+            // Get animation settings (same as images)
+            val animationStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
+            val duration = if (animationStyle == "custom") {
+                prefs.getInt("animation_duration", 250)
+            } else {
+                250
+            }
+            val scaleAmount = if (animationStyle == "custom") {
+                prefs.getInt("animation_scale", 95) / 100f
+            } else {
+                0.95f
+            }
+
+            // Show video view with animation
+            videoView.visibility = View.VISIBLE
+
+            when (animationStyle) {
+                "none" -> {
+                    // No animation - instant display
+                    videoView.alpha = 1f
+                    videoView.scaleX = 1f
+                    videoView.scaleY = 1f
+                }
+                "fade" -> {
+                    // Fade only - no scale
+                    videoView.alpha = 0f
+                    videoView.scaleX = 1f
+                    videoView.scaleY = 1f
+                    videoView.animate()
+                        .alpha(1f)
+                        .setDuration(duration.toLong())
+                        .setInterpolator(DecelerateInterpolator())
+                        .start()
+                }
+                else -> {
+                    // "scale_fade" - default with scale + fade
+                    videoView.alpha = 0f
+                    videoView.scaleX = scaleAmount
+                    videoView.scaleY = scaleAmount
+                    videoView.animate()
+                        .alpha(1f)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(duration.toLong())
+                        .setInterpolator(DecelerateInterpolator())
+                        .start()
+                }
+            }
+
+            currentVideoPath = videoPath
+            android.util.Log.d("MainActivity", "Video loaded with ${animationStyle} animation (${duration}ms, scale: ${scaleAmount})")
+
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error loading video: $videoPath", e)
+            releasePlayer()
+        }
+    }
+
+    /**
+     * Release video player
+     */
+    private fun releasePlayer() {
+        // Cancel any pending video load
+        videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
+
+        if (player != null) {
+            // Cancel any ongoing animations
+            videoView.animate().cancel()
+
+            // Fade out video and release
+            videoView.animate()
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction {
+                    videoView.visibility = View.GONE
+                    player?.release()
+                    player = null
+                    currentVideoPath = null
+
+                    // Show the game image view again
+                    gameImageView.visibility = View.VISIBLE
+
+                    // Restore marquee visibility if game logo is enabled
+                    // Note: The marquee content will be set by loadGameInfo when called
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
+                        marqueeImageView.visibility = View.VISIBLE
+                    }
+                }
+                .start()
+        } else {
+            // No player, just hide the video view and show image view
+            videoView.visibility = View.GONE
+            gameImageView.visibility = View.VISIBLE
+            currentVideoPath = null
+
+            // Restore marquee visibility if game logo is enabled
+            if (prefs.getBoolean("game_logo_enabled", true)) {
+                marqueeImageView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    /**
+     * Handle video loading with delay
+     */
+    private fun handleVideoForGame(systemName: String?, strippedName: String?, rawName: String?) {
+        // Cancel any pending video load
+        videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
+
+        if (!isVideoEnabled()) {
+            releasePlayer()
+            return
+        }
+
+        val videoPath = findVideoForGame(systemName, strippedName, rawName)
+
+        if (videoPath != null) {
+            val delay = getVideoDelay()
+
+            android.util.Log.d("MainActivity", "Video enabled, delay: ${delay}ms, path: $videoPath")
+
+            if (delay == 0L) {
+                // Instant - load video immediately
+                loadVideo(videoPath)
+            } else {
+                // Delayed - show image first, then video
+                releasePlayer() // Stop any current video
+
+                if (videoDelayHandler == null) {
+                    videoDelayHandler = Handler(Looper.getMainLooper())
+                }
+
+                videoDelayRunnable = Runnable {
+                    loadVideo(videoPath)
+                }
+
+                videoDelayHandler?.postDelayed(videoDelayRunnable!!, delay)
+            }
+        } else {
+            // No video found, release player
+            android.util.Log.d("MainActivity", "No video found for system: $systemName, game: $strippedName")
+            releasePlayer()
         }
     }
 }

@@ -56,8 +56,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var drawerTransparencyText: TextView
     private lateinit var logoSizeSeekBar: SeekBar
     private lateinit var logoSizeText: TextView
-    private lateinit var systemLogoSwitch: androidx.appcompat.widget.SwitchCompat
-    private lateinit var gameLogoSwitch: androidx.appcompat.widget.SwitchCompat
+    private lateinit var logoSizeContainer: LinearLayout
+    private lateinit var systemLogoChipGroup: ChipGroup
+    private lateinit var gameLogoChipGroup: ChipGroup
     private lateinit var animationStyleChipGroup: ChipGroup
     private lateinit var imagePreferenceChipGroup: ChipGroup
     private lateinit var customAnimationSettings: LinearLayout
@@ -65,11 +66,17 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var animationDurationText: TextView
     private lateinit var animationScaleSeekBar: SeekBar
     private lateinit var animationScaleText: TextView
-    private lateinit var customEffectTypeGroup: RadioGroup
+    private lateinit var versionText: TextView
+    private lateinit var videoSupportChipGroup: ChipGroup
+    private lateinit var videoSettings: LinearLayout
+    private lateinit var videoDelaySeekBar: SeekBar
+    private lateinit var videoDelayText: TextView
+    private lateinit var videoAudioChipGroup: ChipGroup
 
     private var initialDimming: Int = 0
     private var initialBlur: Int = 0
     private var initialDrawerTransparency: Int = 0
+    private var videoSettingsChanged: Boolean = false
 
     private var pathSelectionType = PathSelection.MEDIA
 
@@ -278,9 +285,10 @@ class SettingsActivity : AppCompatActivity() {
             drawerTransparencySeekBar = findViewById(R.id.drawerTransparencySeekBar)
             drawerTransparencyText = findViewById(R.id.drawerTransparencyText)
             logoSizeSeekBar = findViewById(R.id.logoSizeSeekBar)
-            systemLogoSwitch = findViewById(R.id.systemLogoSwitch)
-            gameLogoSwitch = findViewById(R.id.gameLogoSwitch)
             logoSizeText = findViewById(R.id.logoSizeText)
+            logoSizeContainer = findViewById(R.id.logoSizeContainer)
+            systemLogoChipGroup = findViewById(R.id.systemLogoChipGroup)
+            gameLogoChipGroup = findViewById(R.id.gameLogoChipGroup)
             android.util.Log.d("SettingsActivity", "All views found")
 
             animationStyleChipGroup = findViewById<ChipGroup>(R.id.animationStyleChipGroup)
@@ -291,11 +299,28 @@ class SettingsActivity : AppCompatActivity() {
             animationDurationText = findViewById<TextView>(R.id.animationDurationText)
             animationScaleSeekBar = findViewById<SeekBar>(R.id.animationScaleSeekBar)
             animationScaleText = findViewById<TextView>(R.id.animationScaleText)
-            customEffectTypeGroup = findViewById<RadioGroup>(R.id.customEffectTypeGroup)
             android.util.Log.d("SettingsActivity", "Custom animation controls found")
 
             imagePreferenceChipGroup = findViewById<ChipGroup>(R.id.imagePreferenceChipGroup)
             android.util.Log.d("SettingsActivity", "Image preference chip group found")
+
+            // Initialize video settings
+            videoSupportChipGroup = findViewById(R.id.videoSupportChipGroup)
+            videoSettings = findViewById(R.id.videoSettings)
+            videoDelaySeekBar = findViewById(R.id.videoDelaySeekBar)
+            videoDelayText = findViewById(R.id.videoDelayText)
+            videoAudioChipGroup = findViewById(R.id.videoAudioChipGroup)
+            android.util.Log.d("SettingsActivity", "Video settings found")
+
+            // Initialize version text
+            versionText = findViewById(R.id.versionText)
+            try {
+                val packageInfo = packageManager.getPackageInfo(packageName, 0)
+                val versionName = packageInfo.versionName
+                versionText.text = "ES-DE Companion v$versionName"
+            } catch (e: Exception) {
+                versionText.text = "ES-DE Companion"
+            }
 
             selectMediaPathButton.setOnClickListener {
                 pathSelectionType = PathSelection.MEDIA
@@ -337,6 +362,8 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d("SettingsActivity", "Custom animation controls setup")
             setupImagePreferenceChips()
             android.util.Log.d("SettingsActivity", "Image preference chips setup")
+            setupVideoSettings()
+            android.util.Log.d("SettingsActivity", "Video settings setup")
 
             updateMediaPathDisplay()
             updateSystemPathDisplay()
@@ -376,6 +403,10 @@ class SettingsActivity : AppCompatActivity() {
                     if (currentHiddenApps != initialHiddenApps) {
                         // Signal that hidden apps changed
                         intent.putExtra("APPS_HIDDEN_CHANGED", true)
+                    }
+                    // Signal if video settings changed
+                    if (videoSettingsChanged) {
+                        intent.putExtra("VIDEO_SETTINGS_CHANGED", true)
                     }
                     // Always signal to close drawer when returning from settings
                     intent.putExtra("CLOSE_DRAWER", true)
@@ -508,21 +539,34 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupLogoSizeSlider() {
-        // Setup System Logo Toggle
+        // Setup System Logo Chips
         val systemLogoEnabled = prefs.getBoolean("system_logo_enabled", true)
-        systemLogoSwitch.isChecked = systemLogoEnabled
+        val systemChipToCheck = if (systemLogoEnabled) R.id.systemLogoOn else R.id.systemLogoOff
+        systemLogoChipGroup.check(systemChipToCheck)
 
-        systemLogoSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("system_logo_enabled", isChecked).apply()
+        systemLogoChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val enabled = checkedIds[0] == R.id.systemLogoOn
+                prefs.edit().putBoolean("system_logo_enabled", enabled).apply()
+                updateLogoSizeVisibility()
+            }
         }
 
-        // Setup Game Logo Toggle
+        // Setup Game Logo Chips
         val gameLogoEnabled = prefs.getBoolean("game_logo_enabled", true)
-        gameLogoSwitch.isChecked = gameLogoEnabled
+        val gameChipToCheck = if (gameLogoEnabled) R.id.gameLogoOn else R.id.gameLogoOff
+        gameLogoChipGroup.check(gameChipToCheck)
 
-        gameLogoSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("game_logo_enabled", isChecked).apply()
+        gameLogoChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val enabled = checkedIds[0] == R.id.gameLogoOn
+                prefs.edit().putBoolean("game_logo_enabled", enabled).apply()
+                updateLogoSizeVisibility()
+            }
         }
+
+        // Set initial logo size visibility
+        updateLogoSizeVisibility()
 
         // Setup Shared Logo Size (Small/Medium/Large only, no Off)
         val currentSize = prefs.getString("logo_size", "medium") ?: "medium"
@@ -567,6 +611,21 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    /**
+     * Show/hide logo size slider based on whether any logo is enabled
+     */
+    private fun updateLogoSizeVisibility() {
+        val systemLogoEnabled = prefs.getBoolean("system_logo_enabled", true)
+        val gameLogoEnabled = prefs.getBoolean("game_logo_enabled", true)
+
+        // Show logo size slider if either system or game logo is enabled
+        logoSizeContainer.visibility = if (systemLogoEnabled || gameLogoEnabled) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
     }
 
 
@@ -665,22 +724,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         })
-
-        // Effect Type Radio Group
-        val currentEffect = prefs.getString("animation_effect", "scale_fade") ?: "scale_fade"
-        when (currentEffect) {
-            "fade" -> customEffectTypeGroup.check(R.id.customEffectFade)
-            else -> customEffectTypeGroup.check(R.id.customEffectScaleFade)
-        }
-
-        customEffectTypeGroup.setOnCheckedChangeListener { _, checkedId ->
-            val effect = when (checkedId) {
-                R.id.customEffectFade -> "fade"
-                R.id.customEffectScaleFade -> "scale_fade"
-                else -> "scale_fade"
-            }
-            prefs.edit().putString("animation_effect", effect).apply()
-        }
     }
 
     private fun setupImagePreferenceChips() {
@@ -701,6 +744,75 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 prefs.edit().putString(IMAGE_PREFERENCE_KEY, preference).apply()
             }
+        }
+    }
+
+    private fun setupVideoSettings() {
+        // Load saved video enabled state (default: false/off)
+        val videoEnabled = prefs.getBoolean(VIDEO_ENABLED_KEY, false)
+
+        // Set initial chip selection
+        val chipToCheck = if (videoEnabled) R.id.videoOn else R.id.videoOff
+        videoSupportChipGroup.check(chipToCheck)
+
+        // Show/hide video settings box based on initial state
+        videoSettings.visibility = if (videoEnabled) View.VISIBLE else View.GONE
+
+        // Setup video on/off listener
+        videoSupportChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val enabled = checkedIds[0] == R.id.videoOn
+                prefs.edit().putBoolean(VIDEO_ENABLED_KEY, enabled).apply()
+
+                // Show/hide video settings box
+                videoSettings.visibility = if (enabled) View.VISIBLE else View.GONE
+
+                // Mark that video settings changed
+                videoSettingsChanged = true
+            }
+        }
+
+        // Setup video delay slider (0-5 seconds in 0.5s increments = 0-10 on seekbar)
+        val savedDelay = prefs.getInt(VIDEO_DELAY_KEY, 0) // Default: 0 (instant)
+        videoDelaySeekBar.progress = savedDelay
+        updateVideoDelayText(savedDelay)
+
+        videoDelaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                updateVideoDelayText(progress)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    prefs.edit().putInt(VIDEO_DELAY_KEY, it.progress).apply()
+                    // Mark that video settings changed
+                    videoSettingsChanged = true
+                }
+            }
+        })
+
+        // Setup video audio chips
+        val audioEnabled = prefs.getBoolean(VIDEO_AUDIO_ENABLED_KEY, false)
+        val audioChipToCheck = if (audioEnabled) R.id.videoAudioOn else R.id.videoAudioOff
+        videoAudioChipGroup.check(audioChipToCheck)
+
+        videoAudioChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val enabled = checkedIds[0] == R.id.videoAudioOn
+                prefs.edit().putBoolean(VIDEO_AUDIO_ENABLED_KEY, enabled).apply()
+                // Don't mark as changed - audio is handled by onResume
+            }
+        }
+    }
+
+    private fun updateVideoDelayText(progress: Int) {
+        val delaySeconds = progress * 0.5f
+        videoDelayText.text = if (progress == 0) {
+            "Instant"
+        } else {
+            String.format("%.1fs", delaySeconds)
         }
     }
 
@@ -1678,5 +1790,8 @@ printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_name.txt" &
         const val DIMMING_KEY = "dimming"
         const val BLUR_KEY = "blur"
         const val DRAWER_TRANSPARENCY_KEY = "drawer_transparency"
+        const val VIDEO_ENABLED_KEY = "video_enabled"
+        const val VIDEO_DELAY_KEY = "video_delay"
+        const val VIDEO_AUDIO_ENABLED_KEY = "video_audio_enabled"
     }
 }

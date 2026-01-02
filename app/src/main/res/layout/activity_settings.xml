@@ -77,7 +77,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="IMAGE SETTINGS"
+                        android:text="MEDIA SETTINGS"
                         android:textColor="#FFB74D"
                         android:textSize="14sp"
                         android:textStyle="bold"
@@ -133,6 +133,180 @@
                         app:chipStrokeWidth="2dp" />
 
                 </com.google.android.material.chip.ChipGroup>
+
+                <!-- Video Support -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Video Playback"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Play videos when browsing games"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/videoSupportChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/videoOff"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/videoOn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="On"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+                <!-- Video Settings (shown only when video is On) -->
+                <LinearLayout
+                    android:id="@+id/videoSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="16dp"
+                    android:padding="16dp"
+                    android:background="#252525">
+
+                    <!-- Video Delay -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Video Delay"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/videoDelayText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Instant"
+                            android:textColor="#FFB74D"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:minWidth="60dp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Time before switching from image to video"
+                        android:textColor="#999999"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp" />
+
+                    <SeekBar
+                        android:id="@+id/videoDelaySeekBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:thumbTint="#FFB74D"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:minHeight="32dp"
+                        android:max="10"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/slider_progress_orange"
+                        android:thumb="@drawable/slider_thumb"
+                        android:splitTrack="false"
+                        android:thumbOffset="0dp"
+                        android:layout_marginBottom="20dp" />
+
+                    <!-- Video Audio -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Video Audio"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Enable or disable video sound"
+                        android:textColor="#999999"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/videoAudioChipGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/videoAudioOff"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Off"
+                            android:textColor="#FFFFFF"
+                            android:checkable="true"
+                            app:chipBackgroundColor="@color/chip_background_selector"
+                            app:chipStrokeColor="#FFB74D"
+                            app:chipStrokeWidth="2dp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/videoAudioOn"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="On"
+                            android:textColor="#FFFFFF"
+                            android:checkable="true"
+                            app:chipBackgroundColor="@color/chip_background_selector"
+                            app:chipStrokeColor="#FFB74D"
+                            app:chipStrokeWidth="2dp" />
+
+                    </com.google.android.material.chip.ChipGroup>
+
+                </LinearLayout>
 
                 <!-- Crossfade -->
                 <TextView
@@ -228,13 +402,6 @@
                         android:gravity="center_vertical"
                         android:layout_marginBottom="8dp">
 
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@android:drawable/ic_menu_recent_history"
-                            app:tint="#FFFFFF"
-                            android:layout_marginEnd="12dp" />
-
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -255,11 +422,19 @@
                             android:gravity="end" />
                     </LinearLayout>
 
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="How long the animation takes to complete"
+                        android:textColor="#999999"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp" />
+
                     <SeekBar
                         android:id="@+id/animationDurationSeekBar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="32dp"
+                        android:layout_marginStart="16dp"
                         android:layout_marginBottom="16dp"
                         android:max="40"
                         android:progress="15"
@@ -279,13 +454,6 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:layout_marginBottom="8dp">
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@android:drawable/ic_menu_zoom"
-                            app:tint="#FFFFFF"
-                            android:layout_marginEnd="12dp" />
 
                         <TextView
                             android:layout_width="0dp"
@@ -307,11 +475,19 @@
                             android:gravity="end" />
                     </LinearLayout>
 
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="100% = fade only, lower values add scale effect"
+                        android:textColor="#999999"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp" />
+
                     <SeekBar
                         android:id="@+id/animationScaleSeekBar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="32dp"
+                        android:layout_marginStart="16dp"
                         android:layout_marginBottom="16dp"
                         android:max="15"
                         android:progress="5"
@@ -324,67 +500,18 @@
                         android:splitTrack="false"
                         android:thumbOffset="0dp" />
 
-                    <!-- Effect Type -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Effect Type"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="8dp" />
-
-                    <RadioGroup
-                        android:id="@+id/customEffectTypeGroup"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="32dp">
-
-                        <RadioButton
-                            android:id="@+id/customEffectFade"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Fade Only"
-                            android:textColor="#CCCCCC"
-                            android:textSize="14sp" />
-
-                        <RadioButton
-                            android:id="@+id/customEffectScaleFade"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Scale + Fade"
-                            android:textColor="#CCCCCC"
-                            android:textSize="14sp"
-                            android:checked="true" />
-                    </RadioGroup>
-
                 </LinearLayout>
 
 
                 <!-- System Logo Toggle -->
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="4dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="System Logo"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/systemLogoSwitch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        app:thumbTint="#FFB74D"
-                        app:trackTint="#4D4D4D" />
-                </LinearLayout>
+                    android:text="System Logo"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -392,100 +519,152 @@
                     android:text="Show system logos on system view"
                     android:textColor="#999999"
                     android:textSize="13sp"
-                    android:layout_marginBottom="20dp" />
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/systemLogoChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/systemLogoOff"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/systemLogoOn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="On"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                </com.google.android.material.chip.ChipGroup>
 
                 <!-- Game Logo Toggle -->
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="4dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Game Logo"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/gameLogoSwitch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        app:thumbTint="#FFB74D"
-                        app:trackTint="#4D4D4D" />
-                </LinearLayout>
+                    android:text="Game Marquee"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Show marquee logos on game view"
-                    android:textColor="#999999"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="20dp" />
-
-                <!-- Shared Logo Size -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Logo Size"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:id="@+id/logoSizeText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Medium"
-                        android:textColor="#FFB74D"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:minWidth="70dp"
-                        android:gravity="end" />
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Size of logos when enabled"
+                    android:text="Show game marquees on game view"
                     android:textColor="#999999"
                     android:textSize="13sp"
                     android:layout_marginBottom="8dp" />
 
-                <SeekBar
-                    android:id="@+id/logoSizeSeekBar"
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/gameLogoChipGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp"
-                    android:thumbTint="#FFB74D"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    android:minHeight="32dp"
-                    android:max="2"
-                    android:progressDrawable="@drawable/slider_progress_orange"
-                    android:thumb="@drawable/slider_thumb"
-                    android:splitTrack="false"
-                    android:thumbOffset="0dp" />
+                    android:layout_marginBottom="20dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
 
-                android:paddingBottom="8dp"
-                android:minHeight="32dp"
-                android:max="3"
-                android:progressDrawable="@drawable/slider_progress_orange"
-                android:thumb="@drawable/slider_thumb"
-                android:splitTrack="false"
-                android:thumbOffset="0dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameLogoOff"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameLogoOn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="On"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                </com.google.android.material.chip.ChipGroup>
+                android:textColor="#999999"
+                android:textSize="13sp"
+                android:layout_marginBottom="20dp" />
+
+                <!-- Shared Logo Size -->
+                <LinearLayout
+                    android:id="@+id/logoSizeContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Logo Size"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/logoSizeText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Medium"
+                            android:textColor="#FFB74D"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:minWidth="70dp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Size of system logos and game marquees"
+                        android:textColor="#999999"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp" />
+
+                    <SeekBar
+                        android:id="@+id/logoSizeSeekBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:thumbTint="#FFB74D"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:minHeight="32dp"
+                        android:max="2"
+                        android:progressDrawable="@drawable/slider_progress_orange"
+                        android:thumb="@drawable/slider_thumb"
+                        android:splitTrack="false"
+                        android:thumbOffset="0dp" />
+
+                </LinearLayout>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
