@@ -135,7 +135,7 @@ If you encounter any issues or have questions:
 
 ## 🔄 Changelog
 
-### [0.2.0] - 2026-01-04 - UX Improvements Release
+### [0.2.0] - 2026-01-04 - First release, UX Improvements Release
 - 🎓 **Enhanced onboarding** - Comprehensive tutorial dialog at end of setup wizard
   - Explains key gestures and features
   - Highlights app drawer and settings access
