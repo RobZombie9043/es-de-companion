@@ -1498,13 +1498,13 @@ printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_name.txt" &
                 // Step 5: Enable scripts in ES-DE
                 showWizardDialogRequired(
                     "Step 5: Enable Scripts in ES-DE",
-                    "Final step! You need to enable custom scripts in ES-DE:\n\n" +
+                    "Final step! You need to enable both custom script options in ES-DE:\n\n" +
                             "1. Open ES-DE\n" +
                             "2. Press START to open Main Menu\n" +
                             "3. Go to Other Settings\n" +
                             "4. Toggle ON 'Custom Event Scripts'\n" +
                             "5. Toggle ON 'Browsing Custom Events'\n\n" +
-                            "Once enabled, ES-DE will send game/system information to this app!\n\n" +
+                            "Once both are enabled, ES-DE will send game/system information to this app!\n\n" +
                             "Click 'I've Enabled Scripts' when done.",
                     "I've Enabled Scripts"
                 ) {
