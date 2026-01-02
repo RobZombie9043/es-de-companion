@@ -78,6 +78,7 @@ class SettingsActivity : AppCompatActivity() {
     private var initialDrawerTransparency: Int = 0
     private var videoSettingsChanged: Boolean = false
     private var logoSizeChanged: Boolean = false
+    private var mediaPathChanged: Boolean = false
 
     private var pathSelectionType = PathSelection.MEDIA
 
@@ -109,6 +110,11 @@ class SettingsActivity : AppCompatActivity() {
                 PathSelection.MEDIA -> {
                     prefs.edit().putString(MEDIA_PATH_KEY, path).apply()
                     updateMediaPathDisplay()
+
+                    // Mark that media path changed (only if not in wizard)
+                    if (!isInSetupWizard) {
+                        mediaPathChanged = true
+                    }
 
                     // Warn if path doesn't look like ES-DE downloaded_media folder
                     if (!path.contains("downloaded_media", ignoreCase = true)) {
@@ -420,6 +426,10 @@ class SettingsActivity : AppCompatActivity() {
                     // Signal if logo size changed
                     if (logoSizeChanged) {
                         intent.putExtra("LOGO_SIZE_CHANGED", true)
+                    }
+                    // Signal if media path changed
+                    if (mediaPathChanged) {
+                        intent.putExtra("MEDIA_PATH_CHANGED", true)
                     }
                     // Always signal to close drawer when returning from settings
                     intent.putExtra("CLOSE_DRAWER", true)

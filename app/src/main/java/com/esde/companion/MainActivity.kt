@@ -124,6 +124,7 @@ class MainActivity : AppCompatActivity() {
             val closeDrawer = result.data?.getBooleanExtra("CLOSE_DRAWER", false) ?: false
             val videoSettingsChanged = result.data?.getBooleanExtra("VIDEO_SETTINGS_CHANGED", false) ?: false
             val logoSizeChanged = result.data?.getBooleanExtra("LOGO_SIZE_CHANGED", false) ?: false
+            val mediaPathChanged = result.data?.getBooleanExtra("MEDIA_PATH_CHANGED", false) ?: false
 
             // Close drawer if requested (before recreate to avoid visual glitch)
             if (closeDrawer && ::bottomSheetBehavior.isInitialized) {
@@ -136,8 +137,8 @@ class MainActivity : AppCompatActivity() {
             } else if (appsHiddenChanged) {
                 // Refresh app drawer to apply hidden apps changes
                 setupAppDrawer()
-            } else if (videoSettingsChanged || logoSizeChanged) {
-                // Video settings or logo size changed - reload to apply changes
+            } else if (videoSettingsChanged || logoSizeChanged || mediaPathChanged) {
+                // Video settings, logo size, or media path changed - reload to apply changes
                 if (isSystemScrollActive) {
                     loadSystemImage()
                 } else {
