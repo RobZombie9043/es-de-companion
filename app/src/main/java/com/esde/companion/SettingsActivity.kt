@@ -3,7 +3,6 @@ package com.esde.companion
 import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -15,13 +14,11 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.LinearLayout
-import android.widget.RadioGroup
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.chip.ChipGroup
 
@@ -1477,10 +1474,10 @@ echo -n "${'$'}3"        		> "${'$'}LOG_DIR/esde_screensavergameselect_system.tx
 
             // Show success message with cleanup info
             val successMessage = when {
-                deletedOldScripts > 0 && failedToDelete.isEmpty() ->
-                    "All 7 scripts created successfully!\n\nCleaned up $deletedOldScripts old script(s)."
                 deletedOldScripts > 0 && failedToDelete.isNotEmpty() ->
                     "All 7 scripts created successfully!\n\nCleaned up $deletedOldScripts old script(s).\n\nWarning: Could not delete ${failedToDelete.joinToString()}"
+                deletedOldScripts > 0 ->
+                    "All 7 scripts created successfully!\n\nCleaned up $deletedOldScripts old script(s)."
                 failedToDelete.isNotEmpty() ->
                     "All 7 scripts created successfully!\n\nWarning: Could not delete old scripts: ${failedToDelete.joinToString()}"
                 else ->
@@ -1733,45 +1730,6 @@ echo -n "${'$'}3"        		> "${'$'}LOG_DIR/esde_screensavergameselect_system.tx
         }
     }
 
-    private fun showWizardDialog(title: String, message: String, buttonText: String, onContinue: () -> Unit) {
-        val scrollView = android.widget.ScrollView(this)
-        val textView = android.widget.TextView(this)
-        textView.text = message
-        textView.setPadding(60, 40, 60, 40)
-        textView.textSize = 16f
-        textView.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-
-        scrollView.addView(textView)
-
-        // Set max height via layout params
-        val displayMetrics = resources.displayMetrics
-        val maxHeight = (displayMetrics.heightPixels * 0.35).toInt() // 35% of screen
-        val params = android.widget.FrameLayout.LayoutParams(
-            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-        )
-        params.height = maxHeight
-        scrollView.layoutParams = params
-
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setView(scrollView)
-            .setNegativeButton("Cancel Setup") { _, _ ->
-                isInSetupWizard = false
-            }
-            .setNeutralButton("Use Default") { _, _ ->
-                // Use default system images path
-                prefs.edit().putString(SYSTEM_PATH_KEY, "/storage/emulated/0/ES-DE/downloaded_media/systems").apply()
-                updateSystemPathDisplay()
-                continueSetupWizard()
-            }
-            .setPositiveButton(buttonText) { _, _ ->
-                onContinue()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
     private fun showWizardDialogRequired(title: String, message: String, buttonText: String, onContinue: () -> Unit) {
         // Create custom title view with X button
         val titleContainer = android.widget.LinearLayout(this)
@@ -1831,32 +1789,6 @@ echo -n "${'$'}3"        		> "${'$'}LOG_DIR/esde_screensavergameselect_system.tx
         }
 
         dialog.show()
-    }
-
-    private fun checkAndRequestPermissionsForWizard() {
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-                if (Environment.isExternalStorageManager()) {
-                    continueSetupWizard()
-                } else {
-                    showManageStoragePermissionDialog()
-                }
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    continueSetupWizard()
-                } else {
-                    storagePermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
-            }
-            else -> {
-                continueSetupWizard()
-            }
-        }
     }
 
     private fun showHideAppsDialog() {
@@ -2102,8 +2034,6 @@ Enjoy your enhanced retro gaming experience! ✨
         const val SYSTEM_PATH_KEY = "system_path"
         const val SCRIPTS_PATH_KEY = "scripts_path"
         const val COLUMN_COUNT_KEY = "column_count"
-        const val LOGO_SIZE_KEY = "logo_size"
-        const val CROSSFADE_KEY = "crossfade"
         const val IMAGE_PREFERENCE_KEY = "image_preference"
         const val DIMMING_KEY = "dimming"
         const val BLUR_KEY = "blur"

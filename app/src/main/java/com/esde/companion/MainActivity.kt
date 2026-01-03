@@ -31,7 +31,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -529,13 +528,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
-    private fun getCrossfadeDuration(): Int {
-        return when (prefs.getString("crossfade", "off")) {
-            "off" -> 1  // Use 1ms instead of 0 for truly instant swap
-            else -> 150
-        }
-    }
 
     /**
      * Load an image with animation based on user preference
@@ -1398,7 +1390,8 @@ class MainActivity : AppCompatActivity() {
                     gameImageLoaded = true
                 }
             }
-            // This prevents clearing marquee during fast scroll when no data available
+            // Handle marquee separately when game has its own artwork
+            // Note: gameImageLoaded is always true here by design - we've loaded fallback, marquee, or actual image
             if (gameImageLoaded && gameImage != null && gameImage.exists()) {
                 val marqueeFile = findMarqueeImage(systemName, gameName, gameNameRaw)
                 if (marqueeFile != null && marqueeFile.exists()) {
@@ -1637,60 +1630,6 @@ class MainActivity : AppCompatActivity() {
     /**
      * Launch app on top display (display ID 0)
      */
-    private fun launchOnTopDisplay(intent: Intent) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            try {
-                android.util.Log.d("MainActivity", "Launching on top display (ID: 0)")
-                val options = ActivityOptions.makeBasic()
-                options.launchDisplayId = 0  // Top display
-                startActivity(intent, options.toBundle())
-            } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Error launching on top display, using default", e)
-                startActivity(intent)
-            }
-        } else {
-            startActivity(intent)
-        }
-    }
-
-    /**
-     * Launch app on bottom display (display ID 1, or default if not available)
-     */
-    private fun launchOnBottomDisplay(intent: Intent) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            try {
-                val displayManager = getSystemService(Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
-                val displays = displayManager.displays
-
-                android.util.Log.d("MainActivity", "Available displays: ${displays.size}")
-                displays.forEachIndexed { index, display ->
-                    android.util.Log.d("MainActivity", "Display $index: ID=${display.displayId}, Name=${display.name}")
-                }
-
-                // Try to find the bottom display
-                // For dual-screen devices, the second display is usually ID 1
-                val bottomDisplay = displays.firstOrNull { it.displayId == 1 }
-
-                if (bottomDisplay != null) {
-                    android.util.Log.d("MainActivity", "Launching on bottom display (ID: ${bottomDisplay.displayId})")
-                    val options = ActivityOptions.makeBasic()
-                    options.launchDisplayId = bottomDisplay.displayId
-                    startActivity(intent, options.toBundle())
-                } else {
-                    // Fallback: if no secondary display, just launch normally
-                    android.util.Log.d("MainActivity", "No secondary display found, launching on default display")
-                    startActivity(intent)
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("MainActivity", "Error launching on bottom display, using default", e)
-                // Fallback to default launch
-                startActivity(intent)
-            }
-        } else {
-            startActivity(intent)
-        }
-    }
-
     /**
      * Show app options dialog with launch position toggles
      * Note: "Top" now means "This screen" (same as companion)
