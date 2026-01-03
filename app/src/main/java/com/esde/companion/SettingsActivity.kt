@@ -70,6 +70,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var videoDelayText: TextView
     private lateinit var videoAudioChipGroup: ChipGroup
     private lateinit var gameLaunchBehaviorChipGroup: ChipGroup
+    private lateinit var screensaverBehaviorChipGroup: ChipGroup
 
     private var initialDimming: Int = 0
     private var initialBlur: Int = 0
@@ -79,6 +80,8 @@ class SettingsActivity : AppCompatActivity() {
     private var mediaPathChanged: Boolean = false
     private var imagePreferenceChanged: Boolean = false
     private var logoTogglesChanged: Boolean = false
+    private var gameLaunchBehaviorChanged: Boolean = false
+    private var screensaverBehaviorChanged: Boolean = false
 
     private var pathSelectionType = PathSelection.MEDIA
 
@@ -326,6 +329,7 @@ class SettingsActivity : AppCompatActivity() {
             videoDelayText = findViewById(R.id.videoDelayText)
             videoAudioChipGroup = findViewById(R.id.videoAudioChipGroup)
             gameLaunchBehaviorChipGroup = findViewById(R.id.gameLaunchBehaviorChipGroup)
+            screensaverBehaviorChipGroup = findViewById(R.id.screensaverBehaviorChipGroup)
             android.util.Log.d("SettingsActivity", "Video settings found")
 
             // Initialize version text
@@ -382,6 +386,8 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d("SettingsActivity", "Video settings setup")
             setupGameLaunchBehavior()
             android.util.Log.d("SettingsActivity", "Game launch behavior setup")
+            setupScreensaverBehavior()
+            android.util.Log.d("SettingsActivity", "Screensaver behavior setup")
 
             updateMediaPathDisplay()
             updateSystemPathDisplay()
@@ -441,6 +447,14 @@ class SettingsActivity : AppCompatActivity() {
                     // Signal if logo toggles changed
                     if (logoTogglesChanged) {
                         intent.putExtra("LOGO_TOGGLES_CHANGED", true)
+                    }
+                    // Signal if game launch behavior changed
+                    if (gameLaunchBehaviorChanged) {
+                        intent.putExtra("GAME_LAUNCH_BEHAVIOR_CHANGED", true)
+                    }
+                    // Signal if screensaver behavior changed
+                    if (screensaverBehaviorChanged) {
+                        intent.putExtra("SCREENSAVER_BEHAVIOR_CHANGED", true)
                     }
                     // Always signal to close drawer when returning from settings
                     intent.putExtra("CLOSE_DRAWER", true)
@@ -879,6 +893,35 @@ class SettingsActivity : AppCompatActivity() {
                     else -> "default_image"
                 }
                 prefs.edit().putString(GAME_LAUNCH_BEHAVIOR_KEY, behavior).apply()
+                // Mark as changed
+                gameLaunchBehaviorChanged = true
+            }
+        }
+    }
+
+    private fun setupScreensaverBehavior() {
+        // Load saved screensaver behavior (default: "default_image")
+        val screensaverBehavior = prefs.getString(SCREENSAVER_BEHAVIOR_KEY, "default_image") ?: "default_image"
+
+        // Set initial chip selection
+        val chipToCheck = when (screensaverBehavior) {
+            "game_image" -> R.id.screensaverGameImage
+            "black_screen" -> R.id.screensaverBlackScreen
+            else -> R.id.screensaverDefaultImage
+        }
+        screensaverBehaviorChipGroup.check(chipToCheck)
+
+        // Setup listener
+        screensaverBehaviorChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val behavior = when (checkedIds[0]) {
+                    R.id.screensaverGameImage -> "game_image"
+                    R.id.screensaverBlackScreen -> "black_screen"
+                    else -> "default_image"
+                }
+                prefs.edit().putString(SCREENSAVER_BEHAVIOR_KEY, behavior).apply()
+                // Mark as changed
+                screensaverBehaviorChanged = true
             }
         }
     }
@@ -1656,7 +1699,7 @@ echo -n "${'$'}3"        		> "${'$'}LOG_DIR/esde_screensavergameselect_system.tx
                 // Step 2: Select scripts folder
                 showCustomWizardDialog(
                     title = "Step 2: ES-DE Scripts Folder",
-                    message = "Now select your ES-DE scripts folder.\n\nDefault location:\n/storage/emulated/0/ES-DE/scripts\n\nClick 'Select Folder' to choose, or 'Use Default' to use the default path.",
+                    message = "Now select your ES-DE scripts folder.\n\nThis needs to be the scripts folder where your ES-DE application data directory has been set up:\n~/ES-DE/scripts\n\nClick 'Select Folder' to choose, or 'Use Default' to use the default internal storage path (ES-DE is setup on internal storage in the default location).",
                     topRightText = "Use Default",
                     bottomRightText = "Select Folder",
                     onCancel = { isInSetupWizard = false },
@@ -1713,7 +1756,7 @@ echo -n "${'$'}3"        		> "${'$'}LOG_DIR/esde_screensavergameselect_system.tx
                 // Step 4: Select downloaded_media
                 showCustomWizardDialog(
                     title = "Step 4: Downloaded Media Folder",
-                    message = "Select your ES-DE downloaded_media folder where game artwork is stored.\n\nDefault location:\n/storage/emulated/0/ES-DE/downloaded_media\n\nClick 'Select Folder' to choose, or 'Use Default' to use the default path.",
+                    message = "Select your ES-DE downloaded_media folder where game artwork is stored.\n\nDefault location:\n/storage/emulated/0/ES-DE/downloaded_media\n\nClick 'Select Folder' to choose, or 'Use Default' to use the default internal storage path (downloaded_media is in the default internal storage location).",
                     topRightText = "Use Default",
                     bottomRightText = "Select Folder",
                     onCancel = { isInSetupWizard = false },
@@ -2071,5 +2114,6 @@ Enjoy your enhanced retro gaming experience! ✨
         const val VIDEO_DELAY_KEY = "video_delay"
         const val VIDEO_AUDIO_ENABLED_KEY = "video_audio_enabled"
         const val GAME_LAUNCH_BEHAVIOR_KEY = "game_launch_behavior"
+        const val SCREENSAVER_BEHAVIOR_KEY = "screensaver_behavior"
     }
 }

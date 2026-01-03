@@ -81,6 +81,10 @@ class MainActivity : AppCompatActivity() {
     private var hasWindowFocus = true  // Track if app has window focus (is on top)
     private var isGamePlaying = false  // Track if game is running on other screen
     private var playingGameFilename: String? = null  // Filename of currently playing game
+    private var isScreensaverActive = false  // Track if ES-DE screensaver is running
+    private var screensaverGameFilename: String? = null  // Current screensaver game filename
+    private var screensaverGameName: String? = null  // Current screensaver game name
+    private var screensaverSystemName: String? = null  // Current screensaver system name
 
     // Video playback variables
     private var player: ExoPlayer? = null
@@ -138,6 +142,8 @@ class MainActivity : AppCompatActivity() {
             val mediaPathChanged = result.data?.getBooleanExtra("MEDIA_PATH_CHANGED", false) ?: false
             val imagePreferenceChanged = result.data?.getBooleanExtra("IMAGE_PREFERENCE_CHANGED", false) ?: false
             val logoTogglesChanged = result.data?.getBooleanExtra("LOGO_TOGGLES_CHANGED", false) ?: false
+            val gameLaunchBehaviorChanged = result.data?.getBooleanExtra("GAME_LAUNCH_BEHAVIOR_CHANGED", false) ?: false
+            val screensaverBehaviorChanged = result.data?.getBooleanExtra("SCREENSAVER_BEHAVIOR_CHANGED", false) ?: false
 
             // Close drawer if requested (before recreate to avoid visual glitch)
             if (closeDrawer && ::bottomSheetBehavior.isInitialized) {
@@ -150,6 +156,16 @@ class MainActivity : AppCompatActivity() {
             } else if (appsHiddenChanged) {
                 // Refresh app drawer to apply hidden apps changes
                 setupAppDrawer()
+            } else if (gameLaunchBehaviorChanged && isGamePlaying) {
+                // Game launch behavior changed while game is playing - update display
+                handleGameStart()
+                // Skip reload in onResume to prevent override
+                skipNextReload = true
+            } else if (screensaverBehaviorChanged && isScreensaverActive) {
+                // Screensaver behavior changed while screensaver is active - update display
+                handleScreensaverStart()
+                // Skip reload in onResume to prevent override
+                skipNextReload = true
             } else if (videoSettingsChanged || logoSizeChanged || mediaPathChanged || imagePreferenceChanged || logoTogglesChanged) {
                 // Settings that affect displayed content changed - reload to apply changes
                 if (isSystemScrollActive) {
@@ -930,7 +946,9 @@ class MainActivity : AppCompatActivity() {
 
             override fun onEvent(event: Int, path: String?) {
                 if (path != null && (path == "esde_game_filename.txt" || path == "esde_system_name.txt" ||
-                            path == "esde_gamestart_filename.txt" || path == "esde_gameend_filename.txt")) {
+                            path == "esde_gamestart_filename.txt" || path == "esde_gameend_filename.txt" ||
+                            path == "esde_screensaver_start.txt" || path == "esde_screensaver_end.txt" ||
+                            path == "esde_screensavergameselect_filename.txt")) {
                     // Debounce: ignore events that happen too quickly
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastEventTime < 100) {
@@ -943,10 +961,21 @@ class MainActivity : AppCompatActivity() {
                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                             when (path) {
                                 "esde_system_name.txt" -> {
+                                    // Ignore if screensaver is active
+                                    if (isScreensaverActive) {
+                                        android.util.Log.d("MainActivity", "System scroll ignored - screensaver active")
+                                        return@postDelayed
+                                    }
                                     android.util.Log.d("MainActivity", "System scroll detected")
                                     loadSystemImageDebounced()
                                 }
                                 "esde_game_filename.txt" -> {
+                                    // Ignore if screensaver is active
+                                    if (isScreensaverActive) {
+                                        android.util.Log.d("MainActivity", "Game scroll ignored - screensaver active")
+                                        return@postDelayed
+                                    }
+
                                     // Read the game filename
                                     val gameFile = File(watchDir, "esde_game_filename.txt")
                                     if (gameFile.exists()) {
@@ -980,6 +1009,43 @@ class MainActivity : AppCompatActivity() {
                                     isGamePlaying = false
                                     playingGameFilename = null  // Clear playing game
                                     handleGameEnd()
+                                }
+                                "esde_screensaver_start.txt" -> {
+                                    android.util.Log.d("MainActivity", "Screensaver start detected")
+                                    isScreensaverActive = true
+                                    handleScreensaverStart()
+                                }
+                                "esde_screensaver_end.txt" -> {
+                                    android.util.Log.d("MainActivity", "Screensaver end detected")
+                                    isScreensaverActive = false
+                                    screensaverGameFilename = null
+                                    screensaverGameName = null
+                                    screensaverSystemName = null
+                                    handleScreensaverEnd()
+                                }
+                                "esde_screensavergameselect_filename.txt" -> {
+                                    // Only process if screensaver is active
+                                    if (!isScreensaverActive) {
+                                        return@postDelayed
+                                    }
+
+                                    // Read screensaver game info
+                                    val filenameFile = File(watchDir, "esde_screensavergameselect_filename.txt")
+                                    val nameFile = File(watchDir, "esde_screensavergameselect_name.txt")
+                                    val systemFile = File(watchDir, "esde_screensavergameselect_system.txt")
+
+                                    if (filenameFile.exists()) {
+                                        screensaverGameFilename = filenameFile.readText().trim()
+                                    }
+                                    if (nameFile.exists()) {
+                                        screensaverGameName = nameFile.readText().trim()
+                                    }
+                                    if (systemFile.exists()) {
+                                        screensaverSystemName = systemFile.readText().trim()
+                                    }
+
+                                    android.util.Log.d("MainActivity", "Screensaver game: $screensaverGameName ($screensaverGameFilename) - $screensaverSystemName")
+                                    handleScreensaverGameSelect()
                                 }
                             }
                         }, 50) // 50ms delay to ensure file is written
@@ -1759,13 +1825,41 @@ class MainActivity : AppCompatActivity() {
 
         when (gameLaunchBehavior) {
             "game_image" -> {
-                // Show current game image and marquee (based on settings)
+                // Load and show the launched game's image and marquee
+                val filename = playingGameFilename
+                if (filename != null) {
+                    // Load the game's artwork
+                    val systemName = currentSystemName
+                    if (systemName != null) {
+                        val gameName = filename.substringBeforeLast('.')
+                        val gameImage = findGameImage(systemName, gameName, filename)
+                        if (gameImage != null) {
+                            Glide.with(this)
+                                .load(gameImage)
+                                .into(gameImageView)
+                        } else {
+                            loadFallbackBackground()
+                        }
+
+                        // Load the game's marquee
+                        if (prefs.getBoolean("game_logo_enabled", true)) {
+                            val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                            if (marqueeImage != null) {
+                                Glide.with(this)
+                                    .load(marqueeImage)
+                                    .into(marqueeImageView)
+                                marqueeImageView.visibility = View.VISIBLE
+                            } else {
+                                marqueeImageView.visibility = View.GONE
+                            }
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    }
+                }
+
                 gameImageView.visibility = View.VISIBLE
                 videoView.visibility = View.GONE
-
-                if (prefs.getBoolean("game_logo_enabled", true)) {
-                    marqueeImageView.visibility = View.VISIBLE
-                }
             }
             "black_screen" -> {
                 // Show plain black screen - no logos or images
@@ -1781,11 +1875,32 @@ class MainActivity : AppCompatActivity() {
                 videoView.visibility = View.GONE
             }
             else -> { // "default_image"
-                // Show default fallback image
+                // Show default fallback image with the game's marquee
                 loadFallbackBackground()
                 gameImageView.visibility = View.VISIBLE
-                marqueeImageView.visibility = View.GONE
                 videoView.visibility = View.GONE
+
+                // Load and show the game's marquee if enabled
+                if (prefs.getBoolean("game_logo_enabled", true)) {
+                    val filename = playingGameFilename
+                    val systemName = currentSystemName
+                    if (filename != null && systemName != null) {
+                        val gameName = filename.substringBeforeLast('.')
+                        val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                        if (marqueeImage != null) {
+                            Glide.with(this)
+                                .load(marqueeImage)
+                                .into(marqueeImageView)
+                            marqueeImageView.visibility = View.VISIBLE
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    } else {
+                        marqueeImageView.visibility = View.GONE
+                    }
+                } else {
+                    marqueeImageView.visibility = View.GONE
+                }
             }
         }
 
@@ -1802,6 +1917,262 @@ class MainActivity : AppCompatActivity() {
             loadSystemImage()
         } else {
             loadGameInfo()
+        }
+    }
+
+    // ========== SCREENSAVER FUNCTIONS ==========
+
+    /**
+     * Handle screensaver start event
+     */
+    private fun handleScreensaverStart() {
+        // Stop any videos
+        releasePlayer()
+
+        val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
+
+        when (screensaverBehavior) {
+            "game_image" -> {
+                // Load screensaver game if available
+                if (screensaverGameFilename != null && screensaverSystemName != null) {
+                    // Load the screensaver game's artwork
+                    val gameName = screensaverGameFilename!!.substringBeforeLast('.')
+                    val gameImage = findGameImage(screensaverSystemName!!, gameName, screensaverGameFilename!!)
+                    if (gameImage != null) {
+                        Glide.with(this)
+                            .load(gameImage)
+                            .into(gameImageView)
+                    } else {
+                        gameImageView.setImageDrawable(null)
+                        gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+                    }
+
+                    // Load the screensaver game's marquee
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
+                        val marqueeImage = findMarqueeImage(screensaverSystemName!!, gameName, screensaverGameFilename!!)
+                        if (marqueeImage != null) {
+                            Glide.with(this)
+                                .load(marqueeImage)
+                                .into(marqueeImageView)
+                            marqueeImageView.visibility = View.VISIBLE
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    } else {
+                        marqueeImageView.visibility = View.GONE
+                    }
+                } else {
+                    // No screensaver game data yet (dim/black mode or just started)
+                    // Show black screen - will update if game select events fire
+                    gameImageView.setImageDrawable(null)
+                    gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+                    marqueeImageView.setImageDrawable(null)
+                    marqueeImageView.visibility = View.GONE
+                }
+
+                gameImageView.visibility = View.VISIBLE
+                videoView.visibility = View.GONE
+            }
+            "black_screen" -> {
+                // Show plain black screen - no logos or images
+                gameImageView.setImageDrawable(null)
+                gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+                gameImageView.visibility = View.VISIBLE
+
+                // Clear and hide marquee completely
+                marqueeImageView.setImageDrawable(null)
+                marqueeImageView.visibility = View.GONE
+                Glide.with(this).clear(marqueeImageView)
+
+                videoView.visibility = View.GONE
+            }
+            else -> { // "default_image"
+                // Show default fallback image with current screensaver game's marquee (if available)
+                loadFallbackBackground()
+                gameImageView.visibility = View.VISIBLE
+                videoView.visibility = View.GONE
+
+                // Show the screensaver game's marquee if available, otherwise fall back to browsing state marquee
+                if (prefs.getBoolean("game_logo_enabled", true)) {
+                    // First try to show screensaver game marquee (slideshow/video mode)
+                    if (screensaverGameFilename != null && screensaverSystemName != null) {
+                        val gameName = screensaverGameFilename!!.substringBeforeLast('.')
+                        val marqueeImage = findMarqueeImage(screensaverSystemName!!, gameName, screensaverGameFilename!!)
+                        if (marqueeImage != null) {
+                            Glide.with(this)
+                                .load(marqueeImage)
+                                .into(marqueeImageView)
+                            marqueeImageView.visibility = View.VISIBLE
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    } else {
+                        // No screensaver game data (dim/black mode) - show browsing state marquee
+                        if (isSystemScrollActive) {
+                            // Show system logo
+                            val systemName = currentSystemName
+                            if (systemName != null && prefs.getBoolean("system_logo_enabled", true)) {
+                                val logoDrawable = loadSystemLogoFromAssets(systemName)
+                                if (logoDrawable != null) {
+                                    updateMarqueeSize()
+                                    marqueeImageView.setImageDrawable(logoDrawable)
+                                    marqueeImageView.visibility = View.VISIBLE
+                                    marqueeShowingText = false
+                                } else {
+                                    marqueeImageView.visibility = View.GONE
+                                }
+                            } else {
+                                marqueeImageView.visibility = View.GONE
+                            }
+                        } else {
+                            // Show game marquee from browsing state
+                            val filename = currentGameFilename
+                            val systemName = currentSystemName
+                            if (filename != null && systemName != null) {
+                                val gameName = filename.substringBeforeLast('.')
+                                val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                                if (marqueeImage != null) {
+                                    Glide.with(this)
+                                        .load(marqueeImage)
+                                        .into(marqueeImageView)
+                                    marqueeImageView.visibility = View.VISIBLE
+                                } else {
+                                    marqueeImageView.visibility = View.GONE
+                                }
+                            } else {
+                                marqueeImageView.visibility = View.GONE
+                            }
+                        }
+                    }
+                } else {
+                    marqueeImageView.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle screensaver end event - return to normal browsing display
+     */
+    private fun handleScreensaverEnd() {
+        // Return to normal display - reload the current game/system
+        if (isSystemScrollActive) {
+            loadSystemImage()
+        } else {
+            loadGameInfo()
+        }
+    }
+
+    /**
+     * Handle screensaver game select event (for slideshow/video screensavers)
+     */
+    private fun handleScreensaverGameSelect() {
+        val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
+
+        if (screensaverGameFilename != null && screensaverSystemName != null) {
+            val gameName = screensaverGameFilename!!.substringBeforeLast('.')
+
+            when (screensaverBehavior) {
+                "game_image" -> {
+                    // Load the screensaver game's artwork and marquee
+                    val gameImage = findGameImage(
+                        screensaverSystemName!!,
+                        gameName,
+                        screensaverGameFilename!!
+                    )
+
+                    if (gameImage != null && gameImage.exists()) {
+                        loadImageWithAnimation(gameImage, gameImageView)
+
+                        // Load marquee if enabled
+                        if (prefs.getBoolean("game_logo_enabled", true)) {
+                            val marqueeFile = findMarqueeImage(
+                                screensaverSystemName!!,
+                                gameName,
+                                screensaverGameFilename!!
+                            )
+
+                            if (marqueeFile != null && marqueeFile.exists()) {
+                                updateMarqueeSize()
+                                loadImageWithAnimation(marqueeFile, marqueeImageView)
+                                marqueeImageView.visibility = View.VISIBLE
+                                marqueeShowingText = false
+                            } else {
+                                // No marquee - show game name as text if logo enabled
+                                val displayName = screensaverGameName ?: gameName
+                                val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                                val textDrawable = createTextDrawable(displayName, logoSize)
+
+                                val layoutParams = marqueeImageView.layoutParams
+                                layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                                marqueeImageView.layoutParams = layoutParams
+
+                                marqueeImageView.setImageDrawable(textDrawable)
+                                marqueeImageView.visibility = View.VISIBLE
+                                marqueeShowingText = true
+                            }
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    } else {
+                        // No game image - show fallback with marquee/text
+                        loadFallbackBackground()
+
+                        if (prefs.getBoolean("game_logo_enabled", true)) {
+                            val marqueeFile = findMarqueeImage(
+                                screensaverSystemName!!,
+                                gameName,
+                                screensaverGameFilename!!
+                            )
+
+                            if (marqueeFile != null && marqueeFile.exists()) {
+                                updateMarqueeSize()
+                                loadImageWithAnimation(marqueeFile, marqueeImageView)
+                                marqueeImageView.visibility = View.VISIBLE
+                                marqueeShowingText = false
+                            } else {
+                                val displayName = screensaverGameName ?: gameName
+                                val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                                val textDrawable = createTextDrawable(displayName, logoSize)
+
+                                val layoutParams = marqueeImageView.layoutParams
+                                layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                                marqueeImageView.layoutParams = layoutParams
+
+                                marqueeImageView.setImageDrawable(textDrawable)
+                                marqueeImageView.visibility = View.VISIBLE
+                                marqueeShowingText = true
+                            }
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    }
+                }
+                "default_image" -> {
+                    // Keep fallback image, but update marquee to screensaver game's marquee
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
+                        val marqueeFile = findMarqueeImage(
+                            screensaverSystemName!!,
+                            gameName,
+                            screensaverGameFilename!!
+                        )
+
+                        if (marqueeFile != null && marqueeFile.exists()) {
+                            updateMarqueeSize()
+                            loadImageWithAnimation(marqueeFile, marqueeImageView)
+                            marqueeImageView.visibility = View.VISIBLE
+                            marqueeShowingText = false
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    } else {
+                        marqueeImageView.visibility = View.GONE
+                    }
+                }
+                // "black_screen" mode doesn't update anything
+            }
         }
     }
 
@@ -2013,6 +2384,7 @@ class MainActivity : AppCompatActivity() {
         // Don't play videos if:
         // 1. App doesn't have window focus (game launched on top of companion)
         // 2. Game is playing on other screen
+        // 3. Screensaver is active
         if (!hasWindowFocus) {
             android.util.Log.d("MainActivity", "Video blocked - app doesn't have focus (game on top)")
             releasePlayer()
@@ -2021,6 +2393,12 @@ class MainActivity : AppCompatActivity() {
 
         if (isGamePlaying) {
             android.util.Log.d("MainActivity", "Video blocked - game playing on other screen")
+            releasePlayer()
+            return
+        }
+
+        if (isScreensaverActive) {
+            android.util.Log.d("MainActivity", "Video blocked - screensaver active")
             releasePlayer()
             return
         }
@@ -2049,11 +2427,11 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 videoDelayRunnable = Runnable {
-                    // Double-check focus and game state before loading video
-                    if (hasWindowFocus && !isGamePlaying) {
+                    // Double-check focus, game state, and screensaver before loading video
+                    if (hasWindowFocus && !isGamePlaying && !isScreensaverActive) {
                         loadVideo(videoPath)
                     } else {
-                        android.util.Log.d("MainActivity", "Video delayed load cancelled - focus lost or game playing")
+                        android.util.Log.d("MainActivity", "Video delayed load cancelled - focus lost, game playing, or screensaver active")
                     }
                 }
 
