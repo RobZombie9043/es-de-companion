@@ -70,7 +70,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_gallery"
-                        android:tint="#FFB74D"
+                        app:tint="#FFB74D"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -602,9 +602,6 @@
                         app:chipStrokeWidth="2dp" />
 
                 </com.google.android.material.chip.ChipGroup>
-                android:textColor="#999999"
-                android:textSize="13sp"
-                android:layout_marginBottom="20dp" />
 
                 <!-- Shared Logo Size -->
                 <LinearLayout
@@ -696,7 +693,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_view"
-                        android:tint="#03DAC6"
+                        app:tint="#03DAC6"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -843,7 +840,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_sort_by_size"
-                        android:tint="#CF6679"
+                        app:tint="#CF6679"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
@@ -1132,7 +1129,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@android:drawable/ic_menu_save"
-                        android:tint="#BB86FC"
+                        app:tint="#BB86FC"
                         android:layout_marginEnd="12dp" />
 
                     <TextView
