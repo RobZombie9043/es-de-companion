@@ -543,6 +543,7 @@ class MainActivity : AppCompatActivity() {
                     Glide.with(this)
                         .load(customDefault)
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(200))
                         .into(gameImageView)
                     android.util.Log.d("MainActivity", "Loaded custom default image: ${customDefault.absolutePath}")
                     customDefaultFound = true
@@ -563,6 +564,7 @@ class MainActivity : AppCompatActivity() {
             Glide.with(this)
                 .load(android.net.Uri.parse("file:///android_asset/$assetPath"))
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(200))
                 .into(gameImageView)
             android.util.Log.d("MainActivity", "Loaded fallback image from assets")
         } catch (e: Exception) {
@@ -570,6 +572,53 @@ class MainActivity : AppCompatActivity() {
             // Final fallback: solid color
             gameImageView.setBackgroundColor(android.graphics.Color.parseColor("#1A1A1A"))
             gameImageView.setImageDrawable(null)
+        }
+    }
+
+    /**
+     * Load screensaver default wallpaper and marquee together with animation
+     */
+    private fun loadScreensaverDefaultWithMarquee(gameName: String, systemName: String, filename: String) {
+        // Load wallpaper (custom or built-in) with user's animation style
+        val systemImagePath = getSystemImagePath()
+        val customDefaultExtensions = listOf("png", "jpg", "jpeg", "webp")
+        var wallpaperFile: File? = null
+
+        // Check for custom default
+        for (ext in customDefaultExtensions) {
+            val customDefault = File(systemImagePath, "default.$ext")
+            if (customDefault.exists()) {
+                wallpaperFile = customDefault
+                break
+            }
+        }
+
+        // Load wallpaper with animation
+        if (wallpaperFile != null) {
+            loadImageWithAnimation(wallpaperFile, gameImageView)
+        } else {
+            // Use built-in fallback - need to handle asset differently
+            // For now, just load with fade since we can't use File with assets
+            Glide.with(this)
+                .load(android.net.Uri.parse("file:///android_asset/fallback/default_background.webp"))
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(250))
+                .into(gameImageView)
+        }
+
+        // Load marquee with same animation
+        if (prefs.getBoolean("game_logo_enabled", true)) {
+            val marqueeFile = findMarqueeImage(systemName, gameName, filename)
+            if (marqueeFile != null && marqueeFile.exists()) {
+                updateMarqueeSize()
+                loadImageWithAnimation(marqueeFile, marqueeImageView)
+                marqueeImageView.visibility = View.VISIBLE
+                marqueeShowingText = false
+            } else {
+                marqueeImageView.visibility = View.GONE
+            }
+        } else {
+            marqueeImageView.visibility = View.GONE
         }
     }
 
@@ -2213,66 +2262,34 @@ class MainActivity : AppCompatActivity() {
                 videoView.visibility = View.GONE
             }
             else -> { // "default_image"
-                // Show default fallback image with current screensaver game's marquee (if available)
-                loadFallbackBackground()
+                // Don't load wallpaper yet - stay black until game-select arrives
+                // Then load wallpaper and marquee together for a cleaner look
                 gameImageView.visibility = View.VISIBLE
                 videoView.visibility = View.GONE
 
-                // Show the screensaver game's marquee if available, otherwise fall back to browsing state marquee
-                if (prefs.getBoolean("game_logo_enabled", true)) {
-                    // First try to show screensaver game marquee (slideshow/video mode)
-                    if (screensaverGameFilename != null && screensaverSystemName != null) {
+                // Only load if we already have screensaver game data
+                // Otherwise handleScreensaverGameSelect will load both together
+                if (screensaverGameFilename != null && screensaverSystemName != null) {
+                    // We have data already, load now
+                    loadFallbackBackground()
+
+                    if (prefs.getBoolean("game_logo_enabled", true)) {
                         val gameName = screensaverGameFilename!!.substringBeforeLast('.')
                         val marqueeImage = findMarqueeImage(screensaverSystemName!!, gameName, screensaverGameFilename!!)
                         if (marqueeImage != null) {
                             Glide.with(this)
                                 .load(marqueeImage)
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
                                 .into(marqueeImageView)
                             marqueeImageView.visibility = View.VISIBLE
                         } else {
                             marqueeImageView.visibility = View.GONE
                         }
                     } else {
-                        // No screensaver game data (dim/black mode) - show browsing state marquee
-                        if (isSystemScrollActive) {
-                            // Show system logo
-                            val systemName = currentSystemName
-                            if (systemName != null && prefs.getBoolean("system_logo_enabled", true)) {
-                                val logoDrawable = loadSystemLogoFromAssets(systemName)
-                                if (logoDrawable != null) {
-                                    updateMarqueeSize()
-                                    marqueeImageView.setImageDrawable(logoDrawable)
-                                    marqueeImageView.visibility = View.VISIBLE
-                                    marqueeShowingText = false
-                                } else {
-                                    marqueeImageView.visibility = View.GONE
-                                }
-                            } else {
-                                marqueeImageView.visibility = View.GONE
-                            }
-                        } else {
-                            // Show game marquee from browsing state
-                            val filename = currentGameFilename
-                            val systemName = currentSystemName
-                            if (filename != null && systemName != null) {
-                                val gameName = filename.substringBeforeLast('.')
-                                val marqueeImage = findMarqueeImage(systemName, gameName, filename)
-                                if (marqueeImage != null) {
-                                    Glide.with(this)
-                                        .load(marqueeImage)
-                                        .into(marqueeImageView)
-                                    marqueeImageView.visibility = View.VISIBLE
-                                } else {
-                                    marqueeImageView.visibility = View.GONE
-                                }
-                            } else {
-                                marqueeImageView.visibility = View.GONE
-                            }
-                        }
+                        marqueeImageView.visibility = View.GONE
                     }
-                } else {
-                    marqueeImageView.visibility = View.GONE
                 }
+                // If no data yet, screen stays black until handleScreensaverGameSelect loads both
             }
         }
     }
@@ -2440,29 +2457,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 "default_image" -> {
-                    // Keep fallback image, but update marquee to screensaver game's marquee
-                    if (prefs.getBoolean("game_logo_enabled", true)) {
-                        val marqueeFile = findMarqueeImage(
-                            screensaverSystemName!!,
-                            gameName,
-                            screensaverGameFilename!!
-                        )
-
-                        if (marqueeFile != null && marqueeFile.exists()) {
-                            updateMarqueeSize()
-                            // Load instantly without animation to prevent flash
-                            Glide.with(this)
-                                .load(marqueeFile)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .into(marqueeImageView)
-                            marqueeImageView.visibility = View.VISIBLE
-                            marqueeShowingText = false
-                        } else {
-                            marqueeImageView.visibility = View.GONE
-                        }
-                    } else {
-                        marqueeImageView.visibility = View.GONE
-                    }
+                    // Load both wallpaper and marquee together with user's animation style
+                    loadScreensaverDefaultWithMarquee(gameName, screensaverSystemName!!, screensaverGameFilename!!)
                 }
                 // "black_screen" mode doesn't update anything
             }
