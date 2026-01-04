@@ -531,7 +531,33 @@ class MainActivity : AppCompatActivity() {
         return path
     }
     private fun loadFallbackBackground() {
-        // Try to load from assets first (since you added default_background.webp)
+        // First, try to load custom default image from System Images Path if set
+        val systemImagePath = getSystemImagePath()
+        val customDefaultExtensions = listOf("png", "jpg", "jpeg", "webp")
+        var customDefaultFound = false
+
+        for (ext in customDefaultExtensions) {
+            val customDefault = File(systemImagePath, "default.$ext")
+            if (customDefault.exists()) {
+                try {
+                    Glide.with(this)
+                        .load(customDefault)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(gameImageView)
+                    android.util.Log.d("MainActivity", "Loaded custom default image: ${customDefault.absolutePath}")
+                    customDefaultFound = true
+                    return
+                } catch (e: Exception) {
+                    android.util.Log.w("MainActivity", "Failed to load custom default image: ${customDefault.absolutePath}", e)
+                }
+            }
+        }
+
+        if (!customDefaultFound) {
+            android.util.Log.d("MainActivity", "No custom default image found in $systemImagePath, using built-in fallback")
+        }
+
+        // Try to load from assets (built-in default_background.webp)
         try {
             val assetPath = "fallback/default_background.webp"
             Glide.with(this)
@@ -1025,6 +1051,16 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 "esde_screensaver_start.txt" -> {
                                     android.util.Log.d("MainActivity", "Screensaver start detected")
+
+                                    // CRITICAL: Clear display IMMEDIATELY in the event handler
+                                    // This must happen synchronously before any other processing
+                                    gameImageView.setImageDrawable(null)
+                                    gameImageView.setImageBitmap(null)
+                                    gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+                                    marqueeImageView.setImageDrawable(null)
+                                    marqueeImageView.setImageBitmap(null)
+                                    marqueeImageView.visibility = View.GONE
+
                                     isScreensaverActive = true
                                     handleScreensaverStart()
                                 }
@@ -1038,7 +1074,13 @@ class MainActivity : AppCompatActivity() {
                                     }
 
                                     android.util.Log.d("MainActivity", "Screensaver end detected: $endReason")
+
+                                    // Clear screensaver state immediately to prevent flash when restarting
                                     isScreensaverActive = false
+                                    screensaverGameFilename = null
+                                    screensaverGameName = null
+                                    screensaverSystemName = null
+
                                     handleScreensaverEnd(endReason)
                                 }
                                 "esde_screensavergameselect_filename.txt" -> {
@@ -2102,8 +2144,16 @@ class MainActivity : AppCompatActivity() {
      * Handle screensaver start event
      */
     private fun handleScreensaverStart() {
+        // Display was already cleared in the event handler for immediate response
+        // Now just cancel pending operations and configure for screensaver behavior
+
+        // Cancel any pending Glide requests
+        Glide.with(this).clear(gameImageView)
+        Glide.with(this).clear(marqueeImageView)
+
         // Stop any videos
         releasePlayer()
+        videoView.visibility = View.GONE
 
         val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
 
@@ -2253,6 +2303,12 @@ class MainActivity : AppCompatActivity() {
                 // User cancelled screensaver (pressed back or timeout)
                 // Return to the browsing state from before screensaver started
                 android.util.Log.d("MainActivity", "Screensaver end - cancel, returning to browsing state")
+
+                // Variables already cleared in event handler, but ensure they're gone
+                screensaverGameFilename = null
+                screensaverGameName = null
+                screensaverSystemName = null
+
                 if (isSystemScrollActive) {
                     loadSystemImage()
                 } else {
@@ -2276,6 +2332,20 @@ class MainActivity : AppCompatActivity() {
     private fun handleScreensaverGameSelect() {
         val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
 
+        // Clear old content first to prevent flash
+        when (screensaverBehavior) {
+            "game_image" -> {
+                gameImageView.setImageDrawable(null)
+                marqueeImageView.setImageDrawable(null)
+                marqueeImageView.visibility = View.GONE
+            }
+            "default_image" -> {
+                // Clear marquee (image stays as fallback)
+                marqueeImageView.setImageDrawable(null)
+                marqueeImageView.visibility = View.GONE
+            }
+        }
+
         if (screensaverGameFilename != null && screensaverSystemName != null) {
             val gameName = screensaverGameFilename!!.substringBeforeLast('.')
 
@@ -2289,7 +2359,11 @@ class MainActivity : AppCompatActivity() {
                     )
 
                     if (gameImage != null && gameImage.exists()) {
-                        loadImageWithAnimation(gameImage, gameImageView)
+                        // Load instantly without animation to prevent flash
+                        Glide.with(this)
+                            .load(gameImage)
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .into(gameImageView)
 
                         // Load marquee if enabled
                         if (prefs.getBoolean("game_logo_enabled", true)) {
@@ -2301,7 +2375,11 @@ class MainActivity : AppCompatActivity() {
 
                             if (marqueeFile != null && marqueeFile.exists()) {
                                 updateMarqueeSize()
-                                loadImageWithAnimation(marqueeFile, marqueeImageView)
+                                // Load instantly without animation to prevent flash
+                                Glide.with(this)
+                                    .load(marqueeFile)
+                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                    .into(marqueeImageView)
                                 marqueeImageView.visibility = View.VISIBLE
                                 marqueeShowingText = false
                             } else {
@@ -2335,7 +2413,11 @@ class MainActivity : AppCompatActivity() {
 
                             if (marqueeFile != null && marqueeFile.exists()) {
                                 updateMarqueeSize()
-                                loadImageWithAnimation(marqueeFile, marqueeImageView)
+                                // Load instantly without animation to prevent flash
+                                Glide.with(this)
+                                    .load(marqueeFile)
+                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                    .into(marqueeImageView)
                                 marqueeImageView.visibility = View.VISIBLE
                                 marqueeShowingText = false
                             } else {
@@ -2368,7 +2450,11 @@ class MainActivity : AppCompatActivity() {
 
                         if (marqueeFile != null && marqueeFile.exists()) {
                             updateMarqueeSize()
-                            loadImageWithAnimation(marqueeFile, marqueeImageView)
+                            // Load instantly without animation to prevent flash
+                            Glide.with(this)
+                                .load(marqueeFile)
+                                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                .into(marqueeImageView)
                             marqueeImageView.visibility = View.VISIBLE
                             marqueeShowingText = false
                         } else {
