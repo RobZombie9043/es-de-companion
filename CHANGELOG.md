@@ -2,6 +2,8 @@
 
 ## [0.2.3] - TBC
 - Improved screensaver transitions for all event types
+- Fixed https://github.com/RobZombie9043/es-de-companion/issues/5 - App crash with custom images
+- Fixed png/jpg custom system images not loading 
 
 ## [0.2.2] - 2026-01-03 - Game launch & Screensaver Controls release
 
