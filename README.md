@@ -1,7 +1,17 @@
 # ES-DE Second Screen Companion
 
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.esde.companion%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FRobZombie9043%2Fes-de-companion%22%2C%22author%22%3A%22RobZombie9043%22%2C%22name%22%3A%22ES-DE%20Companion%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22releaseTitleAsVersion%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22allowInsecure%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22%5C%22%2C%5C%22refreshBeforeDownload%5C%22%3Afalse%2C%5C%22includeZips%5C%22%3Afalse%2C%5C%22zippedApkFilterRegEx%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3Anull%7D">
+  <img
+    src="https://github.com/ImranR98/Obtainium/blob/main/assets/graphics/badge_obtainium.png?raw=true"
+    alt="Add ES-DE Companion to Obtainium"
+    width="182"
+  >
+</a>
+
 ![Version](https://img.shields.io/badge/version-0.2.2-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
+
+
 
 A companion app for [ES-DE](https://es-de.org/) that displays beautiful game artwork and marquees on a secondary display, transforming your dual-screen device into an immersive retro gaming interface.
 
@@ -178,64 +188,7 @@ If you encounter any issues or have questions:
 2. Create a new issue with details about your problem
 
 ## 🔄 Changelog
-
-### [0.2.2] - 2026-01-05 - Gameplay & Screensaver Enhancement Release
-
-#### 🎮 Game Launch Display Control
-- **New Setting**: "Game Launch Display" in Application Behavior settings
-  - **Black**: Plain black screen during gameplay (minimal distraction)
-  - **Default Image**: Fallback background with current game marquee
-  - **Game Image**: Shows launched game's artwork and marquee
-- **Dual video blocking system** prevents videos during gameplay:
-  - Window focus detection (when ES-DE uses 'launch games on the other screen')
-  - Game state tracking (when game launches on top of ES-DE)
-- **Smart duplicate filtering** prevents event spam from running games
-- **Live setting updates** - Changes apply immediately if game is already running
-
-#### 🌙 Screensaver Display Control
-- **New Setting**: "Screensaver Display" in Application Behavior settings
-  - **Black**: Plain black screen during screensaver
-  - **Default Image**: Fallback background with current marquee
-  - **Game Image**: Shows screensaver game artwork (slideshow/video modes)
-- **Intelligent screensaver handling**:
-  - Automatically detects ES-DE screensaver type (dim/black vs. slideshow/video)
-  - Blocks videos during screensaver regardless of mode
-  - Ignores browse events during screensaver to prevent interference
-- **Live setting updates** - Changes apply immediately if screensaver is active
-
-#### 📁 Path Changes (Important!)
-- **Logs location**: Moved to `/storage/emulated/0/ES-DE Companion/logs`
-- **Script naming**: Prefix changed to `esdecompanion-` for clarity
-- **Migration system**: Automatic validation and migration from old paths/names
-- **Why**: Improves compatibility with ES-DE installed on SD cards (FileObserver requires internal storage) and provides clean future updating
-- **Action Required**: Re-run Quick Setup after updating to create new scripts
-
-### [0.2.1] - 2026-01-04 - SD Card Compatibility Fix
-- Fixed compatibility with ES-DE installed to SD card
-- Moved logs to internal storage for reliable FileObserver monitoring
-- **Note**: Re-create scripts in Settings after updating if game images were not loading
-
-### [0.2.0] - 2026-01-04 - UX Improvements Release
-- 🎓 **Enhanced onboarding** - Comprehensive tutorial dialog at end of setup wizard
-- 💡 **Settings discoverability** - Visual pulse animation on settings button
-- ⚡ **Performance optimizations** - Separate debouncing for systems and games
-
-### [0.1.2] - 2026-01-03 - Various Presentation and Bug Fixes
-
-### [0.1.1] - 2026-01-03 - Video Playback Release
-- 🎬 **Video playback support** - Play game videos with configurable settings
-- 🎨 **UI improvements** - Renamed "Game Logo" to "Game Marquee" for clarity
-- 🔧 **App launch improvements** - Changed default to "This Screen"
-- ⚡ **Performance optimizations** - Smart video and marquee loading
-
-### [0.1.0] - 2026-01-02 - Initial Release
-- ✨ Built-in system logos for all supported ES-DE systems
-- 🔧 Separate on/off controls for system and game logos
-- 📏 Shared logo size control (Small/Medium/Large)
-- ✨ Advanced animation system with 4 styles
-- 🚀 Quick Setup wizard with ES-DE script configuration
-- 📱 App drawer with search and visibility controls
-- 🖼️ Real-time game artwork and marquee display
+[Changelog](https://github.com/RobZombie9043/es-de-companion/blob/master/CHANGELOG.md)
 
 ---
 
