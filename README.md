@@ -26,7 +26,6 @@ A companion app for [ES-DE](https://es-de.org/) that displays beautiful game art
 - **Video playback support** - Play game videos when browsing games
   - Configurable delay (instant to 5 seconds) before video starts
   - Optional audio control (muted by default)
-  - Respects animation settings (fade, scale+fade, custom)
   - Videos automatically stop during gameplay and screensavers
 - **System view support** - Displays built-in system logos, custom images, or random game artwork when browsing systems
 - **Smooth animations** - Configurable fade and scale effects with custom timing options
@@ -49,8 +48,7 @@ A companion app for [ES-DE](https://es-de.org/) that displays beautiful game art
 - **App visibility control** - Hide apps you don't want to see in the drawer
 - **Long-press menu** - Configure launch behavior for each app
   - Open app info/settings
-  - Choose display (this screen/other screen) for launching apps
-  - Per-app preferences are saved
+  - Choose display (this screen/other screen) for launching apps with per-app preferences saved
 
 ### Easy Setup
 - **Quick Setup Wizard** - Step-by-step configuration on first launch
@@ -90,34 +88,16 @@ For the best experience, use [Mjolnir](https://github.com/blacksheepmvp/mjolnir)
 
 ## ⚙️ Configuration
 
-### Default Settings
-- **Animation Style**: Scale + Fade
-- **Background Dimming**: 25%
-- **Drawer Opacity**: 70%
-- **Background Priority**: Fanart
-- **Grid Columns**: 4
-- **System Logo**: On
-- **Game Marquee**: On
-- **Logo Size**: Medium
-- **Video Playback**: Off
-- **Video Audio**: Off (when video enabled)
-- **App Launch Display**: This Screen
-- **Game Launch Display**: Default Image
-- **Screensaver Display**: Default Image
-
-All settings can be customized in the Settings screen.
-
 ### File Paths
 
 The app uses these default paths (configurable in settings):
 
 | Path | Default Location | Purpose |
 |------|-----------------|---------|
-| **Downloaded Media** | `/storage/emulated/0/ES-DE/downloaded_media` | Game artwork - fanart, screenshots, marquees |
-| **Videos** | `/storage/emulated/0/ES-DE/downloaded_media/{system}/videos` | Game videos (optional) |
+| **Downloaded Media** | `/storage/emulated/0/ES-DE/downloaded_media` | Game artwork - fanart, screenshots, marquees, Game videos |
 | **System Images** | `/storage/emulated/0/ES-DE/downloaded_media/system_images` | Custom system images (optional override) |
 | **System Logos** | `/storage/emulated/0/ES-DE/downloaded_media/system_logos` | Custom system logos (optional override) |
-| **Scripts** | `/storage/emulated/0/ES-DE Companion/scripts` | Integration scripts |
+| **Scripts** | `/storage/emulated/0/ES-DE/scripts` | Integration scripts |
 | **Logs** | `/storage/emulated/0/ES-DE Companion/logs` | Event log files |
 
 **Note**: Scripts and logs have moved to internal storage (`/ES-DE Companion/`) for better compatibility with SD card installations.
@@ -150,19 +130,19 @@ The Quick Setup creates these scripts automatically:
 ```
 ES-DE Companion/scripts/
 ├── esdecompanion-game-select/
-│   └── esdecompanion-game-select.sh        # Browsing games
+│   └── esdecompanion-game-select.sh            # Browsing games
 ├── esdecompanion-system-select/
-│   └── esdecompanion-system-select.sh      # Browsing systems
+│   └── esdecompanion-system-select.sh          # Browsing systems
 ├── esdecompanion-game-start/
-│   └── esdecompanion-game-start.sh         # Game launched
+│   └── esdecompanion-game-start.sh             # Game launched
 ├── esdecompanion-game-end/
-│   └── esdecompanion-game-end.sh           # Game exited
+│   └── esdecompanion-game-end.sh               # Game exited
 ├── esdecompanion-screensaver-start/
-│   └── esdecompanion-screensaver-start.sh  # Screensaver started
+│   └── esdecompanion-screensaver-start.sh      # Screensaver started
 ├── esdecompanion-screensaver-end/
-│   └── esdecompanion-screensaver-end.sh    # Screensaver ended
+│   └── esdecompanion-screensaver-end.sh        # Screensaver ended
 └── esdecompanion-screensavergameselect/
-    └── esdecompanion-screensavergameselect.sh  # Screensaver game
+    └── esdecompanion-screensavergameselect.sh  # Screensaver game browsing
 ```
 
 ## 🤝 Contributing
