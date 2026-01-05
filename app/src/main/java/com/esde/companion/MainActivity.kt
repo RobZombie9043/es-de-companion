@@ -282,21 +282,109 @@ class MainActivity : AppCompatActivity() {
             else -> true
         }
 
-        // Check if all 7 scripts are present with correct names
-        val hasCorrectScripts = checkForCorrectScripts()
-
-        // Launch setup wizard if:
+        // Launch setup wizard immediately if:
         // 1. Setup not completed, OR
-        // 2. Missing permissions, OR
-        // 3. Scripts are missing/outdated
-        if (!hasCompletedSetup || !hasPermission || !hasCorrectScripts) {
-            // Delay slightly to let UI settle
+        // 2. Missing permissions
+        if (!hasCompletedSetup || !hasPermission) {
+            android.util.Log.d("MainActivity", "Setup incomplete or missing permissions - launching wizard immediately")
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 val intent = Intent(this, SettingsActivity::class.java)
                 intent.putExtra("AUTO_START_WIZARD", true)
                 settingsLauncher.launch(intent)
             }, 1000)
+            return
         }
+
+        // For script check, wait for SD card if needed (setup is complete and has permissions)
+        checkScriptsWithRetry()
+    }
+
+    /**
+     * Check for scripts with retry logic to handle SD card mounting delays
+     */
+    private fun checkScriptsWithRetry(attempt: Int = 0, maxAttempts: Int = 5) {
+        val scriptsPath = prefs.getString("scripts_path", null)
+
+        // If no custom scripts path is set, scripts are likely on internal storage
+        // Check immediately without retry
+        if (scriptsPath == null || scriptsPath.startsWith("/storage/emulated/0")) {
+            android.util.Log.d("MainActivity", "Scripts on internal storage - checking immediately")
+            val hasCorrectScripts = checkForCorrectScripts()
+            if (!hasCorrectScripts) {
+                android.util.Log.d("MainActivity", "Scripts missing on internal storage - launching wizard")
+                launchSetupWizardForScripts()
+            }
+            return
+        }
+
+        // Custom path set - might be on SD card
+        // Check if path is accessible (SD card mounted)
+        val scriptsDir = File(scriptsPath)
+        val isAccessible = scriptsDir.exists() && scriptsDir.canRead()
+
+        if (!isAccessible && attempt < maxAttempts) {
+            // SD card not mounted yet - wait and retry
+            val delayMs = when (attempt) {
+                0 -> 1000L  // 1 second
+                1 -> 2000L  // 2 seconds
+                2 -> 3000L  // 3 seconds
+                3 -> 4000L  // 4 seconds
+                else -> 5000L  // 5 seconds
+            }
+
+            android.util.Log.d("MainActivity", "Scripts path not accessible (attempt ${attempt + 1}/$maxAttempts) - waiting ${delayMs}ms for SD card mount: $scriptsPath")
+
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                checkScriptsWithRetry(attempt + 1, maxAttempts)
+            }, delayMs)
+            return
+        }
+
+        // Either accessible now or max attempts reached - check scripts
+        val hasCorrectScripts = checkForCorrectScripts()
+
+        if (!hasCorrectScripts) {
+            if (isAccessible) {
+                // Path is accessible but scripts are missing/invalid - launch wizard
+                android.util.Log.d("MainActivity", "Scripts missing/invalid on accessible path - launching wizard")
+                launchSetupWizardForScripts()
+            } else {
+                // Max attempts reached and still not accessible
+                // SD card might not be mounted - show a helpful message
+                android.util.Log.w("MainActivity", "Scripts path not accessible after $maxAttempts attempts: $scriptsPath")
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    showSdCardNotMountedDialog(scriptsPath)
+                }, 1000)
+            }
+        } else {
+            android.util.Log.d("MainActivity", "Scripts found and valid - no wizard needed")
+        }
+    }
+
+    /**
+     * Launch setup wizard specifically for script issues
+     */
+    private fun launchSetupWizardForScripts() {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            val intent = Intent(this, SettingsActivity::class.java)
+            intent.putExtra("AUTO_START_WIZARD", true)
+            settingsLauncher.launch(intent)
+        }, 1000)
+    }
+
+    /**
+     * Show dialog when SD card is not mounted
+     */
+    private fun showSdCardNotMountedDialog(scriptsPath: String) {
+        AlertDialog.Builder(this)
+            .setTitle("SD Card Not Detected")
+            .setMessage("Your scripts folder appears to be on an SD card that is not currently accessible:\n\n$scriptsPath\n\nPlease ensure:\n• The SD card is properly inserted\n• The device has finished booting\n• The SD card is mounted\n\nThe app will work once the SD card becomes accessible.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                settingsLauncher.launch(Intent(this, SettingsActivity::class.java))
+            }
+            .setNegativeButton("Dismiss", null)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
     }
 
     private fun checkForCorrectScripts(): Boolean {
