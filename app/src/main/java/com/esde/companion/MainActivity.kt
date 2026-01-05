@@ -1159,10 +1159,11 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (bottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                    // Close the app drawer if it's open
                     bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
                 } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                    // Do nothing - stay on home screen
+                    // This prevents cycling through recent apps when pressing back
                 }
             }
         })
