@@ -1,5 +1,8 @@
 # 🔄 Changelog
 
+## [0.2.7] - 2026-01-07
+- Volume control fix that respects per screen volume controls
+
 ## [0.2.6] - 2026-01-07
 - Added an optional double tap shortcut to show/hide black overlay
 - Volume control fixes
