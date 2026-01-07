@@ -24,17 +24,6 @@
         android:background="#333333"
         android:layout_marginBottom="20dp" />
 
-    <!-- App Info Button -->
-    <Button
-        android:id="@+id/btnAppInfo"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="Open App Info"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="24dp" />
-
     <!-- Launch Position Section -->
     <TextView
         android:layout_width="match_parent"
@@ -48,7 +37,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Choose which display to launch on"
+        android:text="Tap to launch app on chosen display"
         android:textColor="#999999"
         android:textSize="14sp"
         android:layout_marginBottom="12dp" />
@@ -58,7 +47,7 @@
         android:id="@+id/launchPositionChipGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="24dp"
         app:singleSelection="true"
         app:selectionRequired="true">
 
@@ -90,5 +79,33 @@
             android:minHeight="48dp" />
 
     </com.google.android.material.chip.ChipGroup>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333"
+        android:layout_marginBottom="20dp" />
+
+    <!-- App Info Button -->
+    <Button
+        android:id="@+id/btnAppInfo"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Open App Info"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:backgroundTint="#BB86FC"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Hide App Button -->
+    <Button
+        android:id="@+id/btnHideApp"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Hide App"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:backgroundTint="#CF6679" />
 
 </LinearLayout>

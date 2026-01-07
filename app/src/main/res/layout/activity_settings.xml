@@ -43,7 +43,7 @@
             android:layout_marginBottom="24dp" />
 
 
-        <!-- 2. IMAGE SETTINGS CARD -->
+        <!-- 1. IMAGE SETTINGS CARD -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -666,7 +666,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- 3. VISUAL EFFECTS CARD -->
+        <!-- 2. VISUAL EFFECTS CARD -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -813,7 +813,224 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- 4. APP DRAWER CARD -->
+        <!-- 3. APPLICATION BEHAVIOR CARD -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#1A1A1A"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Section Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@android:drawable/ic_menu_manage"
+                        app:tint="#4CAF50"
+                        android:layout_marginEnd="12dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="APPLICATION BEHAVIOR"
+                        android:textColor="#4CAF50"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+                </LinearLayout>
+
+                <!-- Game Launch Behavior -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Game Launch Display"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Choose what to display while a game is running"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/gameLaunchBehaviorChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameLaunchBlackScreen"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Black"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameLaunchDefaultImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Default Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameLaunchGameImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Game Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        android:checked="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+                </com.google.android.material.chip.ChipGroup>
+
+
+                <!-- Screensaver Display -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Screensaver Display"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Choose what to display during ES-DE screensaver"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/screensaverBehaviorChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/screensaverBlackScreen"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Black"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/screensaverDefaultImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Default Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/screensaverGameImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Game Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        android:checked="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <!-- Black Overlay Toggle -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Double-Tap Black Overlay"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Double-tap screen to show/hide black overlay"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/blackOverlayChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/blackOverlayOff"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        android:checked="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/blackOverlayOn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="On"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 4. APP DRAWER CARD (moved from position 3) -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -987,224 +1204,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- 5. APPLICATION BEHAVIOR CARD -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="#1A1A1A"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <!-- Section Header -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@android:drawable/ic_menu_manage"
-                        app:tint="#4CAF50"
-                        android:layout_marginEnd="12dp" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="APPLICATION BEHAVIOR"
-                        android:textColor="#4CAF50"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.1" />
-                </LinearLayout>
-
-                <!-- Game Launch Behavior -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Game Launch Display"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Choose what to display while a game is running"
-                    android:textColor="#999999"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/gameLaunchBehaviorChipGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="24dp"
-                    app:singleSelection="true"
-                    app:selectionRequired="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/gameLaunchBlackScreen"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Black"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/gameLaunchDefaultImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Default Image"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        android:checked="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/gameLaunchGameImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Game Image"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-                </com.google.android.material.chip.ChipGroup>
-
-
-                <!-- Screensaver Display -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Screensaver Display"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Choose what to display during ES-DE screensaver"
-                    android:textColor="#999999"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/screensaverBehaviorChipGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    app:singleSelection="true"
-                    app:selectionRequired="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/screensaverBlackScreen"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Black"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/screensaverDefaultImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Default Image"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        android:checked="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/screensaverGameImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Game Image"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-                </com.google.android.material.chip.ChipGroup>
-
-                <!-- Black Overlay Toggle -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Double-Tap Black Overlay"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:layout_marginTop="24dp"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Double-tap screen to show/hide black overlay"
-                    android:textColor="#999999"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/blackOverlayChipGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    app:singleSelection="true"
-                    app:selectionRequired="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/blackOverlayOff"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Off"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        android:checked="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/blackOverlayOn"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="On"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-
-                </com.google.android.material.chip.ChipGroup>
-
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- 6. PATHS CARD -->
+        <!-- 5. PATHS CARD -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -1472,7 +1472,7 @@
                 android:id="@+id/versionText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ES-DE Companion v0.2.9"
+                android:text="ES-DE Companion v0.2.8"
                 android:textColor="#666666"
                 android:textSize="12sp"
                 android:layout_marginBottom="4dp" />

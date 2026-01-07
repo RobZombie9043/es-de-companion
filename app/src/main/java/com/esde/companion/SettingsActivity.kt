@@ -840,7 +840,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // Setup video delay slider (0-5 seconds in 0.5s increments = 0-10 on seekbar)
-        val savedDelay = prefs.getInt(VIDEO_DELAY_KEY, 0) // Default: 0 (instant)
+        val savedDelay = prefs.getInt(VIDEO_DELAY_KEY, 4) // Default: 4 (2 seconds)
         videoDelaySeekBar.progress = savedDelay
         updateVideoDelayText(savedDelay)
 
@@ -885,7 +885,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupGameLaunchBehavior() {
         // Load saved game launch behavior (default: "default_image")
-        val gameLaunchBehavior = prefs.getString(GAME_LAUNCH_BEHAVIOR_KEY, "default_image") ?: "default_image"
+        val gameLaunchBehavior = prefs.getString(GAME_LAUNCH_BEHAVIOR_KEY, "game_image") ?: "game_image"
 
         // Set initial chip selection
         val chipToCheck = when (gameLaunchBehavior) {
@@ -912,7 +912,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupScreensaverBehavior() {
         // Load saved screensaver behavior (default: "default_image")
-        val screensaverBehavior = prefs.getString(SCREENSAVER_BEHAVIOR_KEY, "default_image") ?: "default_image"
+        val screensaverBehavior = prefs.getString(SCREENSAVER_BEHAVIOR_KEY, "game_image") ?: "game_image"
 
         // Set initial chip selection
         val chipToCheck = when (screensaverBehavior) {

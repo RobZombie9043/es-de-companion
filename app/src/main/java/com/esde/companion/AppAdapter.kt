@@ -10,15 +10,17 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class AppAdapter(
-    private val apps: List<ResolveInfo>,
+    private var apps: List<ResolveInfo>,  // Change to var
     private val packageManager: PackageManager,
     private val onAppClick: (ResolveInfo) -> Unit,
-    private val onAppLongClick: (ResolveInfo, View) -> Unit
+    private val onAppLongClick: (ResolveInfo, View) -> Unit,
+    private val appLaunchPrefs: AppLaunchPreferences
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 
     class AppViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.appIcon)
         val appName: TextView = view.findViewById(R.id.appName)
+        val launchIndicator: View = view.findViewById(R.id.launchIndicator)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
@@ -29,8 +31,14 @@ class AppAdapter(
 
     override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
         val app = apps[position]
+        val packageName = app.activityInfo?.packageName ?: ""
+
         holder.appName.text = app.loadLabel(packageManager)
         holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
+
+        // Show indicator if app launches on other screen
+        val launchesOnOtherScreen = appLaunchPrefs.shouldLaunchOnBottom(packageName)
+        holder.launchIndicator.visibility = if (launchesOnOtherScreen) View.VISIBLE else View.GONE
 
         // Regular click to launch app
         holder.itemView.setOnClickListener {
@@ -45,4 +53,15 @@ class AppAdapter(
     }
 
     override fun getItemCount() = apps.size
+
+    // Add method to refresh indicators when preferences change
+    fun refreshIndicators() {
+        notifyDataSetChanged()
+    }
+
+    // Add method to update data without losing scroll position
+    fun updateApps(newApps: List<ResolveInfo>) {
+        apps = newApps
+        notifyDataSetChanged()
+    }
 }

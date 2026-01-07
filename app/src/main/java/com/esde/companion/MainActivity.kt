@@ -82,8 +82,8 @@ class MainActivity : AppCompatActivity() {
     private var currentGameFilename: String? = null  // Filename
     private var currentSystemName: String? = null  // Current system
     private var allApps = listOf<ResolveInfo>()  // Store all apps for search filtering
-    private var hasWindowFocus = true  // Track if app has window focus (is on top)
     private var isGamePlaying = false  // Track if game is running on other screen
+    private var hasWindowFocus = true  // Track if app has window focus (is on top)
     private var playingGameFilename: String? = null  // Filename of currently playing game
     private var isScreensaverActive = false  // Track if ES-DE screensaver is running
     private var screensaverGameFilename: String? = null  // Current screensaver game filename
@@ -728,8 +728,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         super.onPause()
         // Cancel any pending video delay timers (prevent video loading while in settings)
         videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
-        // Pause video playback when app goes to background
-        player?.pause()
+        // Stop and release video player when app goes to background
+        // This fixes video playback issues on devices with identical display names (e.g., Ayaneo Pocket DS)
+        releasePlayer()
     }
 
     override fun onResume() {
@@ -744,9 +745,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         // Update video volume based on current system volume
         updateVideoVolume()
-
-        // Resume video playback if paused
-        player?.play()
 
         // Clear search bar
         if (::appSearchBar.isInitialized) {
@@ -768,16 +766,25 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             marqueeImageView.layoutParams = layoutParams
         }
 
-        // Reload images based on current state (don't change modes)
+        // Reload images and videos based on current state (don't change modes)
         // Skip reload if returning from settings with no changes
         if (skipNextReload) {
             skipNextReload = false
             android.util.Log.d("MainActivity", "Skipping reload - no settings changed")
         } else {
-            if (isSystemScrollActive) {
-                loadSystemImage()
+            // Don't reload if game is playing or screensaver is active
+            // This prevents unnecessary video loading during these states
+            if (isGamePlaying) {
+                android.util.Log.d("MainActivity", "Skipping reload - game playing")
+            } else if (isScreensaverActive) {
+                android.util.Log.d("MainActivity", "Skipping reload - screensaver active")
             } else {
-                loadGameInfo()
+                // Normal reload - this will reload both images and videos
+                if (isSystemScrollActive) {
+                    loadSystemImage()
+                } else {
+                    loadGameInfo()  // This calls handleVideoForGame() internally
+                }
             }
         }
     }
@@ -1160,23 +1167,18 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         bottomSheetBehavior = BottomSheetBehavior.from(appDrawer)
         bottomSheetBehavior.peekHeight = 0
         bottomSheetBehavior.isHideable = true
-        bottomSheetBehavior.skipCollapsed = true  // Skip collapsed state, go straight to expanded
+        bottomSheetBehavior.skipCollapsed = true
 
-        // Add callback to detect drawer state changes
         bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 if (newState == BottomSheetBehavior.STATE_EXPANDED) {
-                    // Drawer just opened - show hint if first time
                     showSettingsPulseHint()
                 }
             }
 
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                // Not needed
-            }
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {}
         })
 
-        // Post to ensure view is laid out before setting state
         appDrawer.post {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             android.util.Log.d("MainActivity", "AppDrawer state set to HIDDEN: ${bottomSheetBehavior.state}")
@@ -1185,22 +1187,21 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         val columnCount = prefs.getInt("column_count", 4)
         appRecyclerView.layoutManager = GridLayoutManager(this, columnCount)
 
-        // Get hidden apps from preferences
-        val hiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
-
         val mainIntent = Intent(Intent.ACTION_MAIN, null)
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-        allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
-            .filter { !hiddenApps.contains(it.activityInfo?.packageName ?: "") }  // Filter out hidden apps
-            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }  // Case-insensitive sort
 
-        appRecyclerView.adapter = AppAdapter(allApps, packageManager,
-            onAppClick = { app ->
-                launchApp(app)
-            },
-            onAppLongClick = { app, view ->
-                showAppOptionsDialog(app)
-            }
+        val hiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+        allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
+            .filter { !hiddenApps.contains(it.activityInfo?.packageName ?: "") }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+
+        // Pass appLaunchPrefs to adapter
+        appRecyclerView.adapter = AppAdapter(
+            allApps,
+            packageManager,
+            onAppClick = { app -> launchApp(app) },
+            onAppLongClick = { app, view -> showAppOptionsDialog(app) },
+            appLaunchPrefs = appLaunchPrefs // Add this
         )
 
         android.util.Log.d("MainActivity", "AppDrawer setup complete, initial state: ${bottomSheetBehavior.state}")
@@ -1289,13 +1290,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     }
                 }
 
-                appRecyclerView.adapter = AppAdapter(filteredApps, packageManager,
+                // Add appLaunchPrefs parameter here
+                appRecyclerView.adapter = AppAdapter(
+                    filteredApps,
+                    packageManager,
                     onAppClick = { app ->
                         launchApp(app)
                     },
                     onAppLongClick = { app, view ->
                         showAppOptionsDialog(app)
-                    }
+                    },
+                    appLaunchPrefs = appLaunchPrefs
                 )
             }
         })
@@ -1687,7 +1692,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.d("MainActivity", "Window focus gained - app is on top")
         } else {
             android.util.Log.d("MainActivity", "Window focus lost - something is on top of app")
-            // Stop any videos when app loses focus
+            // Stop videos when we lose focus (game launched on same screen)
             releasePlayer()
         }
     }
@@ -2508,48 +2513,109 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         val packageName = app.activityInfo?.packageName ?: return
         val appName = app.loadLabel(packageManager).toString()
 
-        // Inflate custom dialog layout
         val dialogView = layoutInflater.inflate(R.layout.dialog_app_options, null)
         val dialogAppName = dialogView.findViewById<TextView>(R.id.dialogAppName)
         val btnAppInfo = dialogView.findViewById<MaterialButton>(R.id.btnAppInfo)
+        val btnHideApp = dialogView.findViewById<MaterialButton>(R.id.btnHideApp)
         val chipGroup = dialogView.findViewById<ChipGroup>(R.id.launchPositionChipGroup)
-        val chipLaunchTop = dialogView.findViewById<Chip>(R.id.chipLaunchTop)  // "This screen"
-        val chipLaunchBottom = dialogView.findViewById<Chip>(R.id.chipLaunchBottom)  // "Other screen"
+        val chipLaunchTop = dialogView.findViewById<Chip>(R.id.chipLaunchTop)
+        val chipLaunchBottom = dialogView.findViewById<Chip>(R.id.chipLaunchBottom)
 
-        // Set app name
         dialogAppName.text = appName
 
-        // Get current launch position and set initial chip state
+        // Set initial chip state
         val currentPosition = appLaunchPrefs.getLaunchPosition(packageName)
         if (currentPosition == AppLaunchPreferences.POSITION_TOP) {
-            chipLaunchTop.isChecked = true  // "This screen"
+            chipLaunchTop.isChecked = true
         } else {
-            chipLaunchBottom.isChecked = true  // "Other screen"
+            chipLaunchBottom.isChecked = true
         }
 
-        // Create dialog
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
 
-        // App Info button click
+        // App Info button
         btnAppInfo.setOnClickListener {
             openAppInfo(packageName)
             dialog.dismiss()
         }
 
-        // Listen for chip selection changes
+        // Hide App button
+        btnHideApp.setOnClickListener {
+            // Show confirmation dialog
+            AlertDialog.Builder(this)
+                .setTitle("Hide App")
+                .setMessage("Hide \"$appName\" from the app drawer?\n\nYou can unhide it later from Settings → App Drawer → Manage Apps.")
+                .setPositiveButton("Hide") { _, _ ->
+                    // Get current hidden apps
+                    val hiddenApps = prefs.getStringSet("hidden_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+
+                    // Add this app to hidden list
+                    hiddenApps.add(packageName)
+
+                    // Save updated hidden apps list
+                    prefs.edit().putStringSet("hidden_apps", hiddenApps).apply()
+
+                    // Close the dialog
+                    dialog.dismiss()
+
+                    // Update allApps list to remove hidden app
+                    val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                    mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                    allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
+                        .filter { !hiddenApps.contains(it.activityInfo?.packageName ?: "") }
+                        .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+
+                    // Update the existing adapter with new list (preserves scroll position)
+                    (appRecyclerView.adapter as? AppAdapter)?.updateApps(allApps)
+
+                    // Show confirmation toast
+                    Toast.makeText(
+                        this,
+                        "\"$appName\" hidden from app drawer",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .setIcon(android.R.drawable.ic_menu_delete)
+                .show()
+        }
+
+        // Chip selection listener - save preference AND launch app
         chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
+
             when {
                 checkedIds.contains(R.id.chipLaunchTop) -> {
-                    // TOP = "This screen" (same display as companion)
+                    // Save preference
                     appLaunchPrefs.setLaunchPosition(packageName, AppLaunchPreferences.POSITION_TOP)
                     android.util.Log.d("MainActivity", "Set $appName to launch on THIS screen")
+
+                    // Launch the app
+                    launchApp(app)
+
+                    // Close dialog and drawer
+                    dialog.dismiss()
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+
+                    // Refresh indicators
+                    (appRecyclerView.adapter as? AppAdapter)?.refreshIndicators()
                 }
                 checkedIds.contains(R.id.chipLaunchBottom) -> {
-                    // BOTTOM = "Other screen" (opposite display from companion)
+                    // Save preference
                     appLaunchPrefs.setLaunchPosition(packageName, AppLaunchPreferences.POSITION_BOTTOM)
                     android.util.Log.d("MainActivity", "Set $appName to launch on OTHER screen")
+
+                    // Launch the app
+                    launchApp(app)
+
+                    // Close dialog and drawer
+                    dialog.dismiss()
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+
+                    // Refresh indicators
+                    (appRecyclerView.adapter as? AppAdapter)?.refreshIndicators()
                 }
             }
         }
@@ -2573,103 +2639,70 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     // ========== GAME STATE FUNCTIONS ==========
 
     private fun handleGameStart() {
-        // Read the game-start file to get the launching game info
-        val logsDir = File(getLogsPath())
-        val gameStartFile = File(logsDir, "esde_gamestart_filename.txt")
-        if (gameStartFile.exists()) {
-            val launchingGameFilename = gameStartFile.readText().trim()
-            playingGameFilename = launchingGameFilename
-            android.util.Log.d("MainActivity", "Game starting: $launchingGameFilename")
-        }
-
         // Check if we came from screensaver with the same game
-        // Compare the launching game with the last screensaver game
         val cameFromScreensaver = screensaverGameFilename != null
-        val isSameGame = playingGameFilename != null &&
-                screensaverGameFilename != null &&
-                sanitizeGameFilename(playingGameFilename!!) == sanitizeGameFilename(screensaverGameFilename!!)
 
-        android.util.Log.d("MainActivity", "handleGameStart: cameFromScreensaver=$cameFromScreensaver, isSameGame=$isSameGame")
-        android.util.Log.d("MainActivity", "  playingGameFilename: $playingGameFilename")
-        android.util.Log.d("MainActivity", "  screensaverGameFilename: $screensaverGameFilename")
-
-        if (cameFromScreensaver && isSameGame) {
+        if (cameFromScreensaver) {
+            // Always the same game when launching from screensaver
             android.util.Log.d("MainActivity", "Game start from screensaver - same game")
 
             // Check if screensaver behavior matches game launch behavior
-            val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
-            val gameLaunchBehavior = prefs.getString("game_launch_behavior", "default_image") ?: "default_image"
+            val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
+            val gameLaunchBehavior = prefs.getString("game_launch_behavior", "game_image") ?: "game_image"
 
-            // If behaviors match, we can skip reloading the image
             if (screensaverBehavior == gameLaunchBehavior) {
+                // Behaviors match - just ensure correct visibility, don't reload
                 android.util.Log.d("MainActivity", "Behaviors match ($screensaverBehavior) - keeping current display")
                 gameImageView.visibility = View.VISIBLE
                 videoView.visibility = View.GONE
             } else {
-                // Behaviors don't match - need to update the display
+                // Behaviors differ - update display based on game launch behavior
                 android.util.Log.d("MainActivity", "Behaviors differ (screensaver: $screensaverBehavior, launch: $gameLaunchBehavior) - updating display")
 
                 when (gameLaunchBehavior) {
                     "game_image" -> {
-                        // Load the game's image (screensaver might have been showing default/black)
-                        // Use playingGameFilename first (the actual game being launched)
-                        // Then screensaverGameFilename (for slideshow/video modes if playing wasn't set yet)
-                        // Finally currentGameFilename (browsing state before screensaver)
-                        val filename = playingGameFilename ?: screensaverGameFilename ?: currentGameFilename
-                        // Use screensaverSystemName first (correct for the launching game)
-                        // Fall back to currentSystemName only if screensaver didn't provide it
+                        // Load the game's artwork
+                        val filename = playingGameFilename ?: screensaverGameFilename
                         val systemName = screensaverSystemName ?: currentSystemName
 
-                        android.util.Log.d("MainActivity", "game_image case - DEBUG:")
-                        android.util.Log.d("MainActivity", "  playingGameFilename: $playingGameFilename")
-                        android.util.Log.d("MainActivity", "  screensaverGameFilename: $screensaverGameFilename")
-                        android.util.Log.d("MainActivity", "  currentGameFilename: $currentGameFilename")
-                        android.util.Log.d("MainActivity", "  currentSystemName: $currentSystemName")
-                        android.util.Log.d("MainActivity", "  screensaverSystemName: $screensaverSystemName")
-                        android.util.Log.d("MainActivity", "  FINAL filename: $filename")
-                        android.util.Log.d("MainActivity", "  FINAL systemName: $systemName")
+                        if (filename != null && systemName != null) {
+                            val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
+                            val gameImage = findGameImage(systemName, gameName, filename)
 
-                        if (filename != null) {
-                            if (systemName != null) {
-                                val gameName = filename.substringBeforeLast('.')
-                                android.util.Log.d("MainActivity", "  Searching for game image: system=$systemName, game=$gameName, filename=$filename")
-                                val gameImage = findGameImage(systemName, gameName, filename)
-                                android.util.Log.d("MainActivity", "  findGameImage result: ${gameImage?.absolutePath ?: "NULL"}")
-                                if (gameImage != null) {
+                            if (gameImage != null) {
+                                Glide.with(this)
+                                    .load(gameImage)
+                                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(gameImage)))
+                                    .into(gameImageView)
+                            } else {
+                                loadFallbackBackground()
+                            }
+
+                            // Load marquee
+                            if (prefs.getBoolean("game_logo_enabled", true)) {
+                                val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                                if (marqueeImage != null) {
                                     Glide.with(this)
-                                        .load(gameImage)
-                                        .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(gameImage))) // Cache invalidation
-                                        .into(gameImageView)
-                                } else {
-                                    loadFallbackBackground()
-                                }
-
-                                // Load marquee
-                                if (prefs.getBoolean("game_logo_enabled", true)) {
-                                    val marqueeImage = findMarqueeImage(systemName, gameName, filename)
-                                    if (marqueeImage != null) {
-                                        Glide.with(this)
-                                            .load(marqueeImage)
-                                            .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage))) // Cache invalidation
-                                            .into(marqueeImageView)
-                                        marqueeImageView.visibility = View.VISIBLE
-                                    } else {
-                                        marqueeImageView.visibility = View.GONE
-                                    }
+                                        .load(marqueeImage)
+                                        .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
+                                        .into(marqueeImageView)
+                                    marqueeImageView.visibility = View.VISIBLE
                                 } else {
                                     marqueeImageView.visibility = View.GONE
                                 }
+                            } else {
+                                marqueeImageView.visibility = View.GONE
                             }
                         }
                         gameImageView.visibility = View.VISIBLE
                         videoView.visibility = View.GONE
                     }
                     "black_screen" -> {
-                        // Change to black screen
                         gameImageView.setImageDrawable(null)
                         gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
                         gameImageView.visibility = View.VISIBLE
 
+                        // Clear and hide marquee completely
                         marqueeImageView.setImageDrawable(null)
                         marqueeImageView.visibility = View.GONE
                         Glide.with(this).clear(marqueeImageView)
@@ -2677,17 +2710,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         videoView.visibility = View.GONE
                     }
                     else -> { // "default_image"
-                        // Change to fallback background
                         loadFallbackBackground()
                         gameImageView.visibility = View.VISIBLE
                         videoView.visibility = View.GONE
 
                         // Load marquee if enabled
                         if (prefs.getBoolean("game_logo_enabled", true)) {
-                            val filename = currentGameFilename ?: screensaverGameFilename ?: playingGameFilename
+                            val filename = playingGameFilename ?: screensaverGameFilename
                             val systemName = screensaverSystemName ?: currentSystemName
                             if (filename != null && systemName != null) {
-                                val gameName = filename.substringBeforeLast('.')
+                                val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
                                 val marqueeImage = findMarqueeImage(systemName, gameName, filename)
                                 if (marqueeImage != null) {
                                     Glide.with(this)
@@ -2708,13 +2740,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 }
             }
 
-            // Clear screensaver launch flag
+            // Clear screensaver launch flag and variables
             isLaunchingFromScreensaver = false
-            // Clear screensaver game variables
             screensaverGameFilename = null
             screensaverGameName = null
             screensaverSystemName = null
-
 
             // Stop any videos
             releasePlayer()
@@ -2723,7 +2753,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         // Normal game start (not from screensaver or different game)
         // Update display based on user preference
-        val gameLaunchBehavior = prefs.getString("game_launch_behavior", "default_image") ?: "default_image"
+        val gameLaunchBehavior = prefs.getString("game_launch_behavior", "game_image") ?: "game_image"
 
         when (gameLaunchBehavior) {
             "game_image" -> {
@@ -2733,7 +2763,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     // Load the game's artwork
                     val systemName = currentSystemName
                     if (systemName != null) {
-                        val gameName = filename.substringBeforeLast('.')
+                        val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
                         val gameImage = findGameImage(systemName, gameName, filename)
                         if (gameImage != null) {
                             Glide.with(this)
@@ -2789,7 +2819,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     val filename = playingGameFilename
                     val systemName = currentSystemName
                     if (filename != null && systemName != null) {
-                        val gameName = filename.substringBeforeLast('.')
+                        val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
                         val marqueeImage = findMarqueeImage(systemName, gameName, filename)
                         if (marqueeImage != null) {
                             Glide.with(this)
@@ -2816,31 +2846,19 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // This ensures when the game ends, we return to the correct game
         if (playingGameFilename != null) {
             currentGameFilename = playingGameFilename
-            currentGameName = screensaverGameName ?: currentGameName  // Use screensaver name if available
+            currentGameName = null  // Will be updated by next game-select event
             isSystemScrollActive = false  // We're now in game view
         }
-        // Always update system name from screensaver if available (more reliable than current)
         if (screensaverSystemName != null) {
             currentSystemName = screensaverSystemName
-            android.util.Log.d("MainActivity", "Using screensaver system name: $screensaverSystemName")
-        } else {
-            // Read from game-start logs as fallback
-            val logsDir = File(getLogsPath())
-            val systemFile = File(logsDir, "esde_gamestart_system.txt")
-            if (systemFile.exists()) {
-                currentSystemName = systemFile.readText().trim()
-                android.util.Log.d("MainActivity", "Using game-start system name: $currentSystemName")
-            }
         }
 
-        // Clear screensaver launch flag
+        // Clear screensaver launch flag and variables (in case we didn't take the screensaver path)
         isLaunchingFromScreensaver = false
-        // Clear screensaver game variables
         screensaverGameFilename = null
         screensaverGameName = null
         screensaverSystemName = null
     }
-
 
     /**
      * Handle game end event - return to normal browsing display
@@ -2886,19 +2904,19 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Stop any videos
         releasePlayer()
 
-        val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
+        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
 
         when (screensaverBehavior) {
             "game_image" -> {
-                // Hide old content immediately - go black
-                gameImageView.setImageDrawable(null)
-                gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
-                gameImageView.visibility = View.VISIBLE
-                marqueeImageView.visibility = View.GONE
-                videoView.visibility = View.GONE
-
-                // Load screensaver game if available
+                // Load screensaver game if available, otherwise use current browsing state
                 if (screensaverGameFilename != null && screensaverSystemName != null) {
+                    // Hide old content immediately - go black
+                    gameImageView.setImageDrawable(null)
+                    gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+                    gameImageView.visibility = View.VISIBLE
+                    marqueeImageView.visibility = View.GONE
+                    videoView.visibility = View.GONE
+
                     // Load the screensaver game's artwork
                     val gameName = sanitizeGameFilename(screensaverGameFilename!!).substringBeforeLast('.')
                     val gameImage = findGameImage(screensaverSystemName!!, gameName, screensaverGameFilename!!)
@@ -2915,15 +2933,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             }
                         }
                     } else {
-                        // No game image - stay black
-                        gameImageView.setImageDrawable(null)
-                        gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+                        // No game image - load fallback
+                        loadFallbackBackground()
                         marqueeImageView.visibility = View.GONE
                     }
                 } else {
-                    // No screensaver game data yet - stay black until game select events fire
-                    marqueeImageView.setImageDrawable(null)
-                    marqueeImageView.visibility = View.GONE
+                    // No screensaver game data yet (dim/black mode) - keep current browsing display
+                    // Don't reload anything - screensaver game select events will update if needed
+                    gameImageView.visibility = View.VISIBLE
+                    videoView.visibility = View.GONE
                 }
             }
             "black_screen" -> {
@@ -3167,10 +3185,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Handle screensaver game select event (for slideshow/video screensavers)
      */
     private fun handleScreensaverGameSelect() {
-        val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
+        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
 
         if (screensaverGameFilename != null && screensaverSystemName != null) {
-            val gameName = screensaverGameFilename!!.substringBeforeLast('.')
+            val gameName = sanitizeGameFilename(screensaverGameFilename!!).substringBeforeLast('.')
 
             when (screensaverBehavior) {
                 "game_image" -> {
@@ -3471,7 +3489,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Get video delay in milliseconds
      */
     private fun getVideoDelay(): Long {
-        val progress = prefs.getInt("video_delay", 0) // 0-10
+        val progress = prefs.getInt("video_delay", 4) // 4 (2 seconds)
         return (progress * 500L) // Convert to milliseconds (0-5000ms)
     }
 
@@ -3691,18 +3709,24 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Cancel any pending video load
         videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
 
-        // Don't play videos if:
-        // 1. App doesn't have window focus (game launched on top of companion)
-        // 2. Game is playing on other screen
-        // 3. Screensaver is active
-        if (!hasWindowFocus) {
-            android.util.Log.d("MainActivity", "Video blocked - app doesn't have focus (game on top)")
-            releasePlayer()
-            return
-        }
+        // Hybrid blocking approach to handle different device scenarios:
+        //
+        // Scenario 1: Game launches on SAME screen as Companion (normal devices)
+        //   - hasWindowFocus becomes false (game window is on top)
+        //   - onPause() does NOT fire (Companion is still "active" behind game)
+        //   - Block: !hasWindowFocus
+        //
+        // Scenario 2: Game launches on OTHER screen (dual-screen devices like Ayaneo)
+        //   - hasWindowFocus may be unreliable (identical display names)
+        //   - onPause() DOES fire (Companion is backgrounded by system)
+        //   - Block: lifecycle state check
+        //
+        // We block videos if EITHER condition indicates we shouldn't play:
 
-        if (isGamePlaying) {
-            android.util.Log.d("MainActivity", "Video blocked - game playing on other screen")
+        val isInBackground = lifecycle.currentState != androidx.lifecycle.Lifecycle.State.RESUMED
+
+        if (!hasWindowFocus || isInBackground) {
+            android.util.Log.d("MainActivity", "Video blocked - hasWindowFocus: $hasWindowFocus, isInBackground: $isInBackground")
             releasePlayer()
             return
         }
@@ -3738,11 +3762,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 }
 
                 videoDelayRunnable = Runnable {
-                    // Double-check focus, game state, and screensaver before loading video
-                    if (hasWindowFocus && !isGamePlaying && !isScreensaverActive) {
+                    // Double-check conditions before loading video after delay
+                    val isStillInBackground = lifecycle.currentState != androidx.lifecycle.Lifecycle.State.RESUMED
+
+                    if (hasWindowFocus && !isStillInBackground && !isScreensaverActive) {
                         loadVideo(videoPath)
                     } else {
-                        android.util.Log.d("MainActivity", "Video delayed load cancelled - focus lost, game playing, or screensaver active")
+                        android.util.Log.d("MainActivity", "Video delayed load cancelled - conditions changed")
                     }
                 }
 
