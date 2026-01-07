@@ -925,6 +925,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 // No animation - instant display with crossfade disabled
                 Glide.with(this)
                     .load(imageFile)
+                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .dontAnimate()  // Disable all transitions
                     .listener(object : RequestListener<Drawable> {
@@ -955,6 +956,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 // Use Glide's built-in crossfade transition
                 Glide.with(this)
                     .load(imageFile)
+                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
                     .listener(object : RequestListener<Drawable> {
@@ -985,6 +987,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 // "scale_fade" - Use Glide crossfade + custom scale animation
                 Glide.with(this)
                     .load(imageFile)
+                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
                     .listener(object : RequestListener<Drawable> {
@@ -1848,6 +1851,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
     }
 
+    /**
+     * Get a signature for an image file to invalidate cache when file changes
+     * Uses file's last modified time to detect changes
+     */
+    private fun getFileSignature(file: File): String {
+        return if (file.exists()) {
+            file.lastModified().toString()
+        } else {
+            "0"
+        }
+    }
 
     /**
      * Create a text drawable for system name when no logo exists
@@ -2009,6 +2023,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     val bitmap = loadScaledBitmap(imageToUse.absolutePath, 1920, 1080)
                     if (bitmap != null) {
                         val drawable = android.graphics.drawable.BitmapDrawable(resources, bitmap)
+
+                        // Clear any cached images first
+                        Glide.with(this).clear(gameImageView)
+
                         gameImageView.setImageDrawable(drawable)
                         android.util.Log.d("MainActivity", "Custom system image loaded successfully")
                     } else {
@@ -2593,6 +2611,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                 if (gameImage != null) {
                                     Glide.with(this)
                                         .load(gameImage)
+                                        .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(gameImage))) // Cache invalidation
                                         .into(gameImageView)
                                 } else {
                                     loadFallbackBackground()
@@ -2604,6 +2623,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                     if (marqueeImage != null) {
                                         Glide.with(this)
                                             .load(marqueeImage)
+                                            .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage))) // Cache invalidation
                                             .into(marqueeImageView)
                                         marqueeImageView.visibility = View.VISIBLE
                                     } else {
@@ -2645,6 +2665,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                 if (marqueeImage != null) {
                                     Glide.with(this)
                                         .load(marqueeImage)
+                                        .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
                                         .into(marqueeImageView)
                                     marqueeImageView.visibility = View.VISIBLE
                                 } else {
@@ -2690,6 +2711,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         if (gameImage != null) {
                             Glide.with(this)
                                 .load(gameImage)
+                                .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(gameImage)))
                                 .into(gameImageView)
                         } else {
                             loadFallbackBackground()
@@ -2701,6 +2723,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             if (marqueeImage != null) {
                                 Glide.with(this)
                                     .load(marqueeImage)
+                                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
                                     .into(marqueeImageView)
                                 marqueeImageView.visibility = View.VISIBLE
                             } else {
@@ -2744,6 +2767,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         if (marqueeImage != null) {
                             Glide.with(this)
                                 .load(marqueeImage)
+                                .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
                                 .into(marqueeImageView)
                             marqueeImageView.visibility = View.VISIBLE
                         } else {
@@ -2825,6 +2849,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     if (gameImage != null) {
                         Glide.with(this)
                             .load(gameImage)
+                            .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(gameImage)))
                             .into(gameImageView)
                     } else {
                         gameImageView.setImageDrawable(null)
@@ -2837,6 +2862,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         if (marqueeImage != null) {
                             Glide.with(this)
                                 .load(marqueeImage)
+                                .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
                                 .into(marqueeImageView)
                             marqueeImageView.visibility = View.VISIBLE
                         } else {
@@ -2885,6 +2911,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         if (marqueeImage != null) {
                             Glide.with(this)
                                 .load(marqueeImage)
+                                .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
                                 .into(marqueeImageView)
                             marqueeImageView.visibility = View.VISIBLE
                         } else {
@@ -2918,6 +2945,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                 if (marqueeImage != null) {
                                     Glide.with(this)
                                         .load(marqueeImage)
+                                        .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
                                         .into(marqueeImageView)
                                     marqueeImageView.visibility = View.VISIBLE
                                 } else {
