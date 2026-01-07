@@ -1,5 +1,9 @@
 # 🔄 Changelog
 
+## [0.2.8] - 2026-01-07
+- Fix for media not displaying for games in folders, updating script detection to assist with migration 
+- Update image loading to handle cache invalidation 
+
 ## [0.2.7] - 2026-01-07
 - Volume control fix that respects per screen volume controls
 
