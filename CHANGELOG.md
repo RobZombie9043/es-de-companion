@@ -1,8 +1,18 @@
 # 🔄 Changelog
 
+## [0.3.0] - TBC
+- Overhauled app long press menu
+    - New `Hide App` button to more easily hide apps from app drawer
+    - Choosing launch app on `this screen`/`other screen` directly launches the app on the chosen screen instead of needing to go back to app drawer to do this. Last used selection is remembered for future app launches.
+    - Added a small indicator dot on app icons that are set for launch on other screen for a quick visual indication of current setting
+-   Updated some app default settings (wont affect existing settings if already changed)
+    - `Video Delay` is set to 2 seconds (if Video Playback is enabled)
+    - `Game Launch Display` and `Screensaver Display` settings default to `Game Image`
+- Fix for videos not playing on Ayaneo Pocket DS devices (to be tested)
+
 ## [0.2.9] - 2026-01-07
 - Fix for Game Launch Display setting not sticking after game launch
-- 
+  
 ## [0.2.8] - 2026-01-07
 - Fix for media not displaying for games in folders, updating script detection to assist with migration 
 - Update image loading to handle cache invalidation 
