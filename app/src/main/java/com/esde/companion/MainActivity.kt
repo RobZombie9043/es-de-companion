@@ -347,8 +347,21 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.d("MainActivity", "Scripts on internal storage - checking immediately")
             val hasCorrectScripts = checkForCorrectScripts()
             if (!hasCorrectScripts) {
-                android.util.Log.d("MainActivity", "Scripts missing on internal storage - launching wizard")
-                launchSetupWizardForScripts()
+                android.util.Log.d("MainActivity", "Scripts missing/outdated on internal storage - showing dialog")
+
+                // Check if scripts exist at all (missing vs outdated)
+                val scriptsDir = File(scriptsPath ?: "/storage/emulated/0/ES-DE/scripts")
+                val gameSelectScript = File(scriptsDir, "game-select/esdecompanion-game-select.sh")
+
+                if (gameSelectScript.exists()) {
+                    // Scripts exist but are outdated - show update dialog
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        showScriptsUpdateAvailableDialog()
+                    }, 1000)
+                } else {
+                    // Scripts missing - launch full wizard
+                    launchSetupWizardForScripts()
+                }
             }
             return
         }
@@ -381,9 +394,21 @@ class MainActivity : AppCompatActivity() {
 
         if (!hasCorrectScripts) {
             if (isAccessible) {
-                // Path is accessible but scripts are missing/invalid - launch wizard
-                android.util.Log.d("MainActivity", "Scripts missing/invalid on accessible path - launching wizard")
-                launchSetupWizardForScripts()
+                // Path is accessible but scripts are missing/invalid
+                android.util.Log.d("MainActivity", "Scripts missing/outdated on accessible path")
+
+                // Check if scripts exist at all (missing vs outdated)
+                val gameSelectScript = File(scriptsDir, "game-select/esdecompanion-game-select.sh")
+
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (gameSelectScript.exists()) {
+                        // Scripts exist but are outdated - show update dialog
+                        showScriptsUpdateAvailableDialog()
+                    } else {
+                        // Scripts missing - launch full wizard
+                        launchSetupWizardForScripts()
+                    }
+                }, 1000)
             } else {
                 // Max attempts reached and still not accessible
                 // SD card might not be mounted - show a helpful message
@@ -434,7 +459,9 @@ class MainActivity : AppCompatActivity() {
                 "LOG_DIR=\"/storage/emulated/0/ES-DE Companion/logs\"",
                 "esde_game_filename.txt",
                 "esde_game_name.txt",
-                "esde_game_system.txt"
+                "esde_game_system.txt",
+                // NEW: Check that it's NOT using basename (old version)
+                "!basename"
             ),
             "system-select/esdecompanion-system-select.sh" to listOf(
                 "LOG_DIR=\"/storage/emulated/0/ES-DE Companion/logs\"",
@@ -444,13 +471,19 @@ class MainActivity : AppCompatActivity() {
                 "LOG_DIR=\"/storage/emulated/0/ES-DE Companion/logs\"",
                 "esde_gamestart_filename.txt",
                 "esde_gamestart_name.txt",
-                "esde_gamestart_system.txt"
+                "esde_gamestart_system.txt",
+                // NEW: Check that it's NOT using basename or clean_filename (old version)
+                "!basename",
+                "!clean_filename"
             ),
             "game-end/esdecompanion-game-end.sh" to listOf(
                 "LOG_DIR=\"/storage/emulated/0/ES-DE Companion/logs\"",
                 "esde_gameend_filename.txt",
                 "esde_gameend_name.txt",
-                "esde_gameend_system.txt"
+                "esde_gameend_system.txt",
+                // NEW: Check that it's NOT using basename or clean_filename (old version)
+                "!basename",
+                "!clean_filename"
             ),
             "screensaver-start/esdecompanion-screensaver-start.sh" to listOf(
                 "LOG_DIR=\"/storage/emulated/0/ES-DE Companion/logs\"",
@@ -464,7 +497,10 @@ class MainActivity : AppCompatActivity() {
                 "LOG_DIR=\"/storage/emulated/0/ES-DE Companion/logs\"",
                 "esde_screensavergameselect_filename.txt",
                 "esde_screensavergameselect_name.txt",
-                "esde_screensavergameselect_system.txt"
+                "esde_screensavergameselect_system.txt",
+                // NEW: Check that it's NOT using basename or clean_filename (old version)
+                "!basename",
+                "!clean_filename"
             )
         )
 
@@ -483,8 +519,18 @@ class MainActivity : AppCompatActivity() {
 
                 // Check if all expected strings are present in the content
                 for (expected in expectedContent) {
-                    if (!content.contains(expected)) {
-                        return false
+                    if (expected.startsWith("!")) {
+                        // Negative check - this string should NOT be present (old version)
+                        val unwantedString = expected.substring(1)
+                        if (content.contains(unwantedString)) {
+                            android.util.Log.w("MainActivity", "Script contains old code: $scriptPath (found: $unwantedString)")
+                            return false // Script is outdated
+                        }
+                    } else {
+                        // Positive check - this string SHOULD be present
+                        if (!content.contains(expected)) {
+                            return false
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -495,6 +541,187 @@ class MainActivity : AppCompatActivity() {
 
         // All scripts exist with correct content
         return true
+    }
+
+    /**
+     * Show dialog when old scripts are detected
+     */
+    private fun showScriptsUpdateAvailableDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Script Update Available")
+            .setMessage("Your ES-DE integration scripts need to be updated to support games in subfolders.\n\n" +
+                    "Changes:\n" +
+                    "• Scripts now pass full file paths\n" +
+                    "• App handles subfolder detection\n" +
+                    "• Improves compatibility with organized ROM collections\n\n" +
+                    "Would you like to update the scripts now?")
+            .setPositiveButton("Update Scripts") { _, _ ->
+                updateScriptsDirectly()
+            }
+            .setNegativeButton("Later") { _, _ ->
+                // User declined - show a toast reminder
+                Toast.makeText(
+                    this,
+                    "You can update scripts anytime from Settings",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setIcon(android.R.drawable.ic_dialog_info)
+            .show()
+    }
+
+    /**
+     * Update scripts directly without going through wizard
+     */
+    private fun updateScriptsDirectly() {
+        val scriptsPath = prefs.getString("scripts_path", "/storage/emulated/0/ES-DE/scripts")
+            ?: "/storage/emulated/0/ES-DE/scripts"
+
+        try {
+            val scriptsDir = File(scriptsPath)
+
+            // Create all script subdirectories
+            val gameSelectDir = File(scriptsDir, "game-select")
+            val systemSelectDir = File(scriptsDir, "system-select")
+            val gameStartDir = File(scriptsDir, "game-start")
+            val gameEndDir = File(scriptsDir, "game-end")
+            val screensaverStartDir = File(scriptsDir, "screensaver-start")
+            val screensaverEndDir = File(scriptsDir, "screensaver-end")
+            val screensaverGameSelectDir = File(scriptsDir, "screensaver-game-select")
+
+            gameSelectDir.mkdirs()
+            systemSelectDir.mkdirs()
+            gameStartDir.mkdirs()
+            gameEndDir.mkdirs()
+            screensaverStartDir.mkdirs()
+            screensaverEndDir.mkdirs()
+            screensaverGameSelectDir.mkdirs()
+
+            // 1. esdecompanion-game-select.sh
+            val gameSelectScriptFile = File(gameSelectDir, "esdecompanion-game-select.sh")
+            gameSelectScriptFile.writeText("""#!/bin/bash
+
+LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+mkdir -p "${'$'}LOG_DIR"
+
+echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_game_filename.txt"
+echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_game_name.txt"
+echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_game_system.txt"
+""")
+            gameSelectScriptFile.setExecutable(true)
+
+            // 2. esdecompanion-system-select.sh
+            val systemSelectScriptFile = File(systemSelectDir, "esdecompanion-system-select.sh")
+            systemSelectScriptFile.writeText("""#!/bin/bash
+
+LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+mkdir -p "${'$'}LOG_DIR"
+
+printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_name.txt" &
+""")
+            systemSelectScriptFile.setExecutable(true)
+
+            // 3. esdecompanion-game-start.sh
+            val gameStartScriptFile = File(gameStartDir, "esdecompanion-game-start.sh")
+            gameStartScriptFile.writeText("""#!/bin/bash
+
+LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+mkdir -p "${'$'}LOG_DIR"
+
+echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_gamestart_filename.txt"
+echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_gamestart_name.txt"
+echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_gamestart_system.txt"
+""")
+            gameStartScriptFile.setExecutable(true)
+
+            // 4. esdecompanion-game-end.sh
+            val gameEndScriptFile = File(gameEndDir, "esdecompanion-game-end.sh")
+            gameEndScriptFile.writeText("""#!/bin/bash
+
+LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+mkdir -p "${'$'}LOG_DIR"
+
+echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_gameend_filename.txt"
+echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_gameend_name.txt"
+echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_gameend_system.txt"
+""")
+            gameEndScriptFile.setExecutable(true)
+
+            // 5. esdecompanion-screensaver-start.sh
+            val screensaverStartScriptFile = File(screensaverStartDir, "esdecompanion-screensaver-start.sh")
+            screensaverStartScriptFile.writeText("""#!/bin/bash
+
+LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+mkdir -p "${'$'}LOG_DIR"
+
+echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_start.txt"
+
+""")
+            screensaverStartScriptFile.setExecutable(true)
+
+            // 6. esdecompanion-screensaver-end.sh
+            val screensaverEndScriptFile = File(screensaverEndDir, "esdecompanion-screensaver-end.sh")
+            screensaverEndScriptFile.writeText("""#!/bin/bash
+
+LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+mkdir -p "${'$'}LOG_DIR"
+
+echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
+
+""")
+            screensaverEndScriptFile.setExecutable(true)
+
+            // 7. esdecompanion-screensaver-game-select.sh
+            val screensaverGameSelectScriptFile = File(screensaverGameSelectDir, "esdecompanion-screensaver-game-select.sh")
+            screensaverGameSelectScriptFile.writeText("""#!/bin/bash
+
+LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+mkdir -p "${'$'}LOG_DIR"
+
+echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensavergameselect_filename.txt"
+echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_screensavergameselect_name.txt"
+echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
+""")
+            screensaverGameSelectScriptFile.setExecutable(true)
+
+            // Show success message
+            Toast.makeText(
+                this,
+                "Scripts updated successfully!",
+                Toast.LENGTH_LONG
+            ).show()
+
+            // Start verification
+            Handler(Looper.getMainLooper()).postDelayed({
+                startScriptVerification()
+            }, 1000)
+
+        } catch (e: Exception) {
+            // Show error message
+            Toast.makeText(
+                this,
+                "Error updating scripts: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+            android.util.Log.e("MainActivity", "Error updating scripts", e)
+        }
+    }
+
+    /**
+     * Sanitize a full game path to just the filename for media lookup
+     * Handles:
+     * - Subfolders: "subfolder/game.zip" -> "game.zip"
+     * - Backslashes: "game\file.zip" -> "gamefile.zip"
+     * - Multiple path separators
+     */
+    private fun sanitizeGameFilename(fullPath: String): String {
+        // Remove backslashes (screensaver case)
+        var cleaned = fullPath.replace("\\", "")
+
+        // Get just the filename (after last forward slash)
+        cleaned = cleaned.substringAfterLast("/")
+
+        return cleaned
     }
 
     override fun onPause() {
@@ -669,8 +896,6 @@ class MainActivity : AppCompatActivity() {
             gameImageView.setImageDrawable(null)
         }
     }
-
-
 
     /**
      * Load an image with animation based on user preference
@@ -1989,7 +2214,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun findGameImage(systemName: String, gameName: String, fullGameName: String): File? {
+    private fun findGameImage(systemName: String, gameName: String, fullGamePath: String): File? {
         val extensions = listOf("jpg", "png", "webp")
         val mediaBase = File(getMediaBasePath(), systemName)
         val imagePref = prefs.getString("image_preference", "fanart") ?: "fanart"
@@ -1999,25 +2224,83 @@ class MainActivity : AppCompatActivity() {
             listOf("fanart", "screenshots")
         }
 
+        // Sanitize the full path to get just the filename
+        val sanitizedFilename = sanitizeGameFilename(fullGamePath)
+        val sanitizedName = sanitizedFilename.substringBeforeLast('.')
+
         for (dirName in dirs) {
-            val file = findImageInDir(File(mediaBase, dirName), gameName, fullGameName, extensions)
+            val file = findImageInDir(
+                File(mediaBase, dirName),
+                sanitizedName,
+                sanitizedFilename,
+                fullGamePath,
+                extensions
+            )
             if (file != null) return file
         }
         return null
     }
 
-    private fun findMarqueeImage(systemName: String, gameName: String, fullGameName: String): File? {
+    private fun findMarqueeImage(systemName: String, gameName: String, fullGamePath: String): File? {
         val extensions = listOf("jpg", "png", "webp")
-        return findImageInDir(File(getMediaBasePath(), "$systemName/marquees"), gameName, fullGameName, extensions)
+
+        // Sanitize the full path to get just the filename
+        val sanitizedFilename = sanitizeGameFilename(fullGamePath)
+        val sanitizedName = sanitizedFilename.substringBeforeLast('.')
+
+        return findImageInDir(
+            File(getMediaBasePath(), "$systemName/marquees"),
+            sanitizedName,
+            sanitizedFilename,
+            fullGamePath,
+            extensions
+        )
     }
 
-    private fun findImageInDir(dir: File, strippedName: String, rawName: String, extensions: List<String>): File? {
+    private fun findImageInDir(
+        dir: File,
+        strippedName: String,
+        rawName: String,
+        fullPath: String,
+        extensions: List<String>
+    ): File? {
+        if (!dir.exists() || !dir.isDirectory) return null
+
+        // Extract subfolder path if present (everything before the filename)
+        val subfolder = fullPath.substringBeforeLast("/", "").substringAfterLast("/", "")
+
+        // Try in order of specificity:
+        // 1. Exact subfolder match: <media_type>/<subfolder>/filename.ext
+        // 2. Root level with stripped name: <media_type>/filename.ext
+        // 3. Root level with raw name: <media_type>/filename.ext
+
+        // 1. Try subfolder match if subfolder exists
+        if (subfolder.isNotEmpty()) {
+            val subfolderDir = File(dir, subfolder)
+            if (subfolderDir.exists() && subfolderDir.isDirectory) {
+                for (name in listOf(strippedName, rawName)) {
+                    for (ext in extensions) {
+                        val file = File(subfolderDir, "$name.$ext")
+                        if (file.exists()) {
+                            android.util.Log.d("MainActivity", "Found media in subfolder: ${file.absolutePath}")
+                            return file
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2 & 3. Try root level (original behavior)
         for (name in listOf(strippedName, rawName)) {
             for (ext in extensions) {
                 val file = File(dir, "$name.$ext")
-                if (file.exists()) return file
+                if (file.exists()) {
+                    android.util.Log.d("MainActivity", "Found media in root: ${file.absolutePath}")
+                    return file
+                }
             }
         }
+
         return null
     }
 
@@ -3034,19 +3317,40 @@ class MainActivity : AppCompatActivity() {
             return null
         }
 
-        // Try both stripped name and raw name (like images do)
-        for (name in listOf(strippedName, rawName)) {
-            if (name == null) continue
+        // Sanitize the raw name (which is now the full path)
+        val sanitizedRawName = if (rawName != null) sanitizeGameFilename(rawName) else null
+
+        // Extract subfolder if present
+        val subfolder = rawName?.substringBeforeLast("/", "")?.substringAfterLast("/", "") ?: ""
+
+        // Try subfolder first if it exists
+        if (subfolder.isNotEmpty()) {
+            val subfolderDir = File(videoDir, subfolder)
+            if (subfolderDir.exists() && subfolderDir.isDirectory) {
+                for (name in listOfNotNull(strippedName, sanitizedRawName)) {
+                    for (ext in videoExtensions) {
+                        val videoFile = File(subfolderDir, "$name.$ext")
+                        if (videoFile.exists()) {
+                            android.util.Log.d("MainActivity", "Found video in subfolder: ${videoFile.absolutePath}")
+                            return videoFile.absolutePath
+                        }
+                    }
+                }
+            }
+        }
+
+        // Try root level
+        for (name in listOfNotNull(strippedName, sanitizedRawName)) {
             for (ext in videoExtensions) {
                 val videoFile = File(videoDir, "$name.$ext")
                 if (videoFile.exists()) {
-                    android.util.Log.d("MainActivity", "Found video: ${videoFile.absolutePath}")
+                    android.util.Log.d("MainActivity", "Found video in root: ${videoFile.absolutePath}")
                     return videoFile.absolutePath
                 }
             }
         }
 
-        android.util.Log.d("MainActivity", "No video found for $strippedName in $videoDir")
+        android.util.Log.d("MainActivity", "No video found for system: $systemName, game: $strippedName")
         return null
     }
 
