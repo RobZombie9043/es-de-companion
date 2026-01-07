@@ -2110,8 +2110,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             val gameFile = File(logsDir, "esde_game_filename.txt")
             if (!gameFile.exists()) return
 
-            val gameNameRaw = gameFile.readText().trim()
-            val gameName = gameNameRaw.substringBeforeLast('.')
+            val gameNameRaw = gameFile.readText().trim()  // Full path from script
+            val gameName = sanitizeGameFilename(gameNameRaw).substringBeforeLast('.')  // FIXED: Sanitize first, then strip extension
 
             // Read the display name from ES-DE if available
             val gameDisplayNameFile = File(logsDir, "esde_game_name.txt")
@@ -2132,7 +2132,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Store current system name
             currentSystemName = systemName
 
-
             // Try to find game-specific artwork first
             val gameImage = findGameImage(systemName, gameName, gameNameRaw)
 
@@ -2148,7 +2147,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
                 if (marqueeFile != null && marqueeFile.exists()) {
                     // Game has marquee - show it centered on dark background
-                    loadFallbackBackground() // Use fallback image instead of solid color
+                    loadFallbackBackground()
 
                     // Load marquee content (even if video is playing - just keep it hidden)
                     if (prefs.getBoolean("game_logo_enabled", true)) {
@@ -2163,7 +2162,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     gameImageLoaded = true
                 } else {
                     // No artwork and no marquee - show fallback with or without text
-                    loadFallbackBackground() // Always load fallback (regardless of logo setting)
+                    loadFallbackBackground()
 
                     if (prefs.getBoolean("game_logo_enabled", true)) {
                         // Logo enabled - show game name as text overlay
@@ -2189,8 +2188,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     gameImageLoaded = true
                 }
             }
+
             // Handle marquee separately when game has its own artwork
-            // Note: gameImageLoaded is always true here by design - we've loaded fallback, marquee, or actual image
             if (gameImageLoaded && gameImage != null && gameImage.exists()) {
                 val marqueeFile = findMarqueeImage(systemName, gameName, gameNameRaw)
                 if (marqueeFile != null && marqueeFile.exists()) {
@@ -2218,16 +2217,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     }
                 }
             }
-            // If gameImageLoaded is false, we couldn't load new game data
-            // Keep last marquee displayed (prevents disappearing during fast scroll)
 
             // Handle video playback for the current game
             // Pass both stripped name and raw filename (like images do)
-            handleVideoForGame(currentSystemName, gameName, gameNameRaw)
+            android.util.Log.d("MainActivity", "loadGameInfo - Calling handleVideoForGame:")
+            android.util.Log.d("MainActivity", "  systemName: $systemName")
+            android.util.Log.d("MainActivity", "  gameName (stripped): $gameName")  // Should now be just "Air Combat (USA)"
+            android.util.Log.d("MainActivity", "  gameNameRaw (full path): $gameNameRaw")
+            handleVideoForGame(systemName, gameName, gameNameRaw)
 
         } catch (e: Exception) {
             // Don't clear images on exception - keep last valid images
-            // This prevents black screen during ES-DE fast scroll when no data available
             android.util.Log.e("MainActivity", "Error loading game info", e)
         }
     }
@@ -3332,10 +3332,18 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * @return Video file path or null if not found
      */
     private fun findVideoForGame(systemName: String?, strippedName: String?, rawName: String?): String? {
-        if (systemName == null || strippedName == null) return null
+        if (systemName == null || strippedName == null) {
+            android.util.Log.d("MainActivity", "findVideoForGame - systemName or strippedName is null")
+            return null
+        }
 
         val mediaPath = prefs.getString("media_path", "/storage/emulated/0/ES-DE/downloaded_media")
             ?: return null
+
+        android.util.Log.d("MainActivity", "findVideoForGame - Looking for video:")
+        android.util.Log.d("MainActivity", "  systemName: $systemName")
+        android.util.Log.d("MainActivity", "  strippedName: $strippedName")
+        android.util.Log.d("MainActivity", "  rawName: $rawName")
 
         val videoExtensions = listOf("mp4", "mkv", "avi", "wmv", "mov", "webm")
         val videoDir = File(mediaPath, "$systemName/videos")
@@ -3348,16 +3356,22 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Sanitize the raw name (which is now the full path)
         val sanitizedRawName = if (rawName != null) sanitizeGameFilename(rawName) else null
 
+        android.util.Log.d("MainActivity", "  sanitizedRawName: $sanitizedRawName")
+
         // Extract subfolder if present
         val subfolder = rawName?.substringBeforeLast("/", "")?.substringAfterLast("/", "") ?: ""
+
+        android.util.Log.d("MainActivity", "  subfolder: $subfolder")
 
         // Try subfolder first if it exists
         if (subfolder.isNotEmpty()) {
             val subfolderDir = File(videoDir, subfolder)
+            android.util.Log.d("MainActivity", "  Checking subfolder: ${subfolderDir.absolutePath}")
             if (subfolderDir.exists() && subfolderDir.isDirectory) {
                 for (name in listOfNotNull(strippedName, sanitizedRawName)) {
                     for (ext in videoExtensions) {
                         val videoFile = File(subfolderDir, "$name.$ext")
+                        android.util.Log.d("MainActivity", "    Trying: ${videoFile.absolutePath}")
                         if (videoFile.exists()) {
                             android.util.Log.d("MainActivity", "Found video in subfolder: ${videoFile.absolutePath}")
                             return videoFile.absolutePath
@@ -3368,9 +3382,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
 
         // Try root level
+        android.util.Log.d("MainActivity", "  Checking root level: ${videoDir.absolutePath}")
         for (name in listOfNotNull(strippedName, sanitizedRawName)) {
             for (ext in videoExtensions) {
                 val videoFile = File(videoDir, "$name.$ext")
+                android.util.Log.d("MainActivity", "    Trying: ${videoFile.absolutePath}")
                 if (videoFile.exists()) {
                     android.util.Log.d("MainActivity", "Found video in root: ${videoFile.absolutePath}")
                     return videoFile.absolutePath
@@ -3551,6 +3567,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             return
         }
 
+        // Pass the raw name (full path) to findVideoForGame
         val videoPath = findVideoForGame(systemName, strippedName, rawName)
 
         if (videoPath != null) {
