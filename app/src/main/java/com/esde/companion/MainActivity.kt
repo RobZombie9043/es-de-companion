@@ -1955,6 +1955,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
 
     private fun loadSystemImage() {
+        // Don't reload images if game is currently playing - respect game launch behavior
+        if (isGamePlaying) {
+            android.util.Log.d("MainActivity", "loadSystemImage blocked - game is playing, maintaining game launch display")
+            return
+        }
+
         try {
             // Stop any video playback when switching to system view
             releasePlayer()
@@ -2103,6 +2109,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun loadGameInfo() {
+        // Don't reload images if game is currently playing - respect game launch behavior
+        if (isGamePlaying) {
+            android.util.Log.d("MainActivity", "loadGameInfo blocked - game is playing, maintaining game launch display")
+            return
+        }
+
         isSystemScrollActive = false
 
         try {
@@ -2809,6 +2821,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Handle game end event - return to normal browsing display
      */
     private fun handleGameEnd() {
+        android.util.Log.d("MainActivity", "Game end - clearing game playing state")
+
+        // Clear game playing state FIRST before any reloads
+        isGamePlaying = false
+        playingGameFilename = null
+
         // Update browsing state to game view since we're returning from a game
         // This ensures we don't show system images when game ends
         isSystemScrollActive = false
@@ -2816,6 +2834,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Delay reload slightly to check if screensaver is about to start
         // This prevents a flash of the browsing image before screensaver appears
         Handler(Looper.getMainLooper()).postDelayed({
+            // Double-check game isn't playing again (rapid launch/exit)
+            if (isGamePlaying) {
+                android.util.Log.d("MainActivity", "Game end - game relaunched, skipping reload")
+                return@postDelayed
+            }
+
             // Check if screensaver started during the delay
             if (isScreensaverActive) {
                 android.util.Log.d("MainActivity", "Game end - screensaver started, skipping reload")
