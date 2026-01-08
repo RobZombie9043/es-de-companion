@@ -1073,14 +1073,16 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun updateSystemPathDisplay() {
         val path = prefs.getString(SYSTEM_PATH_KEY, null)
-        systemPathText.text = path ?: "Default: /storage/emulated/0/ES-DE/downloaded_media/system_images"
+        val defaultPath = "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_images"
+        systemPathText.text = path ?: "Default: $defaultPath"
 
         // Setup System Logos Path
         val systemLogosPath = prefs.getString(
             "system_logos_path",
-            "${Environment.getExternalStorageDirectory()}/ES-DE/downloaded_media/system_logos"
+            null
         )
-        systemLogosPathText.text = systemLogosPath ?: "Default: /storage/emulated/0/ES-DE/downloaded_media/system_logos"
+        val defaultLogosPath = "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_logos"
+        systemLogosPathText.text = systemLogosPath ?: "Default: $defaultLogosPath"
     }
 
     private fun getPathFromUri(uri: Uri): String {

@@ -892,16 +892,6 @@
                         app:chipStrokeWidth="2dp" />
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/gameLaunchDefaultImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Default Image"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-                    <com.google.android.material.chip.Chip
                         android:id="@+id/gameLaunchGameImage"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -909,6 +899,17 @@
                         android:textColor="#FFFFFF"
                         android:checkable="true"
                         android:checked="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameLaunchDefaultImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
                         app:chipBackgroundColor="@color/chip_background_selector_green"
                         app:chipStrokeColor="#4CAF50"
                         app:chipStrokeWidth="2dp" />
@@ -953,16 +954,6 @@
                         app:chipStrokeWidth="2dp" />
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/screensaverDefaultImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Default Image"
-                        android:textColor="#FFFFFF"
-                        android:checkable="true"
-                        app:chipBackgroundColor="@color/chip_background_selector_green"
-                        app:chipStrokeColor="#4CAF50"
-                        app:chipStrokeWidth="2dp" />
-                    <com.google.android.material.chip.Chip
                         android:id="@+id/screensaverGameImage"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -970,6 +961,17 @@
                         android:textColor="#FFFFFF"
                         android:checkable="true"
                         android:checked="true"
+                        app:chipBackgroundColor="@color/chip_background_selector_green"
+                        app:chipStrokeColor="#4CAF50"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/screensaverDefaultImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
                         app:chipBackgroundColor="@color/chip_background_selector_green"
                         app:chipStrokeColor="#4CAF50"
                         app:chipStrokeWidth="2dp" />
@@ -1407,7 +1409,7 @@
                     android:id="@+id/systemPathText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Default: /storage/emulated/0/ES-DE/downloaded_media/system_images"
+                    android:text="Default: /storage/emulated/0/ES-DE Companion/system_images"
                     android:textColor="#999999"
                     android:textSize="13sp"
                     android:layout_marginBottom="12dp" />
@@ -1443,7 +1445,7 @@
                     android:id="@+id/systemLogosPathText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Default: /storage/emulated/0/ES-DE/downloaded_media/system_logos"
+                    android:text="Default: /storage/emulated/0/ES-DE Companion/system_logos"
                     android:textColor="#999999"
                     android:textSize="13sp"
                     android:layout_marginBottom="12dp" />

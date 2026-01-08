@@ -876,14 +876,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
     private fun getSystemImagePath(): String {
         val customPath = prefs.getString("system_path", null)
-        val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE/downloaded_media/system_images"
+        val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_images"
         android.util.Log.d("ESDESecondScreen", "System image path: $path")
         return path
     }
 
     private fun getSystemLogosPath(): String {
         val customPath = prefs.getString("system_logos_path", null)
-        val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE/downloaded_media/system_logos"
+        val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_logos"
         android.util.Log.d("ESDESecondScreen", "System logos path: $path")
         return path
     }
