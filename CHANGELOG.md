@@ -1,5 +1,8 @@
 # 🔄 Changelog
 
+## [0.3.2] - 2026-01-09
+- More fixes for custom image ImagePicker to work with MediaStore and other file picker scenarios
+
 ## [0.3.1] - 2026-01-09
 - Fix for custom image ImagePicker
 - Added ability to show hidden apps in search and unhide app from long press menu

@@ -1140,18 +1140,248 @@ class SettingsActivity : AppCompatActivity() {
             return path
         }
 
-        // Handle content:// URIs - try to get real path
+        // Handle content:// URIs
         if (uri.scheme == "content") {
-            // Try querying the content resolver for the file path
+            // Special handling for Google Photos / cloud providers
+            if (uri.authority == "com.google.android.apps.photos.contentprovider" ||
+                uri.authority?.contains("google.android.apps.docs") == true ||
+                uri.authority?.contains("com.android.providers.media.documents") == true
+            ) {
+                android.util.Log.d(
+                    "SettingsActivity",
+                    "Cloud/Photos provider detected: ${uri.authority}"
+                )
+
+                // These providers require content resolver query
+                val projection = arrayOf(
+                    android.provider.MediaStore.MediaColumns.DATA,
+                    android.provider.MediaStore.MediaColumns.DISPLAY_NAME
+                )
+                try {
+                    contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            // Try DATA column first (actual file path)
+                            val dataIndex =
+                                cursor.getColumnIndex(android.provider.MediaStore.MediaColumns.DATA)
+                            if (dataIndex >= 0) {
+                                val path = cursor.getString(dataIndex)
+                                if (path != null && path.isNotEmpty()) {
+                                    android.util.Log.d(
+                                        "SettingsActivity",
+                                        "Cloud provider - got path: $path"
+                                    )
+                                    return path
+                                }
+                            }
+
+                            // Fallback: get display name (we'll need to copy the file)
+                            val nameIndex =
+                                cursor.getColumnIndex(android.provider.MediaStore.MediaColumns.DISPLAY_NAME)
+                            if (nameIndex >= 0) {
+                                val fileName = cursor.getString(nameIndex)
+                                android.util.Log.d(
+                                    "SettingsActivity",
+                                    "Cloud file name: $fileName (needs copy)"
+                                )
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("SettingsActivity", "Could not query cloud provider", e)
+                }
+
+                // If we get here, file is cloud-only - throw exception to trigger copy fallback
+                throw IllegalArgumentException("Cloud file must be copied to local storage")
+            }
+
+            // Special handling for Downloads provider
+            if (uri.authority == "com.android.providers.downloads.documents") {
+                android.util.Log.d("SettingsActivity", "Downloads provider URI detected")
+
+                // Try to get the real path via content resolver query
+                val projection = arrayOf(android.provider.MediaStore.MediaColumns.DATA)
+                try {
+                    contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val columnIndex =
+                                cursor.getColumnIndex(android.provider.MediaStore.MediaColumns.DATA)
+                            if (columnIndex >= 0) {
+                                val path = cursor.getString(columnIndex)
+                                if (path != null) {
+                                    android.util.Log.d(
+                                        "SettingsActivity",
+                                        "Downloads provider - got path: $path"
+                                    )
+                                    return path
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("SettingsActivity", "Could not query Downloads provider", e)
+                }
+
+                // Fallback: try constructing Downloads path
+                val documentId = android.provider.DocumentsContract.getDocumentId(uri)
+                android.util.Log.d("SettingsActivity", "Downloads document ID: $documentId")
+
+                when {
+                    documentId.startsWith("raw:") -> {
+                        val rawPath = documentId.substringAfter("raw:")
+                        android.util.Log.d("SettingsActivity", "Downloads raw path: $rawPath")
+                        return rawPath
+                    }
+
+                    documentId.startsWith("msf:") -> {
+                        val fileId = documentId.substringAfter("msf:")
+                        android.util.Log.d("SettingsActivity", "MediaStore file ID: $fileId")
+
+                        val downloadUri = android.content.ContentUris.withAppendedId(
+                            android.provider.MediaStore.Files.getContentUri("external"),
+                            fileId.toLongOrNull()
+                                ?: throw IllegalArgumentException("Invalid file ID: $fileId")
+                        )
+
+                        try {
+                            contentResolver.query(downloadUri, projection, null, null, null)
+                                ?.use { cursor ->
+                                    if (cursor.moveToFirst()) {
+                                        val columnIndex =
+                                            cursor.getColumnIndex(android.provider.MediaStore.MediaColumns.DATA)
+                                        if (columnIndex >= 0) {
+                                            val path = cursor.getString(columnIndex)
+                                            if (path != null) {
+                                                android.util.Log.d(
+                                                    "SettingsActivity",
+                                                    "MediaStore file path: $path"
+                                                )
+                                                return path
+                                            }
+                                        }
+                                    }
+                                }
+                        } catch (e: Exception) {
+                            android.util.Log.e(
+                                "SettingsActivity",
+                                "Failed to query MediaStore for file",
+                                e
+                            )
+                        }
+                    }
+
+                    documentId.matches(Regex("\\d+")) -> {
+                        val downloadUri = android.content.ContentUris.withAppendedId(
+                            android.net.Uri.parse("content://downloads/public_downloads"),
+                            documentId.toLong()
+                        )
+
+                        try {
+                            contentResolver.query(downloadUri, projection, null, null, null)
+                                ?.use { cursor ->
+                                    if (cursor.moveToFirst()) {
+                                        val columnIndex =
+                                            cursor.getColumnIndex(android.provider.MediaStore.MediaColumns.DATA)
+                                        if (columnIndex >= 0) {
+                                            val path = cursor.getString(columnIndex)
+                                            if (path != null) {
+                                                android.util.Log.d(
+                                                    "SettingsActivity",
+                                                    "Downloads path: $path"
+                                                )
+                                                return path
+                                            }
+                                        }
+                                    }
+                                }
+                        } catch (e: Exception) {
+                            android.util.Log.e(
+                                "SettingsActivity",
+                                "Failed to query Downloads provider",
+                                e
+                            )
+                        }
+                    }
+                }
+
+                throw IllegalArgumentException("Could not resolve Downloads provider path for: $documentId")
+            }
+
+            // Special handling for Media Documents provider (Gallery, Photos app)
+            if (uri.authority == "com.android.providers.media.documents") {
+                android.util.Log.d("SettingsActivity", "Media documents provider detected")
+
+                try {
+                    val documentId = android.provider.DocumentsContract.getDocumentId(uri)
+                    val parts = documentId.split(":")
+
+                    if (parts.size == 2) {
+                        val type = parts[0]  // "image", "video", "audio"
+                        val id = parts[1]
+
+                        android.util.Log.d(
+                            "SettingsActivity",
+                            "Media document - type: $type, id: $id"
+                        )
+
+                        val contentUri = when (type) {
+                            "image" -> android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                            "video" -> android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                            "audio" -> android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                            else -> null
+                        }
+
+                        if (contentUri != null) {
+                            val selection = "${android.provider.MediaStore.MediaColumns._ID} = ?"
+                            val selectionArgs = arrayOf(id)
+                            val projection = arrayOf(android.provider.MediaStore.MediaColumns.DATA)
+
+                            contentResolver.query(
+                                contentUri,
+                                projection,
+                                selection,
+                                selectionArgs,
+                                null
+                            )?.use { cursor ->
+                                if (cursor.moveToFirst()) {
+                                    val columnIndex =
+                                        cursor.getColumnIndex(android.provider.MediaStore.MediaColumns.DATA)
+                                    if (columnIndex >= 0) {
+                                        val path = cursor.getString(columnIndex)
+                                        if (path != null) {
+                                            android.util.Log.d(
+                                                "SettingsActivity",
+                                                "Media document path: $path"
+                                            )
+                                            return path
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SettingsActivity", "Failed to query media documents", e)
+                }
+
+                throw IllegalArgumentException("Could not resolve media document path")
+            }
+
+            // Try standard MediaStore query for other content providers
             val projection = arrayOf(android.provider.MediaStore.Images.Media.DATA)
             try {
                 contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                     if (cursor.moveToFirst()) {
-                        val columnIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media.DATA)
-                        val path = cursor.getString(columnIndex)
-                        if (path != null) {
-                            android.util.Log.d("SettingsActivity", "Content URI - got path from MediaStore: $path")
-                            return path
+                        val columnIndex =
+                            cursor.getColumnIndex(android.provider.MediaStore.Images.Media.DATA)
+                        if (columnIndex >= 0) {
+                            val path = cursor.getString(columnIndex)
+                            if (path != null && path.isNotEmpty()) {
+                                android.util.Log.d(
+                                    "SettingsActivity",
+                                    "Content URI - got path from MediaStore: $path"
+                                )
+                                return path
+                            }
                         }
                     }
                 }
@@ -1160,7 +1390,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // Fallback: parse the URI path manually
+        // Fallback: parse the URI path manually (for externalstorage.documents)
         val path = uri.path ?: throw IllegalArgumentException("URI has no path")
         android.util.Log.d("SettingsActivity", "Parsing URI path manually: $path")
 
@@ -1178,7 +1408,10 @@ class SettingsActivity : AppCompatActivity() {
             path.contains("/document/primary:") -> {
                 val actualPath = path.substringAfter("primary:")
                 val result = "/storage/emulated/0/$actualPath"
-                android.util.Log.d("SettingsActivity", "Converted document primary path to: $result")
+                android.util.Log.d(
+                    "SettingsActivity",
+                    "Converted document primary path to: $result"
+                )
                 return result
             }
 
@@ -1190,31 +1423,39 @@ class SettingsActivity : AppCompatActivity() {
                     val sdCardId = parts[0]
                     val sdPath = parts[1]
                     val result = "/storage/$sdCardId/$sdPath"
-                    android.util.Log.d("SettingsActivity", "Converted SD card tree path to: $result")
+                    android.util.Log.d(
+                        "SettingsActivity",
+                        "Converted SD card tree path to: $result"
+                    )
                     return result
                 }
                 throw IllegalArgumentException("Could not parse SD card tree path from: $path")
             }
 
-            // SD card document: /document/XXXX-XXXX:path (THIS IS THE NEW CASE YOU NEED)
+            // SD card document: /document/XXXX-XXXX:path
             path.contains("/document/") && !path.contains("primary:") && path.contains(":") -> {
-                // Extract the document path (e.g., "E2AB-E84A%3AES-DE%2Fdownloaded_media%2Fnes%2Ffanart%2FAdventure%20Island%20(USA).jpg")
                 val documentPath = path.substringAfter("/document/")
-
-                // URL decode the path (handles %3A -> : and %2F -> /)
                 val decodedPath = java.net.URLDecoder.decode(documentPath, "UTF-8")
-                android.util.Log.d("SettingsActivity", "Decoded SD card document path: $decodedPath")
+                android.util.Log.d("SettingsActivity", "Decoded document path: $decodedPath")
 
-                // Split on first colon to separate SD card ID from file path
                 val parts = decodedPath.split(":", limit = 2)
                 if (parts.size == 2) {
-                    val sdCardId = parts[0]
-                    val sdPath = parts[1]
-                    val result = "/storage/$sdCardId/$sdPath"
-                    android.util.Log.d("SettingsActivity", "Converted SD card document path to: $result")
-                    return result
+                    val firstPart = parts[0]
+                    // SD card IDs are typically 4-4 hex format
+                    if (firstPart.matches(Regex("[A-Z0-9]{4}-[A-Z0-9]{4}"))) {
+                        val sdCardId = firstPart
+                        val sdPath = parts[1]
+                        val result = "/storage/$sdCardId/$sdPath"
+                        android.util.Log.d(
+                            "SettingsActivity",
+                            "Converted SD card document path to: $result"
+                        )
+                        return result
+                    }
                 }
-                throw IllegalArgumentException("Could not parse SD card document path from: $decodedPath")
+
+                // Changed: throw instead of just logging
+                throw IllegalArgumentException("Document path doesn't match SD card format: $decodedPath")
             }
 
             // MediaStore image ID: /document/image:12345
@@ -1235,14 +1476,26 @@ class SettingsActivity : AppCompatActivity() {
                         null
                     )?.use { cursor ->
                         if (cursor.moveToFirst()) {
-                            val columnIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media.DATA)
-                            val realPath = cursor.getString(columnIndex)
-                            android.util.Log.d("SettingsActivity", "Got real path for image ID: $realPath")
-                            return realPath
+                            val columnIndex =
+                                cursor.getColumnIndex(android.provider.MediaStore.Images.Media.DATA)
+                            if (columnIndex >= 0) {
+                                val path = cursor.getString(columnIndex)
+                                if (path != null) {
+                                    android.util.Log.d(
+                                        "SettingsActivity",
+                                        "Got real path for image ID: $path"
+                                    )
+                                    return path
+                                }
+                            }
                         }
                     }
                 } catch (e: Exception) {
-                    android.util.Log.e("SettingsActivity", "Failed to query MediaStore for image ID", e)
+                    android.util.Log.e(
+                        "SettingsActivity",
+                        "Failed to query MediaStore for image ID",
+                        e
+                    )
                 }
 
                 throw IllegalArgumentException("Could not resolve MediaStore image path for ID: $imageId")
@@ -1254,15 +1507,17 @@ class SettingsActivity : AppCompatActivity() {
                 return path
             }
 
+            // Last resort fallback - this handles the else case
+            path.contains("primary:") -> {
+                val extracted = path.substringAfter("primary:")
+                val result = "/storage/emulated/0/$extracted"
+                android.util.Log.d("SettingsActivity", "Fallback extraction: $result")
+                return result
+            }
+
+            // Ultimate fallback - throw exception if nothing matched
             else -> {
-                // Last resort fallback
-                if (path.contains("primary:")) {
-                    val extracted = path.substringAfter("primary:")
-                    val result = "/storage/emulated/0/$extracted"
-                    android.util.Log.d("SettingsActivity", "Fallback extraction: $result")
-                    return result
-                }
-                throw IllegalArgumentException("Could not convert URI to path: $uri")
+                throw IllegalArgumentException("Could not convert URI to path: $uri (path: $path)")
             }
         }
     }
