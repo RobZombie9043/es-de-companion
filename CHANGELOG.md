@@ -1,14 +1,17 @@
 # 🔄 Changelog
 
-## [0.3.0] - TBC
+## [0.3.0] - 2026-01-08
 - Overhauled app long press menu
     - New `Hide App` button to more easily hide apps from app drawer
     - Choosing launch app on `this screen`/`other screen` directly launches the app on the chosen screen instead of needing to go back to app drawer to do this. Last used selection is remembered for future app launches.
     - Added a small indicator dot on app icons that are set for launch on other screen for a quick visual indication of current setting
--   Updated some app default settings (wont affect existing settings if already changed)
+- Added a `Custom Background Image` option that can override the default fallback image for when media is not found and can be set as the Game Launch or Screensaver Display image.
+- Updated some app default settings (wont affect existing settings if already changed)
     - `Video Delay` is set to 2 seconds (if Video Playback is enabled)
     - `Game Launch Display` and `Screensaver Display` settings default to `Game Image`
-- Fix for videos not playing on Ayaneo Pocket DS devices (to be tested)
+- Added missing system logos for All Games and Last Played Auto Collections and grouped Custom Collections
+- Changed default directories for custom `System Images and Logos` to /storage/emualted/0/ES-DE Companion/system_images or system_logos (this is to keep all ES-DE Companion custom media separate from ES-DEs downloaded_media by default)
+- Added separate sliders for System Logo and Game Marquee size (off - small - medium - large)
 
 ## [0.2.9] - 2026-01-07
 - Fix for Game Launch Display setting not sticking after game launch

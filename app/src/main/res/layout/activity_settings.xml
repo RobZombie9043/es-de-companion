@@ -1497,7 +1497,7 @@
                 android:id="@+id/versionText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ES-DE Companion v0.2.8"
+                android:text="ES-DE Companion v0.3.0"
                 android:textColor="#666666"
                 android:textSize="12sp"
                 android:layout_marginBottom="4dp" />
