@@ -1,5 +1,9 @@
 # 🔄 Changelog
 
+## [0.3.1] - 2026-01-09
+- Fix for custom image ImagePicker
+- Added ability to show hidden apps in search and unhide app from long press menu
+
 ## [0.3.0] - 2026-01-08
 - Overhauled app long press menu
     - New `Hide App` button to more easily hide apps from app drawer

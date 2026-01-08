@@ -1,5 +1,6 @@
 package com.esde.companion
 
+import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.view.LayoutInflater
@@ -10,17 +11,19 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class AppAdapter(
-    private var apps: List<ResolveInfo>,  // Change to var
+    private var apps: List<ResolveInfo>,
     private val packageManager: PackageManager,
     private val onAppClick: (ResolveInfo) -> Unit,
     private val onAppLongClick: (ResolveInfo, View) -> Unit,
-    private val appLaunchPrefs: AppLaunchPreferences
+    private val appLaunchPrefs: AppLaunchPreferences,
+    private val hiddenApps: Set<String> = setOf()  // ADD THIS PARAMETER
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 
     class AppViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.appIcon)
         val appName: TextView = view.findViewById(R.id.appName)
         val launchIndicator: View = view.findViewById(R.id.launchIndicator)
+        val hiddenBadge: TextView = view.findViewById(R.id.hiddenBadge)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
@@ -39,6 +42,10 @@ class AppAdapter(
         // Show indicator if app launches on other screen
         val launchesOnOtherScreen = appLaunchPrefs.shouldLaunchOnBottom(packageName)
         holder.launchIndicator.visibility = if (launchesOnOtherScreen) View.VISIBLE else View.GONE
+
+        // Show hidden badge if app is hidden
+        val isHidden = hiddenApps.contains(packageName)
+        holder.hiddenBadge.visibility = if (isHidden) View.VISIBLE else View.GONE
 
         // Regular click to launch app
         holder.itemView.setOnClickListener {

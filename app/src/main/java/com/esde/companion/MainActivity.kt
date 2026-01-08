@@ -1242,7 +1242,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.d("MainActivity", "AppDrawer state set to HIDDEN: ${bottomSheetBehavior.state}")
         }
 
-        val columnCount = prefs.getInt("column_count", 4)
+        val columnCount = prefs.getInt(COLUMN_COUNT_KEY, 4)
         appRecyclerView.layoutManager = GridLayoutManager(this, columnCount)
 
         val mainIntent = Intent(Intent.ACTION_MAIN, null)
@@ -1253,13 +1253,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             .filter { !hiddenApps.contains(it.activityInfo?.packageName ?: "") }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
 
-        // Pass appLaunchPrefs to adapter
+        // Pass hiddenApps to adapter
         appRecyclerView.adapter = AppAdapter(
             allApps,
             packageManager,
             onAppClick = { app -> launchApp(app) },
             onAppLongClick = { app, view -> showAppOptionsDialog(app) },
-            appLaunchPrefs = appLaunchPrefs // Add this
+            appLaunchPrefs = appLaunchPrefs,
+            hiddenApps = hiddenApps  // ADD THIS LINE
         )
 
         android.util.Log.d("MainActivity", "AppDrawer setup complete, initial state: ${bottomSheetBehavior.state}")
@@ -1340,15 +1341,24 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 // Show/hide clear button based on whether there's text
                 searchClearButton.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
 
+                val hiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+
                 val filteredApps = if (query.isEmpty()) {
+                    // No search query - show only visible apps (current behavior)
                     allApps
                 } else {
-                    allApps.filter { app ->
-                        app.loadLabel(packageManager).toString().lowercase().contains(query)
-                    }
+                    // Has search query - search ALL apps including hidden ones
+                    val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                    mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+
+                    packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
+                        .filter { app ->
+                            app.loadLabel(packageManager).toString().lowercase().contains(query)
+                        }
+                        .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
                 }
 
-                // Add appLaunchPrefs parameter here
+                // Update adapter with filtered results - pass hiddenApps
                 appRecyclerView.adapter = AppAdapter(
                     filteredApps,
                     packageManager,
@@ -1358,7 +1368,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     onAppLongClick = { app, view ->
                         showAppOptionsDialog(app)
                     },
-                    appLaunchPrefs = appLaunchPrefs
+                    appLaunchPrefs = appLaunchPrefs,
+                    hiddenApps = hiddenApps  // ADD THIS LINE
                 )
             }
         })
@@ -2564,9 +2575,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     /**
-     * Launch app on top display (display ID 0)
-     */
-    /**
      * Show app options dialog with launch position toggles
      * Note: "Top" now means "This screen" (same as companion)
      *       "Bottom" now means "Other screen" (opposite of companion)
@@ -2584,6 +2592,22 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         val chipLaunchBottom = dialogView.findViewById<Chip>(R.id.chipLaunchBottom)
 
         dialogAppName.text = appName
+
+        // Check if app is currently hidden and update button
+        val hiddenApps = prefs.getStringSet("hidden_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+        val isHidden = hiddenApps.contains(packageName)
+
+        if (isHidden) {
+            btnHideApp.text = "Unhide App"
+            btnHideApp.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.parseColor("#4CAF50")
+            )
+        } else {
+            btnHideApp.text = "Hide App"
+            btnHideApp.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                android.graphics.Color.parseColor("#CF6679")
+            )
+        }
 
         // Set initial chip state
         val currentPosition = appLaunchPrefs.getLaunchPosition(packageName)
@@ -2603,45 +2627,50 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             dialog.dismiss()
         }
 
-        // Hide App button
+        // Hide/Unhide App button
         btnHideApp.setOnClickListener {
-            // Show confirmation dialog
-            AlertDialog.Builder(this)
-                .setTitle("Hide App")
-                .setMessage("Hide \"$appName\" from the app drawer?\n\nYou can unhide it later from Settings → App Drawer → Manage Apps.")
-                .setPositiveButton("Hide") { _, _ ->
-                    // Get current hidden apps
-                    val hiddenApps = prefs.getStringSet("hidden_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+            val currentHiddenApps = prefs.getStringSet("hidden_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+            val currentlyHidden = currentHiddenApps.contains(packageName)
 
-                    // Add this app to hidden list
-                    hiddenApps.add(packageName)
+            if (currentlyHidden) {
+                // Unhide - no confirmation
+                currentHiddenApps.remove(packageName)
+                prefs.edit().putStringSet("hidden_apps", currentHiddenApps).apply()
+                dialog.dismiss()
 
-                    // Save updated hidden apps list
-                    prefs.edit().putStringSet("hidden_apps", hiddenApps).apply()
+                val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                val updatedHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+                allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
+                    .filter { !updatedHiddenApps.contains(it.activityInfo?.packageName ?: "") }
+                    .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
 
-                    // Close the dialog
-                    dialog.dismiss()
+                (appRecyclerView.adapter as? AppAdapter)?.updateApps(allApps)
+                Toast.makeText(this, "\"$appName\" shown in app drawer", Toast.LENGTH_SHORT).show()
+            } else {
+                // Hide - show confirmation
+                AlertDialog.Builder(this)
+                    .setTitle("Hide App")
+                    .setMessage("Hide \"$appName\" from the app drawer?\n\nYou can unhide it later from Settings → App Drawer → Manage Apps, or by searching for it.")
+                    .setPositiveButton("Hide") { _, _ ->
+                        currentHiddenApps.add(packageName)
+                        prefs.edit().putStringSet("hidden_apps", currentHiddenApps).apply()
+                        dialog.dismiss()
 
-                    // Update allApps list to remove hidden app
-                    val mainIntent = Intent(Intent.ACTION_MAIN, null)
-                    mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-                    allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
-                        .filter { !hiddenApps.contains(it.activityInfo?.packageName ?: "") }
-                        .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+                        val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                        val updatedHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+                        allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
+                            .filter { !updatedHiddenApps.contains(it.activityInfo?.packageName ?: "") }
+                            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
 
-                    // Update the existing adapter with new list (preserves scroll position)
-                    (appRecyclerView.adapter as? AppAdapter)?.updateApps(allApps)
-
-                    // Show confirmation toast
-                    Toast.makeText(
-                        this,
-                        "\"$appName\" hidden from app drawer",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                .setNegativeButton("Cancel", null)
-                .setIcon(android.R.drawable.ic_menu_delete)
-                .show()
+                        (appRecyclerView.adapter as? AppAdapter)?.updateApps(allApps)
+                        Toast.makeText(this, "\"$appName\" hidden from app drawer", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .setIcon(android.R.drawable.ic_menu_delete)
+                    .show()
+            }
         }
 
         // Chip selection listener - save preference AND launch app
@@ -3678,5 +3707,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.d("MainActivity", "No video found for system: $systemName, game: $strippedName")
             releasePlayer()
         }
+    }
+    companion object {
+        const val COLUMN_COUNT_KEY = "column_count"
     }
 }

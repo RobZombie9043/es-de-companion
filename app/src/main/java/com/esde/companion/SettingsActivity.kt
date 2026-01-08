@@ -192,29 +192,71 @@ class SettingsActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 try {
-                    // Get the actual file path using the existing helper
-                    val path = getPathFromUri(uri)
-                    android.util.Log.d("SettingsActivity", "Selected file path: $path")
+                    android.util.Log.d("SettingsActivity", "Custom background selected - URI: $uri")
 
-                    // Verify the file exists
-                    val file = File(path)
-                    if (file.exists() && file.canRead()) {
-                        prefs.edit().putString(CUSTOM_BACKGROUND_KEY, path).apply()
-                        updateCustomBackgroundDisplay()
-                        customBackgroundChanged = true
-
-                        Toast.makeText(
-                            this,
-                            "Custom background set successfully",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Toast.makeText(
-                            this,
-                            "Selected file is not accessible",
-                            Toast.LENGTH_LONG
-                        ).show()
+                    // Try to persist permissions for content:// URIs
+                    try {
+                        contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                        android.util.Log.d("SettingsActivity", "Persisted read permission for URI")
+                    } catch (e: Exception) {
+                        android.util.Log.w("SettingsActivity", "Could not persist URI permissions (might be file:// URI)", e)
                     }
+
+                    // Try to get the actual file path
+                    val path = try {
+                        getPathFromUri(uri)
+                    } catch (e: Exception) {
+                        android.util.Log.e("SettingsActivity", "getPathFromUri failed", e)
+                        null
+                    }
+
+                    android.util.Log.d("SettingsActivity", "Converted to path: $path")
+
+                    // Verify file accessibility
+                    if (path != null) {
+                        val file = File(path)
+                        android.util.Log.d("SettingsActivity", "File check - exists: ${file.exists()}, canRead: ${file.canRead()}, isFile: ${file.isFile}")
+
+                        if (file.exists() && file.canRead() && file.isFile) {
+                            // File is accessible - save path
+                            prefs.edit().putString(CUSTOM_BACKGROUND_KEY, path).apply()
+                            updateCustomBackgroundDisplay()
+                            customBackgroundChanged = true
+
+                            Toast.makeText(
+                                this,
+                                "Custom background set successfully",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@let
+                        } else {
+                            android.util.Log.e("SettingsActivity", "File not accessible: $path")
+                        }
+                    }
+
+                    // Path extraction or file access failed - show error with helpful message
+                    AlertDialog.Builder(this)
+                        .setTitle("File Not Accessible")
+                        .setMessage("Could not access the selected file.\n\n" +
+                                "This might happen if:\n" +
+                                "• The file is on external storage without proper permissions\n" +
+                                "• The file was moved or deleted\n" +
+                                "• The storage location is not mounted\n\n" +
+                                "Try:\n" +
+                                "• Selecting a file from internal storage (/storage/emulated/0/)\n" +
+                                "• Copying the image to your Pictures or Downloads folder first\n" +
+                                "• Granting storage permissions in Android Settings")
+                        .setPositiveButton("Try Again") { _, _ ->
+                            // Let user try selecting again
+                            selectCustomBackgroundButton.performClick()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .show()
+
                 } catch (e: Exception) {
                     android.util.Log.e("SettingsActivity", "Error setting custom background", e)
                     Toast.makeText(
@@ -1087,35 +1129,140 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun getPathFromUri(uri: Uri): String {
-        // Convert content:// URI to file path
-        val path = uri.path ?: return ""
+        android.util.Log.d("SettingsActivity", "getPathFromUri - Input URI: $uri")
+        android.util.Log.d("SettingsActivity", "  URI scheme: ${uri.scheme}")
+        android.util.Log.d("SettingsActivity", "  URI authority: ${uri.authority}")
+
+        // Handle file:// URIs directly
+        if (uri.scheme == "file") {
+            val path = uri.path ?: throw IllegalArgumentException("File URI has no path")
+            android.util.Log.d("SettingsActivity", "File URI - returning path: $path")
+            return path
+        }
+
+        // Handle content:// URIs - try to get real path
+        if (uri.scheme == "content") {
+            // Try querying the content resolver for the file path
+            val projection = arrayOf(android.provider.MediaStore.Images.Media.DATA)
+            try {
+                contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val columnIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media.DATA)
+                        val path = cursor.getString(columnIndex)
+                        if (path != null) {
+                            android.util.Log.d("SettingsActivity", "Content URI - got path from MediaStore: $path")
+                            return path
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("SettingsActivity", "Could not query MediaStore for path", e)
+            }
+        }
+
+        // Fallback: parse the URI path manually
+        val path = uri.path ?: throw IllegalArgumentException("URI has no path")
+        android.util.Log.d("SettingsActivity", "Parsing URI path manually: $path")
 
         // Handle different URI formats
         when {
-            // Internal storage: content://com.android.externalstorage.documents/tree/primary:path
+            // Internal storage tree: content://com.android.externalstorage.documents/tree/primary:path
             path.contains("/tree/primary:") -> {
                 val actualPath = path.substringAfter("primary:")
-                return "/storage/emulated/0/$actualPath"
+                val result = "/storage/emulated/0/$actualPath"
+                android.util.Log.d("SettingsActivity", "Converted tree primary path to: $result")
+                return result
             }
-            // SD Card: content://com.android.externalstorage.documents/tree/XXXX-XXXX:path
-            path.contains("/tree/") && path.contains(":") -> {
-                // Extract SD card ID and path
+
+            // Internal storage document: /document/primary:path
+            path.contains("/document/primary:") -> {
+                val actualPath = path.substringAfter("primary:")
+                val result = "/storage/emulated/0/$actualPath"
+                android.util.Log.d("SettingsActivity", "Converted document primary path to: $result")
+                return result
+            }
+
+            // SD card tree: /tree/XXXX-XXXX:path
+            path.contains("/tree/") && !path.contains("primary:") && path.contains(":") -> {
                 val treePath = path.substringAfter("/tree/")
-                val parts = treePath.split(":")
-                if (parts.size >= 2) {
+                val parts = treePath.split(":", limit = 2)
+                if (parts.size == 2) {
                     val sdCardId = parts[0]
-                    val sdPath = parts.drop(1).joinToString(":")
-                    return "/storage/$sdCardId/$sdPath"
+                    val sdPath = parts[1]
+                    val result = "/storage/$sdCardId/$sdPath"
+                    android.util.Log.d("SettingsActivity", "Converted SD card tree path to: $result")
+                    return result
                 }
+                throw IllegalArgumentException("Could not parse SD card tree path from: $path")
+            }
+
+            // SD card document: /document/XXXX-XXXX:path (THIS IS THE NEW CASE YOU NEED)
+            path.contains("/document/") && !path.contains("primary:") && path.contains(":") -> {
+                // Extract the document path (e.g., "E2AB-E84A%3AES-DE%2Fdownloaded_media%2Fnes%2Ffanart%2FAdventure%20Island%20(USA).jpg")
+                val documentPath = path.substringAfter("/document/")
+
+                // URL decode the path (handles %3A -> : and %2F -> /)
+                val decodedPath = java.net.URLDecoder.decode(documentPath, "UTF-8")
+                android.util.Log.d("SettingsActivity", "Decoded SD card document path: $decodedPath")
+
+                // Split on first colon to separate SD card ID from file path
+                val parts = decodedPath.split(":", limit = 2)
+                if (parts.size == 2) {
+                    val sdCardId = parts[0]
+                    val sdPath = parts[1]
+                    val result = "/storage/$sdCardId/$sdPath"
+                    android.util.Log.d("SettingsActivity", "Converted SD card document path to: $result")
+                    return result
+                }
+                throw IllegalArgumentException("Could not parse SD card document path from: $decodedPath")
+            }
+
+            // MediaStore image ID: /document/image:12345
+            path.contains("/document/image:") -> {
+                val imageId = path.substringAfter("image:")
+                android.util.Log.d("SettingsActivity", "Found MediaStore image ID: $imageId")
+
+                val projection = arrayOf(android.provider.MediaStore.Images.Media.DATA)
+                val selection = "${android.provider.MediaStore.Images.Media._ID} = ?"
+                val selectionArgs = arrayOf(imageId)
+
+                try {
+                    contentResolver.query(
+                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null
+                    )?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val columnIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Images.Media.DATA)
+                            val realPath = cursor.getString(columnIndex)
+                            android.util.Log.d("SettingsActivity", "Got real path for image ID: $realPath")
+                            return realPath
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SettingsActivity", "Failed to query MediaStore for image ID", e)
+                }
+
+                throw IllegalArgumentException("Could not resolve MediaStore image path for ID: $imageId")
+            }
+
+            // Raw path format
+            path.startsWith("/storage/") -> {
+                android.util.Log.d("SettingsActivity", "Already a storage path: $path")
                 return path
             }
+
             else -> {
-                // Fallback
-                return path.substringAfter("primary:").let {
-                    if (it.startsWith("/")) it else "/$it"
-                }.let {
-                    "/storage/emulated/0$it"
+                // Last resort fallback
+                if (path.contains("primary:")) {
+                    val extracted = path.substringAfter("primary:")
+                    val result = "/storage/emulated/0/$extracted"
+                    android.util.Log.d("SettingsActivity", "Fallback extraction: $result")
+                    return result
                 }
+                throw IllegalArgumentException("Could not convert URI to path: $uri")
             }
         }
     }

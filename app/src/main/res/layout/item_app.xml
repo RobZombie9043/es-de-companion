@@ -29,6 +29,22 @@
             android:background="@drawable/indicator_dot"
             android:visibility="gone" />
 
+        <!-- Hidden App Badge (visible when app is hidden) -->
+        <TextView
+            android:id="@+id/hiddenBadge"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="2dp"
+            android:layout_marginBottom="2dp"
+            android:background="@drawable/hidden_badge_background"
+            android:gravity="center"
+            android:text="H"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
     </FrameLayout>
 
     <TextView
