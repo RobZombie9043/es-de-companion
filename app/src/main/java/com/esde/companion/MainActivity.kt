@@ -799,30 +799,23 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun updateMarqueeSize(isSystemLogo: Boolean = false) {
-        // Determine which size setting to use based on context
         val sizeKey = if (isSystemLogo) "system_logo_size" else "game_logo_size"
         val logoSize = prefs.getString(sizeKey, "medium") ?: "medium"
-
-        // Don't resize if logo is set to "off"
-        if (logoSize == "off") {
-            marqueeImageView.visibility = View.GONE
-            return
-        }
 
         val layoutParams = marqueeImageView.layoutParams
 
         when (logoSize) {
             "small" -> {
-                layoutParams.width = dpToPx(225)
-                layoutParams.height = dpToPx(300)
+                layoutParams.width = dpToPx(250)
+                layoutParams.height = dpToPx(250)
             }
             "large" -> {
-                layoutParams.width = dpToPx(375)
-                layoutParams.height = dpToPx(500)
+                layoutParams.width = dpToPx(450)
+                layoutParams.height = dpToPx(450)
             }
             else -> { // medium
-                layoutParams.width = dpToPx(300)
-                layoutParams.height = dpToPx(400)
+                layoutParams.width = dpToPx(350)
+                layoutParams.height = dpToPx(350)
             }
         }
 
@@ -2230,7 +2223,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 gameImageLoaded = true
             } else {
                 // Game has no artwork - check for game marquee to display on dark background
-                val marqueeFile = findMarqueeImage(systemName, gameName, gameNameRaw)
+                val marqueeFile = findGameOverlayImage(systemName, gameName, gameNameRaw)
 
                 if (marqueeFile != null && marqueeFile.exists()) {
                     // Game has marquee - show it centered on dark background
@@ -2280,7 +2273,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
             // Handle marquee separately when game has its own artwork
             if (gameImageLoaded && gameImage != null && gameImage.exists()) {
-                val marqueeFile = findMarqueeImage(systemName, gameName, gameNameRaw)
+                val marqueeFile = findGameOverlayImage(systemName, gameName, gameNameRaw)
                 if (marqueeFile != null && marqueeFile.exists()) {
                     if (!prefs.getBoolean("game_logo_enabled", true)) {
                         marqueeImageView.visibility = View.GONE
@@ -2349,20 +2342,48 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         return null
     }
 
-    private fun findMarqueeImage(systemName: String, gameName: String, fullGamePath: String): File? {
+    private fun findGameOverlayImage(systemName: String, gameName: String, fullGamePath: String): File? {
         val extensions = listOf("jpg", "png", "webp")
+
+        // Get the overlay type from preferences (marquees, covers, 3dboxes, or miximages)
+        val overlayType = prefs.getString("game_overlay_type", "marquees") ?: "marquees"
 
         // Sanitize the full path to get just the filename
         val sanitizedFilename = sanitizeGameFilename(fullGamePath)
         val sanitizedName = sanitizedFilename.substringBeforeLast('.')
 
-        return findImageInDir(
-            File(getMediaBasePath(), "$systemName/marquees"),
+        // Try to find the image in the primary overlay type folder
+        val primaryImage = findImageInDir(
+            File(getMediaBasePath(), "$systemName/$overlayType"),
             sanitizedName,
             sanitizedFilename,
             fullGamePath,
             extensions
         )
+
+        // If found in primary folder, return it
+        if (primaryImage != null) {
+            return primaryImage
+        }
+
+        // Special case: if 3dboxes was selected but no image found, fallback to covers
+        if (overlayType == "3dboxes") {
+            android.util.Log.d("MainActivity", "No 3dboxes image found, trying covers fallback for: $sanitizedName")
+            val fallbackImage = findImageInDir(
+                File(getMediaBasePath(), "$systemName/covers"),
+                sanitizedName,
+                sanitizedFilename,
+                fullGamePath,
+                extensions
+            )
+            if (fallbackImage != null) {
+                android.util.Log.d("MainActivity", "Found covers fallback: ${fallbackImage.absolutePath}")
+                return fallbackImage
+            }
+        }
+
+        // No image found in primary or fallback
+        return null
     }
 
     private fun findImageInDir(
@@ -2772,7 +2793,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             // Load marquee
                             val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
                             if (gameLogoSize != "off") {
-                                val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                                val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
                                 if (marqueeImage != null) {
                                     Glide.with(this)
                                         .load(marqueeImage)
@@ -2813,7 +2834,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             val systemName = screensaverSystemName ?: currentSystemName
                             if (filename != null && systemName != null) {
                                 val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
-                                val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                                val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
                                 if (marqueeImage != null) {
                                     Glide.with(this)
                                         .load(marqueeImage)
@@ -2870,7 +2891,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         // Load the game's marquee
                         val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
                         if (gameLogoSize != "off") {
-                            val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                            val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
                             if (marqueeImage != null) {
                                 Glide.with(this)
                                     .load(marqueeImage)
@@ -2915,7 +2936,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     val systemName = currentSystemName
                     if (filename != null && systemName != null) {
                         val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
-                        val marqueeImage = findMarqueeImage(systemName, gameName, filename)
+                        val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
                         if (marqueeImage != null) {
                             Glide.with(this)
                                 .load(marqueeImage)
@@ -3124,7 +3145,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         // Load marquee if enabled
                         val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
                         if (gameLogoSize != "off") {
-                            val marqueeFile = findMarqueeImage(
+                            val marqueeFile = findGameOverlayImage(
                                 screensaverSystemName!!,
                                 gameName,
                                 screensaverGameFilename!!
@@ -3159,7 +3180,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
                         val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
                         if (gameLogoSize != "off") {
-                            val marqueeFile = findMarqueeImage(
+                            val marqueeFile = findGameOverlayImage(
                                 screensaverSystemName!!,
                                 gameName,
                                 screensaverGameFilename!!
@@ -3197,7 +3218,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
                     val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
                     if (gameLogoSize != "off") {
-                        val marqueeFile = findMarqueeImage(
+                        val marqueeFile = findGameOverlayImage(
                             screensaverSystemName!!,
                             gameName,
                             screensaverGameFilename!!
