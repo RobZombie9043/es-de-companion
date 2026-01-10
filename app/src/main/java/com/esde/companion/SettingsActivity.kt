@@ -61,6 +61,15 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var systemLogoSizeText: TextView
     private lateinit var gameLogoSizeSeekBar: SeekBar
     private lateinit var gameLogoSizeText: TextView
+    private lateinit var customSizeContainer: LinearLayout
+    private lateinit var customWidthSeekBar: SeekBar
+    private lateinit var customHeightSeekBar: SeekBar
+    private lateinit var customOffsetXSeekBar: SeekBar
+    private lateinit var customOffsetYSeekBar: SeekBar
+    private lateinit var customWidthText: TextView
+    private lateinit var customHeightText: TextView
+    private lateinit var customOffsetXText: TextView
+    private lateinit var customOffsetYText: TextView
     private lateinit var animationStyleChipGroup: ChipGroup
     private lateinit var imagePreferenceChipGroup: ChipGroup
     private lateinit var customAnimationSettings: LinearLayout
@@ -411,6 +420,15 @@ class SettingsActivity : AppCompatActivity() {
             systemLogoSizeText = findViewById(R.id.systemLogoSizeText)
             gameLogoSizeSeekBar = findViewById(R.id.gameLogoSizeSeekBar)
             gameLogoSizeText = findViewById(R.id.gameLogoSizeText)
+            customSizeContainer = findViewById(R.id.customSizeContainer)
+            customWidthSeekBar = findViewById(R.id.customWidthSeekBar)
+            customHeightSeekBar = findViewById(R.id.customHeightSeekBar)
+            customOffsetXSeekBar = findViewById(R.id.customOffsetXSeekBar)
+            customOffsetYSeekBar = findViewById(R.id.customOffsetYSeekBar)
+            customWidthText = findViewById(R.id.customWidthText)
+            customHeightText = findViewById(R.id.customHeightText)
+            customOffsetXText = findViewById(R.id.customOffsetXText)
+            customOffsetYText = findViewById(R.id.customOffsetYText)
             android.util.Log.d("SettingsActivity", "All views found")
             gameOverlayTypeChipGroup = findViewById(R.id.gameOverlayTypeChipGroup)
             systemOverlayTypeChipGroup = findViewById(R.id.systemOverlayTypeChipGroup)
@@ -743,7 +761,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         systemLogoSizeSeekBar.min = 0
-        systemLogoSizeSeekBar.max = 2  // Changed from 3 to 2 (removed "off")
+        systemLogoSizeSeekBar.max = 2
         systemLogoSizeSeekBar.progress = systemPosition
         systemLogoSizeText.text = when (systemPosition) {
             0 -> "Small"
@@ -784,18 +802,23 @@ class SettingsActivity : AppCompatActivity() {
             "small" -> 0
             "medium" -> 1
             "large" -> 2
+            "custom" -> 3
             else -> 1  // default to medium
         }
 
         gameLogoSizeSeekBar.min = 0
-        gameLogoSizeSeekBar.max = 2  // Changed from 3 to 2 (removed "off")
+        gameLogoSizeSeekBar.max = 3  // Now includes Custom option
         gameLogoSizeSeekBar.progress = gamePosition
         gameLogoSizeText.text = when (gamePosition) {
             0 -> "Small"
             1 -> "Medium"
             2 -> "Large"
+            3 -> "Custom"
             else -> "Medium"
         }
+
+        // Show/hide custom container based on initial selection
+        customSizeContainer.visibility = if (gamePosition == 3) View.VISIBLE else View.GONE
 
         gameLogoSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -803,8 +826,12 @@ class SettingsActivity : AppCompatActivity() {
                     0 -> "Small"
                     1 -> "Medium"
                     2 -> "Large"
+                    3 -> "Custom"
                     else -> "Medium"
                 }
+
+                // Show/hide custom container
+                customSizeContainer.visibility = if (progress == 3) View.VISIBLE else View.GONE
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -815,9 +842,101 @@ class SettingsActivity : AppCompatActivity() {
                         0 -> "small"
                         1 -> "medium"
                         2 -> "large"
+                        3 -> "custom"
                         else -> "medium"
                     }
                     prefs.edit().putString("game_logo_size", size).apply()
+                    logoTogglesChanged = true
+                }
+            }
+        })
+
+        // Setup Custom Size Sliders
+        setupCustomSizeSliders()
+    }
+
+    private fun setupCustomSizeSliders() {
+        // Load saved values or defaults
+        val customWidth = prefs.getInt("game_logo_custom_width", 35)
+        val customHeight = prefs.getInt("game_logo_custom_height", 35)
+        val customOffsetX = prefs.getInt("game_logo_custom_offset_x", 0)
+        val customOffsetY = prefs.getInt("game_logo_custom_offset_y", 0)
+
+        // Width Slider (0-100%)
+        customWidthSeekBar.progress = customWidth
+        customWidthText.text = "$customWidth%"
+
+        customWidthSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                customWidthText.text = "$progress%"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    prefs.edit().putInt("game_logo_custom_width", it.progress).apply()
+                    logoTogglesChanged = true
+                }
+            }
+        })
+
+        // Height Slider (0-100%)
+        customHeightSeekBar.progress = customHeight
+        customHeightText.text = "$customHeight%"
+
+        customHeightSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                customHeightText.text = "$progress%"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    prefs.edit().putInt("game_logo_custom_height", it.progress).apply()
+                    logoTogglesChanged = true
+                }
+            }
+        })
+
+        // Offset X Slider (-50% to +50%, stored as 0-100, displayed as -50 to +50)
+        customOffsetXSeekBar.progress = customOffsetX + 50
+        customOffsetXText.text = "${customOffsetX}%"
+
+        customOffsetXSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val offset = progress - 50
+                customOffsetXText.text = "${if (offset >= 0) "+" else ""}$offset%"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    val offset = it.progress - 50
+                    prefs.edit().putInt("game_logo_custom_offset_x", offset).apply()
+                    logoTogglesChanged = true
+                }
+            }
+        })
+
+        // Offset Y Slider (-50% to +50%, stored as 0-100, displayed as -50 to +50)
+        customOffsetYSeekBar.progress = customOffsetY + 50
+        customOffsetYText.text = "${customOffsetY}%"
+
+        customOffsetYSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val offset = progress - 50
+                customOffsetYText.text = "${if (offset >= 0) "+" else ""}$offset%"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    val offset = it.progress - 50
+                    prefs.edit().putInt("game_logo_custom_offset_y", offset).apply()
                     logoTogglesChanged = true
                 }
             }

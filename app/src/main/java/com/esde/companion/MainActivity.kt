@@ -802,21 +802,74 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         val sizeKey = if (isSystemLogo) "system_logo_size" else "game_logo_size"
         val logoSize = prefs.getString(sizeKey, "medium") ?: "medium"
 
-        val layoutParams = marqueeImageView.layoutParams
+        val layoutParams = marqueeImageView.layoutParams as RelativeLayout.LayoutParams
 
-        when (logoSize) {
-            "small" -> {
-                layoutParams.width = dpToPx(250)
-                layoutParams.height = dpToPx(250)
+        if (!isSystemLogo && logoSize == "custom") {
+            // Use custom values for game overlay
+            val customWidth = prefs.getInt("game_logo_custom_width", 35)
+            val customHeight = prefs.getInt("game_logo_custom_height", 35)
+            val customOffsetX = prefs.getInt("game_logo_custom_offset_x", 0)
+            val customOffsetY = prefs.getInt("game_logo_custom_offset_y", 0)
+
+            // Get screen dimensions
+            val displayMetrics = resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
+
+            // Calculate size based on percentage of screen
+            val width = (screenWidth * customWidth / 100f).toInt()
+            val height = (screenHeight * customHeight / 100f).toInt()
+
+            layoutParams.width = width
+            layoutParams.height = height
+
+            // Calculate position with offset
+            // Start from center, then apply offset
+            val centerX = (screenWidth - width) / 2
+            val centerY = (screenHeight - height) / 2
+
+            val offsetXPx = (screenWidth * customOffsetX / 100f).toInt()
+            val offsetYPx = (screenHeight * customOffsetY / 100f).toInt()
+
+            // Remove CENTER_IN_PARENT rule and position manually
+            layoutParams.removeRule(RelativeLayout.CENTER_IN_PARENT)
+            layoutParams.removeRule(RelativeLayout.CENTER_HORIZONTAL)
+            layoutParams.removeRule(RelativeLayout.CENTER_VERTICAL)
+
+            // Set all margins to 0 first
+            layoutParams.setMargins(0, 0, 0, 0)
+
+            // Add rule to align parent top/left, then use margins to position
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP)
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START)
+
+            // Apply calculated position (center + offset)
+            layoutParams.leftMargin = centerX + offsetXPx
+            layoutParams.topMargin = centerY + offsetYPx
+
+            android.util.Log.d("MainActivity", "Custom overlay - Size: ${width}x${height}, Center: ($centerX, $centerY), Offset: ($offsetXPx, $offsetYPx), Final: (${centerX + offsetXPx}, ${centerY + offsetYPx})")
+        } else {
+            // Use preset sizes (small/medium/large)
+            when (logoSize) {
+                "small" -> {
+                    layoutParams.width = dpToPx(250)
+                    layoutParams.height = dpToPx(250)
+                }
+                "large" -> {
+                    layoutParams.width = dpToPx(450)
+                    layoutParams.height = dpToPx(450)
+                }
+                else -> { // medium
+                    layoutParams.width = dpToPx(350)
+                    layoutParams.height = dpToPx(350)
+                }
             }
-            "large" -> {
-                layoutParams.width = dpToPx(450)
-                layoutParams.height = dpToPx(450)
-            }
-            else -> { // medium
-                layoutParams.width = dpToPx(350)
-                layoutParams.height = dpToPx(350)
-            }
+
+            // Reset to centered position for preset sizes
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_TOP)
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_START)
+            layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
+            layoutParams.setMargins(0, 0, 0, 0)
         }
 
         marqueeImageView.layoutParams = layoutParams
