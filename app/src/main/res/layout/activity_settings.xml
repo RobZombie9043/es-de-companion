@@ -689,10 +689,43 @@
                         app:chipStrokeWidth="2dp" />
 
                     <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlayScreenshot"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Screenshot"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlayFanart"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fanart"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
                         android:id="@+id/gameOverlayMixImage"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Mix Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlayPhysicalMedia"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Physical Media"
                         android:textColor="#FFFFFF"
                         android:checkable="true"
                         app:chipBackgroundColor="@color/chip_background_selector"
@@ -766,207 +799,1045 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:visibility="gone"
-                        android:padding="16dp"
                         android:background="#1A000000"
                         android:layout_marginBottom="16dp">
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Custom Size &amp; Position"
-                            android:textColor="#FFB74D"
-                            android:textSize="14sp"
-                            android:textStyle="bold"
-                            android:layout_marginBottom="16dp" />
-
-                        <!-- Width Slider -->
+                        <!-- Collapsible Header -->
                         <LinearLayout
+                            android:id="@+id/customSizeHeader"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
+                            android:padding="16dp"
                             android:gravity="center_vertical"
-                            android:layout_marginBottom="8dp">
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground">
 
                             <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Width"
-                                android:textColor="#FFFFFF"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:id="@+id/customWidthText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="35%"
+                                android:text="Custom Size &amp; Position"
                                 android:textColor="#FFB74D"
                                 android:textSize="14sp"
-                                android:textStyle="bold"
-                                android:minWidth="50dp"
-                                android:gravity="end" />
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/customSizeExpandIndicator"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textColor="#FFB74D"
+                                android:textSize="16sp"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="0dp" />
                         </LinearLayout>
 
-                        <SeekBar
-                            android:id="@+id/customWidthSeekBar"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:layout_marginEnd="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:thumbTint="#FFB74D"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
-                            android:minHeight="32dp"
-                            android:max="100"
-                            android:progress="35"
-                            android:progressDrawable="@drawable/slider_progress_orange"
-                            android:thumb="@drawable/slider_thumb"
-                            android:splitTrack="false"
-                            android:thumbOffset="0dp" />
-
-                        <!-- Height Slider -->
+                        <!-- Collapsible Content -->
                         <LinearLayout
+                            android:id="@+id/customSizeContent"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginBottom="8dp">
+                            android:orientation="vertical"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="16dp"
+                            android:visibility="visible">
 
+                            <!-- Size Section -->
                             <TextView
-                                android:layout_width="0dp"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Height"
-                                android:textColor="#FFFFFF"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:id="@+id/customHeightText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="35%"
+                                android:text="Size"
                                 android:textColor="#FFB74D"
-                                android:textSize="14sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
-                                android:minWidth="50dp"
-                                android:gravity="end" />
-                        </LinearLayout>
-
-                        <SeekBar
-                            android:id="@+id/customHeightSeekBar"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:layout_marginEnd="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:thumbTint="#FFB74D"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
-                            android:minHeight="32dp"
-                            android:max="100"
-                            android:progress="35"
-                            android:progressDrawable="@drawable/slider_progress_orange"
-                            android:thumb="@drawable/slider_thumb"
-                            android:splitTrack="false"
-                            android:thumbOffset="0dp" />
-
-                        <!-- Offset X Slider -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginBottom="8dp">
+                                android:layout_marginTop="8dp"
+                                android:layout_marginBottom="8dp" />
 
                             <TextView
-                                android:layout_width="0dp"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Offset X"
-                                android:textColor="#FFFFFF"
-                                android:textSize="14sp" />
+                                android:text="Image size relative to screen (1.0 = full width/height)"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
 
-                            <TextView
-                                android:id="@+id/customOffsetXText"
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="0%"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="16dp">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginEnd="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Width"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customSizeWidthInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.35"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginStart="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Height"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customSizeHeightInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.35"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Origin Section -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Origin"
                                 android:textColor="#FFB74D"
-                                android:textSize="14sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
-                                android:minWidth="50dp"
-                                android:gravity="end" />
-                        </LinearLayout>
-
-                        <SeekBar
-                            android:id="@+id/customOffsetXSeekBar"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:layout_marginEnd="16dp"
-                            android:layout_marginBottom="16dp"
-                            android:thumbTint="#FFB74D"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
-                            android:minHeight="32dp"
-                            android:max="100"
-                            android:progress="50"
-                            android:progressDrawable="@drawable/slider_progress_orange"
-                            android:thumb="@drawable/slider_thumb"
-                            android:splitTrack="false"
-                            android:thumbOffset="0dp" />
-
-                        <!-- Offset Y Slider -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginBottom="8dp">
+                                android:layout_marginBottom="8dp" />
 
                             <TextView
-                                android:layout_width="0dp"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Offset Y"
-                                android:textColor="#FFFFFF"
-                                android:textSize="14sp" />
+                                android:text="Anchor point on the image (0,0 = top-left, 1,1 = bottom-right)"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
 
-                            <TextView
-                                android:id="@+id/customOffsetYText"
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="0%"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="16dp">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginEnd="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="X"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customOriginXInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginStart="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Y"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customOriginYInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Position Section -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Position"
                                 android:textColor="#FFB74D"
-                                android:textSize="14sp"
+                                android:textSize="13sp"
                                 android:textStyle="bold"
-                                android:minWidth="50dp"
-                                android:gravity="end" />
-                        </LinearLayout>
+                                android:layout_marginBottom="8dp" />
 
-                        <SeekBar
-                            android:id="@+id/customOffsetYSeekBar"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:layout_marginEnd="16dp"
-                            android:thumbTint="#FFB74D"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp"
-                            android:minHeight="32dp"
-                            android:max="100"
-                            android:progress="50"
-                            android:progressDrawable="@drawable/slider_progress_orange"
-                            android:thumb="@drawable/slider_thumb"
-                            android:splitTrack="false"
-                            android:thumbOffset="0dp" />
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Position on screen (0,0 = top-left, 1,1 = bottom-right)"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="16dp">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginEnd="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="X"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customPositionXInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginStart="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Y"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customPositionYInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Alignment Section -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Alignment"
+                                android:textColor="#FFB74D"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Quick alignment presets"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="8dp">
+
+                                <TextView
+                                    android:layout_width="100dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="Horizontal:"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp"
+                                    android:gravity="center_vertical" />
+
+                                <com.google.android.material.chip.ChipGroup
+                                    android:id="@+id/customHorizontalAlignmentChipGroup"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    app:singleSelection="true">
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlignLeft"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Left"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlignCenterH"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Center"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        android:checked="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlignRight"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Right"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+                                </com.google.android.material.chip.ChipGroup>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="100dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="Vertical:"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp"
+                                    android:gravity="center_vertical" />
+
+                                <com.google.android.material.chip.ChipGroup
+                                    android:id="@+id/customVerticalAlignmentChipGroup"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    app:singleSelection="true">
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlignTop"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Top"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlignCenterV"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Center"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        android:checked="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlignBottom"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Bottom"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+                                </com.google.android.material.chip.ChipGroup>
+                            </LinearLayout>
+
+                        </LinearLayout>
+                        <!-- End of customSizeContent -->
 
                     </LinearLayout>
                     <!-- End of Custom Size Configuration -->
 
                 </LinearLayout>
                 <!-- End of gameOverlaySizeContainer -->
+
+                <!-- Second Game Overlay Image Type & Size -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Second Game Overlay Image"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Optional second overlay image displayed alongside the first"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Second Overlay Type Selector -->
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/gameOverlay2TypeChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay2Off"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Off"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        android:checked="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay2Marquee"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Marquee"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay22DBox"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2D Box"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay23DBox"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="3D Box"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay2Screenshot"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Screenshot"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay2Fanart"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Fanart"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay2MixImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mix Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameOverlay2PhysicalMedia"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Physical Media"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+                </com.google.android.material.chip.ChipGroup>
+
+                <!-- Second Overlay Image Size Slider (hidden when Off selected) -->
+                <LinearLayout
+                    android:id="@+id/gameOverlay2SizeContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Second Overlay Size"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/gameLogoSize2Text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Medium"
+                            android:textColor="#FFB74D"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:minWidth="70dp"
+                            android:gravity="end" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Size of second overlay image in game view"
+                        android:textColor="#999999"
+                        android:textSize="13sp"
+                        android:layout_marginBottom="8dp" />
+
+                    <SeekBar
+                        android:id="@+id/gameLogoSize2SeekBar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="24dp"
+                        android:thumbTint="#FFB74D"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:minHeight="32dp"
+                        android:max="3"
+                        android:progressDrawable="@drawable/slider_progress_orange"
+                        android:thumb="@drawable/slider_thumb"
+                        android:splitTrack="false"
+                        android:thumbOffset="0dp" />
+
+                    <!-- Custom Size Configuration for Second Overlay -->
+                    <LinearLayout
+                        android:id="@+id/customSize2Container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:background="#1A000000"
+                        android:layout_marginBottom="16dp">
+
+                        <!-- Collapsible Header -->
+                        <LinearLayout
+                            android:id="@+id/customSize2Header"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:padding="16dp"
+                            android:gravity="center_vertical"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?attr/selectableItemBackground">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Custom Size &amp; Position"
+                                android:textColor="#FFB74D"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/customSize2ExpandIndicator"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="▼"
+                                android:textColor="#FFB74D"
+                                android:textSize="16sp"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="0dp" />
+                        </LinearLayout>
+
+                        <!-- Collapsible Content -->
+                        <LinearLayout
+                            android:id="@+id/customSize2Content"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="16dp"
+                            android:visibility="visible">
+
+                            <!-- Size Section -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Size"
+                                android:textColor="#FFB74D"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Image size relative to screen (1.0 = full width/height)"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="16dp">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginEnd="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Width"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customSize2WidthInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.35"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginStart="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Height"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customSize2HeightInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.35"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Origin Section -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Origin"
+                                android:textColor="#FFB74D"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Anchor point on the image (0,0 = top-left, 1,1 = bottom-right)"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="16dp">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginEnd="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="X"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customOrigin2XInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginStart="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Y"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customOrigin2YInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Position Section -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Position"
+                                android:textColor="#FFB74D"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Position on screen (0,0 = top-left, 1,1 = bottom-right)"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginEnd="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="X"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customPosition2XInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginStart="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Y"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="12sp"
+                                        android:layout_marginBottom="4dp" />
+
+                                    <EditText
+                                        android:id="@+id/customPosition2YInput"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="numberDecimal"
+                                        android:text="0.5"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="14sp"
+                                        android:padding="12dp"
+                                        android:background="@android:drawable/edit_text"
+                                        android:backgroundTint="#FFB74D" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Alignment Section -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Alignment"
+                                android:textColor="#FFB74D"
+                                android:textSize="13sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Quick alignment presets"
+                                android:textColor="#999999"
+                                android:textSize="12sp"
+                                android:layout_marginBottom="8dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="8dp">
+
+                                <TextView
+                                    android:layout_width="100dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="Horizontal:"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp"
+                                    android:gravity="center_vertical" />
+
+                                <com.google.android.material.chip.ChipGroup
+                                    android:id="@+id/customHorizontalAlignment2ChipGroup"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    app:singleSelection="true">
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlign2Left"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Left"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlign2CenterH"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Center"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        android:checked="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlign2Right"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Right"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+                                </com.google.android.material.chip.ChipGroup>
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="100dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="Vertical:"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="12sp"
+                                    android:gravity="center_vertical" />
+
+                                <com.google.android.material.chip.ChipGroup
+                                    android:id="@+id/customVerticalAlignment2ChipGroup"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    app:singleSelection="true">
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlign2Top"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Top"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlign2CenterV"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Center"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        android:checked="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+
+                                    <com.google.android.material.chip.Chip
+                                        android:id="@+id/customAlign2Bottom"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Bottom"
+                                        android:textColor="#FFFFFF"
+                                        android:checkable="true"
+                                        app:chipBackgroundColor="@color/chip_background_selector"
+                                        app:chipStrokeColor="#FFB74D"
+                                        app:chipStrokeWidth="2dp" />
+                                </com.google.android.material.chip.ChipGroup>
+                            </LinearLayout>
+
+                        </LinearLayout>
+                        <!-- End of customSize2Content -->
+
+                    </LinearLayout>
+                    <!-- End of Custom Size Configuration for Second Overlay -->
+
+                </LinearLayout>
+                <!-- End of gameOverlay2SizeContainer -->
 
             </LinearLayout>
             <!-- End of MEDIA SETTINGS card inner LinearLayout -->

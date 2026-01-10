@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.widget.Button
+import android.widget.EditText
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -59,17 +60,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var drawerTransparencyText: TextView
     private lateinit var systemLogoSizeSeekBar: SeekBar
     private lateinit var systemLogoSizeText: TextView
-    private lateinit var gameLogoSizeSeekBar: SeekBar
-    private lateinit var gameLogoSizeText: TextView
-    private lateinit var customSizeContainer: LinearLayout
-    private lateinit var customWidthSeekBar: SeekBar
-    private lateinit var customHeightSeekBar: SeekBar
-    private lateinit var customOffsetXSeekBar: SeekBar
-    private lateinit var customOffsetYSeekBar: SeekBar
-    private lateinit var customWidthText: TextView
-    private lateinit var customHeightText: TextView
-    private lateinit var customOffsetXText: TextView
-    private lateinit var customOffsetYText: TextView
     private lateinit var animationStyleChipGroup: ChipGroup
     private lateinit var imagePreferenceChipGroup: ChipGroup
     private lateinit var customAnimationSettings: LinearLayout
@@ -86,10 +76,45 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var gameLaunchBehaviorChipGroup: ChipGroup
     private lateinit var screensaverBehaviorChipGroup: ChipGroup
     private lateinit var blackOverlayChipGroup: ChipGroup
-    private lateinit var gameOverlayTypeChipGroup: com.google.android.material.chip.ChipGroup
     private lateinit var systemOverlayTypeChipGroup: com.google.android.material.chip.ChipGroup
     private lateinit var systemOverlaySizeContainer: LinearLayout
+
+    // First overlay controls
+    private lateinit var gameOverlayTypeChipGroup: com.google.android.material.chip.ChipGroup
     private lateinit var gameOverlaySizeContainer: LinearLayout
+    private lateinit var gameLogoSizeSeekBar: SeekBar
+    private lateinit var gameLogoSizeText: TextView
+    private lateinit var customSizeContainer: LinearLayout
+    private lateinit var customSizeHeader: LinearLayout
+    private lateinit var customSizeContent: LinearLayout
+    private lateinit var customSizeExpandIndicator: TextView
+    private lateinit var customSizeWidthInput: EditText
+    private lateinit var customSizeHeightInput: EditText
+    private lateinit var customOriginXInput: EditText
+    private lateinit var customOriginYInput: EditText
+    private lateinit var customPositionXInput: EditText
+    private lateinit var customPositionYInput: EditText
+    private lateinit var customHorizontalAlignmentChipGroup: com.google.android.material.chip.ChipGroup
+    private lateinit var customVerticalAlignmentChipGroup: com.google.android.material.chip.ChipGroup
+
+
+    // Second overlay controls
+    private lateinit var gameOverlay2TypeChipGroup: ChipGroup
+    private lateinit var gameOverlay2SizeContainer: LinearLayout
+    private lateinit var gameLogoSize2SeekBar: SeekBar
+    private lateinit var gameLogoSize2Text: TextView
+    private lateinit var customSize2Container: LinearLayout
+    private lateinit var customSize2Header: LinearLayout
+    private lateinit var customSize2Content: LinearLayout
+    private lateinit var customSize2ExpandIndicator: TextView
+    private lateinit var customSize2WidthInput: EditText
+    private lateinit var customSize2HeightInput: EditText
+    private lateinit var customOrigin2XInput: EditText
+    private lateinit var customOrigin2YInput: EditText
+    private lateinit var customPosition2XInput: EditText
+    private lateinit var customPosition2YInput: EditText
+    private lateinit var customHorizontalAlignment2ChipGroup: com.google.android.material.chip.ChipGroup
+    private lateinit var customVerticalAlignment2ChipGroup: com.google.android.material.chip.ChipGroup
 
     private var initialDimming: Int = 0
     private var initialBlur: Int = 0
@@ -418,22 +443,46 @@ class SettingsActivity : AppCompatActivity() {
             drawerTransparencyText = findViewById(R.id.drawerTransparencyText)
             systemLogoSizeSeekBar = findViewById(R.id.systemLogoSizeSeekBar)
             systemLogoSizeText = findViewById(R.id.systemLogoSizeText)
+
+            // Initialize first overlay views
+            gameOverlayTypeChipGroup = findViewById(R.id.gameOverlayTypeChipGroup)
+            gameOverlaySizeContainer = findViewById(R.id.gameOverlaySizeContainer)
             gameLogoSizeSeekBar = findViewById(R.id.gameLogoSizeSeekBar)
             gameLogoSizeText = findViewById(R.id.gameLogoSizeText)
             customSizeContainer = findViewById(R.id.customSizeContainer)
-            customWidthSeekBar = findViewById(R.id.customWidthSeekBar)
-            customHeightSeekBar = findViewById(R.id.customHeightSeekBar)
-            customOffsetXSeekBar = findViewById(R.id.customOffsetXSeekBar)
-            customOffsetYSeekBar = findViewById(R.id.customOffsetYSeekBar)
-            customWidthText = findViewById(R.id.customWidthText)
-            customHeightText = findViewById(R.id.customHeightText)
-            customOffsetXText = findViewById(R.id.customOffsetXText)
-            customOffsetYText = findViewById(R.id.customOffsetYText)
+            customSizeWidthInput = findViewById(R.id.customSizeWidthInput)
+            customSizeHeightInput = findViewById(R.id.customSizeHeightInput)
+            customOriginXInput = findViewById(R.id.customOriginXInput)
+            customOriginYInput = findViewById(R.id.customOriginYInput)
+            customPositionXInput = findViewById(R.id.customPositionXInput)
+            customPositionYInput = findViewById(R.id.customPositionYInput)
+            customSizeHeader = findViewById(R.id.customSizeHeader)
+            customSizeContent = findViewById(R.id.customSizeContent)
+            customSizeExpandIndicator = findViewById(R.id.customSizeExpandIndicator)
+            customHorizontalAlignmentChipGroup = findViewById(R.id.customHorizontalAlignmentChipGroup)
+            customVerticalAlignmentChipGroup = findViewById(R.id.customVerticalAlignmentChipGroup)
+
+            // Initialize second overlay views
+            gameOverlay2TypeChipGroup = findViewById(R.id.gameOverlay2TypeChipGroup)
+            gameOverlay2SizeContainer = findViewById(R.id.gameOverlay2SizeContainer)
+            gameLogoSize2SeekBar = findViewById(R.id.gameLogoSize2SeekBar)
+            gameLogoSize2Text = findViewById(R.id.gameLogoSize2Text)
+            customSize2Container = findViewById(R.id.customSize2Container)
+            customSize2WidthInput = findViewById(R.id.customSize2WidthInput)
+            customSize2HeightInput = findViewById(R.id.customSize2HeightInput)
+            customOrigin2XInput = findViewById(R.id.customOrigin2XInput)
+            customOrigin2YInput = findViewById(R.id.customOrigin2YInput)
+            customPosition2XInput = findViewById(R.id.customPosition2XInput)
+            customPosition2YInput = findViewById(R.id.customPosition2YInput)
+            customSize2Header = findViewById(R.id.customSize2Header)
+            customSize2Content = findViewById(R.id.customSize2Content)
+            customSize2ExpandIndicator = findViewById(R.id.customSize2ExpandIndicator)
+            customHorizontalAlignment2ChipGroup = findViewById(R.id.customHorizontalAlignment2ChipGroup)
+            customVerticalAlignment2ChipGroup = findViewById(R.id.customVerticalAlignment2ChipGroup)
             android.util.Log.d("SettingsActivity", "All views found")
-            gameOverlayTypeChipGroup = findViewById(R.id.gameOverlayTypeChipGroup)
+
             systemOverlayTypeChipGroup = findViewById(R.id.systemOverlayTypeChipGroup)
             systemOverlaySizeContainer = findViewById(R.id.systemOverlaySizeContainer)
-            gameOverlaySizeContainer = findViewById(R.id.gameOverlaySizeContainer)
 
             animationStyleChipGroup = findViewById<ChipGroup>(R.id.animationStyleChipGroup)
             android.util.Log.d("SettingsActivity", "Animation style chip group found")
@@ -529,6 +578,8 @@ class SettingsActivity : AppCompatActivity() {
             setupLogoSizeSlider()
             android.util.Log.d("SettingsActivity", "Logo size setup")
             setupGameOverlayTypeChips()
+            setupGameOverlay2TypeChips()
+            setupCollapsibleSections()
             setupAnimationStyleChips()
             android.util.Log.d("SettingsActivity", "Animation style chips setup")
             setupCustomAnimationControls()
@@ -856,91 +907,88 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupCustomSizeSliders() {
-        // Load saved values or defaults
-        val customWidth = prefs.getInt("game_logo_custom_width", 35)
-        val customHeight = prefs.getInt("game_logo_custom_height", 35)
-        val customOffsetX = prefs.getInt("game_logo_custom_offset_x", 0)
-        val customOffsetY = prefs.getInt("game_logo_custom_offset_y", 0)
+        // Load saved values or defaults for first overlay
+        val sizeWidth = prefs.getFloat("game_logo_custom_size_width", 0.35f)
+        val sizeHeight = prefs.getFloat("game_logo_custom_size_height", 0.35f)
+        val originX = prefs.getFloat("game_logo_custom_origin_x", 0.5f)
+        val originY = prefs.getFloat("game_logo_custom_origin_y", 0.5f)
+        val positionX = prefs.getFloat("game_logo_custom_position_x", 0.5f)
+        val positionY = prefs.getFloat("game_logo_custom_position_y", 0.5f)
 
-        // Width Slider (0-100%)
-        customWidthSeekBar.progress = customWidth
-        customWidthText.text = "$customWidth%"
+        // Set initial values
+        customSizeWidthInput.setText(sizeWidth.toString())
+        customSizeHeightInput.setText(sizeHeight.toString())
+        customOriginXInput.setText(originX.toString())
+        customOriginYInput.setText(originY.toString())
+        customPositionXInput.setText(positionX.toString())
+        customPositionYInput.setText(positionY.toString())
 
-        customWidthSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                customWidthText.text = "$progress%"
-            }
+        // Setup text watchers for first overlay
+        setupTextWatcher(customSizeWidthInput, "game_logo_custom_size_width")
+        setupTextWatcher(customSizeHeightInput, "game_logo_custom_size_height")
+        setupTextWatcher(customOriginXInput, "game_logo_custom_origin_x")
+        setupTextWatcher(customOriginYInput, "game_logo_custom_origin_y")
+        setupTextWatcher(customPositionXInput, "game_logo_custom_position_x")
+        setupTextWatcher(customPositionYInput, "game_logo_custom_position_y")
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                seekBar?.let {
-                    prefs.edit().putInt("game_logo_custom_width", it.progress).apply()
-                    logoTogglesChanged = true
+        // Setup alignment listeners for first overlay (these control image within container)
+        customHorizontalAlignmentChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val horizontalAlign = when (checkedIds[0]) {
+                    R.id.customAlignLeft -> "left"
+                    R.id.customAlignCenterH -> "center"
+                    R.id.customAlignRight -> "right"
+                    else -> "center"
                 }
+                prefs.edit().putString("game_logo_horizontal_align", horizontalAlign).apply()
+                logoTogglesChanged = true
             }
-        })
+        }
 
-        // Height Slider (0-100%)
-        customHeightSeekBar.progress = customHeight
-        customHeightText.text = "$customHeight%"
-
-        customHeightSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                customHeightText.text = "$progress%"
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                seekBar?.let {
-                    prefs.edit().putInt("game_logo_custom_height", it.progress).apply()
-                    logoTogglesChanged = true
+        customVerticalAlignmentChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val verticalAlign = when (checkedIds[0]) {
+                    R.id.customAlignTop -> "top"
+                    R.id.customAlignCenterV -> "center"
+                    R.id.customAlignBottom -> "bottom"
+                    else -> "center"
                 }
+                prefs.edit().putString("game_logo_vertical_align", verticalAlign).apply()
+                logoTogglesChanged = true
             }
-        })
+        }
 
-        // Offset X Slider (-50% to +50%, stored as 0-100, displayed as -50 to +50)
-        customOffsetXSeekBar.progress = customOffsetX + 50
-        customOffsetXText.text = "${customOffsetX}%"
+        // Load and set initial alignment states
+        val horizontalAlign = prefs.getString("game_logo_horizontal_align", "center") ?: "center"
+        val verticalAlign = prefs.getString("game_logo_vertical_align", "center") ?: "center"
 
-        customOffsetXSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val offset = progress - 50
-                customOffsetXText.text = "${if (offset >= 0) "+" else ""}$offset%"
-            }
+        val hChipId = when (horizontalAlign) {
+            "left" -> R.id.customAlignLeft
+            "right" -> R.id.customAlignRight
+            else -> R.id.customAlignCenterH
+        }
+        customHorizontalAlignmentChipGroup.check(hChipId)
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+        val vChipId = when (verticalAlign) {
+            "top" -> R.id.customAlignTop
+            "bottom" -> R.id.customAlignBottom
+            else -> R.id.customAlignCenterV
+        }
+        customVerticalAlignmentChipGroup.check(vChipId)
+    }
 
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                seekBar?.let {
-                    val offset = it.progress - 50
-                    prefs.edit().putInt("game_logo_custom_offset_x", offset).apply()
-                    logoTogglesChanged = true
+    private fun setupTextWatcher(editText: EditText, prefKey: String) {
+        editText.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val value = editText.text.toString().toFloatOrNull() ?: 0.5f
+                val clampedValue = value.coerceIn(0f, 1f)
+                prefs.edit().putFloat(prefKey, clampedValue).apply()
+                if (value != clampedValue) {
+                    editText.setText(clampedValue.toString())
                 }
+                logoTogglesChanged = true
             }
-        })
-
-        // Offset Y Slider (-50% to +50%, stored as 0-100, displayed as -50 to +50)
-        customOffsetYSeekBar.progress = customOffsetY + 50
-        customOffsetYText.text = "${customOffsetY}%"
-
-        customOffsetYSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val offset = progress - 50
-                customOffsetYText.text = "${if (offset >= 0) "+" else ""}$offset%"
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                seekBar?.let {
-                    val offset = it.progress - 50
-                    prefs.edit().putInt("game_logo_custom_offset_y", offset).apply()
-                    logoTogglesChanged = true
-                }
-            }
-        })
+        }
     }
 
     private fun setupSystemOverlayTypeChips() {
@@ -986,63 +1034,249 @@ class SettingsActivity : AppCompatActivity() {
         val gameLogoEnabled = prefs.getBoolean("game_logo_enabled", true)
         val currentType = prefs.getString("game_overlay_type", "marquees") ?: "marquees"
 
-        // Determine which chip to check based on enabled state and type
-        val chipToCheck = if (!gameLogoEnabled) {
-            R.id.gameOverlayOff
-        } else {
-            when (currentType) {
-                "covers" -> R.id.gameOverlay2DBox
-                "3dboxes" -> R.id.gameOverlay3DBox
-                "miximages" -> R.id.gameOverlayMixImage
-                else -> R.id.gameOverlayMarquee
-            }
+        // Set initial chip selection
+        val chipToCheck = when (currentType) {
+            "off" -> R.id.gameOverlayOff
+            "marquees" -> R.id.gameOverlayMarquee
+            "2dboxes" -> R.id.gameOverlay2DBox
+            "3dboxes" -> R.id.gameOverlay3DBox
+            "screenshots" -> R.id.gameOverlayScreenshot
+            "fanart" -> R.id.gameOverlayFanart
+            "miximages" -> R.id.gameOverlayMixImage
+            "physicalmedia" -> R.id.gameOverlayPhysicalMedia
+            else -> R.id.gameOverlayMarquee
         }
         gameOverlayTypeChipGroup.check(chipToCheck)
 
-        // Show/hide size slider based on initial state
-        gameOverlaySizeContainer.visibility = if (gameLogoEnabled) View.VISIBLE else View.GONE
+        // Show/hide size container based on initial state
+        gameOverlaySizeContainer.visibility = if (currentType == "off") View.GONE else View.VISIBLE
 
-        // Handle chip selection changes
         gameOverlayTypeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
-                val isOff = checkedIds[0] == R.id.gameOverlayOff
-
-                if (isOff) {
-                    // Hide slider and disable overlays
-                    gameOverlaySizeContainer.animate()
-                        .alpha(0f)
-                        .setDuration(150)
-                        .withEndAction {
-                            gameOverlaySizeContainer.visibility = View.GONE
-                        }
-                        .start()
-                    prefs.edit().putBoolean("game_logo_enabled", false).apply()
-                } else {
-                    // Show slider and save selected type
-                    val type = when (checkedIds[0]) {
-                        R.id.gameOverlay2DBox -> "covers"
-                        R.id.gameOverlay3DBox -> "3dboxes"
-                        R.id.gameOverlayMixImage -> "miximages"
-                        else -> "marquees"
-                    }
-
-                    // Enable overlays and save type
-                    prefs.edit()
-                        .putBoolean("game_logo_enabled", true)
-                        .putString("game_overlay_type", type)
-                        .apply()
-
-                    // Show slider with animation
-                    if (gameOverlaySizeContainer.visibility == View.GONE) {
-                        gameOverlaySizeContainer.visibility = View.VISIBLE
-                        gameOverlaySizeContainer.alpha = 0f
-                        gameOverlaySizeContainer.animate()
-                            .alpha(1f)
-                            .setDuration(200)
-                            .start()
-                    }
+                val selectedType = when (checkedIds[0]) {
+                    R.id.gameOverlayOff -> "off"
+                    R.id.gameOverlayMarquee -> "marquees"
+                    R.id.gameOverlay2DBox -> "2dboxes"
+                    R.id.gameOverlay3DBox -> "3dboxes"
+                    R.id.gameOverlayScreenshot -> "screenshots"
+                    R.id.gameOverlayFanart -> "fanart"
+                    R.id.gameOverlayMixImage -> "miximages"
+                    R.id.gameOverlayPhysicalMedia -> "physicalmedia"
+                    else -> "marquees"
                 }
+
+                // Show/hide size container
+                gameOverlaySizeContainer.visibility = if (selectedType == "off") View.GONE else View.VISIBLE
+
+                // Update logo enabled state
+                val isEnabled = selectedType != "off"
+                prefs.edit()
+                    .putBoolean("game_logo_enabled", isEnabled)
+                    .putString("game_overlay_type", selectedType)
+                    .apply()
+
                 logoTogglesChanged = true
+            }
+        }
+    }
+
+    private fun setupGameOverlay2TypeChips() {
+        // Load current settings
+        val gameOverlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+
+        // Set initial chip selection
+        val chipToCheck = when (gameOverlay2Type) {
+            "off" -> R.id.gameOverlay2Off
+            "marquees" -> R.id.gameOverlay2Marquee
+            "2dboxes" -> R.id.gameOverlay22DBox
+            "3dboxes" -> R.id.gameOverlay23DBox
+            "screenshots" -> R.id.gameOverlay2Screenshot
+            "fanart" -> R.id.gameOverlay2Fanart
+            "miximages" -> R.id.gameOverlay2MixImage
+            "physicalmedia" -> R.id.gameOverlay2PhysicalMedia
+            else -> R.id.gameOverlay2Off
+        }
+        gameOverlay2TypeChipGroup.check(chipToCheck)
+
+        // Show/hide size container based on initial state
+        gameOverlay2SizeContainer.visibility = if (gameOverlay2Type == "off") View.GONE else View.VISIBLE
+
+        gameOverlay2TypeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val selectedType = when (checkedIds[0]) {
+                    R.id.gameOverlay2Off -> "off"
+                    R.id.gameOverlay2Marquee -> "marquees"
+                    R.id.gameOverlay22DBox -> "2dboxes"
+                    R.id.gameOverlay23DBox -> "3dboxes"
+                    R.id.gameOverlay2Screenshot -> "screenshots"
+                    R.id.gameOverlay2Fanart -> "fanart"
+                    R.id.gameOverlay2MixImage -> "miximages"
+                    R.id.gameOverlay2PhysicalMedia -> "physicalmedia"
+                    else -> "off"
+                }
+
+                // Show/hide size container
+                gameOverlay2SizeContainer.visibility = if (selectedType == "off") View.GONE else View.VISIBLE
+
+                // Save settings
+                prefs.edit().putString("game_overlay2_type", selectedType).apply()
+                logoTogglesChanged = true
+            }
+        }
+
+        // Setup size slider
+        setupSecondOverlaySizeSlider()
+    }
+
+    private fun setupSecondOverlaySizeSlider() {
+        val gameLogoSize2 = prefs.getString("game_logo2_size", "medium") ?: "medium"
+        val gamePosition = when (gameLogoSize2) {
+            "small" -> 0
+            "medium" -> 1
+            "large" -> 2
+            "custom" -> 3
+            else -> 1
+        }
+
+        gameLogoSize2SeekBar.min = 0
+        gameLogoSize2SeekBar.max = 3
+        gameLogoSize2SeekBar.progress = gamePosition
+        gameLogoSize2Text.text = when (gamePosition) {
+            0 -> "Small"
+            1 -> "Medium"
+            2 -> "Large"
+            3 -> "Custom"
+            else -> "Medium"
+        }
+
+        // Show/hide custom container based on initial selection
+        customSize2Container.visibility = if (gamePosition == 3) View.VISIBLE else View.GONE
+
+        gameLogoSize2SeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                gameLogoSize2Text.text = when (progress) {
+                    0 -> "Small"
+                    1 -> "Medium"
+                    2 -> "Large"
+                    3 -> "Custom"
+                    else -> "Medium"
+                }
+                customSize2Container.visibility = if (progress == 3) View.VISIBLE else View.GONE
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    val size = when (it.progress) {
+                        0 -> "small"
+                        1 -> "medium"
+                        2 -> "large"
+                        3 -> "custom"
+                        else -> "medium"
+                    }
+                    prefs.edit().putString("game_logo2_size", size).apply()
+                    logoTogglesChanged = true
+                }
+            }
+        })
+
+        setupCustomSize2Sliders()
+    }
+
+    private fun setupCustomSize2Sliders() {
+        // Load saved values or defaults for second overlay
+        val sizeWidth = prefs.getFloat("game_logo2_custom_size_width", 0.35f)
+        val sizeHeight = prefs.getFloat("game_logo2_custom_size_height", 0.35f)
+        val originX = prefs.getFloat("game_logo2_custom_origin_x", 0.5f)
+        val originY = prefs.getFloat("game_logo2_custom_origin_y", 0.5f)
+        val positionX = prefs.getFloat("game_logo2_custom_position_x", 0.5f)
+        val positionY = prefs.getFloat("game_logo2_custom_position_y", 0.5f)
+
+        // Set initial values
+        customSize2WidthInput.setText(sizeWidth.toString())
+        customSize2HeightInput.setText(sizeHeight.toString())
+        customOrigin2XInput.setText(originX.toString())
+        customOrigin2YInput.setText(originY.toString())
+        customPosition2XInput.setText(positionX.toString())
+        customPosition2YInput.setText(positionY.toString())
+
+        // Setup text watchers for second overlay
+        setupTextWatcher(customSize2WidthInput, "game_logo2_custom_size_width")
+        setupTextWatcher(customSize2HeightInput, "game_logo2_custom_size_height")
+        setupTextWatcher(customOrigin2XInput, "game_logo2_custom_origin_x")
+        setupTextWatcher(customOrigin2YInput, "game_logo2_custom_origin_y")
+        setupTextWatcher(customPosition2XInput, "game_logo2_custom_position_x")
+        setupTextWatcher(customPosition2YInput, "game_logo2_custom_position_y")
+
+        // Setup alignment listeners for second overlay (these control image within container)
+        customHorizontalAlignment2ChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val horizontalAlign = when (checkedIds[0]) {
+                    R.id.customAlign2Left -> "left"
+                    R.id.customAlign2CenterH -> "center"
+                    R.id.customAlign2Right -> "right"
+                    else -> "center"
+                }
+                prefs.edit().putString("game_logo2_horizontal_align", horizontalAlign).apply()
+                logoTogglesChanged = true
+            }
+        }
+
+        customVerticalAlignment2ChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val verticalAlign = when (checkedIds[0]) {
+                    R.id.customAlign2Top -> "top"
+                    R.id.customAlign2CenterV -> "center"
+                    R.id.customAlign2Bottom -> "bottom"
+                    else -> "center"
+                }
+                prefs.edit().putString("game_logo2_vertical_align", verticalAlign).apply()
+                logoTogglesChanged = true
+            }
+        }
+
+        // Load and set initial alignment states
+        val horizontalAlign = prefs.getString("game_logo2_horizontal_align", "center") ?: "center"
+        val verticalAlign = prefs.getString("game_logo2_vertical_align", "center") ?: "center"
+
+        val hChipId = when (horizontalAlign) {
+            "left" -> R.id.customAlign2Left
+            "right" -> R.id.customAlign2Right
+            else -> R.id.customAlign2CenterH
+        }
+        customHorizontalAlignment2ChipGroup.check(hChipId)
+
+        val vChipId = when (verticalAlign) {
+            "top" -> R.id.customAlign2Top
+            "bottom" -> R.id.customAlign2Bottom
+            else -> R.id.customAlign2CenterV
+        }
+        customVerticalAlignment2ChipGroup.check(vChipId)
+    }
+
+    private fun setupCollapsibleSections() {
+        // First overlay custom section
+        customSizeHeader.setOnClickListener {
+            val isExpanded = customSizeContent.visibility == View.VISIBLE
+            if (isExpanded) {
+                customSizeContent.visibility = View.GONE
+                customSizeExpandIndicator.text = "▶"
+            } else {
+                customSizeContent.visibility = View.VISIBLE
+                customSizeExpandIndicator.text = "▼"
+            }
+        }
+
+        // Second overlay custom section
+        customSize2Header.setOnClickListener {
+            val isExpanded = customSize2Content.visibility == View.VISIBLE
+            if (isExpanded) {
+                customSize2Content.visibility = View.GONE
+                customSize2ExpandIndicator.text = "▶"
+            } else {
+                customSize2Content.visibility = View.VISIBLE
+                customSize2ExpandIndicator.text = "▼"
             }
         }
     }

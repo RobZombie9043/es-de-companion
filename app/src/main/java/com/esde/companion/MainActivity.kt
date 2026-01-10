@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rootLayout: RelativeLayout
     private lateinit var gameImageView: ImageView
     private lateinit var marqueeImageView: ImageView
+    private lateinit var marquee2ImageView: ImageView
     private lateinit var dimmingOverlay: View
     private lateinit var appDrawer: View
     private lateinit var appRecyclerView: RecyclerView
@@ -105,6 +106,7 @@ class MainActivity : AppCompatActivity() {
 
     // Flag to track if marquee is showing text drawable (needs WRAP_CONTENT)
     private var marqueeShowingText = false
+    private var marquee2ShowingText = false
 
     // Double-tap detection variables
     private var tapCount = 0
@@ -228,6 +230,7 @@ class MainActivity : AppCompatActivity() {
         rootLayout = findViewById(R.id.rootLayout)
         gameImageView = findViewById(R.id.gameImageView)
         marqueeImageView = findViewById(R.id.marqueeImageView)
+        marquee2ImageView = findViewById(R.id.marquee2ImageView)
         dimmingOverlay = findViewById(R.id.dimmingOverlay)
         appDrawer = findViewById(R.id.appDrawer)
         appRecyclerView = findViewById(R.id.appRecyclerView)
@@ -766,6 +769,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         // Update marquee size based on logo size setting
         updateMarqueeSize(isSystemLogo = isSystemScrollActive)
+        updateMarquee2Size()
 
         // If marquee is showing text drawable, restore WRAP_CONTENT
         if (marqueeShowingText) {
@@ -806,48 +810,89 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         if (!isSystemLogo && logoSize == "custom") {
             // Use custom values for game overlay
-            val customWidth = prefs.getInt("game_logo_custom_width", 35)
-            val customHeight = prefs.getInt("game_logo_custom_height", 35)
-            val customOffsetX = prefs.getInt("game_logo_custom_offset_x", 0)
-            val customOffsetY = prefs.getInt("game_logo_custom_offset_y", 0)
+            val sizeWidth = prefs.getFloat("game_logo_custom_size_width", 0.35f)
+            val sizeHeight = prefs.getFloat("game_logo_custom_size_height", 0.35f)
+            val originX = prefs.getFloat("game_logo_custom_origin_x", 0.5f)
+            val originY = prefs.getFloat("game_logo_custom_origin_y", 0.5f)
+            val positionX = prefs.getFloat("game_logo_custom_position_x", 0.5f)
+            val positionY = prefs.getFloat("game_logo_custom_position_y", 0.5f)
+            val horizontalAlign =
+                prefs.getString("game_logo_horizontal_align", "center") ?: "center"
+            val verticalAlign = prefs.getString("game_logo_vertical_align", "center") ?: "center"
 
             // Get screen dimensions
             val displayMetrics = resources.displayMetrics
             val screenWidth = displayMetrics.widthPixels
             val screenHeight = displayMetrics.heightPixels
 
-            // Calculate size based on percentage of screen
-            val width = (screenWidth * customWidth / 100f).toInt()
-            val height = (screenHeight * customHeight / 100f).toInt()
+            // Calculate container size based on screen
+            val width = (screenWidth * sizeWidth).toInt()
+            val height = (screenHeight * sizeHeight).toInt()
 
             layoutParams.width = width
             layoutParams.height = height
 
-            // Calculate position with offset
-            // Start from center, then apply offset
-            val centerX = (screenWidth - width) / 2
-            val centerY = (screenHeight - height) / 2
+            // Calculate container position using origin/position system
+            // Position on screen where the origin point should be
+            val screenPosX = (screenWidth * positionX).toInt()
+            val screenPosY = (screenHeight * positionY).toInt()
 
-            val offsetXPx = (screenWidth * customOffsetX / 100f).toInt()
-            val offsetYPx = (screenHeight * customOffsetY / 100f).toInt()
+            // Origin point on the container
+            val containerOriginX = (width * originX).toInt()
+            val containerOriginY = (height * originY).toInt()
 
-            // Remove CENTER_IN_PARENT rule and position manually
+            // Final container position is screen position minus origin offset
+            val finalX = screenPosX - containerOriginX
+            val finalY = screenPosY - containerOriginY
+
+            // Remove all rules and position container manually
             layoutParams.removeRule(RelativeLayout.CENTER_IN_PARENT)
             layoutParams.removeRule(RelativeLayout.CENTER_HORIZONTAL)
             layoutParams.removeRule(RelativeLayout.CENTER_VERTICAL)
-
-            // Set all margins to 0 first
-            layoutParams.setMargins(0, 0, 0, 0)
-
-            // Add rule to align parent top/left, then use margins to position
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_END)
             layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP)
             layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START)
 
-            // Apply calculated position (center + offset)
-            layoutParams.leftMargin = centerX + offsetXPx
-            layoutParams.topMargin = centerY + offsetYPx
+            layoutParams.setMargins(finalX, finalY, 0, 0)
 
-            android.util.Log.d("MainActivity", "Custom overlay - Size: ${width}x${height}, Center: ($centerX, $centerY), Offset: ($offsetXPx, $offsetYPx), Final: (${centerX + offsetXPx}, ${centerY + offsetYPx})")
+            // Set scaleType to FIT_XY to respect the container bounds
+            marqueeImageView.scaleType = ImageView.ScaleType.FIT_CENTER
+
+            // Calculate gravity based on alignment
+            val gravity = when {
+                horizontalAlign == "left" && verticalAlign == "top" -> android.view.Gravity.START or android.view.Gravity.TOP
+                horizontalAlign == "left" && verticalAlign == "center" -> android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                horizontalAlign == "left" && verticalAlign == "bottom" -> android.view.Gravity.START or android.view.Gravity.BOTTOM
+                horizontalAlign == "center" && verticalAlign == "top" -> android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.TOP
+                horizontalAlign == "center" && verticalAlign == "center" -> android.view.Gravity.CENTER
+                horizontalAlign == "center" && verticalAlign == "bottom" -> android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.BOTTOM
+                horizontalAlign == "right" && verticalAlign == "top" -> android.view.Gravity.END or android.view.Gravity.TOP
+                horizontalAlign == "right" && verticalAlign == "center" -> android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
+                horizontalAlign == "right" && verticalAlign == "bottom" -> android.view.Gravity.END or android.view.Gravity.BOTTOM
+                else -> android.view.Gravity.CENTER
+            }
+
+            layoutParams.setMargins(finalX, finalY, 0, 0)
+
+            // Save alignment for use when image loads
+            marqueeImageView.tag = Pair(horizontalAlign, verticalAlign)
+
+            // Use MATRIX scaleType which we'll set when image loads
+            marqueeImageView.scaleType = ImageView.ScaleType.MATRIX
+
+            android.util.Log.d(
+                "MainActivity",
+                "Custom overlay - Size: ${width}x${height}, Origin: ($originX, $originY), Position: ($positionX, $positionY), Final: ($finalX, $finalY), H-Align: $horizontalAlign, V-Align: $verticalAlign"
+            )
+
+            // For more precise alignment control, use adjustViewBounds
+            marqueeImageView.adjustViewBounds = true
+
+            android.util.Log.d(
+                "MainActivity",
+                "Custom overlay - Size: ${width}x${height}, Origin: ($originX, $originY), Position: ($positionX, $positionY), Final: ($finalX, $finalY), H-Align: $horizontalAlign, V-Align: $verticalAlign"
+            )
         } else {
             // Use preset sizes (small/medium/large)
             when (logoSize) {
@@ -855,10 +900,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     layoutParams.width = dpToPx(250)
                     layoutParams.height = dpToPx(250)
                 }
+
                 "large" -> {
                     layoutParams.width = dpToPx(450)
                     layoutParams.height = dpToPx(450)
                 }
+
                 else -> { // medium
                     layoutParams.width = dpToPx(350)
                     layoutParams.height = dpToPx(350)
@@ -870,9 +917,133 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_START)
             layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
             layoutParams.setMargins(0, 0, 0, 0)
+
+            marqueeImageView.scaleType = ImageView.ScaleType.FIT_CENTER
+            marqueeImageView.tag = null // Clear any custom alignment
         }
 
         marqueeImageView.layoutParams = layoutParams
+    }
+
+    private fun applyImageAlignment(imageView: ImageView, horizontalAlign: String, verticalAlign: String) {
+        val drawable = imageView.drawable ?: return
+
+        val viewWidth = imageView.width.toFloat()
+        val viewHeight = imageView.height.toFloat()
+        val drawableWidth = drawable.intrinsicWidth.toFloat()
+        val drawableHeight = drawable.intrinsicHeight.toFloat()
+
+        if (viewWidth == 0f || viewHeight == 0f || drawableWidth == 0f || drawableHeight == 0f) return
+
+        // Calculate scale to fit image within container without stretching
+        val scale = minOf(viewWidth / drawableWidth, viewHeight / drawableHeight)
+
+        val scaledWidth = drawableWidth * scale
+        val scaledHeight = drawableHeight * scale
+
+        // Calculate translation based on alignment
+        val dx = when (horizontalAlign) {
+            "left" -> 0f
+            "right" -> viewWidth - scaledWidth
+            else -> (viewWidth - scaledWidth) / 2f
+        }
+
+        val dy = when (verticalAlign) {
+            "top" -> 0f
+            "bottom" -> viewHeight - scaledHeight
+            else -> (viewHeight - scaledHeight) / 2f
+        }
+
+        val matrix = android.graphics.Matrix()
+        matrix.postScale(scale, scale)
+        matrix.postTranslate(dx, dy)
+
+        imageView.imageMatrix = matrix
+    }
+
+    private fun updateMarquee2Size() {
+        val logoSize = prefs.getString("game_logo2_size", "medium") ?: "medium"
+        val layoutParams = marquee2ImageView.layoutParams as RelativeLayout.LayoutParams
+
+        if (logoSize == "custom") {
+            // Use custom values for second overlay
+            val sizeWidth = prefs.getFloat("game_logo2_custom_size_width", 0.35f)
+            val sizeHeight = prefs.getFloat("game_logo2_custom_size_height", 0.35f)
+            val originX = prefs.getFloat("game_logo2_custom_origin_x", 0.5f)
+            val originY = prefs.getFloat("game_logo2_custom_origin_y", 0.5f)
+            val positionX = prefs.getFloat("game_logo2_custom_position_x", 0.5f)
+            val positionY = prefs.getFloat("game_logo2_custom_position_y", 0.5f)
+            val horizontalAlign =
+                prefs.getString("game_logo2_horizontal_align", "center") ?: "center"
+            val verticalAlign = prefs.getString("game_logo2_vertical_align", "center") ?: "center"
+
+            // Get screen dimensions
+            val displayMetrics = resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
+
+            // Calculate container size
+            val width = (screenWidth * sizeWidth).toInt()
+            val height = (screenHeight * sizeHeight).toInt()
+
+            layoutParams.width = width
+            layoutParams.height = height
+
+            // Calculate container position
+            val screenPosX = (screenWidth * positionX).toInt()
+            val screenPosY = (screenHeight * positionY).toInt()
+
+            val containerOriginX = (width * originX).toInt()
+            val containerOriginY = (height * originY).toInt()
+
+            val finalX = screenPosX - containerOriginX
+            val finalY = screenPosY - containerOriginY
+
+            layoutParams.removeRule(RelativeLayout.CENTER_IN_PARENT)
+            layoutParams.removeRule(RelativeLayout.CENTER_HORIZONTAL)
+            layoutParams.removeRule(RelativeLayout.CENTER_VERTICAL)
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_END)
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP)
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START)
+
+            layoutParams.setMargins(finalX, finalY, 0, 0)
+
+            // Save alignment for use when image loads
+            marquee2ImageView.tag = Pair(horizontalAlign, verticalAlign)
+
+            // Use MATRIX scaleType which we'll set when image loads
+            marquee2ImageView.scaleType = ImageView.ScaleType.MATRIX
+
+        } else {
+            // Use preset sizes
+            when (logoSize) {
+                "small" -> {
+                    layoutParams.width = dpToPx(250)
+                    layoutParams.height = dpToPx(250)
+                }
+
+                "large" -> {
+                    layoutParams.width = dpToPx(450)
+                    layoutParams.height = dpToPx(450)
+                }
+
+                else -> {
+                    layoutParams.width = dpToPx(350)
+                    layoutParams.height = dpToPx(350)
+                }
+            }
+
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_TOP)
+            layoutParams.removeRule(RelativeLayout.ALIGN_PARENT_START)
+            layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
+            layoutParams.setMargins(0, 0, 0, 0)
+
+            marquee2ImageView.scaleType = ImageView.ScaleType.FIT_CENTER
+            marquee2ImageView.tag = null // Clear any custom alignment
+        }
+
+        marquee2ImageView.layoutParams = layoutParams
     }
 
     private fun dpToPx(dp: Int): Int {
@@ -965,10 +1136,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
                 if (file.exists() && file.canRead()) {
                     // Use loadImageWithAnimation for consistent behavior
-                    loadImageWithAnimation(file, gameImageView) {
-                        android.util.Log.d("MainActivity", "✓ Loaded custom background successfully")
-                    }
+                    loadImageWithAnimation(file, gameImageView)
                     android.util.Log.d("MainActivity", "Loading custom background from: $customBackgroundPath")
+                    android.util.Log.d("MainActivity", "✓ Loaded custom background successfully")
                     return
                 } else {
                     android.util.Log.w("MainActivity", "Custom background file not accessible: $customBackgroundPath")
@@ -997,9 +1167,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             }
 
             // Use loadImageWithAnimation for consistent behavior
-            loadImageWithAnimation(fallbackFile, gameImageView) {
+            loadImageWithAnimation(fallbackFile, gameImageView)
                 android.util.Log.d("MainActivity", "Loaded built-in fallback image from assets")
-            }
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Failed to load built-in fallback image, using solid color", e)
             // Final fallback: solid color (no animation possible)
@@ -1011,132 +1180,84 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     /**
      * Load an image with animation based on user preference
      */
-    private fun loadImageWithAnimation(
-        imageFile: File,
-        targetView: ImageView,
-        onComplete: (() -> Unit)? = null
-    ) {
+    private fun loadImageWithAnimation(file: File, targetView: ImageView) {
+        val logoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
         val animationStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
 
-        // Get custom settings if using custom style
-        val duration = if (animationStyle == "custom") {
-            prefs.getInt("animation_duration", 250)
-        } else {
-            250
+        // Don't animate if animations are disabled
+        if (animationStyle == "none") {
+            Glide.with(this)
+                .load(file)
+                .into(object : com.bumptech.glide.request.target.ImageViewTarget<android.graphics.drawable.Drawable>(targetView) {
+                    override fun setResource(resource: android.graphics.drawable.Drawable?) {
+                        targetView.setImageDrawable(resource)
+
+                        // Apply custom alignment if tag is set
+                        val alignment = targetView.tag as? Pair<*, *>
+                        if (alignment != null && targetView.scaleType == ImageView.ScaleType.MATRIX) {
+                            val horizontalAlign = alignment.first as? String ?: "center"
+                            val verticalAlign = alignment.second as? String ?: "center"
+                            applyImageAlignment(targetView, horizontalAlign, verticalAlign)
+                        }
+                    }
+                })
+            return
         }
 
-        val scaleAmount = if (animationStyle == "custom") {
+        // Get animation settings
+        val duration = if (animationStyle == "custom") {
+            prefs.getInt("animation_duration", 250).toLong()
+        } else {
+            250L
+        }
+
+        val scale = if (animationStyle == "custom") {
             prefs.getInt("animation_scale", 95) / 100f
         } else {
             0.95f
         }
 
-        when (animationStyle) {
-            "none" -> {
-                // No animation - instant display with crossfade disabled
-                Glide.with(this)
-                    .load(imageFile)
-                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .dontAnimate()  // Disable all transitions
-                    .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(
-                            e: GlideException?,
-                            model: Any?,
-                            target: com.bumptech.glide.request.target.Target<Drawable>,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
+        // Determine animation type
+        val shouldScale = animationStyle in listOf("scale_fade", "custom")
+        val shouldFade = animationStyle in listOf("fade", "scale_fade", "custom")
 
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            model: Any,
-                            target: com.bumptech.glide.request.target.Target<Drawable>?,
-                            dataSource: DataSource,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
-                    })
-                    .into(targetView)
-            }
-            "fade" -> {
-                // Use Glide's built-in crossfade transition
-                Glide.with(this)
-                    .load(imageFile)
-                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
-                    .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(
-                            e: GlideException?,
-                            model: Any?,
-                            target: com.bumptech.glide.request.target.Target<Drawable>,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
+        Glide.with(this)
+            .load(file)
+            .into(object : com.bumptech.glide.request.target.ImageViewTarget<android.graphics.drawable.Drawable>(targetView) {
+                override fun setResource(resource: android.graphics.drawable.Drawable?) {
+                    // Apply the image first
+                    targetView.setImageDrawable(resource)
 
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            model: Any,
-                            target: com.bumptech.glide.request.target.Target<Drawable>?,
-                            dataSource: DataSource,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
-                    })
-                    .into(targetView)
-            }
-            else -> {
-                // "scale_fade" - Use Glide crossfade + custom scale animation
-                Glide.with(this)
-                    .load(imageFile)
-                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
-                    .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(
-                            e: GlideException?,
-                            model: Any?,
-                            target: com.bumptech.glide.request.target.Target<Drawable>,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
+                    // Apply custom alignment if tag is set
+                    val alignment = targetView.tag as? Pair<*, *>
+                    if (alignment != null && targetView.scaleType == ImageView.ScaleType.MATRIX) {
+                        val horizontalAlign = alignment.first as? String ?: "center"
+                        val verticalAlign = alignment.second as? String ?: "center"
+                        applyImageAlignment(targetView, horizontalAlign, verticalAlign)
+                    }
 
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            model: Any,
-                            target: com.bumptech.glide.request.target.Target<Drawable>?,
-                            dataSource: DataSource,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            // Apply scale animation on top of Glide's crossfade
-                            targetView.scaleX = scaleAmount
-                            targetView.scaleY = scaleAmount
-                            targetView.animate()
-                                .scaleX(1f)
-                                .scaleY(1f)
-                                .setDuration(duration.toLong())
-                                .setInterpolator(DecelerateInterpolator())
-                                .withEndAction {
-                                    onComplete?.invoke()
-                                }
-                                .start()
-                            return false
+                    // Then animate
+                    if (shouldScale) {
+                        targetView.scaleX = scale
+                        targetView.scaleY = scale
+                    }
+                    if (shouldFade) {
+                        targetView.alpha = 0f
+                    }
+
+                    targetView.animate().apply {
+                        if (shouldScale) {
+                            scaleX(1f)
+                            scaleY(1f)
                         }
-                    })
-                    .into(targetView)
-            }
-        }
+                        if (shouldFade) {
+                            alpha(1f)
+                        }
+                        setDuration(duration)
+                        start()
+                    }
+                }
+            })
     }
 
     private fun setupGestureDetector() {
@@ -2094,6 +2215,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             Glide.with(this).clear(marqueeImageView)
             marqueeImageView.setImageDrawable(null)
 
+            // Clear second overlay as well
+            marquee2ImageView.visibility = View.GONE
+            Glide.with(this).clear(marquee2ImageView)
+            marquee2ImageView.setImageDrawable(null)
+
             val systemName = systemFile.readText().trim()
 
             // Store current system name for later reference
@@ -2354,6 +2480,27 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 }
             }
 
+            // Load second overlay if enabled
+            val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+            if (overlay2Type != "off") {
+                val marquee2File = findGameOverlayImage(systemName, gameName, gameNameRaw, overlay2Type)
+                if (marquee2File != null && marquee2File.exists()) {
+                    updateMarquee2Size()
+                    loadImageWithAnimation(marquee2File, marquee2ImageView)
+                    marquee2ImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
+                } else {
+                    // No second overlay image found - clear it
+                    marquee2ImageView.visibility = View.GONE
+                    Glide.with(this).clear(marquee2ImageView)
+                    marquee2ImageView.setImageDrawable(null)
+                }
+            } else {
+                // Second overlay is disabled - clear it
+                marquee2ImageView.visibility = View.GONE
+                Glide.with(this).clear(marquee2ImageView)
+                marquee2ImageView.setImageDrawable(null)
+            }
+
             // Handle video playback for the current game
             // Pass both stripped name and raw filename (like images do)
             android.util.Log.d("MainActivity", "loadGameInfo - Calling handleVideoForGame:")
@@ -2395,22 +2542,34 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         return null
     }
 
-    private fun findGameOverlayImage(systemName: String, gameName: String, fullGamePath: String): File? {
+    private fun findGameOverlayImage(systemName: String, gameName: String, gameNameRaw: String, overlayType: String? = null): File? {
         val extensions = listOf("jpg", "png", "webp")
 
-        // Get the overlay type from preferences (marquees, covers, 3dboxes, or miximages)
-        val overlayType = prefs.getString("game_overlay_type", "marquees") ?: "marquees"
+        // Get the overlay type - use parameter if provided, otherwise get from preferences
+        val settingType = overlayType ?: (prefs.getString("game_overlay_type", "marquees") ?: "marquees")
+
+        // Map setting names to actual folder names in downloaded_media
+        val folderName = when (settingType) {
+            "2dboxes" -> "covers"           // 2D Box uses "covers" folder
+            "3dboxes" -> "3dboxes"          // 3D Box uses "3dboxes" folder
+            "marquees" -> "marquees"        // Marquee uses "marquees" folder
+            "screenshots" -> "screenshots"  // Screenshot uses "screenshots" folder
+            "fanart" -> "fanart"           // Fanart uses "fanart" folder
+            "miximages" -> "miximages"     // Mix Image uses "miximages" folder
+            "physicalmedia" -> "physicalmedia" // Physical Media uses "physicalmedia" folder
+            else -> settingType            // Fallback to the setting type
+        }
 
         // Sanitize the full path to get just the filename
-        val sanitizedFilename = sanitizeGameFilename(fullGamePath)
+        val sanitizedFilename = sanitizeGameFilename(gameNameRaw)
         val sanitizedName = sanitizedFilename.substringBeforeLast('.')
 
-        // Try to find the image in the primary overlay type folder
+        // Try to find the image in the mapped folder
         val primaryImage = findImageInDir(
-            File(getMediaBasePath(), "$systemName/$overlayType"),
+            File(getMediaBasePath(), "$systemName/$folderName"),
             sanitizedName,
             sanitizedFilename,
-            fullGamePath,
+            gameNameRaw,
             extensions
         )
 
@@ -2419,14 +2578,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             return primaryImage
         }
 
-        // Special case: if 3dboxes was selected but no image found, fallback to covers
-        if (overlayType == "3dboxes") {
+        // Special case: if 3dboxes was selected but no image found, fallback to covers (2D boxes)
+        if (settingType == "3dboxes") {
             android.util.Log.d("MainActivity", "No 3dboxes image found, trying covers fallback for: $sanitizedName")
             val fallbackImage = findImageInDir(
                 File(getMediaBasePath(), "$systemName/covers"),
                 sanitizedName,
                 sanitizedFilename,
-                fullGamePath,
+                gameNameRaw,
                 extensions
             )
             if (fallbackImage != null) {
@@ -2859,6 +3018,24 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             } else {
                                 marqueeImageView.visibility = View.GONE
                             }
+
+                            // Load second overlay
+                            val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                            if (overlay2Type != "off") {
+                                val marquee2Image = findGameOverlayImage(systemName, gameName, filename, overlay2Type)
+                                if (marquee2Image != null) {
+                                    updateMarquee2Size()
+                                    Glide.with(this)
+                                        .load(marquee2Image)
+                                        .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marquee2Image)))
+                                        .into(marquee2ImageView)
+                                    marquee2ImageView.visibility = View.VISIBLE
+                                } else {
+                                    marquee2ImageView.visibility = View.GONE
+                                }
+                            } else {
+                                marquee2ImageView.visibility = View.GONE
+                            }
                         }
                         gameImageView.visibility = View.VISIBLE
                         videoView.visibility = View.GONE
@@ -2872,6 +3049,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         marqueeImageView.setImageDrawable(null)
                         marqueeImageView.visibility = View.GONE
                         Glide.with(this).clear(marqueeImageView)
+
+                        // Clear and hide second overlay
+                        marquee2ImageView.setImageDrawable(null)
+                        marquee2ImageView.visibility = View.GONE
+                        Glide.with(this).clear(marquee2ImageView)
 
                         videoView.visibility = View.GONE
                     }
@@ -2902,6 +3084,31 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             }
                         } else {
                             marqueeImageView.visibility = View.GONE
+                        }
+
+                        // Load second overlay if enabled
+                        val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                        if (overlay2Type != "off") {
+                            val filename = playingGameFilename ?: screensaverGameFilename
+                            val systemName = screensaverSystemName ?: currentSystemName
+                            if (filename != null && systemName != null) {
+                                val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
+                                val marquee2Image = findGameOverlayImage(systemName, gameName, filename, overlay2Type)
+                                if (marquee2Image != null) {
+                                    updateMarquee2Size()
+                                    Glide.with(this)
+                                        .load(marquee2Image)
+                                        .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marquee2Image)))
+                                        .into(marquee2ImageView)
+                                    marquee2ImageView.visibility = View.VISIBLE
+                                } else {
+                                    marquee2ImageView.visibility = View.GONE
+                                }
+                            } else {
+                                marquee2ImageView.visibility = View.GONE
+                            }
+                        } else {
+                            marquee2ImageView.visibility = View.GONE
                         }
                     }
                 }
@@ -2957,6 +3164,24 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         } else {
                             marqueeImageView.visibility = View.GONE
                         }
+
+                        // Load second overlay
+                        val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                        if (overlay2Type != "off") {
+                            val marquee2Image = findGameOverlayImage(systemName, gameName, filename, overlay2Type)
+                            if (marquee2Image != null) {
+                                updateMarquee2Size()
+                                Glide.with(this)
+                                    .load(marquee2Image)
+                                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marquee2Image)))
+                                    .into(marquee2ImageView)
+                                marquee2ImageView.visibility = View.VISIBLE
+                            } else {
+                                marquee2ImageView.visibility = View.GONE
+                            }
+                        } else {
+                            marquee2ImageView.visibility = View.GONE
+                        }
                     }
                 }
 
@@ -2973,6 +3198,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 marqueeImageView.setImageDrawable(null)
                 marqueeImageView.visibility = View.GONE
                 Glide.with(this).clear(marqueeImageView)
+
+                // Clear and hide second overlay
+                marquee2ImageView.setImageDrawable(null)
+                marquee2ImageView.visibility = View.GONE
+                Glide.with(this).clear(marquee2ImageView)
 
                 videoView.visibility = View.GONE
             }
@@ -3004,6 +3234,31 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     }
                 } else {
                     marqueeImageView.visibility = View.GONE
+                }
+
+                // Load second overlay if enabled
+                val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                if (overlay2Type != "off") {
+                    val filename = playingGameFilename
+                    val systemName = currentSystemName
+                    if (filename != null && systemName != null) {
+                        val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
+                        val marquee2Image = findGameOverlayImage(systemName, gameName, filename, overlay2Type)
+                        if (marquee2Image != null) {
+                            updateMarquee2Size()
+                            Glide.with(this)
+                                .load(marquee2Image)
+                                .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marquee2Image)))
+                                .into(marquee2ImageView)
+                            marquee2ImageView.visibility = View.VISIBLE
+                        } else {
+                            marquee2ImageView.visibility = View.GONE
+                        }
+                    } else {
+                        marquee2ImageView.visibility = View.GONE
+                    }
+                } else {
+                    marquee2ImageView.visibility = View.GONE
                 }
             }
         }
@@ -3227,6 +3482,26 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         } else {
                             marqueeImageView.visibility = View.GONE
                         }
+
+                        // Load second overlay if enabled
+                        val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                        if (overlay2Type != "off") {
+                            val marquee2File = findGameOverlayImage(
+                                screensaverSystemName!!,
+                                gameName,
+                                screensaverGameFilename!!,
+                                overlay2Type
+                            )
+                            if (marquee2File != null && marquee2File.exists()) {
+                                updateMarquee2Size()
+                                loadImageWithAnimation(marquee2File, marquee2ImageView)
+                                marquee2ImageView.visibility = View.VISIBLE
+                            } else {
+                                marquee2ImageView.visibility = View.GONE
+                            }
+                        } else {
+                            marquee2ImageView.visibility = View.GONE
+                        }
                     } else {
                         // No game image - show fallback with marquee/text
                         loadFallbackBackground()
@@ -3261,6 +3536,26 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         } else {
                             marqueeImageView.visibility = View.GONE
                         }
+
+                        // Load second overlay if enabled (NO GAME IMAGE CASE)
+                        val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                        if (overlay2Type != "off") {
+                            val marquee2File = findGameOverlayImage(
+                                screensaverSystemName!!,
+                                gameName,
+                                screensaverGameFilename!!,
+                                overlay2Type
+                            )
+                            if (marquee2File != null && marquee2File.exists()) {
+                                updateMarquee2Size()
+                                loadImageWithAnimation(marquee2File, marquee2ImageView)
+                                marquee2ImageView.visibility = View.VISIBLE
+                            } else {
+                                marquee2ImageView.visibility = View.GONE
+                            }
+                        } else {
+                            marquee2ImageView.visibility = View.GONE
+                        }
                     }
                 }
                 "default_image" -> {
@@ -3287,6 +3582,26 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         }
                     } else {
                         marqueeImageView.visibility = View.GONE
+                    }
+
+                    // Load second overlay if enabled (DEFAULT IMAGE CASE)
+                    val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                    if (overlay2Type != "off") {
+                        val marquee2File = findGameOverlayImage(
+                            screensaverSystemName!!,
+                            gameName,
+                            screensaverGameFilename!!,
+                            overlay2Type
+                        )
+                        if (marquee2File != null && marquee2File.exists()) {
+                            updateMarquee2Size()
+                            loadImageWithAnimation(marquee2File, marquee2ImageView)
+                            marquee2ImageView.visibility = View.VISIBLE
+                        } else {
+                            marquee2ImageView.visibility = View.GONE
+                        }
+                    } else {
+                        marquee2ImageView.visibility = View.GONE
                     }
                 }
                 // "black_screen" mode doesn't update anything
@@ -3599,6 +3914,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Hide the game image view and marquee so video is visible
             gameImageView.visibility = View.GONE
             marqueeImageView.visibility = View.GONE
+            marquee2ImageView.visibility = View.GONE
 
             // Get animation settings (same as images)
             val animationStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
@@ -3688,6 +4004,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     if (gameLogoSize != "off") {
                         marqueeImageView.visibility = View.VISIBLE
                     }
+
+                    // Restore second overlay visibility if enabled
+                    val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+                    if (overlay2Type != "off") {
+                        marquee2ImageView.visibility = View.VISIBLE
+                    }
                 }
                 .start()
         } else {
@@ -3697,9 +4019,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             currentVideoPath = null
 
             // Restore marquee visibility if game logo is enabled
+            // Note: The marquee content will be set by loadGameInfo when called
             val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
             if (gameLogoSize != "off") {
                 marqueeImageView.visibility = View.VISIBLE
+            }
+
+            // Restore second overlay visibility if enabled
+            val overlay2Type = prefs.getString("game_overlay2_type", "off") ?: "off"
+            if (overlay2Type != "off") {
+                marquee2ImageView.visibility = View.VISIBLE
             }
         }
     }
