@@ -76,6 +76,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private lateinit var gestureDetector: GestureDetectorCompat
 
+    // Widget system
+    private lateinit var widgetContainer: RelativeLayout
+    private lateinit var widgetManager: WidgetManager
+    private val activeWidgets = mutableListOf<WidgetView>()
+
     private var fileObserver: FileObserver? = null
     private var isSystemScrollActive = false
     private var currentGameName: String? = null  // Display name from ES-DE
@@ -239,6 +244,13 @@ class MainActivity : AppCompatActivity() {
         videoView = findViewById(R.id.videoView)
         blackOverlay = findViewById(R.id.blackOverlay)
 
+        // Initialize widget system
+        widgetContainer = findViewById(R.id.widgetContainer)
+        widgetManager = WidgetManager(this)
+        // Make container non-clickable so touches pass through
+        widgetContainer.isClickable = false
+        widgetContainer.isFocusable = false
+
         // Set initial position off-screen (above the top)
         val displayHeight = resources.displayMetrics.heightPixels.toFloat()
         blackOverlay.translationY = -displayHeight
@@ -252,6 +264,7 @@ class MainActivity : AppCompatActivity() {
         setupDrawerBackButton()
         setupSettingsButton()
         setupAndroidSettingsButton()
+        loadWidgets()
 
         // Apply drawer transparency
         updateDrawerTransparency()
@@ -1092,6 +1105,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 return true
             }
 
+            override fun onLongPress(e: MotionEvent) {
+                // Only show widget menu if drawer is closed AND not touching a widget
+                if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                    // Check if long press is on a widget
+                    val isTouchingWidget = isTouchOnWidget(e.x, e.y)
+                    if (!isTouchingWidget) {
+                        showCreateWidgetMenu()
+                    }
+                }
+            }
+
             override fun onFling(
                 e1: MotionEvent?,
                 e2: MotionEvent,
@@ -1105,28 +1129,33 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
                 // Check if it's more vertical than horizontal
                 if (abs(diffY) > abs(diffX)) {
-                    val swipeThreshold = 50
-                    val velocityThreshold = 50
-
-                    if (abs(diffY) > swipeThreshold && abs(velocityY) > velocityThreshold) {
-                        if (diffY < 0) {
-                            // Swipe up
-                            if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-                                bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-                                return true
-                            }
-                        } else {
-                            // Swipe down
-                            if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
-                                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-                                return true
-                            }
+                    // Vertical fling
+                    if (abs(diffY) > 100 && abs(velocityY) > 100) {
+                        if (diffY < 0) {  // CHANGED: diffY < 0 means swipe UP
+                            // Swipe up - open drawer
+                            bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                            return true
                         }
                     }
                 }
                 return false
             }
         })
+    }
+
+    private fun isTouchOnWidget(x: Float, y: Float): Boolean {
+        for (widgetView in activeWidgets) {
+            val location = IntArray(2)
+            widgetView.getLocationOnScreen(location)
+            val widgetX = location[0].toFloat()
+            val widgetY = location[1].toFloat()
+
+            if (x >= widgetX && x <= widgetX + widgetView.width &&
+                y >= widgetY && y <= widgetY + widgetView.height) {
+                return true
+            }
+        }
+        return false
     }
 
     /**
@@ -1163,6 +1192,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             handleVideoForGame(currentSystemName, gameName, currentGameFilename)
         }
     }
+
+    // Add these member variables at the top of MainActivity class
+    private var isInteractingWithWidget = false
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         // Check if black overlay feature is enabled
@@ -1206,8 +1238,18 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             return true
         }
 
-        // Handle drawer gestures when drawer is hidden
-        if (drawerState == BottomSheetBehavior.STATE_HIDDEN) {
+        // Track widget interaction state
+        when (ev.action) {
+            MotionEvent.ACTION_DOWN -> {
+                isInteractingWithWidget = isTouchOnWidget(ev.x, ev.y)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                isInteractingWithWidget = false
+            }
+        }
+
+        // Only use gesture detector if NOT interacting with a widget AND drawer is hidden
+        if (drawerState == BottomSheetBehavior.STATE_HIDDEN && !isInteractingWithWidget) {
             gestureDetector.onTouchEvent(ev)
         }
 
@@ -2022,6 +2064,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
 
     private fun loadSystemImage() {
+        // Hide widgets in system view
+        hideWidgets()
+
         // Don't reload images if game is currently playing - respect game launch behavior
         if (isGamePlaying) {
             android.util.Log.d("MainActivity", "loadSystemImage blocked - game is playing, maintaining game launch display")
@@ -2212,6 +2257,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Store current system name
             currentSystemName = systemName
 
+            // Check if we have widgets - if so, hide old marquee system
+            val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+
             // Try to find game-specific artwork first
             val gameImage = findGameImage(systemName, gameName, gameNameRaw)
 
@@ -2229,41 +2277,56 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     // Game has marquee - show it centered on dark background
                     loadFallbackBackground()
 
-                    // Load marquee content (even if video is playing - just keep it hidden)
-                    val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                    if (gameLogoSize != "off") {
-                        // Restore fixed size for actual marquee images
-                        updateMarqueeSize(isSystemLogo = false)
+                    // Only load old marquee if no widgets exist
+                    if (!hasWidgets) {
+                        // Load marquee content (even if video is playing - just keep it hidden)
+                        val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
+                        if (gameLogoSize != "off") {
+                            // Restore fixed size for actual marquee images
+                            updateMarqueeSize(isSystemLogo = false)
 
-                        loadImageWithAnimation(marqueeFile, marqueeImageView)
-                        // Only show if video is NOT playing
-                        marqueeImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
-                        marqueeShowingText = false
+                            loadImageWithAnimation(marqueeFile, marqueeImageView)
+                            // Only show if video is NOT playing
+                            marqueeImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
+                            marqueeShowingText = false
+                        } else {
+                            marqueeImageView.visibility = View.GONE
+                        }
+                    } else {
+                        // Widgets exist - hide old marquee
+                        marqueeImageView.visibility = View.GONE
                     }
                     gameImageLoaded = true
                 } else {
                     // No artwork and no marquee - show fallback with or without text
                     loadFallbackBackground()
 
-                    val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                    if (gameLogoSize != "off") {
-                        // Logo enabled - show game name as text overlay
-                        val displayName = currentGameName ?: gameName
-                        val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
-                        val textDrawable = createTextDrawable(displayName, logoSize)
+                    // Only show text overlay if no widgets exist
+                    if (!hasWidgets) {
+                        val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
+                        if (gameLogoSize != "off") {
+                            // Logo enabled - show game name as text overlay
+                            val displayName = currentGameName ?: gameName
+                            val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
+                            val textDrawable = createTextDrawable(displayName, logoSize)
 
-                        // Use WRAP_CONTENT for text to show at full size
-                        val layoutParams = marqueeImageView.layoutParams
-                        layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
-                        layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                        marqueeImageView.layoutParams = layoutParams
+                            // Use WRAP_CONTENT for text to show at full size
+                            val layoutParams = marqueeImageView.layoutParams
+                            layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+                            layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                            marqueeImageView.layoutParams = layoutParams
 
-                        marqueeImageView.setImageDrawable(textDrawable)
-                        // Only show if video is NOT playing
-                        marqueeImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
-                        marqueeShowingText = true
+                            marqueeImageView.setImageDrawable(textDrawable)
+                            // Only show if video is NOT playing
+                            marqueeImageView.visibility = if (isVideoPlaying()) View.GONE else View.VISIBLE
+                            marqueeShowingText = true
+                        } else {
+                            // Logo disabled - just show fallback, no text
+                            marqueeImageView.visibility = View.GONE
+                            marqueeShowingText = false
+                        }
                     } else {
-                        // Logo disabled - just show fallback, no text
+                        // Widgets exist - hide old marquee
                         marqueeImageView.visibility = View.GONE
                         marqueeShowingText = false
                     }
@@ -2275,7 +2338,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             if (gameImageLoaded && gameImage != null && gameImage.exists()) {
                 val marqueeFile = findGameOverlayImage(systemName, gameName, gameNameRaw)
                 if (marqueeFile != null && marqueeFile.exists()) {
-                    if (!prefs.getBoolean("game_logo_enabled", true)) {
+                    // Only show old marquee if no widgets exist
+                    if (!prefs.getBoolean("game_logo_enabled", true) || hasWidgets) {
                         marqueeImageView.visibility = View.GONE
                         Glide.with(this).clear(marqueeImageView)
                         marqueeImageView.setImageDrawable(null)
@@ -2305,9 +2369,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Pass both stripped name and raw filename (like images do)
             android.util.Log.d("MainActivity", "loadGameInfo - Calling handleVideoForGame:")
             android.util.Log.d("MainActivity", "  systemName: $systemName")
-            android.util.Log.d("MainActivity", "  gameName (stripped): $gameName")  // Should now be just "Air Combat (USA)"
+            android.util.Log.d("MainActivity", "  gameName (stripped): $gameName")
             android.util.Log.d("MainActivity", "  gameNameRaw (full path): $gameNameRaw")
             handleVideoForGame(systemName, gameName, gameNameRaw)
+
+            // Show and update widgets at the end
+            showWidgets()
+            updateWidgetsForCurrentGame()
 
         } catch (e: Exception) {
             // Don't clear images on exception - keep last valid images
@@ -2767,6 +2835,19 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 android.util.Log.d("MainActivity", "Behaviors match ($screensaverBehavior) - keeping current display")
                 gameImageView.visibility = View.VISIBLE
                 videoView.visibility = View.GONE
+
+                // Check if widgets exist - keep them visible if they do
+                val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+                if (!hasWidgets) {
+                    // No widgets - show old marquee if enabled
+                    val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
+                    if (gameLogoSize != "off") {
+                        marqueeImageView.visibility = View.VISIBLE
+                    }
+                } else {
+                    // Widgets exist - hide old marquee, keep widgets visible
+                    marqueeImageView.visibility = View.GONE
+                }
             } else {
                 // Behaviors differ - update display based on game launch behavior
                 android.util.Log.d("MainActivity", "Behaviors differ (screensaver: $screensaverBehavior, launch: $gameLaunchBehavior) - updating display")
@@ -2781,18 +2862,18 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
                             val gameImage = findGameImage(systemName, gameName, filename)
 
-                            if (gameImage != null) {
-                                Glide.with(this)
-                                    .load(gameImage)
-                                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(gameImage)))
-                                    .into(gameImageView)
+                            if (gameImage != null && gameImage.exists()) {
+                                loadImageWithAnimation(gameImage, gameImageView)
                             } else {
                                 loadFallbackBackground()
                             }
 
-                            // Load marquee
+                            // Check if widgets exist
+                            val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+
+                            // Load marquee only if no widgets
                             val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                            if (gameLogoSize != "off") {
+                            if (gameLogoSize != "off" && !hasWidgets) {
                                 val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
                                 if (marqueeImage != null) {
                                     Glide.with(this)
@@ -2807,29 +2888,21 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                 marqueeImageView.visibility = View.GONE
                             }
                         }
+
                         gameImageView.visibility = View.VISIBLE
                         videoView.visibility = View.GONE
                     }
-                    "black_screen" -> {
-                        gameImageView.setImageDrawable(null)
-                        gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
-                        gameImageView.visibility = View.VISIBLE
-
-                        // Clear and hide marquee completely
-                        marqueeImageView.setImageDrawable(null)
-                        marqueeImageView.visibility = View.GONE
-                        Glide.with(this).clear(marqueeImageView)
-
-                        videoView.visibility = View.GONE
-                    }
-                    else -> { // "default_image"
+                    "default_image" -> {
                         loadFallbackBackground()
                         gameImageView.visibility = View.VISIBLE
                         videoView.visibility = View.GONE
 
-                        // Load marquee if enabled
+                        // Check if widgets exist
+                        val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+
+                        // Load marquee only if no widgets
                         val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                        if (gameLogoSize != "off") {
+                        if (gameLogoSize != "off" && !hasWidgets) {
                             val filename = playingGameFilename ?: screensaverGameFilename
                             val systemName = screensaverSystemName ?: currentSystemName
                             if (filename != null && systemName != null) {
@@ -2851,46 +2924,44 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             marqueeImageView.visibility = View.GONE
                         }
                     }
+                    "black" -> {
+                        gameImageView.visibility = View.GONE
+                        videoView.visibility = View.GONE
+                        marqueeImageView.visibility = View.GONE
+                    }
                 }
             }
+        } else {
+            // Normal game launch (not from screensaver)
+            android.util.Log.d("MainActivity", "Game start - normal launch")
 
-            // Clear screensaver launch flag and variables
-            isLaunchingFromScreensaver = false
-            screensaverGameFilename = null
-            screensaverGameName = null
-            screensaverSystemName = null
+            val gameLaunchBehavior = prefs.getString("game_launch_behavior", "game_image") ?: "game_image"
 
-            // Stop any videos
-            releasePlayer()
-            return
-        }
-
-        // Normal game start (not from screensaver or different game)
-        // Update display based on user preference
-        val gameLaunchBehavior = prefs.getString("game_launch_behavior", "game_image") ?: "game_image"
-
-        when (gameLaunchBehavior) {
-            "game_image" -> {
-                // Load and show the launched game's image and marquee
-                val filename = playingGameFilename
-                if (filename != null) {
-                    // Load the game's artwork
+            when (gameLaunchBehavior) {
+                "game_image" -> {
+                    // Show the game's artwork and marquee
+                    val filename = playingGameFilename
                     val systemName = currentSystemName
-                    if (systemName != null) {
+
+                    if (filename != null && systemName != null) {
                         val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
                         val gameImage = findGameImage(systemName, gameName, filename)
-                        if (gameImage != null) {
-                            Glide.with(this)
-                                .load(gameImage)
-                                .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(gameImage)))
-                                .into(gameImageView)
+
+                        if (gameImage != null && gameImage.exists()) {
+                            loadImageWithAnimation(gameImage, gameImageView)
                         } else {
                             loadFallbackBackground()
                         }
 
-                        // Load the game's marquee
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // Check if widgets exist
+                        val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+
+                        // Load marquee only if no widgets
                         val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                        if (gameLogoSize != "off") {
+                        if (gameLogoSize != "off" && !hasWidgets) {
                             val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
                             if (marqueeImage != null) {
                                 Glide.with(this)
@@ -2906,50 +2977,41 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         }
                     }
                 }
+                "default_image" -> {
+                    loadFallbackBackground()
+                    gameImageView.visibility = View.VISIBLE
+                    videoView.visibility = View.GONE
 
-                gameImageView.visibility = View.VISIBLE
-                videoView.visibility = View.GONE
-            }
-            "black_screen" -> {
-                // Show plain black screen - no logos or images
-                gameImageView.setImageDrawable(null)
-                gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
-                gameImageView.visibility = View.VISIBLE
+                    // Check if widgets exist
+                    val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
 
-                // Clear and hide marquee completely
-                marqueeImageView.setImageDrawable(null)
-                marqueeImageView.visibility = View.GONE
-                Glide.with(this).clear(marqueeImageView)
-
-                videoView.visibility = View.GONE
-            }
-            else -> { // "default_image"
-                // Show default fallback image with the game's marquee
-                loadFallbackBackground()
-                gameImageView.visibility = View.VISIBLE
-                videoView.visibility = View.GONE
-
-                // Load and show the game's marquee if enabled
-                val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                if (gameLogoSize != "off") {
-                    val filename = playingGameFilename
-                    val systemName = currentSystemName
-                    if (filename != null && systemName != null) {
-                        val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
-                        val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
-                        if (marqueeImage != null) {
-                            Glide.with(this)
-                                .load(marqueeImage)
-                                .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
-                                .into(marqueeImageView)
-                            marqueeImageView.visibility = View.VISIBLE
+                    // Load marquee only if no widgets
+                    val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
+                    if (gameLogoSize != "off" && !hasWidgets) {
+                        val filename = playingGameFilename
+                        val systemName = currentSystemName
+                        if (filename != null && systemName != null) {
+                            val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
+                            val marqueeImage = findGameOverlayImage(systemName, gameName, filename)
+                            if (marqueeImage != null) {
+                                Glide.with(this)
+                                    .load(marqueeImage)
+                                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(marqueeImage)))
+                                    .into(marqueeImageView)
+                                marqueeImageView.visibility = View.VISIBLE
+                            } else {
+                                marqueeImageView.visibility = View.GONE
+                            }
                         } else {
                             marqueeImageView.visibility = View.GONE
                         }
                     } else {
                         marqueeImageView.visibility = View.GONE
                     }
-                } else {
+                }
+                "black" -> {
+                    gameImageView.visibility = View.GONE
+                    videoView.visibility = View.GONE
                     marqueeImageView.visibility = View.GONE
                 }
             }
@@ -2974,6 +3036,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         screensaverGameFilename = null
         screensaverGameName = null
         screensaverSystemName = null
+
+        // IMPORTANT: Don't hide widgets during game launch - keep them visible
+        // (They were visible during screensaver, so keep them showing during gameplay)
+        // The hideWidgets() call has been removed
     }
 
     /**
@@ -2989,6 +3055,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Update browsing state to game view since we're returning from a game
         // This ensures we don't show system images when game ends
         isSystemScrollActive = false
+
+        // Show widgets again
+        showWidgets()
 
         // Delay reload slightly to check if screensaver is about to start
         // This prevents a flash of the browsing image before screensaver appears
@@ -3017,42 +3086,52 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Handle screensaver start event
      */
     private fun handleScreensaverStart() {
-        // Stop any videos
-        releasePlayer()
+        android.util.Log.d("MainActivity", "Screensaver start")
 
-        // Reset initialization flag
-        screensaverInitialized = false
+        isScreensaverActive = true
+        screensaverInitialized = false  // Reset for new screensaver session
 
         val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
 
         when (screensaverBehavior) {
             "game_image" -> {
-                // For game_image mode, wait for first game event before showing anything
-                // Don't load anything yet - handleScreensaverGameSelect will do it
-                android.util.Log.d("MainActivity", "Screensaver: game_image mode - waiting for first game event")
+                // Game images will be loaded by handleScreensaverGameSelect events
+                // Just prepare the display
+                android.util.Log.d("MainActivity", "Screensaver behavior: game_image - waiting for game select events")
             }
-            "black_screen" -> {
-                // Show plain black screen - no logos or images
-                gameImageView.setImageDrawable(null)
-                gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+            "default_image" -> {
+                // Show default/fallback image immediately
+                android.util.Log.d("MainActivity", "Screensaver behavior: default_image")
+                loadFallbackBackground()
                 gameImageView.visibility = View.VISIBLE
-
-                // Clear and hide marquee completely
-                marqueeImageView.setImageDrawable(null)
-                marqueeImageView.visibility = View.GONE
-                Glide.with(this).clear(marqueeImageView)
-
                 videoView.visibility = View.GONE
 
-                // Mark as initialized (no game data needed for black screen)
-                screensaverInitialized = true
+                // Check if widgets exist
+                val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+
+                // Only show marquee if no widgets exist
+                if (!hasWidgets) {
+                    // Marquee will be updated by handleScreensaverGameSelect if available
+                    marqueeImageView.visibility = View.GONE
+                } else {
+                    // Hide marquee when widgets exist
+                    marqueeImageView.visibility = View.GONE
+                }
             }
-            else -> { // "default_image"
-                // For default_image mode, wait for first game event before loading
-                // Don't load anything yet - handleScreensaverGameSelect will do it
-                android.util.Log.d("MainActivity", "Screensaver: default_image mode - waiting for first game event")
+            "black" -> {
+                // Show black screen
+                android.util.Log.d("MainActivity", "Screensaver behavior: black")
+                gameImageView.visibility = View.GONE
+                videoView.visibility = View.GONE
+                marqueeImageView.visibility = View.GONE
             }
         }
+
+        // Stop any videos
+        releasePlayer()
+
+        // Show widgets during screensaver (instead of hiding them)
+        showWidgets()
     }
 
     /**
@@ -3071,6 +3150,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         // Reset initialization flag
         screensaverInitialized = false
+
+        // Show widgets after screensaver ends
+        showWidgets()
+        updateWidgetsForCurrentGame()
+
 
         when (reason) {
             "game-start" -> {
@@ -3132,7 +3216,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
             when (screensaverBehavior) {
                 "game_image" -> {
-                    // Load the screensaver game's artwork and marquee
+                    // Load the screensaver game's artwork
                     val gameImage = findGameImage(
                         screensaverSystemName!!,
                         gameName,
@@ -3142,93 +3226,48 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     if (gameImage != null && gameImage.exists()) {
                         loadImageWithAnimation(gameImage, gameImageView)
 
-                        // Load marquee if enabled
+                        // Check if widgets exist
+                        val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+
+                        // Load marquee only if enabled and no widgets
                         val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                        if (gameLogoSize != "off") {
+                        if (gameLogoSize != "off" && !hasWidgets) {
                             val marqueeFile = findGameOverlayImage(
                                 screensaverSystemName!!,
                                 gameName,
                                 screensaverGameFilename!!
                             )
-
                             if (marqueeFile != null && marqueeFile.exists()) {
-                                updateMarqueeSize(isSystemLogo = false)
                                 loadImageWithAnimation(marqueeFile, marqueeImageView)
                                 marqueeImageView.visibility = View.VISIBLE
-                                marqueeShowingText = false
                             } else {
-                                // No marquee - show game name as text if logo enabled
-                                val displayName = screensaverGameName ?: gameName
-                                val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
-                                val textDrawable = createTextDrawable(displayName, logoSize)
-
-                                val layoutParams = marqueeImageView.layoutParams
-                                layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
-                                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                                marqueeImageView.layoutParams = layoutParams
-
-                                marqueeImageView.setImageDrawable(textDrawable)
-                                marqueeImageView.visibility = View.VISIBLE
-                                marqueeShowingText = true
+                                marqueeImageView.visibility = View.GONE
                             }
                         } else {
                             marqueeImageView.visibility = View.GONE
                         }
                     } else {
-                        // No game image - show fallback with marquee/text
                         loadFallbackBackground()
-
-                        val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                        if (gameLogoSize != "off") {
-                            val marqueeFile = findGameOverlayImage(
-                                screensaverSystemName!!,
-                                gameName,
-                                screensaverGameFilename!!
-                            )
-
-                            if (marqueeFile != null && marqueeFile.exists()) {
-                                updateMarqueeSize(isSystemLogo = false)
-                                loadImageWithAnimation(marqueeFile, marqueeImageView)
-                                marqueeImageView.visibility = View.VISIBLE
-                                marqueeShowingText = false
-                            } else {
-                                val displayName = screensaverGameName ?: gameName
-                                val logoSize = prefs.getString("logo_size", "medium") ?: "medium"
-                                val textDrawable = createTextDrawable(displayName, logoSize)
-
-                                val layoutParams = marqueeImageView.layoutParams
-                                layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
-                                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
-                                marqueeImageView.layoutParams = layoutParams
-
-                                marqueeImageView.setImageDrawable(textDrawable)
-                                marqueeImageView.visibility = View.VISIBLE
-                                marqueeShowingText = true
-                            }
-                        } else {
-                            marqueeImageView.visibility = View.GONE
-                        }
+                        marqueeImageView.visibility = View.GONE
                     }
                 }
                 "default_image" -> {
-                    // On first game OR subsequent games, load/update display
                     loadFallbackBackground()
-                    gameImageView.visibility = View.VISIBLE
-                    videoView.visibility = View.GONE
 
+                    // Check if widgets exist
+                    val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+
+                    // Show marquee only if no widgets
                     val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-                    if (gameLogoSize != "off") {
+                    if (gameLogoSize != "off" && !hasWidgets) {
                         val marqueeFile = findGameOverlayImage(
                             screensaverSystemName!!,
                             gameName,
                             screensaverGameFilename!!
                         )
-
                         if (marqueeFile != null && marqueeFile.exists()) {
-                            updateMarqueeSize(isSystemLogo = false)
                             loadImageWithAnimation(marqueeFile, marqueeImageView)
                             marqueeImageView.visibility = View.VISIBLE
-                            marqueeShowingText = false
                         } else {
                             marqueeImageView.visibility = View.GONE
                         }
@@ -3236,8 +3275,62 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         marqueeImageView.visibility = View.GONE
                     }
                 }
-                // "black_screen" mode doesn't update anything
+                "black" -> {
+                    gameImageView.visibility = View.GONE
+                    marqueeImageView.visibility = View.GONE
+                }
             }
+
+            // Always update and show widgets for screensaver game (after loading images)
+            showWidgets()
+            updateWidgetsForScreensaverGame()
+        }
+    }
+
+    private fun updateWidgetsForScreensaverGame() {
+        // Clear existing widgets
+        widgetContainer.removeAllViews()
+        activeWidgets.clear()
+
+        val systemName = screensaverSystemName
+        val gameFilename = screensaverGameFilename
+
+        if (systemName != null && gameFilename != null) {
+            // Load saved widgets and update with screensaver game images
+            val allWidgets = widgetManager.loadWidgets()
+
+            allWidgets.forEach { widget ->
+                val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
+                val imageFile = when (widget.imageType) {
+                    OverlayWidget.ImageType.MARQUEE ->
+                        findImageInFolder(systemName, gameName, gameFilename, "marquees")
+                    OverlayWidget.ImageType.BOX_2D ->
+                        findImageInFolder(systemName, gameName, gameFilename, "covers")
+                    OverlayWidget.ImageType.BOX_3D ->
+                        findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
+                    OverlayWidget.ImageType.MIX_IMAGE ->
+                        findImageInFolder(systemName, gameName, gameFilename, "miximages")
+                    OverlayWidget.ImageType.BACK_COVER ->
+                        findImageInFolder(systemName, gameName, gameFilename, "backcovers")
+                    OverlayWidget.ImageType.PHYSICAL_MEDIA ->
+                        findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
+                    OverlayWidget.ImageType.SCREENSHOT ->
+                        findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+                    OverlayWidget.ImageType.FANART ->
+                        findImageInFolder(systemName, gameName, gameFilename, "fanart")
+                    OverlayWidget.ImageType.TITLE_SCREEN ->
+                        findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
+                }
+
+                if (imageFile != null && imageFile.exists()) {
+                    // Update widget with screensaver game's image
+                    val updatedWidget = widget.copy(imagePath = imageFile.absolutePath)
+                    addWidgetToScreen(updatedWidget)
+                }
+            }
+
+            // Make sure container is visible
+            widgetContainer.visibility = View.VISIBLE
         }
     }
 
@@ -3729,6 +3822,246 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             releasePlayer()
         }
     }
+
+    private fun loadWidgets() {
+        // Clear existing widgets
+        widgetContainer.removeAllViews()
+        activeWidgets.clear()
+
+        // Load saved widgets
+        val widgets = widgetManager.loadWidgets()
+        widgets.forEach { widget ->
+            addWidgetToScreen(widget)
+        }
+    }
+
+    private fun addWidgetToScreen(widget: OverlayWidget) {
+        val widgetView = WidgetView(
+            this,
+            widget,
+            onDelete = { view ->
+                removeWidget(view)
+            },
+            onUpdate = { updatedWidget ->
+                saveAllWidgets()
+            }
+        )
+
+        activeWidgets.add(widgetView)
+        widgetContainer.addView(widgetView)
+    }
+
+    private fun removeWidget(widgetView: WidgetView) {
+        widgetContainer.removeView(widgetView)
+        activeWidgets.remove(widgetView)
+        widgetManager.deleteWidget(widgetView.widget.id)
+    }
+
+    private fun saveAllWidgets() {
+        val widgets = activeWidgets.map { it.widget }
+        widgetManager.saveWidgets(widgets)
+    }
+
+    private fun showCreateWidgetMenu() {
+        // Deselect all widgets first
+        activeWidgets.forEach { it.deselect() }
+
+        val options = arrayOf(
+            "Marquee",
+            "2D Box",
+            "3D Box",
+            "Mix Image",
+            "Back Cover",
+            "Physical Media",
+            "Screenshot",
+            "Fanart",
+            "Title Screen"
+        )
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Create Widget")
+            .setItems(options) { _, which ->
+                val imageType = when (which) {
+                    0 -> OverlayWidget.ImageType.MARQUEE
+                    1 -> OverlayWidget.ImageType.BOX_2D
+                    2 -> OverlayWidget.ImageType.BOX_3D
+                    3 -> OverlayWidget.ImageType.MIX_IMAGE
+                    4 -> OverlayWidget.ImageType.BACK_COVER
+                    5 -> OverlayWidget.ImageType.PHYSICAL_MEDIA
+                    6 -> OverlayWidget.ImageType.SCREENSHOT
+                    7 -> OverlayWidget.ImageType.FANART
+                    else -> OverlayWidget.ImageType.TITLE_SCREEN
+                }
+                createWidget(imageType)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun createWidget(imageType: OverlayWidget.ImageType) {
+        // Get current game info
+        val systemName = currentSystemName
+        val gameFilename = currentGameFilename
+
+        if (systemName == null || gameFilename == null) {
+            android.widget.Toast.makeText(
+                this,
+                "No game selected. Browse to a game first.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        // Find the appropriate image
+        val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
+        val imageFile = when (imageType) {
+            OverlayWidget.ImageType.MARQUEE ->
+                findImageInFolder(systemName, gameName, gameFilename, "marquees")
+            OverlayWidget.ImageType.BOX_2D ->
+                findImageInFolder(systemName, gameName, gameFilename, "covers")
+            OverlayWidget.ImageType.BOX_3D ->
+                findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
+            OverlayWidget.ImageType.MIX_IMAGE ->
+                findImageInFolder(systemName, gameName, gameFilename, "miximages")
+            OverlayWidget.ImageType.BACK_COVER ->
+                findImageInFolder(systemName, gameName, gameFilename, "backcovers")
+            OverlayWidget.ImageType.PHYSICAL_MEDIA ->
+                findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
+            OverlayWidget.ImageType.SCREENSHOT ->
+                findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+            OverlayWidget.ImageType.FANART ->
+                findImageInFolder(systemName, gameName, gameFilename, "fanart")
+            OverlayWidget.ImageType.TITLE_SCREEN ->
+                findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
+        }
+
+        if (imageFile == null || !imageFile.exists()) {
+            val typeName = when (imageType) {
+                OverlayWidget.ImageType.MARQUEE -> "marquee"
+                OverlayWidget.ImageType.BOX_2D -> "2D box"
+                OverlayWidget.ImageType.BOX_3D -> "3D box"
+                OverlayWidget.ImageType.MIX_IMAGE -> "mix image"
+                OverlayWidget.ImageType.BACK_COVER -> "back cover"
+                OverlayWidget.ImageType.PHYSICAL_MEDIA -> "physical media"
+                OverlayWidget.ImageType.SCREENSHOT -> "screenshot"
+                OverlayWidget.ImageType.FANART -> "fanart"
+                OverlayWidget.ImageType.TITLE_SCREEN -> "title screen"
+            }
+            android.widget.Toast.makeText(
+                this,
+                "No $typeName image found for this game",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        // Create widget in center of screen
+        val displayMetrics = resources.displayMetrics
+        val widget = OverlayWidget(
+            imageType = imageType,
+            imagePath = imageFile.absolutePath,
+            x = displayMetrics.widthPixels / 2f - 150f,
+            y = displayMetrics.heightPixels / 2f - 200f,
+            width = 300f,
+            height = 400f
+        )
+
+        addWidgetToScreen(widget)
+        saveAllWidgets()
+
+        android.widget.Toast.makeText(
+            this,
+            "Widget created! Long-press to delete, drag to move, resize from bottom-right corner",
+            android.widget.Toast.LENGTH_LONG
+        ).show()
+    }
+
+    private fun findImageInFolder(
+        systemName: String,
+        gameName: String,
+        gameFilename: String,
+        folder: String
+    ): File? {
+        val extensions = listOf("jpg", "png", "webp")
+        val sanitizedFilename = sanitizeGameFilename(gameFilename)
+        val sanitizedName = sanitizedFilename.substringBeforeLast('.')
+
+        return findImageInDir(
+            File(getMediaBasePath(), "$systemName/$folder"),
+            sanitizedName,
+            sanitizedFilename,
+            gameFilename,
+            extensions
+        )
+    }
+
+    private fun updateWidgetsForCurrentGame() {
+        // Clear existing widgets
+        widgetContainer.removeAllViews()
+        activeWidgets.clear()
+
+        // Show widgets in game view OR during screensaver (not in system view, not during gameplay)
+        if (!isSystemScrollActive && !isGamePlaying) {
+            val systemName = currentSystemName
+            val gameFilename = currentGameFilename
+
+            if (systemName != null && gameFilename != null) {
+                // Load saved widgets and filter for current game
+                val allWidgets = widgetManager.loadWidgets()
+
+                // Reload all widgets with current game images
+                allWidgets.forEach { widget ->
+                    val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
+                    val imageFile = when (widget.imageType) {
+                        OverlayWidget.ImageType.MARQUEE ->
+                            findImageInFolder(systemName, gameName, gameFilename, "marquees")
+                        OverlayWidget.ImageType.BOX_2D ->
+                            findImageInFolder(systemName, gameName, gameFilename, "covers")
+                        OverlayWidget.ImageType.BOX_3D ->
+                            findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
+                        OverlayWidget.ImageType.MIX_IMAGE ->
+                            findImageInFolder(systemName, gameName, gameFilename, "miximages")
+                        OverlayWidget.ImageType.BACK_COVER ->
+                            findImageInFolder(systemName, gameName, gameFilename, "backcovers")
+                        OverlayWidget.ImageType.PHYSICAL_MEDIA ->
+                            findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
+                        OverlayWidget.ImageType.SCREENSHOT ->
+                            findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+                        OverlayWidget.ImageType.FANART ->
+                            findImageInFolder(systemName, gameName, gameFilename, "fanart")
+                        OverlayWidget.ImageType.TITLE_SCREEN ->
+                            findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
+                    }
+
+                    if (imageFile != null && imageFile.exists()) {
+                        // Update widget with current game's image
+                        val updatedWidget = widget.copy(imagePath = imageFile.absolutePath)
+                        addWidgetToScreen(updatedWidget)
+                    }
+                }
+
+                // Make sure container is visible
+                widgetContainer.visibility = View.VISIBLE
+            }
+        } else {
+            // Hide widgets in other views
+            widgetContainer.visibility = View.GONE
+        }
+    }
+
+    private fun hideWidgets() {
+        widgetContainer.visibility = View.GONE
+        android.util.Log.d("MainActivity", "Hiding widgets")
+    }
+
+    private fun showWidgets() {
+        // Only show if we're in the right state
+        if (!isSystemScrollActive && !isGamePlaying && !isScreensaverActive) {
+            widgetContainer.visibility = View.VISIBLE
+            android.util.Log.d("MainActivity", "Showing widgets")
+        }
+    }
+
     companion object {
         const val COLUMN_COUNT_KEY = "column_count"
     }

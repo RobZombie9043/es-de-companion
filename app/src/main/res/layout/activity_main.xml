@@ -48,6 +48,14 @@
         android:clickable="true"
         android:focusable="true" />
 
+    <!-- Widget Container (for overlay widgets) -->
+    <RelativeLayout
+        android:id="@+id/widgetContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false" />
+
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
