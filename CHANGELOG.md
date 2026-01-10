@@ -1,5 +1,9 @@
 # 🔄 Changelog
 
+## [0.3.4] - TBC
+- Updated psp logo to blue version for better visibility
+
+
 ## [0.3.3] - 2026-01-10
 - Added additional selectable game overlay image types (None, Marquee, 2D Box, 3D Box, Mix Image)
 
