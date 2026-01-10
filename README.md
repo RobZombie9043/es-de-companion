@@ -19,6 +19,8 @@ A companion app for [ES-DE](https://es-de.org/) that displays beautiful game art
 
 > **Note**: This app was developed using AI assistance, the full source code has been made available.
 
+[![Video Alt Text](https://img.youtube.com/vi/sMCEDMRibs0/0.jpg)](www.youtube.com)
+
 ## 🎮 Features
 
 ### Dynamic Display
