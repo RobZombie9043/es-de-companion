@@ -11,7 +11,8 @@ data class OverlayWidget(
     var y: Float,
     var width: Float,
     var height: Float,
-    var zIndex: Int = 0
+    var zIndex: Int = 0,
+    val widgetContext: WidgetContext = WidgetContext.GAME
 ) {
     enum class ImageType {
         MARQUEE,
@@ -22,6 +23,12 @@ data class OverlayWidget(
         PHYSICAL_MEDIA,
         SCREENSHOT,
         FANART,
-        TITLE_SCREEN
+        TITLE_SCREEN,
+        SYSTEM_LOGO
+    }
+
+    enum class WidgetContext {
+        GAME,    // Shows in game view
+        SYSTEM   // Shows in system view
     }
 }

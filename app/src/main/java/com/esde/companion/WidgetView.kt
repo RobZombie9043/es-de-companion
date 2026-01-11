@@ -130,21 +130,7 @@ class WidgetView(
         setWillNotDraw(false)
     }
 
-    private fun loadWidgetImage() {
-        val file = File(widget.imagePath)
-        if (file.exists()) {
-            Glide.with(context)
-                .load(file)
-                .into(imageView)
-        } else {
-            // File doesn't exist - clear the image
-            android.util.Log.d("WidgetView", "Image file doesn't exist: ${widget.imagePath}, clearing image")
-            Glide.with(context).clear(imageView)
-            imageView.setImageDrawable(null)
-        }
-    }
-
-    private fun updateLayout() {
+        private fun updateLayout() {
         val params = layoutParams as? LayoutParams ?: LayoutParams(
             widget.width.toInt(),
             widget.height.toInt()
@@ -323,6 +309,47 @@ class WidgetView(
         }
 
         return false
+    }
+
+    private fun loadWidgetImage() {
+        if (widget.imagePath.isEmpty()) {
+            android.util.Log.d("WidgetView", "Empty image path, clearing image")
+            Glide.with(context).clear(imageView)
+            imageView.setImageDrawable(null)
+            return
+        }
+
+        if (widget.imagePath.startsWith("builtin://")) {
+            // Load built-in system logo from assets
+            val systemName = widget.imagePath.removePrefix("builtin://")
+            android.util.Log.d("WidgetView", "Loading built-in system logo for: $systemName")
+
+            val mainActivity = context as? MainActivity
+            if (mainActivity != null) {
+                // loadSystemLogoFromAssets expects just the system name
+                val drawable = mainActivity.loadSystemLogoFromAssets(systemName)
+                if (drawable != null) {
+                    imageView.setImageDrawable(drawable)
+                    android.util.Log.d("WidgetView", "Built-in system logo loaded successfully")
+                } else {
+                    android.util.Log.e("WidgetView", "Failed to load built-in system logo")
+                    imageView.setImageDrawable(null)
+                }
+            }
+        } else {
+            // Load from file (custom logo path)
+            val file = File(widget.imagePath)
+            if (file.exists()) {
+                Glide.with(context)
+                    .load(file)
+                    .into(imageView)
+                android.util.Log.d("WidgetView", "Loaded custom logo file: ${widget.imagePath}")
+            } else {
+                android.util.Log.d("WidgetView", "Logo file doesn't exist: ${widget.imagePath}, clearing image")
+                Glide.with(context).clear(imageView)
+                imageView.setImageDrawable(null)
+            }
+        }
     }
 
     private fun isTouchingExtendedCorner(x: Float, y: Float): Boolean {

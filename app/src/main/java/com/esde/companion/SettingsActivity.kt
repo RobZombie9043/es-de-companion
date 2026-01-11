@@ -57,10 +57,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var blurText: TextView
     private lateinit var drawerTransparencySeekBar: SeekBar
     private lateinit var drawerTransparencyText: TextView
-    private lateinit var systemLogoSizeSeekBar: SeekBar
-    private lateinit var systemLogoSizeText: TextView
-    private lateinit var gameLogoSizeSeekBar: SeekBar
-    private lateinit var gameLogoSizeText: TextView
     private lateinit var animationStyleChipGroup: ChipGroup
     private lateinit var imagePreferenceChipGroup: ChipGroup
     private lateinit var customAnimationSettings: LinearLayout
@@ -77,10 +73,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var gameLaunchBehaviorChipGroup: ChipGroup
     private lateinit var screensaverBehaviorChipGroup: ChipGroup
     private lateinit var blackOverlayChipGroup: ChipGroup
-    private lateinit var gameOverlayTypeChipGroup: com.google.android.material.chip.ChipGroup
-    private lateinit var systemOverlayTypeChipGroup: com.google.android.material.chip.ChipGroup
-    private lateinit var systemOverlaySizeContainer: LinearLayout
-    private lateinit var gameOverlaySizeContainer: LinearLayout
 
     private var initialDimming: Int = 0
     private var initialBlur: Int = 0
@@ -407,15 +399,7 @@ class SettingsActivity : AppCompatActivity() {
             blurText = findViewById(R.id.blurText)
             drawerTransparencySeekBar = findViewById(R.id.drawerTransparencySeekBar)
             drawerTransparencyText = findViewById(R.id.drawerTransparencyText)
-            systemLogoSizeSeekBar = findViewById(R.id.systemLogoSizeSeekBar)
-            systemLogoSizeText = findViewById(R.id.systemLogoSizeText)
-            gameLogoSizeSeekBar = findViewById(R.id.gameLogoSizeSeekBar)
-            gameLogoSizeText = findViewById(R.id.gameLogoSizeText)
             android.util.Log.d("SettingsActivity", "All views found")
-            gameOverlayTypeChipGroup = findViewById(R.id.gameOverlayTypeChipGroup)
-            systemOverlayTypeChipGroup = findViewById(R.id.systemOverlayTypeChipGroup)
-            systemOverlaySizeContainer = findViewById(R.id.systemOverlaySizeContainer)
-            gameOverlaySizeContainer = findViewById(R.id.gameOverlaySizeContainer)
 
             animationStyleChipGroup = findViewById<ChipGroup>(R.id.animationStyleChipGroup)
             android.util.Log.d("SettingsActivity", "Animation style chip group found")
@@ -508,9 +492,7 @@ class SettingsActivity : AppCompatActivity() {
             android.util.Log.d("SettingsActivity", "Blur setup")
             setupDrawerTransparencySlider()
             android.util.Log.d("SettingsActivity", "Drawer transparency setup")
-            setupLogoSizeSlider()
             android.util.Log.d("SettingsActivity", "Logo size setup")
-            setupGameOverlayTypeChips()
             setupAnimationStyleChips()
             android.util.Log.d("SettingsActivity", "Animation style chips setup")
             setupCustomAnimationControls()
@@ -727,205 +709,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         })
-    }
-
-    private fun setupLogoSizeSlider() {
-        // Setup System Overlay Type Chips (Off/Logo)
-        setupSystemOverlayTypeChips()
-
-        // Setup System Logo Size Slider
-        val systemLogoSize = prefs.getString("system_logo_size", "medium") ?: "medium"
-        val systemPosition = when (systemLogoSize) {
-            "small" -> 0
-            "medium" -> 1
-            "large" -> 2
-            else -> 1  // default to medium
-        }
-
-        systemLogoSizeSeekBar.min = 0
-        systemLogoSizeSeekBar.max = 2  // Changed from 3 to 2 (removed "off")
-        systemLogoSizeSeekBar.progress = systemPosition
-        systemLogoSizeText.text = when (systemPosition) {
-            0 -> "Small"
-            1 -> "Medium"
-            2 -> "Large"
-            else -> "Medium"
-        }
-
-        systemLogoSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                systemLogoSizeText.text = when (progress) {
-                    0 -> "Small"
-                    1 -> "Medium"
-                    2 -> "Large"
-                    else -> "Medium"
-                }
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                seekBar?.let {
-                    val size = when (it.progress) {
-                        0 -> "small"
-                        1 -> "medium"
-                        2 -> "large"
-                        else -> "medium"
-                    }
-                    prefs.edit().putString("system_logo_size", size).apply()
-                    logoTogglesChanged = true
-                }
-            }
-        })
-
-        // Setup Game Logo Size Slider
-        val gameLogoSize = prefs.getString("game_logo_size", "medium") ?: "medium"
-        val gamePosition = when (gameLogoSize) {
-            "small" -> 0
-            "medium" -> 1
-            "large" -> 2
-            else -> 1  // default to medium
-        }
-
-        gameLogoSizeSeekBar.min = 0
-        gameLogoSizeSeekBar.max = 2  // Changed from 3 to 2 (removed "off")
-        gameLogoSizeSeekBar.progress = gamePosition
-        gameLogoSizeText.text = when (gamePosition) {
-            0 -> "Small"
-            1 -> "Medium"
-            2 -> "Large"
-            else -> "Medium"
-        }
-
-        gameLogoSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                gameLogoSizeText.text = when (progress) {
-                    0 -> "Small"
-                    1 -> "Medium"
-                    2 -> "Large"
-                    else -> "Medium"
-                }
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                seekBar?.let {
-                    val size = when (it.progress) {
-                        0 -> "small"
-                        1 -> "medium"
-                        2 -> "large"
-                        else -> "medium"
-                    }
-                    prefs.edit().putString("game_logo_size", size).apply()
-                    logoTogglesChanged = true
-                }
-            }
-        })
-    }
-
-    private fun setupSystemOverlayTypeChips() {
-        val currentType = prefs.getString("system_logo_size", "medium") ?: "medium"
-        val isOff = currentType == "off"
-
-        // Set initial chip selection
-        val chipToCheck = if (isOff) R.id.systemOverlayOff else R.id.systemOverlayLogo
-        systemOverlayTypeChipGroup.check(chipToCheck)
-
-        // Show/hide slider based on initial state
-        systemOverlaySizeContainer.visibility = if (isOff) View.GONE else View.VISIBLE
-
-        systemOverlayTypeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
-            if (checkedIds.isNotEmpty()) {
-                val isOffSelected = checkedIds[0] == R.id.systemOverlayOff
-
-                if (isOffSelected) {
-                    // Hide slider and save "off"
-                    systemOverlaySizeContainer.visibility = View.GONE
-                    prefs.edit().putString("system_logo_size", "off").apply()
-                } else {
-                    // Show slider and restore last size (or default to medium)
-                    systemOverlaySizeContainer.visibility = View.VISIBLE
-                    val lastSize = prefs.getString("last_system_logo_size", "medium") ?: "medium"
-                    prefs.edit().putString("system_logo_size", lastSize).apply()
-
-                    // Update slider to match
-                    val position = when (lastSize) {
-                        "small" -> 0
-                        "large" -> 2
-                        else -> 1
-                    }
-                    systemLogoSizeSeekBar.progress = position
-                }
-                logoTogglesChanged = true
-            }
-        }
-    }
-
-    private fun setupGameOverlayTypeChips() {
-        // Load current settings
-        val gameLogoEnabled = prefs.getBoolean("game_logo_enabled", true)
-        val currentType = prefs.getString("game_overlay_type", "marquees") ?: "marquees"
-
-        // Determine which chip to check based on enabled state and type
-        val chipToCheck = if (!gameLogoEnabled) {
-            R.id.gameOverlayOff
-        } else {
-            when (currentType) {
-                "covers" -> R.id.gameOverlay2DBox
-                "3dboxes" -> R.id.gameOverlay3DBox
-                "miximages" -> R.id.gameOverlayMixImage
-                else -> R.id.gameOverlayMarquee
-            }
-        }
-        gameOverlayTypeChipGroup.check(chipToCheck)
-
-        // Show/hide size slider based on initial state
-        gameOverlaySizeContainer.visibility = if (gameLogoEnabled) View.VISIBLE else View.GONE
-
-        // Handle chip selection changes
-        gameOverlayTypeChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
-            if (checkedIds.isNotEmpty()) {
-                val isOff = checkedIds[0] == R.id.gameOverlayOff
-
-                if (isOff) {
-                    // Hide slider and disable overlays
-                    gameOverlaySizeContainer.animate()
-                        .alpha(0f)
-                        .setDuration(150)
-                        .withEndAction {
-                            gameOverlaySizeContainer.visibility = View.GONE
-                        }
-                        .start()
-                    prefs.edit().putBoolean("game_logo_enabled", false).apply()
-                } else {
-                    // Show slider and save selected type
-                    val type = when (checkedIds[0]) {
-                        R.id.gameOverlay2DBox -> "covers"
-                        R.id.gameOverlay3DBox -> "3dboxes"
-                        R.id.gameOverlayMixImage -> "miximages"
-                        else -> "marquees"
-                    }
-
-                    // Enable overlays and save type
-                    prefs.edit()
-                        .putBoolean("game_logo_enabled", true)
-                        .putString("game_overlay_type", type)
-                        .apply()
-
-                    // Show slider with animation
-                    if (gameOverlaySizeContainer.visibility == View.GONE) {
-                        gameOverlaySizeContainer.visibility = View.VISIBLE
-                        gameOverlaySizeContainer.alpha = 0f
-                        gameOverlaySizeContainer.animate()
-                            .alpha(1f)
-                            .setDuration(200)
-                            .start()
-                    }
-                }
-                logoTogglesChanged = true
-            }
-        }
     }
 
     private fun setupAnimationStyleChips() {
