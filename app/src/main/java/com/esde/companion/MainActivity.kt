@@ -2200,13 +2200,21 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             currentGameName = null  // Clear game info when in system view
             currentGameFilename = null
 
+            // Handle ES-DE auto-collections
+            val baseFileName = when (systemName.lowercase()) {
+                "all" -> "auto-allgames"
+                "favorites" -> "auto-favorites"
+                "recent" -> "auto-lastplayed"
+                else -> systemName.lowercase()
+            }
+
             // Check for custom system image with multiple format support
             var imageToUse: File? = null
             val systemImagePath = getSystemImagePath()
             val imageExtensions = listOf("webp", "png", "jpg", "jpeg")
 
             for (ext in imageExtensions) {
-                val imageFile = File(systemImagePath, "$systemName.$ext")
+                val imageFile = File(systemImagePath, "$baseFileName.$ext")
                 if (imageFile.exists()) {
                     imageToUse = imageFile
                     break
