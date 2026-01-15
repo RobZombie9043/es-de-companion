@@ -130,7 +130,7 @@ class WidgetView(
         setWillNotDraw(false)
     }
 
-        private fun updateLayout() {
+    private fun updateLayout() {
         val params = layoutParams as? LayoutParams ?: LayoutParams(
             widget.width.toInt(),
             widget.height.toInt()
@@ -313,9 +313,30 @@ class WidgetView(
 
     private fun loadWidgetImage() {
         if (widget.imagePath.isEmpty()) {
-            android.util.Log.d("WidgetView", "Empty image path, clearing image")
-            Glide.with(context).clear(imageView)
-            imageView.setImageDrawable(null)
+            // Only show text fallback for MARQUEE type
+            if (widget.imageType == OverlayWidget.ImageType.MARQUEE) {
+                android.util.Log.d("WidgetView", "Empty marquee image path, showing text fallback")
+                val mainActivity = context as? MainActivity
+                if (mainActivity != null) {
+                    val displayText = extractGameNameFromWidget()
+                    val fallbackDrawable = mainActivity.createMarqueeTextFallback(
+                        gameName = displayText,
+                        width = widget.width.toInt(),
+                        height = widget.height.toInt()
+                    )
+                    imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+                    imageView.setImageDrawable(fallbackDrawable)
+                    android.util.Log.d("WidgetView", "Marquee text fallback displayed: $displayText")
+                } else {
+                    Glide.with(context).clear(imageView)
+                    imageView.setImageDrawable(null)
+                }
+            } else {
+                // For non-marquee types, just clear the image
+                android.util.Log.d("WidgetView", "Empty image path for non-marquee, clearing image")
+                Glide.with(context).clear(imageView)
+                imageView.setImageDrawable(null)
+            }
             return
         }
 
@@ -350,10 +371,44 @@ class WidgetView(
                     .into(imageView)
                 android.util.Log.d("WidgetView", "Loaded custom logo file: ${widget.imagePath}")
             } else {
-                android.util.Log.d("WidgetView", "Logo file doesn't exist: ${widget.imagePath}, clearing image")
-                Glide.with(context).clear(imageView)
-                imageView.setImageDrawable(null)
+                // Only show text fallback for MARQUEE type
+                if (widget.imageType == OverlayWidget.ImageType.MARQUEE) {
+                    android.util.Log.d("WidgetView", "Marquee file doesn't exist: ${widget.imagePath}, showing text fallback")
+                    val mainActivity = context as? MainActivity
+                    if (mainActivity != null) {
+                        val displayText = extractGameNameFromWidget()
+                        val fallbackDrawable = mainActivity.createMarqueeTextFallback(
+                            gameName = displayText,
+                            width = widget.width.toInt(),
+                            height = widget.height.toInt()
+                        )
+                        imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+                        imageView.setImageDrawable(fallbackDrawable)
+                        android.util.Log.d("WidgetView", "Marquee text fallback displayed for missing file: $displayText")
+                    } else {
+                        Glide.with(context).clear(imageView)
+                        imageView.setImageDrawable(null)
+                    }
+                } else {
+                    // For non-marquee types, just clear the image
+                    android.util.Log.d("WidgetView", "Logo file doesn't exist: ${widget.imagePath}, clearing image")
+                    Glide.with(context).clear(imageView)
+                    imageView.setImageDrawable(null)
+                }
             }
+        }
+    }
+
+    private fun extractGameNameFromWidget(): String {
+        // Try to extract game name from widget ID or fallback to "Marquee"
+        return when {
+            widget.id.isNotEmpty() && widget.id != "widget_${widget.imageType}" -> {
+                // Widget ID might contain game name
+                widget.id.replace("widget_", "")
+                    .replace("_", " ")
+                    .trim()
+            }
+            else -> "Marquee"
         }
     }
 
@@ -515,38 +570,60 @@ class WidgetView(
 
     private fun showLayerMenu() {
         val options = arrayOf(
-            "Bring to Front",
-            "Send to Back",
             "Move Forward",
             "Move Backward",
             "─────────────",
             "Delete"
         )
 
+        // Get the widget name from imagePath since we can't directly access ImageType here
+        // Parse the builtin path or filename to determine widget type
+        val widgetName = when {
+            widget.imagePath.contains("marquees", ignoreCase = true) -> "Marquee"
+            widget.imagePath.contains("covers", ignoreCase = true) -> "2D Box"
+            widget.imagePath.contains("3dboxes", ignoreCase = true) -> "3D Box"
+            widget.imagePath.contains("miximages", ignoreCase = true) -> "Mix Image"
+            widget.imagePath.contains("backcovers", ignoreCase = true) -> "Back Cover"
+            widget.imagePath.contains("physicalmedia", ignoreCase = true) -> "Physical Media"
+            widget.imagePath.contains("screenshots", ignoreCase = true) -> "Screenshot"
+            widget.imagePath.contains("fanart", ignoreCase = true) -> "Fanart"
+            widget.imagePath.contains("titlescreens", ignoreCase = true) -> "Title Screen"
+            widget.imagePath.contains("systemlogo", ignoreCase = true) ||
+                    widget.imagePath.contains("system", ignoreCase = true) -> "System Logo"
+            widget.imagePath.startsWith("builtin://") -> {
+                // Extract name from builtin path
+                widget.imagePath.removePrefix("builtin://")
+                    .split("/").last()
+                    .replace("_", " ")
+                    .split(" ")
+                    .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+            }
+            else -> "Widget"
+        }
+
+        // Get current zIndex from parent view
+        val currentZIndex = (parent as? android.view.ViewGroup)?.indexOfChild(this) ?: 0
+
         android.app.AlertDialog.Builder(context)
-            .setTitle("Widget Layer")
-            .setItems(options) { _, which ->
+            .setTitle("$widgetName (zIndex: $currentZIndex)")
+            .setItems(options) { dialog, which ->
                 when (which) {
-                    0 -> bringWidgetToFront()  // CHANGED
-                    1 -> sendWidgetToBack()    // CHANGED
-                    2 -> moveWidgetForward()   // CHANGED
-                    3 -> moveWidgetBackward()  // CHANGED
-                    4 -> {} // Separator
-                    5 -> showDeleteDialog()
+                    0 -> {
+                        moveWidgetForward()
+                        // Reopen the dialog after moving
+                        postDelayed({ showLayerMenu() }, 100)
+                    }
+                    1 -> {
+                        moveWidgetBackward()
+                        // Reopen the dialog after moving
+                        postDelayed({ showLayerMenu() }, 100)
+                    }
+                    2 -> {} // Separator
+                    3 -> showDeleteDialog()
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }
-
-    private fun bringWidgetToFront() {  // CHANGED name
-        val mainActivity = context as? MainActivity
-        mainActivity?.bringWidgetToFront(this)
-    }
-
-    private fun sendWidgetToBack() {  // CHANGED name
-        val mainActivity = context as? MainActivity
-        mainActivity?.sendWidgetToBack(this)
     }
 
     private fun moveWidgetForward() {  // CHANGED name

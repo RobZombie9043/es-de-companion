@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.graphics.Canvas
 import android.os.Bundle
 import android.os.Environment
 import android.os.FileObserver
@@ -2024,8 +2025,125 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.graphics.drawable.PictureDrawable(svg.renderToPicture())
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Failed to load logo for $systemName", e)
-            null
+            // Return text-based drawable as fallback
+            createTextFallbackDrawable(systemName, width, height)
         }
+    }
+
+    /**
+     * Create a text-based drawable as fallback for marquee images when no image is available
+     * @param gameName The game name to display
+     * @param width Target width in pixels (default 800 for marquees)
+     * @param height Target height in pixels (default 300 for marquees)
+     * @return A drawable with centered text
+     */
+    /**
+     * Create a text-based drawable as fallback for marquee images when no image is available
+     * @param gameName The game name to display
+     * @param width Target width in pixels (default 800 for marquees)
+     * @param height Target height in pixels (default 300 for marquees)
+     * @return A drawable with centered text on transparent background
+     */
+    fun createMarqueeTextFallback(
+        gameName: String,
+        width: Int = 800,
+        height: Int = 300
+    ): android.graphics.drawable.Drawable {
+        // Clean up game name for display
+        val displayName = gameName
+            .replaceFirst(Regex("\\.[^.]+$"), "") // Remove file extension
+            .replace(Regex("[_-]"), " ") // Replace underscores/hyphens with spaces
+            .replace(Regex("\\s+"), " ") // Normalize multiple spaces
+            .trim()
+            .split(" ")
+            .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+
+        val bitmap = android.graphics.Bitmap.createBitmap(
+            width,
+            height,
+            android.graphics.Bitmap.Config.ARGB_8888
+        )
+        val canvas = android.graphics.Canvas(bitmap)
+
+        // Leave background transparent (no background drawing)
+
+        // Configure text paint
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = height * 0.20f // Start with 20% of height
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        // Word wrap logic
+        val maxWidth = width * 1.0f
+        val words = displayName.split(" ")
+        val lines = mutableListOf<String>()
+        var currentLine = ""
+
+        for (word in words) {
+            val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
+            if (paint.measureText(testLine) <= maxWidth) {
+                currentLine = testLine
+            } else {
+                if (currentLine.isNotEmpty()) lines.add(currentLine)
+                currentLine = word
+            }
+        }
+        if (currentLine.isNotEmpty()) lines.add(currentLine)
+
+        // Draw lines centered vertically
+        val lineHeight = paint.textSize * 1.2f
+        val totalHeight = lines.size * lineHeight
+        var yPos = (height - totalHeight) / 2f + lineHeight * 0.8f
+
+        for (line in lines) {
+            canvas.drawText(line, width / 2f, yPos, paint)
+            yPos += lineHeight
+        }
+
+        return android.graphics.drawable.BitmapDrawable(resources, bitmap)
+    }
+
+    private fun createTextFallbackDrawable(
+        systemName: String,
+        width: Int = -1,
+        height: Int = -1
+    ): android.graphics.drawable.Drawable {
+        // Clean up system name for display
+        val displayName = systemName
+            .replace("auto-", "")
+            .replace("-", " ")
+            .split(" ")
+            .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+
+        // Create a bitmap to draw text on
+        val targetWidth = if (width > 0) width else 400
+        val targetHeight = if (height > 0) height else 200
+
+        val bitmap = android.graphics.Bitmap.createBitmap(
+            targetWidth,
+            targetHeight,
+            android.graphics.Bitmap.Config.ARGB_8888
+        )
+        val canvas = android.graphics.Canvas(bitmap)
+
+        // Configure text paint
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = targetHeight * 0.35f // Scale text to ~35% of height
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+
+        // Draw text centered
+        val xPos = targetWidth / 2f
+        val yPos = (targetHeight / 2f) - ((paint.descent() + paint.ascent()) / 2f)
+        canvas.drawText(displayName, xPos, yPos, paint)
+
+        return android.graphics.drawable.BitmapDrawable(resources, bitmap)
     }
 
     /**
@@ -3204,7 +3322,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     widget.copy(imagePath = imageFile.absolutePath)
                 } else {
                     android.util.Log.d("MainActivity", "  No screensaver image found for widget type ${widget.imageType}, using empty path")
-                    widget.copy(imagePath = "")  // CHANGED: Use empty path instead of keeping old path
+                    // Store game name in widget ID for marquee text fallback
+                    if (widget.imageType == OverlayWidget.ImageType.MARQUEE) {
+                        widget.copy(
+                            imagePath = "",
+                            id = "widget_${gameName}"
+                        )
+                    } else {
+                        widget.copy(imagePath = "")
+                    }
                 }
 
                 addWidgetToScreenWithoutSaving(widgetToAdd)
@@ -3776,67 +3902,41 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Deselect all widgets first
         activeWidgets.forEach { it.deselect() }
 
-        val lockText = if (widgetsLocked) "🔒 Unlock Widgets" else "🔓 Lock Widgets"
-        val snapText = if (snapToGrid) "⊞ Snap to Grid: ON" else "⊞ Snap to Grid: OFF"
+        fun getMenuOptions(): Array<String> {
+            val lockText = if (widgetsLocked) "🔒 Unlock Widgets" else "🔓 Lock Widgets"
+            val snapText = if (snapToGrid) "⊞ Snap to Grid: ON" else "⊞ Snap to Grid: OFF"
 
-        // Different options based on current view
-        val options = if (isSystemScrollActive) {
-            // System view - only system logo option
-            arrayOf(
-                lockText,
-                snapText,
-                "─────────────",
-                "System Logo"
-            )
-        } else {
-            // Game view - all game image types
-            arrayOf(
-                lockText,
-                snapText,
-                "─────────────",
-                "Marquee",
-                "2D Box",
-                "3D Box",
-                "Mix Image",
-                "Back Cover",
-                "Physical Media",
-                "Screenshot",
-                "Fanart",
-                "Title Screen"
-            )
+            // Different options based on current view
+            return if (isSystemScrollActive) {
+                // System view - only system logo option
+                arrayOf(
+                    lockText,
+                    snapText,
+                    "─────────────",
+                    "System Logo"
+                )
+            } else {
+                // Game view - all game image types
+                arrayOf(
+                    lockText,
+                    snapText,
+                    "─────────────",
+                    "Marquee",
+                    "2D Box",
+                    "3D Box",
+                    "Mix Image",
+                    "Back Cover",
+                    "Physical Media",
+                    "Screenshot",
+                    "Fanart",
+                    "Title Screen"
+                )
+            }
         }
 
-        widgetMenuDialog = android.app.AlertDialog.Builder(this)
+        val dialog = android.app.AlertDialog.Builder(this)
             .setTitle("Widget Menu")
-            .setItems(options) { dialogInterface, which ->
-                when {
-                    which == 0 -> toggleWidgetLock()
-                    which == 1 -> toggleSnapToGrid()
-                    which == 2 -> {} // Separator
-                    isSystemScrollActive && which == 3 -> {
-                        // System Logo
-                        createWidget(OverlayWidget.ImageType.SYSTEM_LOGO)
-                        dialogInterface.dismiss()
-                    }
-                    !isSystemScrollActive -> {
-                        // Game view widget creation
-                        val imageType = when (which) {
-                            3 -> OverlayWidget.ImageType.MARQUEE
-                            4 -> OverlayWidget.ImageType.BOX_2D
-                            5 -> OverlayWidget.ImageType.BOX_3D
-                            6 -> OverlayWidget.ImageType.MIX_IMAGE
-                            7 -> OverlayWidget.ImageType.BACK_COVER
-                            8 -> OverlayWidget.ImageType.PHYSICAL_MEDIA
-                            9 -> OverlayWidget.ImageType.SCREENSHOT
-                            10 -> OverlayWidget.ImageType.FANART
-                            11 -> OverlayWidget.ImageType.TITLE_SCREEN
-                            else -> return@setItems
-                        }
-                        createWidget(imageType)
-                        dialogInterface.dismiss()
-                    }
-                }
-            }
+            .setItems(getMenuOptions(), null) // Set listener to null initially
             .setNegativeButton("Cancel", null)
             .setOnDismissListener {
                 widgetMenuShowing = false
@@ -3845,7 +3945,72 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             }
             .create()
 
-        widgetMenuDialog?.show()
+        // Set custom click listener after creating dialog to control dismissal
+        dialog.listView.setOnItemClickListener { _, _, which, _ ->
+            when {
+                which == 0 -> {
+                    // Toggle lock - dismiss and reopen instantly
+                    toggleWidgetLock()
+                    dialog.dismiss()
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        showCreateWidgetMenu()
+                    }
+                }
+                which == 1 -> {
+                    // Toggle snap to grid - dismiss and reopen instantly
+                    toggleSnapToGrid()
+                    dialog.dismiss()
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        showCreateWidgetMenu()
+                    }
+                }
+                which == 2 -> {} // Separator - do nothing
+                isSystemScrollActive && which == 3 -> {
+                    // System Logo - check if locked before creating
+                    if (widgetsLocked) {
+                        android.widget.Toast.makeText(
+                            this,
+                            "Cannot create widgets while locked. Unlock widgets first.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        // Don't dismiss - dialog stays open
+                    } else {
+                        createWidget(OverlayWidget.ImageType.SYSTEM_LOGO)
+                        dialog.dismiss()
+                    }
+                }
+                !isSystemScrollActive -> {
+                    // Game view widget creation - check if locked before creating
+                    if (widgetsLocked) {
+                        android.widget.Toast.makeText(
+                            this,
+                            "Cannot create widgets while locked. Unlock widgets first.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        // Don't dismiss - dialog stays open
+                        return@setOnItemClickListener
+                    }
+
+                    val imageType = when (which) {
+                        3 -> OverlayWidget.ImageType.MARQUEE
+                        4 -> OverlayWidget.ImageType.BOX_2D
+                        5 -> OverlayWidget.ImageType.BOX_3D
+                        6 -> OverlayWidget.ImageType.MIX_IMAGE
+                        7 -> OverlayWidget.ImageType.BACK_COVER
+                        8 -> OverlayWidget.ImageType.PHYSICAL_MEDIA
+                        9 -> OverlayWidget.ImageType.SCREENSHOT
+                        10 -> OverlayWidget.ImageType.FANART
+                        11 -> OverlayWidget.ImageType.TITLE_SCREEN
+                        else -> return@setOnItemClickListener
+                    }
+                    createWidget(imageType)
+                    dialog.dismiss()
+                }
+            }
+        }
+
+        widgetMenuDialog = dialog
+        dialog.show()
         android.util.Log.d("MainActivity", "Widget menu dialog created and shown")
     }
 
@@ -4196,7 +4361,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         widget.copy(imagePath = imageFile.absolutePath)
                     } else {
                         android.util.Log.d("MainActivity", "  No valid image found, using empty path")
-                        widget.copy(imagePath = "")  // CHANGED: Use empty path instead of keeping old path
+                        // Store game name in widget ID for marquee text fallback
+                        if (widget.imageType == OverlayWidget.ImageType.MARQUEE) {
+                            widget.copy(
+                                imagePath = "",
+                                id = "widget_${gameName}"
+                            )
+                        } else {
+                            widget.copy(imagePath = "")
+                        }
                     }
 
                     addWidgetToScreenWithoutSaving(widgetToAdd)
