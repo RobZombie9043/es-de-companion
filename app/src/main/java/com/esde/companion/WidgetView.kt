@@ -68,8 +68,10 @@ class WidgetView(
     init {
         // Create ImageView for the widget content
         imageView = ImageView(context).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = true
+            scaleType = ImageView.ScaleType.FIT_CENTER  // Keeps image centered and scaled
+            // Remove any max dimensions that might constrain scaling
+            maxHeight = Int.MAX_VALUE
+            maxWidth = Int.MAX_VALUE
         }
         addView(imageView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
@@ -237,8 +239,8 @@ class WidgetView(
                     val newX = initialX + deltaX
                     val newY = initialY + deltaY
 
-                    widget.x = if (snapToGrid) snapToGridValue(newX) else newX
-                    widget.y = if (snapToGrid) snapToGridValue(newY) else newY
+                    widget.x = if (snapToGrid) snapXToGrid(newX) else newX
+                    widget.y = if (snapToGrid) snapYToGrid(newY) else newY
                     updateLayout()
                 }
 
@@ -272,8 +274,8 @@ class WidgetView(
 
                 // Apply final snap on release if enabled
                 if (snapToGrid && (isDragging || isResizing)) {
-                    widget.x = snapToGridValue(widget.x)
-                    widget.y = snapToGridValue(widget.y)
+                    widget.x = snapXToGrid(widget.x)
+                    widget.y = snapYToGrid(widget.y)
                     widget.width = snapToGridValue(widget.width)
                     widget.height = snapToGridValue(widget.height)
                     updateLayout()
@@ -366,10 +368,13 @@ class WidgetView(
             // Load from file (custom logo path)
             val file = File(widget.imagePath)
             if (file.exists()) {
+                // ✨ UPDATED SECTION - Better scaling for images
                 Glide.with(context)
                     .load(file)
+                    .override(widget.width.toInt(), widget.height.toInt())  // ✅ Scale to container size
+                    .fitCenter()
                     .into(imageView)
-                android.util.Log.d("WidgetView", "Loaded custom logo file: ${widget.imagePath}")
+                android.util.Log.d("WidgetView", "Loaded custom logo file with full scaling: ${widget.imagePath}")
             } else {
                 // Only show text fallback for MARQUEE type
                 if (widget.imageType == OverlayWidget.ImageType.MARQUEE) {
@@ -397,6 +402,23 @@ class WidgetView(
                 }
             }
         }
+
+        // At the very end of loadWidgetImage() method
+        postDelayed({
+            android.util.Log.d("WidgetView", "═══ DIAGNOSTIC INFO ═══")
+            android.util.Log.d("WidgetView", "Widget container: ${width}x${height}")
+            android.util.Log.d("WidgetView", "Widget data size: ${widget.width}x${widget.height}")
+            android.util.Log.d("WidgetView", "ImageView size: ${imageView.width}x${imageView.height}")
+            android.util.Log.d("WidgetView", "ImageView scaleType: ${imageView.scaleType}")
+            android.util.Log.d("WidgetView", "ImageView layoutParams: ${imageView.layoutParams.width}x${imageView.layoutParams.height}")
+
+            val drawable = imageView.drawable
+            if (drawable != null) {
+                android.util.Log.d("WidgetView", "Drawable intrinsic: ${drawable.intrinsicWidth}x${drawable.intrinsicHeight}")
+                android.util.Log.d("WidgetView", "Drawable bounds: ${drawable.bounds}")
+            }
+            android.util.Log.d("WidgetView", "═══ END DIAGNOSTIC ═══")
+        }, 100)
     }
 
     private fun extractGameNameFromWidget(): String {
@@ -469,7 +491,6 @@ class WidgetView(
     private fun resizeFromCorner(corner: ResizeCorner, deltaX: Float, deltaY: Float) {
         when (corner) {
             ResizeCorner.TOP_LEFT -> {
-                // Resize from top-left: move position and change size inversely
                 val newWidth = max(100f, initialWidth - deltaX)
                 val newHeight = max(100f, initialHeight - deltaY)
                 val widthDiff = initialWidth - newWidth
@@ -477,31 +498,28 @@ class WidgetView(
 
                 widget.width = if (snapToGrid) snapToGridValue(newWidth) else newWidth
                 widget.height = if (snapToGrid) snapToGridValue(newHeight) else newHeight
-                widget.x = if (snapToGrid) snapToGridValue(initialX + widthDiff) else initialX + widthDiff
-                widget.y = if (snapToGrid) snapToGridValue(initialY + heightDiff) else initialY + heightDiff
+                widget.x = if (snapToGrid) snapXToGrid(initialX + widthDiff) else initialX + widthDiff
+                widget.y = if (snapToGrid) snapYToGrid(initialY + heightDiff) else initialY + heightDiff
             }
             ResizeCorner.TOP_RIGHT -> {
-                // Resize from top-right: change width and move y
                 val newWidth = max(100f, initialWidth + deltaX)
                 val newHeight = max(100f, initialHeight - deltaY)
                 val heightDiff = initialHeight - newHeight
 
                 widget.width = if (snapToGrid) snapToGridValue(newWidth) else newWidth
                 widget.height = if (snapToGrid) snapToGridValue(newHeight) else newHeight
-                widget.y = if (snapToGrid) snapToGridValue(initialY + heightDiff) else initialY + heightDiff
+                widget.y = if (snapToGrid) snapYToGrid(initialY + heightDiff) else initialY + heightDiff
             }
             ResizeCorner.BOTTOM_LEFT -> {
-                // Resize from bottom-left: change height and move x
                 val newWidth = max(100f, initialWidth - deltaX)
                 val newHeight = max(100f, initialHeight + deltaY)
                 val widthDiff = initialWidth - newWidth
 
                 widget.width = if (snapToGrid) snapToGridValue(newWidth) else newWidth
                 widget.height = if (snapToGrid) snapToGridValue(newHeight) else newHeight
-                widget.x = if (snapToGrid) snapToGridValue(initialX + widthDiff) else initialX + widthDiff
+                widget.x = if (snapToGrid) snapXToGrid(initialX + widthDiff) else initialX + widthDiff
             }
             ResizeCorner.BOTTOM_RIGHT -> {
-                // Resize from bottom-right: just increase size
                 val newWidth = max(100f, initialWidth + deltaX)
                 val newHeight = max(100f, initialHeight + deltaY)
 
@@ -512,8 +530,24 @@ class WidgetView(
         }
     }
 
-    private fun snapToGridValue(value: Float): Float {
-        return (value / gridSize).roundToInt() * gridSize
+    private fun snapXToGrid(x: Float): Float {
+        val displayMetrics = context.resources.displayMetrics
+        val screenCenterX = displayMetrics.widthPixels / 2f
+        // Snap the center itself to grid
+        val snappedCenterX = (screenCenterX / gridSize).roundToInt() * gridSize
+        val distanceFromCenter = x - snappedCenterX
+        val snappedDistance = (distanceFromCenter / gridSize).roundToInt() * gridSize
+        return snappedCenterX + snappedDistance
+    }
+
+    private fun snapYToGrid(y: Float): Float {
+        val displayMetrics = context.resources.displayMetrics
+        val screenCenterY = displayMetrics.heightPixels / 2f
+        // Snap the center itself to grid
+        val snappedCenterY = (screenCenterY / gridSize).roundToInt() * gridSize
+        val distanceFromCenter = y - snappedCenterY
+        val snappedDistance = (distanceFromCenter / gridSize).roundToInt() * gridSize
+        return snappedCenterY + snappedDistance
     }
 
     fun setLocked(locked: Boolean) {
@@ -525,13 +559,17 @@ class WidgetView(
         invalidate()
     }
 
+    private fun snapToGridValue(value: Float): Float {
+        return (value / gridSize).roundToInt() * gridSize
+    }
+
     fun setSnapToGrid(snap: Boolean, size: Float) {
         snapToGrid = snap
         gridSize = size
 
         if (snap) {
-            widget.x = snapToGridValue(widget.x)
-            widget.y = snapToGridValue(widget.y)
+            widget.x = snapXToGrid(widget.x)
+            widget.y = snapYToGrid(widget.y)
             widget.width = snapToGridValue(widget.width)
             widget.height = snapToGridValue(widget.height)
             updateLayout()

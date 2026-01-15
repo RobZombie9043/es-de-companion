@@ -105,6 +105,10 @@ class MainActivity : AppCompatActivity() {
     private var hasWindowFocus = true  // Track if app has window focus (is on top)
     private var playingGameFilename: String? = null  // Filename of currently playing game
     private var isScreensaverActive = false  // Track if ES-DE screensaver is running
+    private var wasInSystemViewBeforeScreensaver = false
+    private var systemBeforeScreensaver: String? = null
+    private var gameFilenameBeforeScreensaver: String? = null
+    private var gameNameBeforeScreensaver: String? = null
     private var screensaverGameFilename: String? = null  // Current screensaver game filename
     private var screensaverGameName: String? = null  // Current screensaver game name
     private var screensaverSystemName: String? = null  // Current screensaver system name
@@ -285,6 +289,8 @@ class MainActivity : AppCompatActivity() {
         widgetsLocked = prefs.getBoolean("widgets_locked", true)
         // Load snap to grid state
         snapToGrid = prefs.getBoolean("snap_to_grid", true)
+        // Load show grid state
+        showGrid = prefs.getBoolean("show_grid", false)
 
         // Create default widgets on first launch
         createDefaultWidgets()
@@ -2463,9 +2469,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.d("MainActivity", "  gameNameRaw (full path): $gameNameRaw")
             handleVideoForGame(systemName, gameName, gameNameRaw)
 
-            // Show and update widgets at the end
-            showWidgets()
+            // Update game widgets after loading game image
             updateWidgetsForCurrentGame()
+            // Don't show widgets if screensaver is active
+            if (!isScreensaverActive) {
+                showWidgets()
+            } else {
+                android.util.Log.d("MainActivity", "Screensaver active - not showing widgets from loadGameInfo")
+            }
 
         } catch (e: Exception) {
             // Don't clear images on exception - keep last valid images
@@ -3082,6 +3093,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         isScreensaverActive = true
         screensaverInitialized = false
 
+        // Save complete state before screensaver
+        wasInSystemViewBeforeScreensaver = isSystemScrollActive
+        systemBeforeScreensaver = currentSystemName
+        gameFilenameBeforeScreensaver = currentGameFilename
+        gameNameBeforeScreensaver = currentGameName
+        android.util.Log.d("MainActivity", "Saved pre-screensaver state: system=$systemBeforeScreensaver, game=$gameNameBeforeScreensaver, isSystemView=$wasInSystemViewBeforeScreensaver")
+
         val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
         android.util.Log.d("MainActivity", "Screensaver behavior: $screensaverBehavior")
 
@@ -3115,6 +3133,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         // Stop any videos
         releasePlayer()
+
+        // CRITICAL: Clear all widgets immediately when screensaver starts
+        // Game widgets will be loaded by handleScreensaverGameSelect when first game is selected
+        widgetContainer.removeAllViews()
+        activeWidgets.clear()
+        android.util.Log.d("MainActivity", "Screensaver started - all widgets cleared, waiting for game-select")
 
         // Update grid overlay for screensaver state (for game_image and default_image)
         widgetContainer.visibility = View.VISIBLE
@@ -3193,10 +3217,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     screensaverGameName = null
                     screensaverSystemName = null
 
-                    // CHANGED: Check what view we should return to
-                    if (isSystemScrollActive) {
+                    // CHANGED: Check what view we were in BEFORE screensaver started
+                    if (wasInSystemViewBeforeScreensaver) {
                         // Was in system view - reload system image and widgets
                         android.util.Log.d("MainActivity", "Returning to system view")
+                        isSystemScrollActive = true  // Restore system view state
                         loadSystemImage()
                     } else {
                         // Was in game view - reload game info and widgets
@@ -3213,9 +3238,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     screensaverGameName = null
                     screensaverSystemName = null
 
-                    if (isSystemScrollActive) {
+                    // CHANGED: Check what view we were in BEFORE screensaver started
+                    if (wasInSystemViewBeforeScreensaver) {
+                        // Was in system view - reload system image and widgets
+                        android.util.Log.d("MainActivity", "Returning to system view")
+                        isSystemScrollActive = true  // Restore system view state
                         loadSystemImage()
                     } else {
+                        // Was in game view - reload game info and widgets
+                        android.util.Log.d("MainActivity", "Returning to game view")
                         loadGameInfo()
                     }
                 }
@@ -3261,15 +3292,29 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         loadFallbackBackground()
                     }
 
-                    // Show widgets for game_image behavior
-                    showWidgets()
-                    updateWidgetsForScreensaverGame()
+                    // CRITICAL: Set current game context BEFORE loading widgets
+                    // This ensures widgets load images from the correct system folder
+                    currentSystemName = screensaverSystemName
+                    currentGameFilename = screensaverGameFilename
+                    currentGameName = gameName
+                    isSystemScrollActive = false  // CRITICAL: Set to false so updateWidgetsForCurrentGame() loads game widgets
+                    android.util.Log.d("MainActivity", "Set game context for widgets: system=$currentSystemName, game=$currentGameName")
+
+                    // Use existing function to load game widgets with correct images
+                    updateWidgetsForCurrentGame()
                 }
                 "default_image" -> {
                     loadFallbackBackground()
-                    // Show widgets for default image too
-                    showWidgets()
-                    updateWidgetsForScreensaverGame()
+                    // CRITICAL: Set current game context BEFORE loading widgets
+                    // This ensures widgets load images from the correct system folder
+                    currentSystemName = screensaverSystemName
+                    currentGameFilename = screensaverGameFilename
+                    currentGameName = gameName
+                    isSystemScrollActive = false  // CRITICAL: Set to false so updateWidgetsForCurrentGame() loads game widgets
+                    android.util.Log.d("MainActivity", "Set game context for widgets: system=$currentSystemName, game=$currentGameName")
+
+                    // Use existing function to load game widgets with correct images
+                    updateWidgetsForCurrentGame()
                 }
             }
         }
@@ -4039,14 +4084,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Update all active widgets with the new snap state
         activeWidgets.forEach { it.setSnapToGrid(snapToGrid, gridSize) }
 
-        val message = if (snapToGrid) {
-            "Snap to grid enabled - widgets will align to ${gridSize.toInt()}px grid"
-        } else {
-            "Snap to grid disabled - free placement and sizing"
-        }
-
-        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
-
         // Save snap state to preferences
         prefs.edit().putBoolean("snap_to_grid", snapToGrid).apply()
     }
@@ -4054,6 +4091,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun toggleShowGrid() {
         showGrid = !showGrid
         updateGridOverlay()
+
+        // Save show grid state to preferences
+        prefs.edit().putBoolean("show_grid", showGrid).apply()
+
         android.util.Log.d("MainActivity", "Show grid toggled: $showGrid")
     }
 
@@ -4245,6 +4286,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun updateWidgetsForCurrentSystem() {
         android.util.Log.d("MainActivity", "═══ updateWidgetsForCurrentSystem START ═══")
         android.util.Log.d("MainActivity", "currentSystemName: $currentSystemName")
+
+        // Don't update system widgets during screensaver
+        if (isScreensaverActive) {
+            android.util.Log.d("MainActivity", "Screensaver active - skipping system widget update")
+            return
+        }
 
         val systemName = currentSystemName
 
@@ -4525,6 +4572,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 gridOverlayView = null
                 android.util.Log.d("MainActivity", "Grid overlay removed")
             }
+            // CRITICAL: Hide the widget container when grid is not showing
+            widgetContainer.visibility = View.GONE
+            android.util.Log.d("MainActivity", "Widget container hidden (no grid to show)")
         }
     }
 
