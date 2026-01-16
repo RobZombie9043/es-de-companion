@@ -2043,13 +2043,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * @param gameName The game name to display
      * @param width Target width in pixels (default 800 for marquees)
      * @param height Target height in pixels (default 300 for marquees)
-     * @return A drawable with centered text
-     */
-    /**
-     * Create a text-based drawable as fallback for marquee images when no image is available
-     * @param gameName The game name to display
-     * @param width Target width in pixels (default 800 for marquees)
-     * @param height Target height in pixels (default 300 for marquees)
      * @return A drawable with centered text on transparent background
      */
     fun createMarqueeTextFallback(
@@ -2084,8 +2077,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             textAlign = android.graphics.Paint.Align.CENTER
         }
 
-        // Word wrap logic
+        // Word wrap logic with line limit
         val maxWidth = width * 1.0f
+        val lineHeight = paint.textSize * 1.2f
+        val maxLines = (height * 0.9f / lineHeight).toInt().coerceAtLeast(1) // Calculate how many lines fit
+
         val words = displayName.split(" ")
         val lines = mutableListOf<String>()
         var currentLine = ""
@@ -2095,14 +2091,30 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             if (paint.measureText(testLine) <= maxWidth) {
                 currentLine = testLine
             } else {
-                if (currentLine.isNotEmpty()) lines.add(currentLine)
+                if (currentLine.isNotEmpty()) {
+                    lines.add(currentLine)
+                    if (lines.size >= maxLines) break // Stop if we've reached max lines
+                }
                 currentLine = word
             }
         }
-        if (currentLine.isNotEmpty()) lines.add(currentLine)
+
+        // Handle the last line with ellipsis if needed
+        if (currentLine.isNotEmpty()) {
+            if (lines.size >= maxLines) {
+                // Truncate last line with ellipsis
+                val lastLine = lines[maxLines - 1]
+                var truncated = lastLine
+                while (paint.measureText("$truncated...") > maxWidth && truncated.isNotEmpty()) {
+                    truncated = truncated.dropLast(1).trimEnd()
+                }
+                lines[maxLines - 1] = "$truncated..."
+            } else {
+                lines.add(currentLine)
+            }
+        }
 
         // Draw lines centered vertically
-        val lineHeight = paint.textSize * 1.2f
         val totalHeight = lines.size * lineHeight
         var yPos = (height - totalHeight) / 2f + lineHeight * 0.8f
 
@@ -2956,10 +2968,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             gameImageView.visibility = View.VISIBLE
                             videoView.visibility = View.GONE
 
-                            val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-                            if (hasWidgets) {
-                                widgetContainer.visibility = View.VISIBLE
-                            }
+                            // Load and show widgets
+                            updateWidgetsForCurrentGame()
+                            showWidgets()
                         }
                     }
                 }
@@ -2975,16 +2986,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             if (gameLaunchBehavior != "black_screen") {
                 // If we were already in game view with game_image behavior, keep the display
                 if (wasInGameView && gameLaunchBehavior == "game_image") {
-                    android.util.Log.d("MainActivity", "Already showing game image - keeping current display and widgets")
-                    android.util.Log.d("MainActivity", "Nothing to update - display already correct")
+                    android.util.Log.d("MainActivity", "Already showing game image - keeping current display and reloading widgets")
 
-                    // Don't touch ANYTHING - everything is already correct
-                    // This prevents any layout passes that could cause flashing
-                    // Only reload widgets for case where coming from video playing
-                    val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-                    if (hasWidgets) {
-                        widgetContainer.visibility = View.VISIBLE
-                    }
+                    // Keep the display but reload widgets since they may have changed
+                    // This ensures widgets show up even when launching the same game again
+                    updateWidgetsForCurrentGame()
+                    showWidgets()
+
+                    android.util.Log.d("MainActivity", "Widgets reloaded for same game launch")
                 } else {
                     // Need to update display
                     android.util.Log.d("MainActivity", "Updating display for game launch")
@@ -3018,10 +3027,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             gameImageView.visibility = View.VISIBLE
                             videoView.visibility = View.GONE
 
-                            val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-                            if (hasWidgets) {
-                                widgetContainer.visibility = View.VISIBLE
-                            }
+                            // Load and show widgets
+                            updateWidgetsForCurrentGame()
+                            showWidgets()
                         }
                     }
                 }
@@ -3813,13 +3821,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     // Show the game image view again
                     gameImageView.visibility = View.VISIBLE
 
-                    // Show widgets again if not during gameplay  // ADDED
-                    if (!isGamePlaying) {  // ADDED
-                        val hasWidgets = widgetManager.loadWidgets().isNotEmpty()  // ADDED
-                        if (hasWidgets) {  // ADDED
-                            showWidgets()  // ADDED
-                        }  // ADDED
-                    }  // ADDED
+                    // Show widgets when game is playing (FIXED)
+                    if (isGamePlaying) {  // Changed from !isGamePlaying
+                        val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+                        if (hasWidgets) {
+                            showWidgets()
+                        }
+                    }
                 }
                 .start()
         } else {
@@ -3828,13 +3836,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             gameImageView.visibility = View.VISIBLE
             currentVideoPath = null
 
-            // Show widgets again if not during gameplay  // ADDED
-            if (!isGamePlaying) {  // ADDED
-                val hasWidgets = widgetManager.loadWidgets().isNotEmpty()  // ADDED
-                if (hasWidgets) {  // ADDED
-                    showWidgets()  // ADDED
-                }  // ADDED
-            }  // ADDED
+            // Show widgets when game is playing (FIXED)
+            if (isGamePlaying) {  // Changed from !isGamePlaying
+                val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+                if (hasWidgets) {
+                    showWidgets()
+                }
+            }
         }
     }
 
@@ -3847,12 +3855,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         // Hybrid blocking approach to handle different device scenarios:
         //
-        // Scenario 1: Game launches on SAME screen as Companion (normal devices)
+        // Scenario 1: Game launches on SAME screen as Companion
         //   - hasWindowFocus becomes false (game window is on top)
         //   - onPause() does NOT fire (Companion is still "active" behind game)
         //   - Block: !hasWindowFocus
         //
-        // Scenario 2: Game launches on OTHER screen (dual-screen devices like Ayaneo)
+        // Scenario 2: Game launches on OTHER screen
         //   - hasWindowFocus may be unreliable (identical display names)
         //   - onPause() DOES fire (Companion is backgrounded by system)
         //   - Block: lifecycle state check
@@ -4500,7 +4508,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.util.Log.d("MainActivity", "currentGameFilename: $currentGameFilename")
 
         // Show widgets in game view OR during screensaver (not in system view, not during gameplay)
-        if (!isSystemScrollActive && !isGamePlaying) {
+        if (!isSystemScrollActive) {  // Remove the !isGamePlaying check
             val systemName = currentSystemName
             val gameFilename = currentGameFilename
 
@@ -4673,17 +4681,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun showWidgets() {
-        // Only show if we're in the right state
-        if (!isSystemScrollActive && !isGamePlaying && !isScreensaverActive) {
-            widgetContainer.visibility = View.VISIBLE
-            updateGridOverlay()
-            android.util.Log.d("MainActivity", "Showing widgets")
-        } else if (isSystemScrollActive || isScreensaverActive) {
-            // During system scroll or screensaver, keep container visible for grid
-            widgetContainer.visibility = View.VISIBLE
-            updateGridOverlay()
-            android.util.Log.d("MainActivity", "Keeping container visible for grid (system scroll or screensaver)")
-        }
+        // Show widgets/grid in all views (game browsing, gameplay, system view, screensaver)
+        widgetContainer.visibility = View.VISIBLE
+        updateGridOverlay()
+        android.util.Log.d("MainActivity", "Showing widgets/grid")
     }
 
     private fun updateGridOverlay() {
