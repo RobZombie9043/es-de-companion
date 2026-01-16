@@ -522,7 +522,7 @@ class WidgetView(
         }
     }
 
-    private fun isTouchingExtendedCorner(x: Float, y: Float): Boolean {
+    fun isTouchingExtendedCorner(x: Float, y: Float): Boolean {
         val extend = handleHitZone / 2  // Half the hit zone extends outside
 
         // Top-left extended zone

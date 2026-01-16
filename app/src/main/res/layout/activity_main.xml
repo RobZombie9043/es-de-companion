@@ -39,7 +39,7 @@
         android:cropToPadding="false" />
 
     <!-- Widget Container (for overlay widgets) -->
-    <RelativeLayout
+    <com.esde.companion.ResizableWidgetContainer
         android:id="@+id/widgetContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

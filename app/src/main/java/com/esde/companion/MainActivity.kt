@@ -54,6 +54,7 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import android.os.Handler
 import android.os.Looper
+import com.esde.companion.ResizableWidgetContainer
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,7 +78,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gestureDetector: GestureDetectorCompat
 
     // Widget system
-    private lateinit var widgetContainer: RelativeLayout
+    private lateinit var widgetContainer: ResizableWidgetContainer
     private lateinit var widgetManager: WidgetManager
     private var gridOverlayView: GridOverlayView? = null
     private val activeWidgets = mutableListOf<WidgetView>()
