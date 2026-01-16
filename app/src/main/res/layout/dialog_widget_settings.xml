@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:maxHeight="600dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:background="#1A1A1A">
+
+        <!-- Widget Name Header (without zIndex) -->
+        <TextView
+            android:id="@+id/dialogWidgetName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Layer Controls Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Layer Controls"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Adjust widget stacking order"
+            android:textColor="#999999"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Move Forward Button -->
+        <Button
+            android:id="@+id/btnMoveForward"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Move Forward"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:backgroundTint="#BB86FC"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Move Backward Button -->
+        <Button
+            android:id="@+id/btnMoveBackward"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Move Backward"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:backgroundTint="#BB86FC"
+            android:layout_marginBottom="12dp" />
+
+        <!-- zIndex Info (moved here) -->
+        <TextView
+            android:id="@+id/dialogWidgetZIndex"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#999999"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Opacity Control (only for Game Description) -->
+        <LinearLayout
+            android:id="@+id/opacityControlSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#333333"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Opacity Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Background Opacity"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Adjust text background transparency"
+                android:textColor="#999999"
+                android:textSize="14sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Opacity Slider -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp">
+
+                <SeekBar
+                    android:id="@+id/opacitySeekBar"
+                    style="@style/Widget.AppCompat.SeekBar"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="20"
+                    android:progress="4"
+                    android:thumbTint="#03DAC6"
+                    android:progressDrawable="@drawable/slider_progress_teal"
+                    android:thumb="@drawable/slider_thumb"
+                    android:splitTrack="false"
+                    android:thumbOffset="0dp"
+                    android:minHeight="32dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/opacityText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="20%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:layout_marginStart="16dp"
+                    android:minWidth="50dp"
+                    android:gravity="end" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Delete Widget Button -->
+        <Button
+            android:id="@+id/btnDeleteWidget"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Delete Widget"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:backgroundTint="#CF6679" />
+
+    </LinearLayout>
+
+</ScrollView>

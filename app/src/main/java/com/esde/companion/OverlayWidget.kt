@@ -12,6 +12,7 @@ data class OverlayWidget(
     var width: Float,
     var height: Float,
     var zIndex: Int = 0,
+    var backgroundOpacity: Float = 0.2f,
     val widgetContext: WidgetContext = WidgetContext.GAME
 ) {
     enum class ImageType {

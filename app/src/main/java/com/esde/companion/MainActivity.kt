@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.RelativeLayout
 import android.widget.Toast
@@ -3988,46 +3989,30 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Deselect all widgets first
         activeWidgets.forEach { it.deselect() }
 
-        fun getMenuOptions(): Array<String> {
-            val lockText = if (widgetsLocked) "🔒 Unlock Widgets" else "🔓 Lock Widgets"
-            val snapText = if (snapToGrid) "⊞ Snap to Grid: ON" else "⊞ Snap to Grid: OFF"
-            val gridText = if (showGrid) "⊞ Show Grid: ON" else "⊞ Show Grid: OFF"
+        // Inflate the custom dialog view
+        val dialogView = layoutInflater.inflate(R.layout.dialog_widget_menu, null)
 
-            // Different options based on current view
-            return if (isSystemScrollActive) {
-                // System view - only system logo option
-                arrayOf(
-                    lockText,
-                    snapText,
-                    gridText,
-                    "─────────────",
-                    "System Logo"
-                )
-            } else {
-                // Game view - all game image types
-                arrayOf(
-                    lockText,
-                    snapText,
-                    gridText,
-                    "─────────────",
-                    "Marquee",
-                    "2D Box",
-                    "3D Box",
-                    "Mix Image",
-                    "Back Cover",
-                    "Physical Media",
-                    "Screenshot",
-                    "Fanart",
-                    "Title Screen",
-                    "Game Description"
-                )
-            }
-        }
+        // Get references to chips
+        val chipLockWidgets = dialogView.findViewById<com.google.android.material.chip.Chip>(R.id.chipLockWidgets)
+        val chipSnapToGrid = dialogView.findViewById<com.google.android.material.chip.Chip>(R.id.chipSnapToGrid)
+        val chipShowGrid = dialogView.findViewById<com.google.android.material.chip.Chip>(R.id.chipShowGrid)
+        val widgetOptionsContainer = dialogView.findViewById<LinearLayout>(R.id.widgetOptionsContainer)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancelWidgetMenu)
 
+        // Set chip states and text
+        chipLockWidgets.isChecked = !widgetsLocked  // Inverted: checked = edit mode ON
+        chipLockWidgets.text = if (widgetsLocked) "Widget Edit Mode: OFF" else "Widget Edit Mode: ON"
+
+        chipSnapToGrid.isChecked = snapToGrid
+        chipSnapToGrid.text = if (snapToGrid) "⊞ Snap to Grid: ON" else "⊞ Snap to Grid: OFF"
+
+        chipShowGrid.isChecked = showGrid
+        chipShowGrid.text = if (showGrid) "⊞ Show Grid: ON" else "⊞ Show Grid: OFF"
+
+        // Create the dialog
         val dialog = android.app.AlertDialog.Builder(this)
-            .setTitle("Widget Menu")
-            .setItems(getMenuOptions(), null) // Set listener to null initially
-            .setNegativeButton("Cancel", null)
+            .setView(dialogView)
+            .setCancelable(true)
             .setOnDismissListener {
                 widgetMenuShowing = false
                 widgetMenuDialog = null
@@ -4035,77 +4020,68 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             }
             .create()
 
-        // Set custom click listener after creating dialog to control dismissal
-        dialog.listView.setOnItemClickListener { _, _, which, _ ->
-            when {
-                which == 0 -> {
-                    // Toggle lock - dismiss and reopen instantly
-                    toggleWidgetLock()
-                    dialog.dismiss()
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        showCreateWidgetMenu()
-                    }
-                }
-                which == 1 -> {
-                    // Toggle snap to grid - dismiss and reopen instantly
-                    toggleSnapToGrid()
-                    dialog.dismiss()
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        showCreateWidgetMenu()
-                    }
-                }
-                which == 2 -> {
-                    // Toggle show grid - dismiss and reopen instantly
-                    toggleShowGrid()
-                    dialog.dismiss()
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        showCreateWidgetMenu()
-                    }
-                }
-                which == 3 -> {} // Separator - do nothing
-                isSystemScrollActive && which == 4 -> {  // CHANGED from 3 to 4
-                    // System Logo - check if locked before creating
-                    if (widgetsLocked) {
-                        android.widget.Toast.makeText(
-                            this,
-                            "Cannot create widgets while locked. Unlock widgets first.",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                        // Don't dismiss - dialog stays open
-                    } else {
-                        createWidget(OverlayWidget.ImageType.SYSTEM_LOGO)
-                        dialog.dismiss()
-                    }
-                }
-                !isSystemScrollActive -> {
-                    // Game view widget creation - check if locked before creating
-                    if (widgetsLocked) {
-                        android.widget.Toast.makeText(
-                            this,
-                            "Cannot create widgets while locked. Unlock widgets first.",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                        // Don't dismiss - dialog stays open
-                        return@setOnItemClickListener
-                    }
+        // Chip click listeners
+        chipLockWidgets.setOnClickListener {
+            toggleWidgetLock()
+            chipLockWidgets.text = if (widgetsLocked) "Widget Edit Mode: OFF" else "Widget Edit Mode: ON"
+        }
 
-                    val imageType = when (which) {
-                        4 -> OverlayWidget.ImageType.MARQUEE
-                        5 -> OverlayWidget.ImageType.BOX_2D
-                        6 -> OverlayWidget.ImageType.BOX_3D
-                        7 -> OverlayWidget.ImageType.MIX_IMAGE
-                        8 -> OverlayWidget.ImageType.BACK_COVER
-                        9 -> OverlayWidget.ImageType.PHYSICAL_MEDIA
-                        10 -> OverlayWidget.ImageType.SCREENSHOT
-                        11 -> OverlayWidget.ImageType.FANART
-                        12 -> OverlayWidget.ImageType.TITLE_SCREEN
-                        13 -> OverlayWidget.ImageType.GAME_DESCRIPTION
-                        else -> return@setOnItemClickListener
-                    }
+        chipSnapToGrid.setOnClickListener {
+            toggleSnapToGrid()
+            chipSnapToGrid.text = if (snapToGrid) "⊞ Snap to Grid: ON" else "⊞ Snap to Grid: OFF"
+        }
+
+        chipShowGrid.setOnClickListener {
+            toggleShowGrid()
+            chipShowGrid.text = if (showGrid) "⊞ Show Grid: ON" else "⊞ Show Grid: OFF"
+        }
+
+        // Populate widget options based on current view
+        val widgetOptions = if (isSystemScrollActive) {
+            // System view - only system logo option
+            listOf("System Logo" to OverlayWidget.ImageType.SYSTEM_LOGO)
+        } else {
+            // Game view - all game image types
+            listOf(
+                "Marquee" to OverlayWidget.ImageType.MARQUEE,
+                "2D Box" to OverlayWidget.ImageType.BOX_2D,
+                "3D Box" to OverlayWidget.ImageType.BOX_3D,
+                "Mix Image" to OverlayWidget.ImageType.MIX_IMAGE,
+                "Back Cover" to OverlayWidget.ImageType.BACK_COVER,
+                "Physical Media" to OverlayWidget.ImageType.PHYSICAL_MEDIA,
+                "Screenshot" to OverlayWidget.ImageType.SCREENSHOT,
+                "Fanart" to OverlayWidget.ImageType.FANART,
+                "Title Screen" to OverlayWidget.ImageType.TITLE_SCREEN,
+                "Game Description" to OverlayWidget.ImageType.GAME_DESCRIPTION
+            )
+        }
+
+        // Add each widget option as a styled item
+        widgetOptions.forEach { (label, imageType) ->
+            val itemView = layoutInflater.inflate(R.layout.item_widget_option, widgetOptionsContainer, false)
+            val textView = itemView.findViewById<TextView>(R.id.widgetOptionText)
+            textView.text = label
+
+            itemView.setOnClickListener {
+                // Check if locked before creating
+                if (widgetsLocked) {
+                    android.widget.Toast.makeText(
+                        this,
+                        "Cannot create widgets while locked. Unlock widgets first.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                } else {
                     createWidget(imageType)
                     dialog.dismiss()
                 }
             }
+
+            widgetOptionsContainer.addView(itemView)
+        }
+
+        // Cancel button
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
         }
 
         widgetMenuDialog = dialog
@@ -4686,6 +4662,36 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         widgetContainer.visibility = View.VISIBLE
         updateGridOverlay()
         android.util.Log.d("MainActivity", "Showing widgets/grid")
+    }
+
+    fun saveAllWidgets() {
+        android.util.Log.d("MainActivity", "saveAllWidgets called, active widgets count: ${activeWidgets.size}")
+        activeWidgets.forEachIndexed { index, widgetView ->
+            android.util.Log.d("MainActivity", "Widget $index: type=${widgetView.widget.imageType}, id=${widgetView.widget.id}, context=${widgetView.widget.widgetContext}")
+        }
+
+        // Load ALL existing widgets
+        val allExistingWidgets = widgetManager.loadWidgets().toMutableList()
+        android.util.Log.d("MainActivity", "Loaded ${allExistingWidgets.size} existing widgets from storage")
+
+        // Determine which context we're currently in
+        val currentContext = if (isSystemScrollActive) {
+            OverlayWidget.WidgetContext.SYSTEM
+        } else {
+            OverlayWidget.WidgetContext.GAME
+        }
+        android.util.Log.d("MainActivity", "Current context: $currentContext")
+
+        // Remove widgets of the CURRENT context only
+        val widgetsToKeep = allExistingWidgets.filter { it.widgetContext != currentContext }
+        android.util.Log.d("MainActivity", "Keeping ${widgetsToKeep.size} widgets from OTHER context")
+
+        // Add current active widgets (they're all from the current context)
+        val updatedWidgets = widgetsToKeep + activeWidgets.map { it.widget }
+        android.util.Log.d("MainActivity", "Total widgets to save: ${updatedWidgets.size}")
+
+        widgetManager.saveWidgets(updatedWidgets)
+        android.util.Log.d("MainActivity", "Widgets saved")
     }
 
     private fun updateGridOverlay() {
