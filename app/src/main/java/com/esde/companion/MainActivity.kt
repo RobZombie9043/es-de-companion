@@ -2960,10 +2960,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             gameImageView.visibility = View.VISIBLE
                             videoView.visibility = View.GONE
 
-                            val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-                            if (hasWidgets) {
-                                widgetContainer.visibility = View.VISIBLE
-                            }
+                            // Load and show widgets for game image behavior
+                            updateWidgetsForCurrentGame()
+                            showWidgets()
                         }
                         "default_image" -> {
                             loadFallbackBackground()
@@ -3190,6 +3189,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                         currentGameFilename = screensaverGameFilename
                         android.util.Log.d("MainActivity", "Updated currentGameFilename to screensaver game: $currentGameFilename")
                     }
+
+                    // CRITICAL: Set to game view mode so widgets load correctly
+                    isSystemScrollActive = false
+                    android.util.Log.d("MainActivity", "Set isSystemScrollActive = false for game launch")
 
                     // Don't clear screensaver variables yet - handleGameStart needs them
                     // The game-start event will handle the display
