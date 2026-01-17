@@ -4904,9 +4904,28 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun saveAllWidgetsWithZIndex() {
-        val widgets = activeWidgets.map { it.widget }
-        widgetManager.saveWidgets(widgets)
-        android.util.Log.d("MainActivity", "Saved ${widgets.size} widgets with z-indices")
+        // Load ALL existing widgets
+        val allExistingWidgets = widgetManager.loadWidgets().toMutableList()
+        android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex: Loaded ${allExistingWidgets.size} existing widgets from storage")
+
+        // Determine which context we're currently in
+        val currentContext = if (isSystemScrollActive) {
+            OverlayWidget.WidgetContext.SYSTEM
+        } else {
+            OverlayWidget.WidgetContext.GAME
+        }
+        android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex: Current context: $currentContext")
+
+        // Remove widgets of the CURRENT context only
+        val widgetsToKeep = allExistingWidgets.filter { it.widgetContext != currentContext }
+        android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex: Keeping ${widgetsToKeep.size} widgets from OTHER context")
+
+        // Add current active widgets (they're all from the current context)
+        val updatedWidgets = widgetsToKeep + activeWidgets.map { it.widget }
+        android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex: Total widgets to save: ${updatedWidgets.size}")
+
+        widgetManager.saveWidgets(updatedWidgets)
+        android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex: Saved ${updatedWidgets.size} widgets with z-indices")
     }
 
     fun deselectAllWidgets() {

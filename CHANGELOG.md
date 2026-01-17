@@ -9,6 +9,7 @@
     - Show Grid On/Off
     - Layer control to adjust widget stacking order
     - Adjustable transparency for game description widget
+    - Option to size images to fit to container or fill container with cropping
 - Split system and game view backgrounds - Independent background images for system browsing and game browsing
 - Solid color background option - New option to use solid colors instead of images for either view
 - Improved fallback text - System logo and game marquee widgets now show fallback text with truncation for long names
