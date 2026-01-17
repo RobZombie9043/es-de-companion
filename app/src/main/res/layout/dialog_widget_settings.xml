@@ -79,6 +79,64 @@
             android:gravity="center"
             android:layout_marginBottom="24dp" />
 
+        <!-- Divider -->
+        <View
+            android:id="@+id/scaleTypeDivider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#333333"
+            android:layout_marginBottom="20dp"
+            android:visibility="gone" />
+
+        <!-- Image Scaling Section (only for image widgets) -->
+        <LinearLayout
+            android:id="@+id/scaleTypeControlSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Image Scaling"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Choose how images fill the widget container"
+                android:textColor="#999999"
+                android:textSize="14sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Fit to Container Button -->
+            <Button
+                android:id="@+id/btnScaleFit"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Fit to Container (No Cropping)"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:backgroundTint="#03DAC6"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Fill with Crop Button -->
+            <Button
+                android:id="@+id/btnScaleCrop"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Fill Container (With Cropping)"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:backgroundTint="#BB86FC"
+                android:layout_marginBottom="24dp" />
+
+        </LinearLayout>
+
         <!-- Opacity Control (only for Game Description) -->
         <LinearLayout
             android:id="@+id/opacityControlSection"

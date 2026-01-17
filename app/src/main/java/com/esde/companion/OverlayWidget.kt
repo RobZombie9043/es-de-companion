@@ -13,6 +13,7 @@ data class OverlayWidget(
     var height: Float,
     var zIndex: Int = 0,
     var backgroundOpacity: Float = 0.2f,
+    var scaleType: ScaleType = ScaleType.FIT,
     val widgetContext: WidgetContext = WidgetContext.GAME
 ) {
     enum class ImageType {
@@ -32,5 +33,10 @@ data class OverlayWidget(
     enum class WidgetContext {
         GAME,    // Shows in game view
         SYSTEM   // Shows in system view
+    }
+
+    enum class ScaleType {
+        FIT,      // Fit to container with no cropping (default)
+        CROP      // Fill container with cropping (centerCrop)
     }
 }

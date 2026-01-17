@@ -126,7 +126,7 @@ class WidgetView(
 
         // Create ImageView for the widget content
         imageView = ImageView(context).apply {
-            scaleType = ImageView.ScaleType.FIT_CENTER  // Keeps image centered and scaled
+            // Scale type will be set dynamically in loadWidgetImage()
             // Remove any max dimensions that might constrain scaling
             maxHeight = Int.MAX_VALUE
             maxWidth = Int.MAX_VALUE
@@ -464,7 +464,11 @@ class WidgetView(
                     widget.height.toInt()
                 )
                 if (drawable != null) {
-                    imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+                    // Set scale type based on widget preference (handle null for migration)
+                    imageView.scaleType = when (widget.scaleType ?: OverlayWidget.ScaleType.FIT) {
+                        OverlayWidget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
+                        OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                    }
                     imageView.setImageDrawable(drawable)
                     android.util.Log.d("WidgetView", "Built-in system logo loaded successfully")
                 } else {
@@ -476,12 +480,22 @@ class WidgetView(
             // Load from file (custom logo path)
             val file = File(widget.imagePath)
             if (file.exists()) {
-                // ✨ UPDATED SECTION - Better scaling for images
-                Glide.with(context)
+                // Set scale type based on widget preference (handle null for migration)
+                val effectiveScaleType = widget.scaleType ?: OverlayWidget.ScaleType.FIT
+                imageView.scaleType = when (effectiveScaleType) {
+                    OverlayWidget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
+                    OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                }
+
+                // Load image with appropriate scaling
+                val glideRequest = Glide.with(context)
                     .load(file)
-                    .override(widget.width.toInt(), widget.height.toInt())  // ✅ Scale to container size
-                    .fitCenter()
-                    .into(imageView)
+                    .override(widget.width.toInt(), widget.height.toInt())
+
+                when (effectiveScaleType) {
+                    OverlayWidget.ScaleType.FIT -> glideRequest.fitCenter()
+                    OverlayWidget.ScaleType.CROP -> glideRequest.centerCrop()
+                }.into(imageView)
                 android.util.Log.d("WidgetView", "Loaded custom logo file with full scaling: ${widget.imagePath}")
             } else {
                 // Only show text fallback for MARQUEE type
@@ -495,7 +509,11 @@ class WidgetView(
                             width = widget.width.toInt(),
                             height = widget.height.toInt()
                         )
-                        imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+                        // Set scale type based on widget preference (handle null for migration)
+                        imageView.scaleType = when (widget.scaleType ?: OverlayWidget.ScaleType.FIT) {
+                            OverlayWidget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
+                            OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                        }
                         imageView.setImageDrawable(fallbackDrawable)
                         android.util.Log.d("WidgetView", "Marquee text fallback displayed for missing file: $displayText")
                     } else {
@@ -774,12 +792,56 @@ class WidgetView(
         val opacitySeekBar = dialogView.findViewById<android.widget.SeekBar>(R.id.opacitySeekBar)
         val opacityText = dialogView.findViewById<TextView>(R.id.opacityText)
 
+        // Scale type control references
+        val scaleTypeControlSection = dialogView.findViewById<LinearLayout>(R.id.scaleTypeControlSection)
+        val scaleTypeDivider = dialogView.findViewById<android.view.View>(R.id.scaleTypeDivider)
+        val btnScaleFit = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnScaleFit)
+        val btnScaleCrop = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnScaleCrop)
+
         // Set widget name (without zIndex)
         dialogWidgetName.text = widgetName
 
         // Set zIndex info below Layer Controls
         val currentZIndex = widget.zIndex
         dialogWidgetZIndex.text = "Current zIndex: $currentZIndex"
+
+        // Show scale type control for all image widgets (NOT for Game Description)
+        if (widget.imageType != OverlayWidget.ImageType.GAME_DESCRIPTION) {
+            scaleTypeControlSection.visibility = android.view.View.VISIBLE
+            scaleTypeDivider.visibility = android.view.View.VISIBLE
+
+            // Update button styles based on current scale type (handle null for migration)
+            fun updateScaleTypeButtons() {
+                val currentScaleType = widget.scaleType ?: OverlayWidget.ScaleType.FIT
+                if (currentScaleType == OverlayWidget.ScaleType.FIT) {
+                    btnScaleFit.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF03DAC6.toInt())
+                    btnScaleCrop.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF666666.toInt())
+                } else {
+                    btnScaleFit.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF666666.toInt())
+                    btnScaleCrop.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF03DAC6.toInt())
+                }
+            }
+
+            updateScaleTypeButtons()
+
+            // Scale type button listeners
+            btnScaleFit.setOnClickListener {
+                widget.scaleType = OverlayWidget.ScaleType.FIT
+                updateScaleTypeButtons()
+                loadWidgetImage()  // Reload image with new scale type
+                onUpdate(widget)   // Save the change
+            }
+
+            btnScaleCrop.setOnClickListener {
+                widget.scaleType = OverlayWidget.ScaleType.CROP
+                updateScaleTypeButtons()
+                loadWidgetImage()  // Reload image with new scale type
+                onUpdate(widget)   // Save the change
+            }
+        } else {
+            scaleTypeControlSection.visibility = android.view.View.GONE
+            scaleTypeDivider.visibility = android.view.View.GONE
+        }
 
         // Show opacity control only for Game Description
         if (widget.imageType == OverlayWidget.ImageType.GAME_DESCRIPTION) {
