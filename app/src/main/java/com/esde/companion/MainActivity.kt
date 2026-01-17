@@ -1734,9 +1734,41 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                     handleScreensaverEnd(endReason)
                                 }
                                 "esde_screensavergameselect_filename.txt" -> {
-                                    // Only process if screensaver is active
+                                    // DEFENSIVE FIX: Auto-initialize screensaver state if screensaver-start event was missed
                                     if (!isScreensaverActive) {
-                                        return@postDelayed
+                                        android.util.Log.w("MainActivity", "⚠️ FALLBACK: Screensaver game-select fired without screensaver-start event!")
+                                        android.util.Log.w("MainActivity", "Auto-initializing screensaver state as defensive fallback")
+
+                                        // Save pre-screensaver state NOW (before any games are browsed)
+                                        wasInSystemViewBeforeScreensaver = isSystemScrollActive
+                                        systemBeforeScreensaver = currentSystemName
+                                        gameFilenameBeforeScreensaver = currentGameFilename
+                                        gameNameBeforeScreensaver = currentGameName
+                                        android.util.Log.d("MainActivity", "Saved pre-screensaver state: system=$systemBeforeScreensaver, game=$gameNameBeforeScreensaver, isSystemView=$wasInSystemViewBeforeScreensaver")
+
+                                        // Enable screensaver mode
+                                        isScreensaverActive = true
+                                        screensaverInitialized = false
+
+                                        // Apply screensaver behavior preferences
+                                        val screensaverBehavior = prefs.getString("screensaver_behavior", "default_image") ?: "default_image"
+                                        android.util.Log.d("MainActivity", "Applying screensaver behavior: $screensaverBehavior")
+
+                                        // Handle black screen preference
+                                        if (screensaverBehavior == "black_screen") {
+                                            android.util.Log.d("MainActivity", "Black screen behavior - clearing display")
+                                            Glide.with(this@MainActivity).clear(gameImageView)
+                                            gameImageView.setImageDrawable(null)
+                                            gameImageView.visibility = View.GONE
+                                            videoView.visibility = View.GONE
+                                            releasePlayer()
+                                            gridOverlayView?.visibility = View.GONE
+                                        }
+
+                                        // Clear widgets (will be loaded by handleScreensaverGameSelect)
+                                        widgetContainer.removeAllViews()
+                                        activeWidgets.clear()
+                                        android.util.Log.d("MainActivity", "Fallback initialization complete - widgets cleared")
                                     }
 
                                     // Read screensaver game info
