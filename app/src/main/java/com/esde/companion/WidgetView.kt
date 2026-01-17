@@ -136,6 +136,9 @@ class WidgetView(
         addView(scrollView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(imageView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
+        // Make sure onDraw (which draws handles) happens after child views
+        setWillNotDraw(false)
+
         val buttonSize = (handleSize * 1.2f).toInt()
         val buttonSpacing = 10  // Space between buttons
 
@@ -189,9 +192,6 @@ class WidgetView(
         // Set initial position and size
         updateLayout()
 
-        // Enable drawing for border and handles
-        setWillNotDraw(false)
-
         // Apply initial background opacity for Game Description
         if (widget.imageType == OverlayWidget.ImageType.GAME_DESCRIPTION) {
             val alpha = (widget.backgroundOpacity * 255).toInt().coerceIn(0, 255)
@@ -220,7 +220,14 @@ class WidgetView(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Only draw border and handles when selected (and not locked)
+        // Nothing here - we'll use dispatchDraw instead
+    }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        // First draw all child views (images, etc.)
+        super.dispatchDraw(canvas)
+
+        // Then draw border and handles ON TOP when selected (and not locked)
         if (isWidgetSelected && !isLocked) {
             // Draw green border
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), borderPaint)
