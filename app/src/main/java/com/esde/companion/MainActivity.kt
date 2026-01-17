@@ -218,19 +218,45 @@ class MainActivity : AppCompatActivity() {
                 handleScreensaverStart()
                 // Skip reload in onResume to prevent override
                 skipNextReload = true
+            } else if (imagePreferenceChanged) {
+                // Image preference changed - reload appropriate view
+                if (isGamePlaying) {
+                    // Game is playing - update game launch display
+                    android.util.Log.d("MainActivity", "Image preference changed during gameplay - reloading display")
+                    handleGameStart()
+                    skipNextReload = true
+                } else if (isSystemScrollActive) {
+                    // In system view - reload system image with new preference
+                    android.util.Log.d("MainActivity", "Image preference changed in system view - reloading system image")
+                    loadSystemImage()
+                    skipNextReload = true
+                } else {
+                    // In game browsing view - reload game image with new preference
+                    android.util.Log.d("MainActivity", "Image preference changed in game view - reloading game image")
+                    loadGameInfo()
+                    skipNextReload = true
+                }
             } else if (customBackgroundChanged) {
                 // Custom background changed - reload to apply changes
                 if (isSystemScrollActive) {
                     loadSystemImage()
-                } else {
+                } else if (!isGamePlaying) {
+                    // Only reload if not playing - if playing, customBackgroundChanged won't affect display
                     loadGameInfo()
+                } else {
+                    // Game is playing - skip reload since game launch behavior controls display
+                    skipNextReload = true
                 }
-            } else if (videoSettingsChanged || logoSizeChanged || mediaPathChanged || imagePreferenceChanged || logoTogglesChanged) {
+            } else if (videoSettingsChanged || logoSizeChanged || mediaPathChanged || logoTogglesChanged) {
                 // Settings that affect displayed content changed - reload to apply changes
                 if (isSystemScrollActive) {
                     loadSystemImage()
-                } else {
+                } else if (!isGamePlaying) {
+                    // Only reload if not playing - if playing, these settings don't affect game launch display
                     loadGameInfo()
+                } else {
+                    // Game is playing - skip reload
+                    skipNextReload = true
                 }
             } else {
                 // No settings changed that require reload - skip the reload in onResume
@@ -958,8 +984,23 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.util.Log.d("MainActivity", "Logs path: $path")
         return path
     }
-    private fun loadFallbackBackground() {
-        android.util.Log.d("MainActivity", "═══ loadFallbackBackground CALLED ═══")
+    private fun loadFallbackBackground(forceCustomImageOnly: Boolean = false) {
+        android.util.Log.d("MainActivity", "═══ loadFallbackBackground CALLED (forceCustomImageOnly=$forceCustomImageOnly) ═══")
+
+        // CRITICAL: Only check solid color preference if NOT forcing custom image only
+        // When forceCustomImageOnly=true (screensaver/game launch "default_image" behavior),
+        // we skip the solid color check and go straight to custom background image
+        if (!forceCustomImageOnly) {
+            val gameImagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
+            if (gameImagePref == "solid_color") {
+                val solidColor = prefs.getInt("game_background_color", android.graphics.Color.parseColor("#1A1A1A"))
+                android.util.Log.d("MainActivity", "Game view solid color selected - using color: ${String.format("#%06X", 0xFFFFFF and solidColor)}")
+                val drawable = android.graphics.drawable.ColorDrawable(solidColor)
+                gameImageView.setImageDrawable(drawable)
+                gameImageView.visibility = View.VISIBLE
+                return
+            }
+        }
 
         // Check if user has set a custom background
         val customBackgroundPath = prefs.getString("custom_background_uri", null)
@@ -2340,6 +2381,25 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             currentGameName = null  // Clear game info when in system view
             currentGameFilename = null
 
+            // ========== START: Check solid color FIRST ==========
+            // CRITICAL: Check if solid color is selected for system view BEFORE checking for custom images
+            val systemImagePref = prefs.getString("system_image_preference", "fanart") ?: "fanart"
+            if (systemImagePref == "solid_color") {
+                val solidColor = prefs.getInt("system_background_color", android.graphics.Color.parseColor("#1A1A1A"))
+                android.util.Log.d("MainActivity", "System view solid color selected - using color: ${String.format("#%06X", 0xFFFFFF and solidColor)}")
+                val drawable = android.graphics.drawable.ColorDrawable(solidColor)
+                gameImageView.setImageDrawable(drawable)
+                gameImageView.visibility = View.VISIBLE
+
+                isSystemScrollActive = true
+
+                // Update system widgets after setting solid color
+                updateWidgetsForCurrentSystem()
+                showWidgets()
+                return
+            }
+            // ========== END: Check solid color FIRST ==========
+
             // Handle ES-DE auto-collections
             val baseFileName = when (systemName.lowercase()) {
                 "all" -> "auto-allgames"
@@ -2363,8 +2423,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
             if (imageToUse == null) {
                 val mediaBase = File(getMediaBasePath(), systemName)
-                val imagePref = prefs.getString("image_preference", "fanart") ?: "fanart"
-                val prioritizedFolders = if (imagePref == "screenshot") {
+                // Use system_image_preference instead of image_preference
+                val prioritizedFolders = if (systemImagePref == "screenshot") {
                     listOf("screenshots", "fanart")
                 } else {
                     listOf("fanart", "screenshots")
@@ -2464,15 +2524,23 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Check if we have widgets - if so, hide old marquee system
             val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
 
-            // Try to find game-specific artwork
-            val gameImage = findGameImage(systemName, gameName, gameNameRaw)
-
-            if (gameImage != null && gameImage.exists()) {
-                // Game has its own artwork - use it
-                loadImageWithAnimation(gameImage, gameImageView)
+            // Check if solid color is selected for game view
+            val gameImagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
+            if (gameImagePref == "solid_color") {
+                val solidColor = prefs.getInt("game_background_color", android.graphics.Color.parseColor("#1A1A1A"))
+                val drawable = android.graphics.drawable.ColorDrawable(solidColor)
+                gameImageView.setImageDrawable(drawable)
             } else {
-                // No game artwork - show fallback background
-                loadFallbackBackground()
+                // Try to find game-specific artwork
+                val gameImage = findGameImage(systemName, gameName, gameNameRaw)
+
+                if (gameImage != null && gameImage.exists()) {
+                    // Game has its own artwork - use it
+                    loadImageWithAnimation(gameImage, gameImageView)
+                } else {
+                    // No game artwork - show fallback background
+                    loadFallbackBackground()
+                }
             }
 
             // Handle video playback for the current game
@@ -2501,7 +2569,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun findGameImage(systemName: String, gameName: String, fullGamePath: String): File? {
         val extensions = listOf("jpg", "png", "webp")
         val mediaBase = File(getMediaBasePath(), systemName)
-        val imagePref = prefs.getString("image_preference", "fanart") ?: "fanart"
+        val imagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
+
+        // Return null if solid color is selected - handled in loadGameInfo()
+        if (imagePref == "solid_color") {
+            return null
+        }
+
         val dirs = if (imagePref == "screenshot") {
             listOf("screenshots", "fanart")
         } else {
@@ -2965,7 +3039,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                             showWidgets()
                         }
                         "default_image" -> {
-                            loadFallbackBackground()
+                            loadFallbackBackground(forceCustomImageOnly = true)
                             gameImageView.visibility = View.VISIBLE
                             videoView.visibility = View.GONE
 
@@ -2980,58 +3054,64 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Normal game launch (not from screensaver)
             android.util.Log.d("MainActivity", "Game start - normal launch")
 
-// Check what was showing before game started
-            val wasInGameView = !isSystemScrollActive && currentGameFilename != null
-
-// Only update display if NOT black (already handled at top)
+            // Only update display if NOT black (already handled at top)
             if (gameLaunchBehavior != "black_screen") {
-                // If we were already in game view with game_image behavior, keep the display
-                if (wasInGameView && gameLaunchBehavior == "game_image") {
-                    android.util.Log.d("MainActivity", "Already showing game image - keeping current display and reloading widgets")
+                // ALWAYS update display when behavior changes - don't try to be clever about it
+                android.util.Log.d("MainActivity", "Updating display for game launch behavior: $gameLaunchBehavior")
 
-                    // Keep the display but reload widgets since they may have changed
-                    // This ensures widgets show up even when launching the same game again
-                    updateWidgetsForCurrentGame()
-                    showWidgets()
+                when (gameLaunchBehavior) {
+                    "game_image" -> {
+                        // Get game info from memory or log files
+                        var filename = playingGameFilename
+                        var systemName = currentSystemName
 
-                    android.util.Log.d("MainActivity", "Widgets reloaded for same game launch")
-                } else {
-                    // Need to update display
-                    android.util.Log.d("MainActivity", "Updating display for game launch")
+                        // If not in memory, read from log files
+                        if (filename == null || systemName == null) {
+                            android.util.Log.d("MainActivity", "No game info in memory, reading from logs")
+                            val logsDir = File(getLogsPath())
+                            val gameFile = File(logsDir, "esde_game_filename.txt")
+                            val systemFile = File(logsDir, "esde_game_system.txt")
 
-                    when (gameLaunchBehavior) {
-                        "game_image" -> {
-                            val filename = playingGameFilename
-                            val systemName = currentSystemName
-
-                            if (filename != null && systemName != null) {
-                                val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
-                                val gameImage = findGameImage(systemName, gameName, filename)
-
-                                if (gameImage != null && gameImage.exists()) {
-                                    loadImageWithAnimation(gameImage, gameImageView)
-                                } else {
-                                    loadFallbackBackground()
-                                }
-                            }
-
-                            gameImageView.visibility = View.VISIBLE
-                            videoView.visibility = View.GONE
-
-                            val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-                            if (hasWidgets) {
-                                widgetContainer.visibility = View.VISIBLE
+                            if (gameFile.exists() && systemFile.exists()) {
+                                filename = gameFile.readText().trim()
+                                systemName = systemFile.readText().trim()
+                                android.util.Log.d("MainActivity", "Read from logs: filename=$filename, system=$systemName")
                             }
                         }
-                        "default_image" -> {
+
+                        if (filename != null && systemName != null) {
+                            val gameName = sanitizeGameFilename(filename).substringBeforeLast('.')
+                            val gameImage = findGameImage(systemName, gameName, filename)
+
+                            if (gameImage != null && gameImage.exists()) {
+                                android.util.Log.d("MainActivity", "Loading game image: ${gameImage.name}")
+                                loadImageWithAnimation(gameImage, gameImageView)
+                            } else {
+                                android.util.Log.d("MainActivity", "No game image found, using fallback")
+                                loadFallbackBackground()
+                            }
+                        } else {
+                            android.util.Log.d("MainActivity", "No game info available, using fallback")
                             loadFallbackBackground()
-                            gameImageView.visibility = View.VISIBLE
-                            videoView.visibility = View.GONE
-
-                            // Load and show widgets
-                            updateWidgetsForCurrentGame()
-                            showWidgets()
                         }
+
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // CRITICAL: Always update and show widgets for game_image behavior
+                        android.util.Log.d("MainActivity", "Updating widgets for game_image behavior")
+                        updateWidgetsForCurrentGame()
+                        showWidgets()
+                    }
+                    "default_image" -> {
+                        android.util.Log.d("MainActivity", "Loading custom background for default_image behavior")
+                        loadFallbackBackground(forceCustomImageOnly = true)
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // Load and show widgets
+                        updateWidgetsForCurrentGame()
+                        showWidgets()
                     }
                 }
             }
@@ -3321,7 +3401,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     updateWidgetsForCurrentGame()
                 }
                 "default_image" -> {
-                    loadFallbackBackground()
+                    loadFallbackBackground(forceCustomImageOnly = true)
 
                     // NEW: Make sure views are visible
                     gameImageView.visibility = View.VISIBLE
