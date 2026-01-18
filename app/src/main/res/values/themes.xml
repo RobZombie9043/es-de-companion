@@ -1,6 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Force dark mode always - prevents white backgrounds in dialogs -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
         <item name="android:windowFullscreen">true</item>
+
+        <!-- Force dark theme colors -->
+        <item name="colorPrimary">#BB86FC</item>
+        <item name="colorPrimaryVariant">#3700B3</item>
+        <item name="colorOnPrimary">#000000</item>
+        <item name="colorSecondary">#03DAC6</item>
+        <item name="colorSecondaryVariant">#018786</item>
+        <item name="colorOnSecondary">#000000</item>
+
+        <!-- Dark backgrounds -->
+        <item name="android:colorBackground">#121212</item>
+        <item name="colorSurface">#121212</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+
+        <!-- Dialog backgrounds and text -->
+        <item name="alertDialogTheme">@style/DarkAlertDialog</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#999999</item>
+    </style>
+
+    <!-- Custom dark dialog theme -->
+    <style name="DarkAlertDialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="android:background">#1A1A1A</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#999999</item>
+        <item name="buttonBarNegativeButtonStyle">@style/DarkDialogButton</item>
+        <item name="buttonBarPositiveButtonStyle">@style/DarkDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/DarkDialogButton</item>
+    </style>
+
+    <!-- Dark dialog button style -->
+    <style name="DarkDialogButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">#BB86FC</item>
     </style>
 </resources>
