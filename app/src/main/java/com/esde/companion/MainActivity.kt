@@ -3555,8 +3555,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun updateWidgetsForScreensaverGame() {
         android.util.Log.d("MainActivity", "═══ updateWidgetsForScreensaverGame START ═══")
 
-        // Clear existing widgets
-        widgetContainer.removeAllViews()
+        // Clear existing widgets but preserve grid overlay
+        val childCount = widgetContainer.childCount
+        for (i in childCount - 1 downTo 0) {
+            val child = widgetContainer.getChildAt(i)
+            if (child !is GridOverlayView) {
+                widgetContainer.removeView(child)
+            }
+        }
         activeWidgets.clear()
 
         val systemName = screensaverSystemName
@@ -4254,6 +4260,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 widgetMenuShowing = false
                 widgetMenuDialog = null
                 android.util.Log.d("MainActivity", "Widget menu dismissed, flags reset")
+
+                // Refresh widgets based on current view state
+                if (isSystemScrollActive) {
+                    // In system view - refresh system widgets
+                    android.util.Log.d("MainActivity", "Refreshing system widgets after dialog dismiss")
+                    updateWidgetsForCurrentSystem()
+                } else if (currentGameFilename != null && currentSystemName != null) {
+                    // In game view - refresh game widgets
+                    android.util.Log.d("MainActivity", "Refreshing game widgets after dialog dismiss")
+                    updateWidgetsForCurrentGame()
+                }
             }
             .create()
 
@@ -4605,10 +4622,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             val systemWidgets = allWidgets.filter { it.widgetContext == OverlayWidget.WidgetContext.SYSTEM }
             android.util.Log.d("MainActivity", "Loaded ${systemWidgets.size} system widgets from storage")
 
-            // Clear existing widget views
-            widgetContainer.removeAllViews()
+            // Clear existing widget views but preserve grid overlay
+            val childCount = widgetContainer.childCount
+            for (i in childCount - 1 downTo 0) {
+                val child = widgetContainer.getChildAt(i)
+                if (child !is GridOverlayView) {
+                    widgetContainer.removeView(child)
+                }
+            }
             activeWidgets.clear()
-            android.util.Log.d("MainActivity", "Cleared widget container")
+            android.util.Log.d("MainActivity", "Cleared widget container (preserved grid)")
 
             // Sort widgets by z-index
             val sortedWidgets = systemWidgets.sortedBy { it.zIndex }
@@ -4759,10 +4782,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 val gameWidgets = allWidgets.filter { it.widgetContext == OverlayWidget.WidgetContext.GAME }
                 android.util.Log.d("MainActivity", "Loaded ${gameWidgets.size} game widgets from storage")
 
-                // Clear existing widget views
-                widgetContainer.removeAllViews()
+                // Clear existing widget views but preserve grid overlay
+                val childCount = widgetContainer.childCount
+                for (i in childCount - 1 downTo 0) {
+                    val child = widgetContainer.getChildAt(i)
+                    if (child !is GridOverlayView) {
+                        widgetContainer.removeView(child)
+                    }
+                }
                 activeWidgets.clear()
-                android.util.Log.d("MainActivity", "Cleared widget container")
+                android.util.Log.d("MainActivity", "Cleared widget container (preserved grid)")
 
                 // Sort widgets by z-index - CHANGED to use gameWidgets
                 val sortedWidgets = gameWidgets.sortedBy { it.zIndex }
