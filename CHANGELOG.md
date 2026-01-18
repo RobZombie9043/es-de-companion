@@ -1,5 +1,8 @@
 # 🔄 Changelog
 
+## [0.4.3] - 2026-01-19
+- Added widget onboarding help dialog
+
 ## [0.4.2] - 2026-01-19
 - Fix some text being unreadable with Android Light mode on
 - Fixed system logos being hidden when turning on edit widget mode

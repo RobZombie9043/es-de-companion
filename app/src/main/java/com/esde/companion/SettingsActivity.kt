@@ -3049,40 +3049,48 @@ https://github.com/blacksheepmvp/mjolnir
 
 You can always re-run this setup from the settings screen.
 
-Enjoy your enhanced retro gaming experience! ✨
-        """.trimIndent()
-
-        messageText.setPadding(60, 20, 60, 40)
-        messageText.textSize = 15f
+Enjoy your enhanced retro gaming experience!
+"""
+        messageText.textSize = 16f
         messageText.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
-        messageText.setLineSpacing(8f, 1.0f)
+        messageText.setPadding(60, 20, 60, 20)
 
         scrollView.addView(messageText)
 
-        // Set max height for scroll view
-        val displayMetrics = resources.displayMetrics
-        val maxHeight = (displayMetrics.heightPixels * 0.5).toInt()
-        val params = android.widget.FrameLayout.LayoutParams(
-            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-        )
-        params.height = maxHeight
-        scrollView.layoutParams = params
-
-        AlertDialog.Builder(this)
+        // Show dialog with TWO buttons
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
             .setCustomTitle(titleContainer)
             .setView(scrollView)
-            .setPositiveButton("Got it!") { _, _ ->
+            .setPositiveButton("Learn About Widgets") { _, _ ->
+                // Close settings and trigger widget tutorial in MainActivity
+                val intent = Intent()
+                intent.putExtra("SHOW_WIDGET_TUTORIAL", true)
+                setResult(Activity.RESULT_OK, intent)
+                finish()
+            }
+            .setNegativeButton("Finish Setup") { _, _ ->
+                // Just close settings normally
                 if (triggerVerification) {
-                    // Signal MainActivity to start verification
                     val intent = Intent()
                     intent.putExtra("START_SCRIPT_VERIFICATION", true)
                     setResult(Activity.RESULT_OK, intent)
+                    finish()
+                } else {
+                    finish()
                 }
-                finish()
             }
-            .setCancelable(false)
-            .show()
+            .setCancelable(true)
+            .create()
+
+        // Dark theme for dialog
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(
+                android.graphics.drawable.ColorDrawable(android.graphics.Color.parseColor("#1A1A1A"))
+            )
+        }
+
+        dialog.show()
     }
 
     /**

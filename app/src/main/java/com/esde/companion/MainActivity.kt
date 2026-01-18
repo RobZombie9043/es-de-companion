@@ -185,6 +185,13 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            val showWidgetTutorial = result.data?.getBooleanExtra("SHOW_WIDGET_TUTORIAL", false) ?: false
+            if (showWidgetTutorial) {
+                // Delay slightly to let UI settle after settings closes
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    showWidgetSystemTutorial(fromUpdate = false)
+                }, 500)
+            }
             val needsRecreate = result.data?.getBooleanExtra("NEEDS_RECREATE", false) ?: false
             val appsHiddenChanged = result.data?.getBooleanExtra("APPS_HIDDEN_CHANGED", false) ?: false
             val closeDrawer = result.data?.getBooleanExtra("CLOSE_DRAWER", false) ?: false
@@ -298,6 +305,9 @@ class MainActivity : AppCompatActivity() {
         prefs = getSharedPreferences("ESDESecondScreenPrefs", MODE_PRIVATE)
         appLaunchPrefs = AppLaunchPreferences(this)
 
+        // Check if we should show widget tutorial for updating users
+        checkAndShowWidgetTutorialForUpdate()
+
         rootLayout = findViewById(R.id.rootLayout)
         gameImageView = findViewById(R.id.gameImageView)
         dimmingOverlay = findViewById(R.id.dimmingOverlay)
@@ -396,6 +406,77 @@ class MainActivity : AppCompatActivity() {
         registerSecondaryVolumeObserver()
     }
 
+    private fun checkAndShowWidgetTutorialForUpdate() {
+        android.util.Log.d("MainActivity", "=== checkAndShowWidgetTutorialForUpdate CALLED ===")
+        try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            val currentVersion = packageInfo.versionName ?: "0.4.3"
+            android.util.Log.d("MainActivity", "Current version from package: $currentVersion")
+
+            val lastSeenVersion = prefs.getString("last_seen_app_version", "0.0.0") ?: "0.0.0"
+            android.util.Log.d("MainActivity", "Last seen version from prefs: $lastSeenVersion")
+
+            val hasSeenWidgetTutorial = prefs.getBoolean("widget_tutorial_shown", false)
+            android.util.Log.d("MainActivity", "Has seen widget tutorial: $hasSeenWidgetTutorial")
+
+            // Check if default widgets were created (indicates not a fresh install)
+            val hasCreatedDefaultWidgets = prefs.getBoolean("default_widgets_created", false)
+            android.util.Log.d("MainActivity", "Has created default widgets: $hasCreatedDefaultWidgets")
+
+            // NEW LOGIC:
+            // Show tutorial if:
+            // 1. User hasn't seen it yet AND
+            // 2. EITHER they're updating from an older version OR they have default widgets (not fresh install)
+            val isOlderVersion = lastSeenVersion != "0.0.0" && isVersionLessThan(lastSeenVersion, currentVersion)
+            val shouldShowTutorial = !hasSeenWidgetTutorial && (isOlderVersion || hasCreatedDefaultWidgets)
+
+            android.util.Log.d("MainActivity", "Should show tutorial: $shouldShowTutorial")
+            android.util.Log.d("MainActivity", "  - hasSeenWidgetTutorial: $hasSeenWidgetTutorial")
+            android.util.Log.d("MainActivity", "  - isOlderVersion: $isOlderVersion")
+            android.util.Log.d("MainActivity", "  - hasCreatedDefaultWidgets: $hasCreatedDefaultWidgets")
+
+            if (shouldShowTutorial) {
+                android.util.Log.d("MainActivity", "✓ Showing widget tutorial")
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    showWidgetSystemTutorial(fromUpdate = true)
+                }, 3000)
+            }
+
+            // Always update the version tracking
+            prefs.edit().putString("last_seen_app_version", currentVersion).apply()
+            android.util.Log.d("MainActivity", "Saved current version to prefs: $currentVersion")
+
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error in version check for widget tutorial", e)
+        }
+    }
+
+    /**
+     * Compare two version strings (e.g., "0.3.3" < "0.3.4")
+     * Returns true if v1 < v2
+     */
+    private fun isVersionLessThan(v1: String, v2: String): Boolean {
+        try {
+            val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
+            val parts2 = v2.split(".").map { it.toIntOrNull() ?: 0 }
+
+            // Compare each part
+            for (i in 0 until maxOf(parts1.size, parts2.size)) {
+                val p1 = parts1.getOrNull(i) ?: 0
+                val p2 = parts2.getOrNull(i) ?: 0
+
+                if (p1 < p2) return true
+                if (p1 > p2) return false
+            }
+
+            // Versions are equal
+            return false
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error comparing versions: $v1 vs $v2", e)
+            return false
+        }
+    }
+
     private fun checkAndLaunchSetupWizard() {
         // Check if setup has been completed
         val hasCompletedSetup = prefs.getBoolean("setup_completed", false)
@@ -428,6 +509,145 @@ class MainActivity : AppCompatActivity() {
 
         // For script check, wait for SD card if needed (setup is complete and has permissions)
         checkScriptsWithRetry()
+    }
+
+    /**
+     * Show comprehensive widget system tutorial dialog
+     * @param fromUpdate - True if showing because user updated the app
+     */
+    private fun showWidgetSystemTutorial(fromUpdate: Boolean = false) {
+        // Get current version dynamically
+        val currentVersion = try {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        } catch (e: Exception) {
+            "0.4.3"  // Fallback version
+        }
+
+        // Create custom title view with emoji
+        val titleContainer = android.widget.LinearLayout(this)
+        titleContainer.orientation = android.widget.LinearLayout.HORIZONTAL
+        titleContainer.setPadding(60, 40, 60, 20)
+        titleContainer.gravity = android.view.Gravity.CENTER
+
+        val titleText = android.widget.TextView(this)
+        titleText.text = if (fromUpdate) "🆕 Widget Overlay System" else "📐 Widget Overlay System"
+        titleText.textSize = 24f
+        titleText.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+        titleText.gravity = android.view.Gravity.CENTER
+
+        titleContainer.addView(titleText)
+
+        // Create scrollable message view
+        val scrollView = android.widget.ScrollView(this)
+        val messageText = android.widget.TextView(this)
+
+        val updatePrefix = if (fromUpdate) {
+            "New in version 0.4.0+! The widget overlay system lets you create customizable displays on top of game artwork.\n\n"
+        } else {
+            ""
+        }
+
+        messageText.text = """
+${updatePrefix}🎨 What Are Widgets?
+
+Widgets are overlay elements that display game/system artwork like marquees, box art, screenshots, and more. You can position and size them however you want!
+
+🔓 Widget Edit Mode
+
+Widgets are LOCKED by default to prevent accidental changes. To edit widgets:
+
+1. Long-press anywhere on screen → Widget menu appears
+2. Toggle "Widget Edit Mode: OFF" to ON
+3. Now you can create, move, resize, and delete widgets
+
+➕ Creating Widgets
+
+1. Unlock widgets (see above)
+2. Open widget menu (long-press screen)
+3. Tap "Add Widget"
+4. Choose widget type (Marquee, Box Art, Screenshot, etc.)
+
+✏️ Editing Widgets
+
+Select: Tap a widget to select it (shows purple border)
+Move: Drag selected widget to reposition
+Resize: Drag the corner handles (⌙ shapes) on selected widgets
+Delete: Tap the X button on selected widget
+Settings: Tap the ⚙ button for layer ordering options
+
+📐 Grid System
+
+Snap to Grid: Makes positioning precise and aligned
+Show Grid: Visual grid overlay to help with alignment
+
+Both options in the widget menu!
+
+🔒 Important: Lock Widgets When Done
+
+After arranging your widgets, toggle Edit Mode back to OFF. This prevents accidental changes during normal use.
+
+💡 Tips
+
+• Widgets are context-aware - create separate layouts for games vs systems
+• Use "Bring to Front" / "Send to Back" to layer widgets
+• Each widget updates automatically when you browse in ES-DE
+• System logos work for both built-in and custom system logos
+
+Access this help anytime from the widget menu!
+"""
+
+        messageText.textSize = 16f
+        messageText.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+        messageText.setPadding(60, 20, 60, 20)
+
+        scrollView.addView(messageText)
+
+        // Create "don't show again" checkbox
+        val checkboxContainer = android.widget.LinearLayout(this)
+        checkboxContainer.orientation = android.widget.LinearLayout.HORIZONTAL
+        checkboxContainer.setPadding(60, 10, 60, 20)
+        checkboxContainer.gravity = android.view.Gravity.CENTER_VERTICAL
+
+        val checkbox = android.widget.CheckBox(this)
+        checkbox.text = "Don't show this automatically again"
+        checkbox.setTextColor(android.graphics.Color.parseColor("#999999"))
+        checkbox.textSize = 14f
+
+        checkboxContainer.addView(checkbox)
+
+        // Create main container
+        val mainContainer = android.widget.LinearLayout(this)
+        mainContainer.orientation = android.widget.LinearLayout.VERTICAL
+        mainContainer.addView(scrollView)
+        mainContainer.addView(checkboxContainer)
+
+        // Show dialog
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setCustomTitle(titleContainer)
+            .setView(mainContainer)
+            .setPositiveButton("Got It!") { _, _ ->
+                // Mark as shown
+                prefs.edit().putBoolean("widget_tutorial_shown", true).apply()
+
+                // If user checked "don't show again", mark preference
+                if (checkbox.isChecked) {
+                    prefs.edit().putBoolean("widget_tutorial_dont_show_auto", true).apply()
+                }
+            }
+            .setCancelable(true)
+            .create()
+
+        // Dark theme for dialog
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(
+                android.graphics.drawable.ColorDrawable(android.graphics.Color.parseColor("#1A1A1A"))
+            )
+        }
+
+        dialog.show()
+
+        android.util.Log.d("MainActivity", "Widget tutorial dialog shown (fromUpdate: $fromUpdate)")
     }
 
     /**
@@ -4241,6 +4461,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         val chipShowGrid = dialogView.findViewById<com.google.android.material.chip.Chip>(R.id.chipShowGrid)
         val widgetOptionsContainer = dialogView.findViewById<LinearLayout>(R.id.widgetOptionsContainer)
         val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancelWidgetMenu)
+        val btnHelp = dialogView.findViewById<android.widget.Button>(R.id.btnWidgetHelp)
 
         // Set chip states and text
         chipLockWidgets.isChecked = !widgetsLocked  // Inverted: checked = edit mode ON
@@ -4288,6 +4509,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         chipShowGrid.setOnClickListener {
             toggleShowGrid()
             chipShowGrid.text = if (showGrid) "⊞ Show Grid: ON" else "⊞ Show Grid: OFF"
+        }
+
+        btnHelp.setOnClickListener {
+            dialog.dismiss()
+            showWidgetSystemTutorial(fromUpdate = false)
         }
 
         // Populate widget options based on current view

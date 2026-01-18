@@ -20,7 +20,20 @@
             android:textColor="#FFFFFF"
             android:textSize="24sp"
             android:textStyle="bold"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="16dp" />
+
+        <!-- Widget Help/Tutorial Button -->
+        <Button
+            android:id="@+id/btnWidgetHelp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="❓ Widget Help"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:backgroundTint="#2196F3"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"
+            android:gravity="center" />
 
         <!-- Divider -->
         <View
