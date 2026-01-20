@@ -182,9 +182,10 @@ class WidgetView(
 
         android.util.Log.d("WidgetView", "Settings and delete buttons created in container")
 
-        // Make this view clickable and focusable
+        // Make this view clickable but not focusable (touch-only, no D-pad focus border)
         isClickable = true
-        isFocusable = true
+        isFocusable = false
+        isFocusableInTouchMode = false
 
         // Load image based on widget data
         loadWidgetImage()
