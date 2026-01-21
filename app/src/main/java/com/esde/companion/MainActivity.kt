@@ -138,7 +138,15 @@ class MainActivity : AppCompatActivity() {
     // Double-tap detection variables
     private var tapCount = 0
     private var lastTapTime = 0L
-    private val DOUBLE_TAP_TIMEOUT = 300L // 300ms window for double-tap
+    // Standard Android double-tap timeout (max time between taps)
+    private val DOUBLE_TAP_TIMEOUT by lazy {
+        ViewConfiguration.getDoubleTapTimeout().toLong() // Default: 300ms
+    }
+    // Custom minimum interval to prevent accidental activations (100ms)
+    // This is intentionally higher than Android's internal 40ms hardware filter:
+    // - 40ms filters touch controller artifacts (hardware-level)
+    // - 100ms filters user errors like screen brushing (UX-level)
+    // Still imperceptible to users while significantly reducing false positives
     private val MIN_TAP_INTERVAL = 100L // 100ms minimum time between taps (prevents accidental fast touches)
 
     // Scripts verification
