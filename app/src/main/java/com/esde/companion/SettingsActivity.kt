@@ -890,6 +890,15 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 prefs.edit().putString(GAME_IMAGE_PREFERENCE_KEY, preference).apply()
 
+                // DEBUG: Verify preference was saved
+                val savedPref = prefs.getString(GAME_IMAGE_PREFERENCE_KEY, "NOT_FOUND")
+                android.util.Log.d("SettingsActivity", "━━━ IMAGE PREFERENCE DEBUG ━━━")
+                android.util.Log.d("SettingsActivity", "Chip ID selected: ${checkedIds[0]}")
+                android.util.Log.d("SettingsActivity", "Preference value to save: $preference")
+                android.util.Log.d("SettingsActivity", "Preference key: $GAME_IMAGE_PREFERENCE_KEY")
+                android.util.Log.d("SettingsActivity", "Saved preference readback: $savedPref")
+                android.util.Log.d("SettingsActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
                 // Show/hide color picker
                 gameColorPickerLayout.visibility =
                     if (preference == "solid_color") View.VISIBLE else View.GONE

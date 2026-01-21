@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var androidSettingsButton: ImageButton
     private lateinit var prefs: SharedPreferences
     private lateinit var appLaunchPrefs: AppLaunchPreferences
+    private lateinit var mediaFileLocator: MediaFileLocator
 
     private lateinit var blackOverlay: View
     private var isBlackOverlayShown = false
@@ -316,6 +317,7 @@ class MainActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences("ESDESecondScreenPrefs", MODE_PRIVATE)
         appLaunchPrefs = AppLaunchPreferences(this)
+        mediaFileLocator = MediaFileLocator(prefs)
 
         // Check if we should show widget tutorial for updating users
         checkAndShowWidgetTutorialForUpdate()
@@ -2927,21 +2929,23 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 }
             }
 
+            // Update game widgets after loading game image
+            updateWidgetsForCurrentGame()
+
             // Handle video playback for the current game
             // Pass both stripped name and raw filename (like images do)
             android.util.Log.d("MainActivity", "loadGameInfo - Calling handleVideoForGame:")
             android.util.Log.d("MainActivity", "  systemName: $systemName")
             android.util.Log.d("MainActivity", "  gameName (stripped): $gameName")
             android.util.Log.d("MainActivity", "  gameNameRaw (full path): $gameNameRaw")
-            handleVideoForGame(systemName, gameName, gameNameRaw)
+            val videoWillPlay = handleVideoForGame(systemName, gameName, gameNameRaw)
 
-            // Update game widgets after loading game image
-            updateWidgetsForCurrentGame()
-            // Don't show widgets if screensaver is active
-            if (!isScreensaverActive) {
+            // Show widgets only if screensaver is not active AND video won't play
+            if (!isScreensaverActive && !videoWillPlay) {
                 showWidgets()
+                android.util.Log.d("MainActivity", "Showing widgets - no screensaver and no video")
             } else {
-                android.util.Log.d("MainActivity", "Screensaver active - not showing widgets from loadGameInfo")
+                android.util.Log.d("MainActivity", "Not showing widgets - screensaver: $isScreensaverActive, video will play: $videoWillPlay")
             }
 
         } catch (e: Exception) {
@@ -2950,9 +2954,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
     }
 
-    private fun findGameImage(systemName: String, gameName: String, fullGamePath: String): File? {
-        val extensions = listOf("jpg", "png", "webp")
-        val mediaBase = File(getMediaBasePath(), systemName)
+    private fun findGameImage(
+        systemName: String,
+        strippedName: String,
+        fullGamePath: String
+    ): File? {
+        // Get image preference
         val imagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
 
         // Return null if solid color is selected - handled in loadGameInfo()
@@ -2960,74 +2967,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             return null
         }
 
-        val dirs = if (imagePref == "screenshot") {
-            listOf("screenshots", "fanart")
-        } else {
-            listOf("fanart", "screenshots")
-        }
-
-        // Sanitize the full path to get just the filename
-        val sanitizedFilename = sanitizeGameFilename(fullGamePath)
-        val sanitizedName = sanitizedFilename.substringBeforeLast('.')
-
-        for (dirName in dirs) {
-            val file = findImageInDir(
-                File(mediaBase, dirName),
-                sanitizedName,
-                sanitizedFilename,
-                fullGamePath,
-                extensions
-            )
-            if (file != null) return file
-        }
-        return null
-    }
-
-    private fun findImageInDir(
-        dir: File,
-        strippedName: String,
-        rawName: String,
-        fullPath: String,
-        extensions: List<String>
-    ): File? {
-        if (!dir.exists() || !dir.isDirectory) return null
-
-        // Extract subfolder path if present (everything before the filename)
-        val subfolder = fullPath.substringBeforeLast("/", "").substringAfterLast("/", "")
-
-        // Try in order of specificity:
-        // 1. Exact subfolder match: <media_type>/<subfolder>/filename.ext
-        // 2. Root level with stripped name: <media_type>/filename.ext
-        // 3. Root level with raw name: <media_type>/filename.ext
-
-        // 1. Try subfolder match if subfolder exists
-        if (subfolder.isNotEmpty()) {
-            val subfolderDir = File(dir, subfolder)
-            if (subfolderDir.exists() && subfolderDir.isDirectory) {
-                for (name in listOf(strippedName, rawName)) {
-                    for (ext in extensions) {
-                        val file = File(subfolderDir, "$name.$ext")
-                        if (file.exists()) {
-                            android.util.Log.d("MainActivity", "Found media in subfolder: ${file.absolutePath}")
-                            return file
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2 & 3. Try root level (original behavior)
-        for (name in listOf(strippedName, rawName)) {
-            for (ext in extensions) {
-                val file = File(dir, "$name.$ext")
-                if (file.exists()) {
-                    android.util.Log.d("MainActivity", "Found media in root: ${file.absolutePath}")
-                    return file
-                }
-            }
-        }
-
-        return null
+        val preferScreenshot = (imagePref == "screenshot")
+        return mediaFileLocator.findGameBackgroundImage(systemName, fullGamePath, preferScreenshot)
     }
 
     /**
@@ -4156,70 +4097,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * @return Video file path or null if not found
      */
     private fun findVideoForGame(systemName: String?, strippedName: String?, rawName: String?): String? {
-        if (systemName == null || strippedName == null) {
-            android.util.Log.d("MainActivity", "findVideoForGame - systemName or strippedName is null")
+        if (systemName == null || rawName == null) {
+            android.util.Log.d("MainActivity", "findVideoForGame - systemName or rawName is null")
             return null
         }
-
-        val mediaPath = prefs.getString("media_path", "/storage/emulated/0/ES-DE/downloaded_media")
-            ?: return null
 
         android.util.Log.d("MainActivity", "findVideoForGame - Looking for video:")
         android.util.Log.d("MainActivity", "  systemName: $systemName")
-        android.util.Log.d("MainActivity", "  strippedName: $strippedName")
         android.util.Log.d("MainActivity", "  rawName: $rawName")
 
-        val videoExtensions = listOf("mp4", "mkv", "avi", "wmv", "mov", "webm")
-        val videoDir = File(mediaPath, "$systemName/videos")
-
-        if (!videoDir.exists()) {
-            android.util.Log.d("MainActivity", "Video directory does not exist: ${videoDir.absolutePath}")
-            return null
-        }
-
-        // Sanitize the raw name (which is now the full path)
-        val sanitizedRawName = if (rawName != null) sanitizeGameFilename(rawName) else null
-
-        android.util.Log.d("MainActivity", "  sanitizedRawName: $sanitizedRawName")
-
-        // Extract subfolder if present
-        val subfolder = rawName?.substringBeforeLast("/", "")?.substringAfterLast("/", "") ?: ""
-
-        android.util.Log.d("MainActivity", "  subfolder: $subfolder")
-
-        // Try subfolder first if it exists
-        if (subfolder.isNotEmpty()) {
-            val subfolderDir = File(videoDir, subfolder)
-            android.util.Log.d("MainActivity", "  Checking subfolder: ${subfolderDir.absolutePath}")
-            if (subfolderDir.exists() && subfolderDir.isDirectory) {
-                for (name in listOfNotNull(strippedName, sanitizedRawName)) {
-                    for (ext in videoExtensions) {
-                        val videoFile = File(subfolderDir, "$name.$ext")
-                        android.util.Log.d("MainActivity", "    Trying: ${videoFile.absolutePath}")
-                        if (videoFile.exists()) {
-                            android.util.Log.d("MainActivity", "Found video in subfolder: ${videoFile.absolutePath}")
-                            return videoFile.absolutePath
-                        }
-                    }
-                }
-            }
-        }
-
-        // Try root level
-        android.util.Log.d("MainActivity", "  Checking root level: ${videoDir.absolutePath}")
-        for (name in listOfNotNull(strippedName, sanitizedRawName)) {
-            for (ext in videoExtensions) {
-                val videoFile = File(videoDir, "$name.$ext")
-                android.util.Log.d("MainActivity", "    Trying: ${videoFile.absolutePath}")
-                if (videoFile.exists()) {
-                    android.util.Log.d("MainActivity", "Found video in root: ${videoFile.absolutePath}")
-                    return videoFile.absolutePath
-                }
-            }
-        }
-
-        android.util.Log.d("MainActivity", "No video found for system: $systemName, game: $strippedName")
-        return null
+        return mediaFileLocator.findVideoFile(systemName, rawName)
     }
 
     /**
@@ -4367,32 +4254,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     /**
      * Handle video loading with delay
      */
-    private fun handleVideoForGame(systemName: String?, strippedName: String?, rawName: String?) {
+    private fun handleVideoForGame(systemName: String?, strippedName: String?, rawName: String?): Boolean {
         // Cancel any pending video load
         videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
 
         // Only trust isActivityVisible (onStart/onStop) - it's the only truly reliable signal
         // on devices with identical display names.
-        //
-        // We ignore hasWindowFocus because:
-        // - It can be false even when Companion is visible (dialogs, system UI)
-        // - It's unreliable on devices with identical display names
-        //
-        // onStop() ONLY fires when activity is truly not visible, making it perfect for:
-        // - Game launched on other screen (Companion backgrounded)
-        // - App minimized/switched away
-        //
-        // onStop() does NOT fire when:
-        // - Game launched on SAME screen (Companion still visible, just covered)
-        // - Dialogs appear
-        // - System UI overlays
-
-        // For same-screen game launches, we rely on ES-DE game-start events instead.
-
         if (!isActivityVisible) {
             android.util.Log.d("MainActivity", "Video blocked - activity not visible (onStop called)")
             releasePlayer()
-            return
+            return false
         }
 
         // Additional check: If ES-DE reports a game is playing, block videos
@@ -4400,26 +4271,25 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         if (isGamePlaying) {
             android.util.Log.d("MainActivity", "Video blocked - game is playing (ES-DE event)")
             releasePlayer()
-            return
+            return false
         }
-
 
         if (isScreensaverActive) {
             android.util.Log.d("MainActivity", "Video blocked - screensaver active")
             releasePlayer()
-            return
+            return false
         }
 
         if (!isVideoEnabled()) {
             releasePlayer()
-            return
+            return false
         }
 
         // Block videos during widget edit mode
         if (!widgetsLocked) {
             android.util.Log.d("MainActivity", "Video blocked - widget edit mode active")
             releasePlayer()
-            return
+            return false
         }
 
         // Pass the raw name (full path) to findVideoForGame
@@ -4433,6 +4303,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             if (delay == 0L) {
                 // Instant - load video immediately
                 loadVideo(videoPath)
+                return true  // Video will play
             } else {
                 // Delayed - show image first, then video
                 releasePlayer() // Stop any current video
@@ -4463,11 +4334,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 }
 
                 videoDelayHandler?.postDelayed(videoDelayRunnable!!, delay)
+                return true  // Video will play (after delay)
             }
         } else {
             // No video found, release player
             android.util.Log.d("MainActivity", "No video found for system: $systemName, game: $strippedName")
             releasePlayer()
+            return false
         }
     }
 
@@ -4985,17 +4858,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         gameFilename: String,
         folder: String
     ): File? {
-        val extensions = listOf("jpg", "png", "webp")
-        val sanitizedFilename = sanitizeGameFilename(gameFilename)
-        val sanitizedName = sanitizedFilename.substringBeforeLast('.')
-
-        return findImageInDir(
-            File(getMediaBasePath(), "$systemName/$folder"),
-            sanitizedName,
-            sanitizedFilename,
-            gameFilename,
-            extensions
-        )
+        return mediaFileLocator.findImageInFolder(systemName, gameName, gameFilename, folder)
     }
 
     /**
