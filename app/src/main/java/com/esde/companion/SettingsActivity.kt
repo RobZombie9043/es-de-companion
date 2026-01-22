@@ -395,8 +395,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ========== START: onCreate Extraction ==========
-
     /**
      * Initialize all view references
      */
@@ -560,8 +558,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         })
     }
-
-// ========== END: onCreate Extraction ==========
 
     override fun onResume() {
         super.onResume()
@@ -2344,7 +2340,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.e("SettingsActivity", "Error creating scripts", e)
         }
     }
-    // ========== START: Script Creation Extraction (Corrected) ==========
 
     /**
      * Check for existing scripts
@@ -2564,8 +2559,6 @@ echo -n "" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
             showScriptsCreatedVerificationPrompt()
         }
     }
-
-// ========== END: Script Creation Extraction ==========
 
     private fun checkAndAutoStartWizard() {
         // Check if permissions are granted
