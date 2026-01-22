@@ -248,7 +248,7 @@ class MainActivity : AppCompatActivity() {
                 skipNextReload = true
             } else if (screensaverBehaviorChanged && state is AppState.Screensaver) {
                 // Screensaver behavior changed while screensaver is active - update display
-                handleScreensaverStart()
+                applyScreensaverBehaviorChange()
                 // Skip reload in onResume to prevent override
                 skipNextReload = true
             } else if (imagePreferenceChanged) {
@@ -3699,6 +3699,87 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     /**
+     * Apply screensaver behavior change while screensaver is already active.
+     * Unlike handleScreensaverStart(), this preserves the current screensaver game.
+     */
+    private fun applyScreensaverBehaviorChange() {
+        android.util.Log.d("MainActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        android.util.Log.d("MainActivity", "SCREENSAVER BEHAVIOR CHANGE")
+        android.util.Log.d("MainActivity", "Current state: $state")
+
+        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
+        android.util.Log.d("MainActivity", "New screensaver behavior: $screensaverBehavior")
+
+        // Get current screensaver game (if any)
+        val screensaverGame = if (state is AppState.Screensaver) {
+            (state as AppState.Screensaver).currentGame
+        } else {
+            null
+        }
+
+        when (screensaverBehavior) {
+            "black_screen" -> {
+                android.util.Log.d("MainActivity", "Switching to black screen")
+                Glide.with(this).clear(gameImageView)
+                gameImageView.setImageDrawable(null)
+                gameImageView.visibility = View.GONE
+                videoView.visibility = View.GONE
+                hideWidgets()
+                releasePlayer()
+                gridOverlayView?.visibility = View.GONE
+            }
+            "default_image" -> {
+                android.util.Log.d("MainActivity", "Switching to default image")
+                loadFallbackBackground(forceCustomImageOnly = true)
+                gameImageView.visibility = View.VISIBLE
+                videoView.visibility = View.GONE
+
+                // Show current game widgets if we have a game
+                if (screensaverGame != null) {
+                    loadGameWidgets(screensaverGame.systemName, screensaverGame.gameFilename)
+                    showWidgets()
+                } else {
+                    hideWidgets()
+                }
+
+                releasePlayer()
+            }
+            "game_image" -> {
+                android.util.Log.d("MainActivity", "Switching to game image")
+
+                // If we have a current screensaver game, load it
+                if (screensaverGame != null) {
+                    val gameName = screensaverGame.gameFilename.substringBeforeLast('.')
+                    val filename = sanitizeGameFilename(screensaverGame.gameFilename)
+                    val gameImage = findGameImage(screensaverGame.systemName, gameName, filename)
+
+                    if (gameImage != null && gameImage.exists()) {
+                        android.util.Log.d("MainActivity", "Loading current screensaver game image: ${gameImage.name}")
+                        loadImageWithAnimation(gameImage, gameImageView)
+                    } else {
+                        android.util.Log.d("MainActivity", "No game image found, using fallback")
+                        loadFallbackBackground()
+                    }
+
+                    gameImageView.visibility = View.VISIBLE
+                    videoView.visibility = View.GONE
+
+                    // Load and show widgets
+                    loadGameWidgets(screensaverGame.systemName, screensaverGame.gameFilename)
+                    showWidgets()
+                } else {
+                    // No game selected yet - just wait
+                    android.util.Log.d("MainActivity", "No screensaver game yet - display will update on next game-select")
+                }
+
+                releasePlayer()
+            }
+        }
+
+        android.util.Log.d("MainActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    }
+
+    /**
      * Handle screensaver end event - return to normal browsing display
      * @param reason The reason for screensaver ending: "cancel", "game-jump", or "game-start"
      */
@@ -3733,9 +3814,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         if (reason != null) {
             when (reason) {
                 "game-start" -> {
+                    // CRITICAL: Set flag IMMEDIATELY to block FileObserver reloads during transition
+                    isLaunchingFromScreensaver = true
+
                     // User is launching a game from screensaver
                     android.util.Log.d("MainActivity", "Screensaver end - game starting, waiting for game-start event")
-                    isLaunchingFromScreensaver = true
+                    android.util.Log.d("MainActivity", "isLaunchingFromScreensaver flag set - blocking intermediate reloads")
 
                     // Update state - transition to GameBrowsing (waiting for GamePlaying)
                     if (screensaverGame != null) {
@@ -3750,6 +3834,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     }
 
                     // The game-start event will handle the display
+                    // Flag will be cleared in handleGameStart()
                 }
                 "game-jump" -> {
                     // User jumped to a different game while in screensaver

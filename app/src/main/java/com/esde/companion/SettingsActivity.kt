@@ -2582,7 +2582,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 LOG_DIR="$logsPath"
 mkdir -p "${'$'}LOG_DIR"
 
-echo -n "" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
+echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
 """)
         screensaverEndScript.setExecutable(true)
     }
