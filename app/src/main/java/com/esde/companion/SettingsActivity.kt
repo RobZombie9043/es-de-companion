@@ -364,9 +364,6 @@ class SettingsActivity : AppCompatActivity() {
             setContentView(R.layout.activity_settings)
             android.util.Log.d("SettingsActivity", "Layout inflated successfully")
 
-            // Setup swipe gesture to exit settings
-            setupSwipeGesture()
-
             prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             android.util.Log.d("SettingsActivity", "Prefs initialized")
 
@@ -375,229 +372,20 @@ class SettingsActivity : AppCompatActivity() {
             initialBlur = prefs.getInt(BLUR_KEY, 0)
             initialDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
 
-            setupWizardButton = findViewById(R.id.setupWizardButton)
-            setupWizardButton.setOnClickListener {
-                startSetupWizard()
-            }
+            // Initialize all views
+            initializeViews()
 
-            mediaPathText = findViewById(R.id.mediaPathText)
-            mediaStatusText = findViewById(R.id.mediaStatusText)
-            mediaStatusDescription = findViewById(R.id.mediaStatusDescription)
-            selectMediaPathButton = findViewById(R.id.selectMediaPathButton)
-            systemPathText = findViewById(R.id.systemPathText)
-            systemLogosPathText = findViewById(R.id.systemLogosPathText)
-            selectSystemPathButton = findViewById(R.id.selectSystemPathButton)
-            selectSystemLogosPathButton = findViewById(R.id.selectSystemLogosPathButton)
-            scriptsPathText = findViewById(R.id.scriptsPathText)
-            selectScriptsPathButton = findViewById(R.id.selectScriptsPathButton)
-            createScriptsButton = findViewById(R.id.createScriptsButton)
-            scriptsStatusText = findViewById(R.id.scriptsStatusText)
-            scriptsStatusDescription = findViewById(R.id.scriptsStatusDescription)
-            columnCountSeekBar = findViewById(R.id.columnCountSeekBar)
-            columnCountText = findViewById(R.id.columnCountText)
-            hideAppsButton = findViewById(R.id.hideAppsButton)
-            hideAppsButton.setOnClickListener {
-                showHideAppsDialog()
-            }
-            dimmingSeekBar = findViewById(R.id.dimmingSeekBar)
-            dimmingText = findViewById(R.id.dimmingText)
-            blurSeekBar = findViewById(R.id.blurSeekBar)
-            blurText = findViewById(R.id.blurText)
-            drawerTransparencySeekBar = findViewById(R.id.drawerTransparencySeekBar)
-            drawerTransparencyText = findViewById(R.id.drawerTransparencyText)
-            android.util.Log.d("SettingsActivity", "All views found")
+            // Setup all UI components
+            setupAllUIComponents()
 
-            animationStyleChipGroup = findViewById<ChipGroup>(R.id.animationStyleChipGroup)
-            android.util.Log.d("SettingsActivity", "Animation style chip group found")
+            // Update all path displays
+            updateAllPathDisplays()
 
-            customAnimationSettings = findViewById<LinearLayout>(R.id.customAnimationSettings)
-            animationDurationSeekBar = findViewById<SeekBar>(R.id.animationDurationSeekBar)
-            animationDurationText = findViewById<TextView>(R.id.animationDurationText)
-            animationScaleSeekBar = findViewById<SeekBar>(R.id.animationScaleSeekBar)
-            animationScaleText = findViewById<TextView>(R.id.animationScaleText)
-            android.util.Log.d("SettingsActivity", "Custom animation controls found")
+            // Handle wizard auto-start
+            handleWizardAutoStart()
 
-            systemImagePreferenceChipGroup = findViewById<ChipGroup>(R.id.systemImagePreferenceChipGroup)
-            gameImagePreferenceChipGroup = findViewById<ChipGroup>(R.id.gameImagePreferenceChipGroup)
-            systemColorPickerLayout = findViewById<LinearLayout>(R.id.systemColorPickerLayout)
-            gameColorPickerLayout = findViewById<LinearLayout>(R.id.gameColorPickerLayout)
-            systemColorPickerButton = findViewById<Button>(R.id.systemColorPickerButton)
-            gameColorPickerButton = findViewById<Button>(R.id.gameColorPickerButton)
-            android.util.Log.d("SettingsActivity", "Image preference chip groups found")
-
-            // Initialize video settings
-            videoSupportChipGroup = findViewById(R.id.videoSupportChipGroup)
-            videoSettings = findViewById(R.id.videoSettings)
-            videoDelaySeekBar = findViewById(R.id.videoDelaySeekBar)
-            videoDelayText = findViewById(R.id.videoDelayText)
-            videoAudioChipGroup = findViewById(R.id.videoAudioChipGroup)
-            gameLaunchBehaviorChipGroup = findViewById(R.id.gameLaunchBehaviorChipGroup)
-            screensaverBehaviorChipGroup = findViewById(R.id.screensaverBehaviorChipGroup)
-            blackOverlayChipGroup = findViewById(R.id.blackOverlayChipGroup)
-            android.util.Log.d("SettingsActivity", "Video settings found")
-
-            customBackgroundPathText = findViewById(R.id.customBackgroundPathText)
-            customBackgroundStatusText = findViewById(R.id.customBackgroundStatusText)
-            customBackgroundStatusDescription = findViewById(R.id.customBackgroundStatusDescription)
-            selectCustomBackgroundButton = findViewById(R.id.selectCustomBackgroundButton)
-            clearCustomBackgroundButton = findViewById(R.id.clearCustomBackgroundButton)
-
-            // Initialize version text
-            versionText = findViewById(R.id.versionText)
-            try {
-                val packageInfo = packageManager.getPackageInfo(packageName, 0)
-                val versionName = packageInfo.versionName
-                versionText.text = "ES-DE Companion v$versionName"
-            } catch (e: Exception) {
-                versionText.text = "ES-DE Companion"
-            }
-
-            selectMediaPathButton.setOnClickListener {
-                pathSelectionType = PathSelection.MEDIA
-                directoryPicker.launch(null)
-            }
-
-            selectSystemPathButton.setOnClickListener {
-                pathSelectionType = PathSelection.SYSTEM
-                directoryPicker.launch(null)
-            }
-
-            selectScriptsPathButton.setOnClickListener {
-                pathSelectionType = PathSelection.SCRIPTS
-                directoryPicker.launch(null)
-            }
-
-            selectSystemLogosPathButton.setOnClickListener {
-                pathSelectionType = PathSelection.SYSTEM_LOGOS
-                directoryPicker.launch(null)
-            }
-
-            createScriptsButton.setOnClickListener {
-                checkAndRequestPermissions()
-            }
-
-            selectCustomBackgroundButton.setOnClickListener {
-                pathSelectionType = PathSelection.CUSTOM_BACKGROUND
-                // Create intent to pick image file
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "image/*"
-                    putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/jpeg", "image/jpg", "image/png", "image/webp"))
-                }
-                customBackgroundPicker.launch(intent)
-            }
-
-            clearCustomBackgroundButton.setOnClickListener {
-                // Clear custom background
-                prefs.edit().remove(CUSTOM_BACKGROUND_KEY).apply()
-                updateCustomBackgroundDisplay()
-                customBackgroundChanged = true
-                Toast.makeText(this, "Custom background cleared", Toast.LENGTH_SHORT).show()
-            }
-
-            setupColumnCountSlider()
-            android.util.Log.d("SettingsActivity", "Column count setup")
-            setupDimmingSlider()
-            android.util.Log.d("SettingsActivity", "Dimming setup")
-            setupBlurSlider()
-            android.util.Log.d("SettingsActivity", "Blur setup")
-            setupDrawerTransparencySlider()
-            android.util.Log.d("SettingsActivity", "Drawer transparency setup")
-            android.util.Log.d("SettingsActivity", "Logo size setup")
-            setupAnimationStyleChips()
-            android.util.Log.d("SettingsActivity", "Animation style chips setup")
-            setupCustomAnimationControls()
-            android.util.Log.d("SettingsActivity", "Custom animation controls setup")
-            setupImagePreferenceChips()
-            android.util.Log.d("SettingsActivity", "Image preference chips setup")
-            setupVideoSettings()
-            android.util.Log.d("SettingsActivity", "Video settings setup")
-            setupGameLaunchBehavior()
-            android.util.Log.d("SettingsActivity", "Game launch behavior setup")
-            setupScreensaverBehavior()
-            setupBlackOverlay()
-            android.util.Log.d("SettingsActivity", "Screensaver behavior setup")
-
-            updateMediaPathDisplay()
-            updateSystemPathDisplay()
-            updateScriptsPathDisplay()
-            updateCustomBackgroundDisplay()
-
-            // Check if we should auto-start wizard from MainActivity
-            val autoStartWizard = intent.getBooleanExtra("AUTO_START_WIZARD", false)
-
-            if (autoStartWizard) {
-                // Start wizard immediately
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    if (!isInSetupWizard) {
-                        // Remove the if/else for startStep - just always start from beginning
-                        startSetupWizard()
-                    }
-                }, 500)
-            } else {
-                // Normal auto-start check (for when settings opened directly)
-                checkAndAutoStartWizard()
-            }
-
-            // Handle back button press
-            // Track initial hidden apps state
-            val initialHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
-
-            onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    // Check if dimming, blur, or drawer transparency changed
-                    val currentDimming = prefs.getInt(DIMMING_KEY, 25)
-                    val currentBlur = prefs.getInt(BLUR_KEY, 0)
-                    val currentDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
-                    val currentHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
-
-                    val intent = Intent()
-                    if (currentDimming != initialDimming || currentBlur != initialBlur || currentDrawerTransparency != initialDrawerTransparency) {
-                        // Signal that MainActivity should recreate itself to apply visual changes
-                        intent.putExtra("NEEDS_RECREATE", true)
-                    }
-                    if (currentHiddenApps != initialHiddenApps) {
-                        // Signal that hidden apps changed
-                        intent.putExtra("APPS_HIDDEN_CHANGED", true)
-                    }
-                    // Signal if video settings changed
-                    if (videoSettingsChanged) {
-                        intent.putExtra("VIDEO_SETTINGS_CHANGED", true)
-                    }
-                    // Signal if logo size changed
-                    if (logoSizeChanged) {
-                        intent.putExtra("LOGO_SIZE_CHANGED", true)
-                    }
-                    // Signal if media path changed
-                    if (mediaPathChanged) {
-                        intent.putExtra("MEDIA_PATH_CHANGED", true)
-                    }
-                    // Signal if image preference changed
-                    if (imagePreferenceChanged) {
-                        intent.putExtra("IMAGE_PREFERENCE_CHANGED", true)
-                    }
-                    // Signal if logo toggles changed
-                    if (logoTogglesChanged) {
-                        intent.putExtra("LOGO_TOGGLES_CHANGED", true)
-                    }
-                    // Signal if game launch behavior changed
-                    if (gameLaunchBehaviorChanged) {
-                        intent.putExtra("GAME_LAUNCH_BEHAVIOR_CHANGED", true)
-                    }
-                    // Signal if screensaver behavior changed
-                    if (screensaverBehaviorChanged) {
-                        intent.putExtra("SCREENSAVER_BEHAVIOR_CHANGED", true)
-                    }
-                    // Signal if custom background changed
-                    if (customBackgroundChanged) {
-                        intent.putExtra("CUSTOM_BACKGROUND_CHANGED", true)
-                    }
-                    // Always signal to close drawer when returning from settings
-                    intent.putExtra("CLOSE_DRAWER", true)
-                    setResult(Activity.RESULT_OK, intent)
-                    finish()
-                }
-            })
+            // Setup back button handler
+            setupBackButtonHandler()
 
             android.util.Log.d("SettingsActivity", "onCreate completed successfully")
         } catch (e: Exception) {
@@ -606,6 +394,174 @@ class SettingsActivity : AppCompatActivity() {
             finish()
         }
     }
+
+    // ========== START: onCreate Extraction ==========
+
+    /**
+     * Initialize all view references
+     */
+    private fun initializeViews() {
+        setupWizardButton = findViewById(R.id.setupWizardButton)
+        mediaPathText = findViewById(R.id.mediaPathText)
+        mediaStatusText = findViewById(R.id.mediaStatusText)
+        mediaStatusDescription = findViewById(R.id.mediaStatusDescription)
+        selectMediaPathButton = findViewById(R.id.selectMediaPathButton)
+        systemPathText = findViewById(R.id.systemPathText)
+        systemLogosPathText = findViewById(R.id.systemLogosPathText)
+        selectSystemPathButton = findViewById(R.id.selectSystemPathButton)
+        selectSystemLogosPathButton = findViewById(R.id.selectSystemLogosPathButton)
+        customBackgroundPathText = findViewById(R.id.customBackgroundPathText)
+        customBackgroundStatusText = findViewById(R.id.customBackgroundStatusText)
+        customBackgroundStatusDescription = findViewById(R.id.customBackgroundStatusDescription)
+        selectCustomBackgroundButton = findViewById(R.id.selectCustomBackgroundButton)
+        clearCustomBackgroundButton = findViewById(R.id.clearCustomBackgroundButton)
+        scriptsPathText = findViewById(R.id.scriptsPathText)
+        selectScriptsPathButton = findViewById(R.id.selectScriptsPathButton)
+        createScriptsButton = findViewById(R.id.createScriptsButton)
+        scriptsStatusText = findViewById(R.id.scriptsStatusText)
+        scriptsStatusDescription = findViewById(R.id.scriptsStatusDescription)
+        columnCountSeekBar = findViewById(R.id.columnCountSeekBar)
+        columnCountText = findViewById(R.id.columnCountText)
+        hideAppsButton = findViewById(R.id.hideAppsButton)
+        dimmingSeekBar = findViewById(R.id.dimmingSeekBar)
+        dimmingText = findViewById(R.id.dimmingText)
+        blurSeekBar = findViewById(R.id.blurSeekBar)
+        blurText = findViewById(R.id.blurText)
+        drawerTransparencySeekBar = findViewById(R.id.drawerTransparencySeekBar)
+        drawerTransparencyText = findViewById(R.id.drawerTransparencyText)
+        animationStyleChipGroup = findViewById(R.id.animationStyleChipGroup)
+        customAnimationSettings = findViewById(R.id.customAnimationSettings)
+        animationDurationSeekBar = findViewById(R.id.animationDurationSeekBar)
+        animationDurationText = findViewById(R.id.animationDurationText)
+        animationScaleSeekBar = findViewById(R.id.animationScaleSeekBar)
+        animationScaleText = findViewById(R.id.animationScaleText)
+        systemImagePreferenceChipGroup = findViewById(R.id.systemImagePreferenceChipGroup)
+        gameImagePreferenceChipGroup = findViewById(R.id.gameImagePreferenceChipGroup)
+        systemColorPickerLayout = findViewById(R.id.systemColorPickerLayout)
+        gameColorPickerLayout = findViewById(R.id.gameColorPickerLayout)
+        systemColorPickerButton = findViewById(R.id.systemColorPickerButton)
+        gameColorPickerButton = findViewById(R.id.gameColorPickerButton)
+        videoSupportChipGroup = findViewById(R.id.videoSupportChipGroup)
+        videoSettings = findViewById(R.id.videoSettings)
+        videoDelaySeekBar = findViewById(R.id.videoDelaySeekBar)
+        videoDelayText = findViewById(R.id.videoDelayText)
+        videoAudioChipGroup = findViewById(R.id.videoAudioChipGroup)
+        gameLaunchBehaviorChipGroup = findViewById(R.id.gameLaunchBehaviorChipGroup)
+        screensaverBehaviorChipGroup = findViewById(R.id.screensaverBehaviorChipGroup)
+        blackOverlayChipGroup = findViewById(R.id.blackOverlayChipGroup)
+        versionText = findViewById(R.id.versionText)
+    }
+
+    /**
+     * Setup all UI components and listeners
+     */
+    private fun setupAllUIComponents() {
+        android.util.Log.d("SettingsActivity", "Setting up UI components")
+
+        setupSwipeGesture()
+        setupWizardButton.setOnClickListener { startSetupWizard() }
+        hideAppsButton.setOnClickListener { showHideAppsDialog() }
+        setupColumnCountSlider()
+        setupDimmingSlider()
+        setupBlurSlider()
+        setupDrawerTransparencySlider()
+        setupAnimationStyleChips()
+        setupCustomAnimationControls()
+        setupImagePreferenceChips()
+        setupVideoSettings()
+        setupGameLaunchBehavior()
+        setupScreensaverBehavior()
+        setupBlackOverlay()
+
+        android.util.Log.d("SettingsActivity", "All UI components setup complete")
+    }
+
+    /**
+     * Update all path displays
+     */
+    private fun updateAllPathDisplays() {
+        updateMediaPathDisplay()
+        updateSystemPathDisplay()
+        updateScriptsPathDisplay()
+        updateCustomBackgroundDisplay()
+    }
+
+    /**
+     * Check if wizard should auto-start and handle accordingly
+     */
+    private fun handleWizardAutoStart() {
+        val autoStartWizard = intent.getBooleanExtra("AUTO_START_WIZARD", false)
+
+        if (autoStartWizard) {
+            // Start wizard immediately
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (!isInSetupWizard) {
+                    startSetupWizard()
+                }
+            }, 500)
+        } else {
+            // Normal auto-start check (for when settings opened directly)
+            checkAndAutoStartWizard()
+        }
+    }
+
+    /**
+     * Setup back button handler with state change tracking
+     */
+    private fun setupBackButtonHandler() {
+        val initialHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Check all changed states
+                val currentDimming = prefs.getInt(DIMMING_KEY, 25)
+                val currentBlur = prefs.getInt(BLUR_KEY, 0)
+                val currentDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
+                val currentHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+
+                val intent = Intent()
+
+                // Build intent with all state change flags
+                if (currentDimming != initialDimming || currentBlur != initialBlur ||
+                    currentDrawerTransparency != initialDrawerTransparency) {
+                    intent.putExtra("NEEDS_RECREATE", true)
+                }
+                if (currentHiddenApps != initialHiddenApps) {
+                    intent.putExtra("APPS_HIDDEN_CHANGED", true)
+                }
+                if (videoSettingsChanged) {
+                    intent.putExtra("VIDEO_SETTINGS_CHANGED", true)
+                }
+                if (logoSizeChanged) {
+                    intent.putExtra("LOGO_SIZE_CHANGED", true)
+                }
+                if (mediaPathChanged) {
+                    intent.putExtra("MEDIA_PATH_CHANGED", true)
+                }
+                if (imagePreferenceChanged) {
+                    intent.putExtra("IMAGE_PREFERENCE_CHANGED", true)
+                }
+                if (logoTogglesChanged) {
+                    intent.putExtra("LOGO_TOGGLES_CHANGED", true)
+                }
+                if (gameLaunchBehaviorChanged) {
+                    intent.putExtra("GAME_LAUNCH_BEHAVIOR_CHANGED", true)
+                }
+                if (screensaverBehaviorChanged) {
+                    intent.putExtra("SCREENSAVER_BEHAVIOR_CHANGED", true)
+                }
+                if (customBackgroundChanged) {
+                    intent.putExtra("CUSTOM_BACKGROUND_CHANGED", true)
+                }
+
+                intent.putExtra("CLOSE_DRAWER", true)
+                setResult(Activity.RESULT_OK, intent)
+                finish()
+            }
+        })
+    }
+
+// ========== END: onCreate Extraction ==========
 
     override fun onResume() {
         super.onResume()
@@ -2327,244 +2283,289 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun createScriptFiles() {
-        val scriptsPath = prefs.getString(SCRIPTS_PATH_KEY, "/storage/emulated/0/ES-DE/scripts") ?: "/storage/emulated/0/ES-DE/scripts"
+        val scriptsPath = prefs.getString(SCRIPTS_PATH_KEY, "/storage/emulated/0/ES-DE/scripts")
+            ?: "/storage/emulated/0/ES-DE/scripts"
 
         try {
-            val scriptsDir = java.io.File(scriptsPath)
+            val scriptsDir = File(scriptsPath)
 
             // Check if any scripts already exist
-            val scriptFiles = listOf(
-                java.io.File(scriptsDir, "game-select/esdecompanion-game-select.sh"),
-                java.io.File(scriptsDir, "system-select/esdecompanion-system-select.sh"),
-                java.io.File(scriptsDir, "game-start/esdecompanion-game-start.sh"),
-                java.io.File(scriptsDir, "game-end/esdecompanion-game-end.sh"),
-                java.io.File(scriptsDir, "screensaver-start/esdecompanion-screensaver-start.sh"),
-                java.io.File(scriptsDir, "screensaver-end/esdecompanion-screensaver-end.sh"),
-                java.io.File(scriptsDir, "screensaver-game-select/esdecompanion-screensaver-game-select.sh")
-            )
-
-            val existingScripts = scriptFiles.filter { it.exists() }
+            val existingScripts = findExistingScripts(scriptsDir)
 
             if (existingScripts.isNotEmpty()) {
                 // Scripts exist, show warning
-                val scriptNames = existingScripts.map { it.name }
-
-                AlertDialog.Builder(this)
-                    .setTitle("Scripts Already Exist")
-                    .setMessage("The following script files already exist:\n\n" +
-                            scriptNames.joinToString("\n") { "• $it" } +
-                            "\n\nOverwriting them will replace any custom modifications you may have made.\n\n" +
-                            "Do you want to overwrite the existing scripts?")
-                    .setPositiveButton("Overwrite") { _, _ ->
-                        // User confirmed, proceed with creation
-                        val gameSelectScript = java.io.File(scriptsDir, "game-select/esdecompanion-game-select.sh")
-                        val systemSelectScript = java.io.File(scriptsDir, "system-select/esdecompanion-system-select.sh")
-                        writeScriptFiles(scriptsDir, gameSelectScript, systemSelectScript)
-                    }
-                    .setNegativeButton("Cancel") { _, _ ->
-                        // User cancelled
-                        android.widget.Toast.makeText(
-                            this,
-                            "Script creation cancelled",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-
-                        // If in wizard, still continue to next step
-                        if (isInSetupWizard) {
-                            continueSetupWizard()
-                        }
-                    }
-                    .setIcon(android.R.drawable.ic_dialog_alert)
-                    .show()
+                showScriptOverwriteDialog(scriptsDir, existingScripts)
             } else {
                 // No existing scripts, create them
-                val gameSelectScript = java.io.File(scriptsDir, "game-select/esdecompanion-game-select.sh")
-                val systemSelectScript = java.io.File(scriptsDir, "system-select/esdecompanion-system-select.sh")
+                val gameSelectScript = File(scriptsDir, "game-select/esdecompanion-game-select.sh")
+                val systemSelectScript = File(scriptsDir, "system-select/esdecompanion-system-select.sh")
                 writeScriptFiles(scriptsDir, gameSelectScript, systemSelectScript)
             }
 
         } catch (e: Exception) {
             // Show error message
-            android.widget.Toast.makeText(
+            Toast.makeText(
                 this,
                 "Error checking scripts: ${e.message}",
-                android.widget.Toast.LENGTH_LONG
+                Toast.LENGTH_LONG
             ).show()
             android.util.Log.e("SettingsActivity", "Error checking scripts", e)
         }
     }
 
-    private fun writeScriptFiles(scriptsDir: java.io.File, gameSelectScript: java.io.File, systemSelectScript: java.io.File) {
+    private fun writeScriptFiles(scriptsDir: File, gameSelectScript: File, systemSelectScript: File) {
         try {
-            // First, check for and delete old-style scripts (only the original 2)
-            val oldScripts = listOf(
-                java.io.File(scriptsDir, "game-select/game-select.sh"),
-                java.io.File(scriptsDir, "system-select/system-select.sh")
-            )
+            // Prepare all directories
+            prepareScriptDirectories(scriptsDir)
 
-            var deletedOldScripts = 0
-            var failedToDelete = mutableListOf<String>()
+            // Delete old scripts
+            val failedToDelete = deleteOldScriptFiles(scriptsDir)
 
-            for (oldScript in oldScripts) {
-                if (oldScript.exists()) {
-                    try {
-                        if (oldScript.delete()) {
-                            deletedOldScripts++
-                        } else {
-                            failedToDelete.add(oldScript.name)
-                            android.util.Log.w("SettingsActivity", "Failed to delete old script: ${oldScript.name}")
-                        }
-                    } catch (e: Exception) {
-                        failedToDelete.add(oldScript.name)
-                        android.util.Log.e("SettingsActivity", "Exception deleting old script: ${oldScript.name}", e)
-                    }
+            // Write all 7 script files
+            writeAllScriptFiles(scriptsDir)
+
+            // Generate and show success message
+            val successMessage = getScriptCreationSuccessMessage(failedToDelete)
+            Toast.makeText(this, successMessage, Toast.LENGTH_LONG).show()
+
+            // Update the status display
+            updateScriptsPathDisplay()
+
+            // Handle post-creation actions
+            handlePostScriptCreation()
+
+        } catch (e: Exception) {
+            // Show error message
+            Toast.makeText(
+                this,
+                "Error creating scripts: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+            android.util.Log.e("SettingsActivity", "Error creating scripts", e)
+        }
+    }
+    // ========== START: Script Creation Extraction (Corrected) ==========
+
+    /**
+     * Check for existing scripts
+     * @return List of existing script File objects
+     */
+    private fun findExistingScripts(scriptsDir: File): List<File> {
+        val scriptFiles = listOf(
+            File(scriptsDir, "game-select/esdecompanion-game-select.sh"),
+            File(scriptsDir, "system-select/esdecompanion-system-select.sh"),
+            File(scriptsDir, "game-start/esdecompanion-game-start.sh"),
+            File(scriptsDir, "game-end/esdecompanion-game-end.sh"),
+            File(scriptsDir, "screensaver-start/esdecompanion-screensaver-start.sh"),
+            File(scriptsDir, "screensaver-end/esdecompanion-screensaver-end.sh"),
+            File(scriptsDir, "screensaver-game-select/esdecompanion-screensaver-game-select.sh")
+        )
+
+        return scriptFiles.filter { it.exists() }
+    }
+
+    /**
+     * Show dialog warning about overwriting existing scripts
+     */
+    private fun showScriptOverwriteDialog(scriptsDir: File, existingScripts: List<File>) {
+        val scriptNames = existingScripts.map { it.name }
+
+        AlertDialog.Builder(this)
+            .setTitle("Scripts Already Exist")
+            .setMessage("The following script files already exist:\n\n" +
+                    scriptNames.joinToString("\n") { "• $it" } +
+                    "\n\nOverwriting them will replace any custom modifications you may have made.\n\n" +
+                    "Do you want to overwrite the existing scripts?")
+            .setPositiveButton("Overwrite") { _, _ ->
+                val gameSelectScript = File(scriptsDir, "game-select/esdecompanion-game-select.sh")
+                val systemSelectScript = File(scriptsDir, "system-select/esdecompanion-system-select.sh")
+                writeScriptFiles(scriptsDir, gameSelectScript, systemSelectScript)
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                Toast.makeText(
+                    this,
+                    "Script creation cancelled",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                // If in wizard, still continue to next step
+                if (isInSetupWizard) {
+                    continueSetupWizard()
                 }
             }
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
+    }
 
-            // Create all script subdirectories
-            val gameSelectDir = java.io.File(scriptsDir, "game-select")
-            val systemSelectDir = java.io.File(scriptsDir, "system-select")
-            val gameStartDir = java.io.File(scriptsDir, "game-start")
-            val gameEndDir = java.io.File(scriptsDir, "game-end")
-            val screensaverStartDir = java.io.File(scriptsDir, "screensaver-start")
-            val screensaverEndDir = java.io.File(scriptsDir, "screensaver-end")
-            val screensaverGameSelectDir = java.io.File(scriptsDir, "screensaver-game-select")
+    /**
+     * Prepare script directories
+     */
+    private fun prepareScriptDirectories(scriptsDir: File) {
+        val directories = listOf(
+            "game-select",
+            "system-select",
+            "game-start",
+            "game-end",
+            "screensaver-start",
+            "screensaver-end",
+            "screensaver-game-select"
+        )
 
-            gameSelectDir.mkdirs()
-            systemSelectDir.mkdirs()
-            gameStartDir.mkdirs()
-            gameEndDir.mkdirs()
-            screensaverStartDir.mkdirs()
-            screensaverEndDir.mkdirs()
-            screensaverGameSelectDir.mkdirs()
+        directories.forEach { dirName ->
+            val dir = File(scriptsDir, dirName)
+            if (!dir.exists()) {
+                dir.mkdirs()
+            }
+        }
+    }
 
-            // 1. esdecompanion-game-select.sh - REMOVE filename sanitization
-            val gameSelectScriptFile = java.io.File(gameSelectDir, "esdecompanion-game-select.sh")
-            gameSelectScriptFile.writeText("""#!/bin/bash
+    /**
+     * Delete old script files that are no longer needed
+     * @return List of script names that failed to delete
+     */
+    private fun deleteOldScriptFiles(scriptsDir: File): List<String> {
+        val failedToDelete = mutableListOf<String>()
 
-LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+        val oldScripts = listOf(
+            File(scriptsDir, "game-select/companion_game_select.sh"),
+            File(scriptsDir, "system-select/companion_system_select.sh")
+        )
+
+        oldScripts.forEach { oldScript ->
+            if (oldScript.exists()) {
+                try {
+                    if (!oldScript.delete()) {
+                        failedToDelete.add(oldScript.name)
+                    }
+                } catch (e: Exception) {
+                    failedToDelete.add(oldScript.name)
+                }
+            }
+        }
+
+        return failedToDelete
+    }
+
+    /**
+     * Write all 7 script files
+     * Uses hardcoded logs path: /storage/emulated/0/ES-DE Companion/logs
+     */
+    private fun writeAllScriptFiles(scriptsDir: File) {
+        // Hardcoded logs path - same as MainActivity.getLogsPath()
+        val logsPath = "/storage/emulated/0/ES-DE Companion/logs"
+
+        // 1. Game select script
+        val gameSelectScript = File(File(scriptsDir, "game-select"), "esdecompanion-game-select.sh")
+        gameSelectScript.writeText("""#!/bin/bash
+
+LOG_DIR="$logsPath"
 mkdir -p "${'$'}LOG_DIR"
 
 echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_game_filename.txt"
 echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_game_name.txt"
 echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_game_system.txt"
 """)
-            gameSelectScriptFile.setExecutable(true)
+        gameSelectScript.setExecutable(true)
 
-            // 2. esdecompanion-system-select.sh
-            val systemSelectScriptFile = java.io.File(systemSelectDir, "esdecompanion-system-select.sh")
-            systemSelectScriptFile.writeText("""#!/bin/bash
+        // 2. System select script
+        val systemSelectScript = File(File(scriptsDir, "system-select"), "esdecompanion-system-select.sh")
+        systemSelectScript.writeText("""#!/bin/bash
 
-LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+LOG_DIR="$logsPath"
 mkdir -p "${'$'}LOG_DIR"
 
 printf "%s" "${'$'}1" > "${'$'}LOG_DIR/esde_system_name.txt" &
 """)
-            systemSelectScriptFile.setExecutable(true)
+        systemSelectScript.setExecutable(true)
 
-            // 3. esdecompanion-game-start.sh - REMOVE sanitization
-            val gameStartScriptFile = java.io.File(gameStartDir, "esdecompanion-game-start.sh")
-            gameStartScriptFile.writeText("""#!/bin/bash
+        // 3. Game start script
+        val gameStartScript = File(File(scriptsDir, "game-start"), "esdecompanion-game-start.sh")
+        gameStartScript.writeText("""#!/bin/bash
 
-LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+LOG_DIR="$logsPath"
 mkdir -p "${'$'}LOG_DIR"
 
 echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_gamestart_filename.txt"
 echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_gamestart_name.txt"
 echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_gamestart_system.txt"
 """)
-            gameStartScriptFile.setExecutable(true)
+        gameStartScript.setExecutable(true)
 
-            // 4. esdecompanion-game-end.sh - REMOVE sanitization
-            val gameEndScriptFile = java.io.File(gameEndDir, "esdecompanion-game-end.sh")
-            gameEndScriptFile.writeText("""#!/bin/bash
+        // 4. Game end script
+        val gameEndScript = File(File(scriptsDir, "game-end"), "esdecompanion-game-end.sh")
+        gameEndScript.writeText("""#!/bin/bash
 
-LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+LOG_DIR="$logsPath"
 mkdir -p "${'$'}LOG_DIR"
 
 echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_gameend_filename.txt"
 echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_gameend_name.txt"
 echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_gameend_system.txt"
 """)
-            gameEndScriptFile.setExecutable(true)
+        gameEndScript.setExecutable(true)
 
-            // 5. esdecompanion-screensaver-start.sh
-            val screensaverStartScriptFile = java.io.File(screensaverStartDir, "esdecompanion-screensaver-start.sh")
-            screensaverStartScriptFile.writeText("""#!/bin/bash
+        // 5. Screensaver start script
+        val screensaverStartScript = File(File(scriptsDir, "screensaver-start"), "esdecompanion-screensaver-start.sh")
+        screensaverStartScript.writeText("""#!/bin/bash
 
-LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+LOG_DIR="$logsPath"
 mkdir -p "${'$'}LOG_DIR"
 
-echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_start.txt"
-
+echo -n "active" > "${'$'}LOG_DIR/esde_screensaver_start.txt"
 """)
-            screensaverStartScriptFile.setExecutable(true)
+        screensaverStartScript.setExecutable(true)
 
-            // 6. esdecompanion-screensaver-end.sh
-            val screensaverEndScriptFile = java.io.File(screensaverEndDir, "esdecompanion-screensaver-end.sh")
-            screensaverEndScriptFile.writeText("""#!/bin/bash
+        // 6. Screensaver game select script
+        val screensaverGameSelectScript = File(File(scriptsDir, "screensaver-game-select"), "esdecompanion-screensaver-game-select.sh")
+        screensaverGameSelectScript.writeText("""#!/bin/bash
 
-LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
-mkdir -p "${'$'}LOG_DIR"
-
-echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
-
-""")
-            screensaverEndScriptFile.setExecutable(true)
-
-            // 7. esdecompanion-screensaver-game-select.sh - REMOVE sanitization
-            val screensaverGameSelectScriptFile = java.io.File(screensaverGameSelectDir, "esdecompanion-screensaver-game-select.sh")
-            screensaverGameSelectScriptFile.writeText("""#!/bin/bash
-
-LOG_DIR="/storage/emulated/0/ES-DE Companion/logs"
+LOG_DIR="$logsPath"
 mkdir -p "${'$'}LOG_DIR"
 
 echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensavergameselect_filename.txt"
 echo -n "${'$'}2" > "${'$'}LOG_DIR/esde_screensavergameselect_name.txt"
 echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 """)
-            screensaverGameSelectScriptFile.setExecutable(true)
+        screensaverGameSelectScript.setExecutable(true)
 
-            // Show success message with cleanup info
-            val successMessage = when {
-                deletedOldScripts > 0 && failedToDelete.isNotEmpty() ->
-                    "All 7 scripts created successfully!\n\nCleaned up $deletedOldScripts old script(s).\n\nWarning: Could not delete ${failedToDelete.joinToString()}"
-                deletedOldScripts > 0 ->
-                    "All 7 scripts created successfully!\n\nCleaned up $deletedOldScripts old script(s)."
-                failedToDelete.isNotEmpty() ->
-                    "All 7 scripts created successfully!\n\nWarning: Could not delete old scripts: ${failedToDelete.joinToString()}"
-                else ->
-                    "All 7 scripts created successfully!"
-            }
+        // 7. Screensaver end script
+        val screensaverEndScript = File(File(scriptsDir, "screensaver-end"), "esdecompanion-screensaver-end.sh")
+        screensaverEndScript.writeText("""#!/bin/bash
 
-            android.widget.Toast.makeText(
-                this,
-                successMessage,
-                android.widget.Toast.LENGTH_LONG
-            ).show()
+LOG_DIR="$logsPath"
+mkdir -p "${'$'}LOG_DIR"
 
-            // Update the status display
-            updateScriptsPathDisplay()
+echo -n "" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
+""")
+        screensaverEndScript.setExecutable(true)
+    }
 
-            // Continue wizard if active
-            if (isInSetupWizard) {
-                continueSetupWizard()
-            } else {
-                // Not in wizard - user manually created scripts
-                // Offer to verify
-                showScriptsCreatedVerificationPrompt()
-            }
-
-        } catch (e: Exception) {
-            // Show error message
-            android.widget.Toast.makeText(
-                this,
-                "Error creating scripts: ${e.message}",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-            android.util.Log.e("SettingsActivity", "Error creating scripts", e)
+    /**
+     * Generate success message based on deletion results
+     */
+    private fun getScriptCreationSuccessMessage(failedToDelete: List<String>): String {
+        return when {
+            failedToDelete.isNotEmpty() ->
+                "All 7 scripts created successfully!\n\nWarning: Could not delete old scripts: ${failedToDelete.joinToString()}"
+            else ->
+                "All 7 scripts created successfully!"
         }
     }
+
+    /**
+     * Handle post-creation actions (wizard or verification)
+     */
+    private fun handlePostScriptCreation() {
+        if (isInSetupWizard) {
+            continueSetupWizard()
+        } else {
+            // Not in wizard - user manually created scripts
+            // Offer to verify
+            showScriptsCreatedVerificationPrompt()
+        }
+    }
+
+// ========== END: Script Creation Extraction ==========
 
     private fun checkAndAutoStartWizard() {
         // Check if permissions are granted
