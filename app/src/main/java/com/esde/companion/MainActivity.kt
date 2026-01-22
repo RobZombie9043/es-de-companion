@@ -8,7 +8,6 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.graphics.Canvas
 import android.os.Bundle
 import android.os.Environment
 import android.os.FileObserver
@@ -18,7 +17,6 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.EditText
@@ -45,7 +43,6 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import android.app.ActivityOptions
 import android.provider.Settings
-import android.hardware.display.DisplayManager
 import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import java.io.File
@@ -56,7 +53,6 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import android.os.Handler
 import android.os.Looper
-import com.esde.companion.ResizableWidgetContainer
 
 class MainActivity : AppCompatActivity() {
 
@@ -134,9 +130,6 @@ class MainActivity : AppCompatActivity() {
 
     // Flag to skip reload in onResume (used when returning from settings with no changes)
     private var skipNextReload = false
-
-    // Flag to track if marquee is showing text drawable (needs WRAP_CONTENT)
-    private var marqueeShowingText = false
 
     // Double-tap detection variables
     private var tapCount = 0
@@ -2946,9 +2939,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 gameName = gameDisplayName
             ))
 
-            // Check if we have widgets - if so, hide old marquee system
-            val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-
             // Check if solid color is selected for game view
             val gameImagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
             if (gameImagePref == "solid_color") {
@@ -2957,7 +2947,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 gameImageView.setImageDrawable(drawable)
             } else {
                 // Try to find game-specific artwork
-                val gameImage = findGameImage(systemName, gameName, gameNameRaw)
+                val gameImage = findGameImage(systemName, gameNameRaw)
 
                 if (gameImage != null && gameImage.exists()) {
                     // Game has its own artwork - use it
@@ -2978,15 +2968,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.d("MainActivity", "  videoDelay: ${videoDelay}ms")
             android.util.Log.d("MainActivity", "  instantVideoWillPlay: $instantVideoWillPlay")
 
-// Update game widgets after determining video status
-// Note: updateWidgetsForCurrentGame() calls showWidgets() internally via loadGameWidgets()
+            // Update game widgets after determining video status
+            // Note: updateWidgetsForCurrentGame() calls showWidgets() internally via loadGameWidgets()
             updateWidgetsForCurrentGame()
 
-// Handle video playback for the current game
-            val videoWillPlay = handleVideoForGame(systemName, gameName, gameNameRaw)
+            // Handle video playback for the current game
+            handleVideoForGame(systemName, gameName, gameNameRaw)
 
-// Hide widgets ONLY if instant video is playing (delay = 0)
-// For delayed videos, widgets stay visible until loadVideo() hides them
+            // Hide widgets ONLY if instant video is playing (delay = 0)
+            // For delayed videos, widgets stay visible until loadVideo() hides them
             when (state) {
                 is AppState.GameBrowsing -> {
                     if (instantVideoWillPlay) {
@@ -3014,7 +3004,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
     private fun findGameImage(
         systemName: String,
-        strippedName: String,
         fullGamePath: String
     ): File? {
         // Get image preference
@@ -3500,9 +3489,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
                 if (gameInfo != null) {
                     val (systemName, gameFilename) = gameInfo
-                    val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
-                    val filename = sanitizeGameFilename(gameFilename)
-                    val gameImage = findGameImage(systemName, gameName, filename)
+                    val gameImage = findGameImage(systemName, gameFilename)
 
                     if (gameImage != null && gameImage.exists()) {
                         android.util.Log.d("MainActivity", "Loading game image: ${gameImage.name}")
@@ -3749,9 +3736,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
                 // If we have a current screensaver game, load it
                 if (screensaverGame != null) {
-                    val gameName = screensaverGame.gameFilename.substringBeforeLast('.')
-                    val filename = sanitizeGameFilename(screensaverGame.gameFilename)
-                    val gameImage = findGameImage(screensaverGame.systemName, gameName, filename)
+                    val gameImage = findGameImage(screensaverGame.systemName, screensaverGame.gameFilename)
 
                     if (gameImage != null && gameImage.exists()) {
                         android.util.Log.d("MainActivity", "Loading current screensaver game image: ${gameImage.name}")
@@ -3963,7 +3948,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     // Load the screensaver game's artwork
                     val gameImage = findGameImage(
                         screensaverGame.systemName,
-                        gameName,
                         screensaverGame.gameFilename
                     )
 
@@ -5416,20 +5400,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.util.Log.d("MainActivity", "Showing widgets/grid")
     }
 
-    /**
-     * Determine if widgets should be visible based on current state.
-     */
-    private fun shouldShowWidgetsForCurrentState(): Boolean {
-        return when (state) {
-            is AppState.GameBrowsing -> !isVideoPlaying()
-            is AppState.Screensaver -> {
-                val behavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
-                behavior == "game_image"
-            }
-            else -> false
-        }
-    }
-
     fun saveAllWidgets() {
         android.util.Log.d("MainActivity", "saveAllWidgets called, active widgets count: ${activeWidgets.size}")
         activeWidgets.forEachIndexed { index, widgetView ->
@@ -5504,32 +5474,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         return false
     }
 
-    fun bringWidgetToFront(widgetView: WidgetView) {
-        // Get max z-index
-        val maxZ = activeWidgets.maxOfOrNull { it.widget.zIndex } ?: 0
-
-        // Set this widget to max + 1
-        widgetView.widget.zIndex = maxZ + 1
-
-        // Reorder widgets
-        reorderWidgetsByZIndex()
-
-        android.util.Log.d("MainActivity", "Widget brought to front with z-index ${widgetView.widget.zIndex}")
-    }
-
-    fun sendWidgetToBack(widgetView: WidgetView) {
-        // Get min z-index
-        val minZ = activeWidgets.minOfOrNull { it.widget.zIndex } ?: 0
-
-        // Set this widget to min - 1
-        widgetView.widget.zIndex = minZ - 1
-
-        // Reorder widgets
-        reorderWidgetsByZIndex()
-
-        android.util.Log.d("MainActivity", "Widget sent to back with z-index ${widgetView.widget.zIndex}")
-    }
-
     fun moveWidgetForward(widgetView: WidgetView) {
         // Find the widget with the next higher z-index
         val currentZ = widgetView.widget.zIndex
@@ -5574,10 +5518,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Sort widgets by z-index
         val sortedWidgets = activeWidgets.sortedBy { it.widget.zIndex }
 
-        // Remove all from container
-        widgetContainer.removeAllViews()
+        // Remove only widget views (preserve grid overlay)
+        val childCount = widgetContainer.childCount
+        for (i in childCount - 1 downTo 0) {
+            val child = widgetContainer.getChildAt(i)
+            if (child !is GridOverlayView) {
+                widgetContainer.removeView(child)
+            }
+        }
 
-        // Re-add in sorted order (lower z-index = added first = appears behind)
+        // Re-add widgets in sorted order (lower z-index = added first = appears behind)
+        // Grid overlay was added at index 0, so widgets will be added after it
         sortedWidgets.forEach { widgetView ->
             widgetContainer.addView(widgetView)
         }
