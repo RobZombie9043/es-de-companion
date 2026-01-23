@@ -2536,6 +2536,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Load a built-in system logo SVG from assets folder
      * Handles both regular systems and ES-DE auto-collections
      * Returns drawable if found, null otherwise
+     *
+     * For bitmap-based custom logos (PNG, JPG, WEBP, GIF), returns null and expects
+     * caller to use Glide for loading (which handles animated formats automatically)
      */
     fun loadSystemLogoFromAssets(systemName: String, width: Int = -1, height: Int = -1): android.graphics.drawable.Drawable? {
         return try {
@@ -2550,15 +2553,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // First check user-provided system logos path with multiple format support
             val userLogosDir = File(getSystemLogosPath())
             if (userLogosDir.exists() && userLogosDir.isDirectory) {
-                val extensions = listOf("svg", "png", "jpg", "jpeg", "webp")
+                val extensions = listOf("svg", "png", "jpg", "jpeg", "webp", "gif")
 
                 for (ext in extensions) {
                     val logoFile = File(userLogosDir, "$baseFileName.$ext")
                     if (logoFile.exists()) {
-                        android.util.Log.d("MainActivity", "Loading logo from user path: $logoFile")
+                        android.util.Log.d("MainActivity", "Found custom logo: $logoFile (extension: $ext)")
 
                         return when (ext) {
                             "svg" -> {
+                                // Handle SVG files directly (as before)
+                                android.util.Log.d("MainActivity", "Loading SVG logo from user path")
                                 val svg = com.caverock.androidsvg.SVG.getFromInputStream(logoFile.inputStream())
 
                                 if (width > 0 && height > 0) {
@@ -2609,9 +2614,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                 }
                             }
                             else -> {
-                                // Load bitmap formats (PNG, JPG, WebP) with downscaling
-                                val bitmap = loadScaledBitmap(logoFile.absolutePath, 800, 1000)
-                                android.graphics.drawable.BitmapDrawable(resources, bitmap)
+                                // For bitmap formats (PNG, JPG, WEBP, GIF), return null
+                                // Caller will use Glide to load them, which supports animation
+                                android.util.Log.d("MainActivity", "Bitmap-based custom logo detected - delegating to Glide for loading")
+                                return null  // Signal to caller to use Glide
                             }
                         }
                     }
@@ -5153,7 +5159,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
     }
 
-    private fun findSystemLogo(systemName: String): String? {
+    fun findSystemLogo(systemName: String): String? {
         // Handle ES-DE auto-collections
         val baseFileName = when (systemName.lowercase()) {
             "all" -> "auto-allgames"
@@ -5163,25 +5169,18 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
         android.util.Log.d("MainActivity", "Finding system logo for: $baseFileName")
 
-        // First check if custom system logos are enabled
-        val customSystemLogosEnabled = prefs.getBoolean("custom_system_logos_enabled", false)
+        // Check for custom system logos (always check the path, regardless of preference)
+        val customLogoDir = File(getSystemLogosPath())
+        android.util.Log.d("MainActivity", "Checking custom logos path: ${customLogoDir.absolutePath}")
 
-        if (customSystemLogosEnabled) {
-            val customLogoPath = prefs.getString("custom_system_logos_path", null)
-            android.util.Log.d("MainActivity", "Custom system logos enabled, path: $customLogoPath")
-
-            if (customLogoPath != null) {
-                val customLogoDir = File(customLogoPath)
-                if (customLogoDir.exists() && customLogoDir.isDirectory) {
-                    // Try different extensions
-                    val extensions = listOf("svg", "png", "jpg", "webp")
-                    for (ext in extensions) {
-                        val logoFile = File(customLogoDir, "$baseFileName.$ext")
-                        if (logoFile.exists()) {
-                            android.util.Log.d("MainActivity", "Found custom system logo: ${logoFile.absolutePath}")
-                            return logoFile.absolutePath
-                        }
-                    }
+        if (customLogoDir.exists() && customLogoDir.isDirectory) {
+            // Try different extensions (including GIF for animation support)
+            val extensions = listOf("svg", "png", "jpg", "jpeg", "webp", "gif")
+            for (ext in extensions) {
+                val logoFile = File(customLogoDir, "$baseFileName.$ext")
+                if (logoFile.exists()) {
+                    android.util.Log.d("MainActivity", "Found custom system logo: ${logoFile.absolutePath}")
+                    return logoFile.absolutePath
                 }
             }
         }
@@ -5189,7 +5188,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Fall back to built-in assets
         // Return special marker that WidgetView will recognize to load from assets
         android.util.Log.d("MainActivity", "Using built-in system logo for $baseFileName")
-        return "builtin://$baseFileName"  // CHANGED: Just pass system name
+        return "builtin://$baseFileName"
     }
 
     private fun updateWidgetsForCurrentSystem() {

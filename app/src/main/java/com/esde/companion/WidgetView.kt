@@ -467,29 +467,105 @@ class WidgetView(
         }
 
         if (widget.imagePath.startsWith("builtin://")) {
-            // Load built-in system logo from assets
+            // Load built-in system logo from assets or custom logos
             val systemName = widget.imagePath.removePrefix("builtin://")
-            android.util.Log.d("WidgetView", "Loading built-in system logo for: $systemName")
+            android.util.Log.d("WidgetView", "Loading system logo for: $systemName")
 
             val mainActivity = context as? MainActivity
             if (mainActivity != null) {
-                // Pass widget dimensions to properly scale SVG
-                val drawable = mainActivity.loadSystemLogoFromAssets(
-                    systemName,
-                    widget.width.toInt(),
-                    widget.height.toInt()
-                )
-                if (drawable != null) {
-                    // Set scale type based on widget preference (handle null for migration)
-                    imageView.scaleType = when (widget.scaleType ?: OverlayWidget.ScaleType.FIT) {
-                        OverlayWidget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
-                        OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                // First, check if there's a custom logo file
+                val logoPath = mainActivity.findSystemLogo(systemName)
+                android.util.Log.d("WidgetView", "Logo path found: $logoPath")
+
+                if (logoPath != null && !logoPath.startsWith("builtin://")) {
+                    // Custom logo exists - check if it's a bitmap format that needs Glide
+                    val logoFile = File(logoPath)
+                    val extension = logoFile.extension.lowercase()
+
+                    if (extension in listOf("png", "jpg", "jpeg", "webp", "gif")) {
+                        // Bitmap-based custom logo - use Glide for animation support
+                        android.util.Log.d("WidgetView", "Loading bitmap custom logo via Glide: ${logoFile.name}")
+
+                        if (logoFile.exists()) {
+                            val effectiveScaleType = widget.scaleType ?: OverlayWidget.ScaleType.FIT
+                            imageView.scaleType = when (effectiveScaleType) {
+                                OverlayWidget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
+                                OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                            }
+
+                            // Check if this is potentially an animated format
+                            val isAnimatedFormat = extension in listOf("webp", "gif")
+
+                            // Load with Glide
+                            val glideRequest = Glide.with(context)
+                                .load(logoFile)
+                                .signature(com.bumptech.glide.signature.ObjectKey("${logoFile.lastModified()}_${logoFile.length()}"))
+
+                            if (isAnimatedFormat) {
+                                // For animated formats: skip disk cache and transformations
+                                // AnimatedImageDrawable cannot be encoded to disk cache
+                                android.util.Log.d("WidgetView", "Animated format detected - using NONE disk cache strategy")
+                                glideRequest
+                                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
+                                    .into(imageView)
+                            } else {
+                                // For static images: use full caching and transformations
+                                glideRequest
+                                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                                // For static images, apply transformations with override
+                                glideRequest.override(widget.width.toInt(), widget.height.toInt())
+                                when (effectiveScaleType) {
+                                    OverlayWidget.ScaleType.FIT -> glideRequest.fitCenter()
+                                    OverlayWidget.ScaleType.CROP -> glideRequest.centerCrop()
+                                }.into(imageView)
+                            }
+
+                            android.util.Log.d("WidgetView", "Bitmap custom logo loaded via Glide")
+                        } else {
+                            android.util.Log.e("WidgetView", "Custom logo file not found: $logoPath")
+                            imageView.setImageDrawable(null)
+                        }
+                    } else {
+                        // SVG custom logo - use loadSystemLogoFromAssets
+                        android.util.Log.d("WidgetView", "Loading SVG custom logo via drawable")
+                        val drawable = mainActivity.loadSystemLogoFromAssets(
+                            systemName,
+                            widget.width.toInt(),
+                            widget.height.toInt()
+                        )
+
+                        if (drawable != null) {
+                            imageView.scaleType = when (widget.scaleType ?: OverlayWidget.ScaleType.FIT) {
+                                OverlayWidget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
+                                OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                            }
+                            imageView.setImageDrawable(drawable)
+                            android.util.Log.d("WidgetView", "SVG custom logo loaded successfully")
+                        } else {
+                            android.util.Log.e("WidgetView", "Failed to load SVG custom logo")
+                            imageView.setImageDrawable(null)
+                        }
                     }
-                    imageView.setImageDrawable(drawable)
-                    android.util.Log.d("WidgetView", "Built-in system logo loaded successfully")
                 } else {
-                    android.util.Log.e("WidgetView", "Failed to load built-in system logo")
-                    imageView.setImageDrawable(null)
+                    // No custom logo - use built-in SVG from assets
+                    android.util.Log.d("WidgetView", "Loading built-in SVG logo from assets")
+                    val drawable = mainActivity.loadSystemLogoFromAssets(
+                        systemName,
+                        widget.width.toInt(),
+                        widget.height.toInt()
+                    )
+
+                    if (drawable != null) {
+                        imageView.scaleType = when (widget.scaleType ?: OverlayWidget.ScaleType.FIT) {
+                            OverlayWidget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
+                            OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                        }
+                        imageView.setImageDrawable(drawable)
+                        android.util.Log.d("WidgetView", "Built-in SVG logo loaded successfully")
+                    } else {
+                        android.util.Log.e("WidgetView", "Failed to load built-in logo")
+                        imageView.setImageDrawable(null)
+                    }
                 }
             }
         } else {
@@ -503,17 +579,32 @@ class WidgetView(
                     OverlayWidget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
                 }
 
+                // Check if this is potentially an animated format
+                val extension = file.extension.lowercase()
+                val isAnimatedFormat = extension in listOf("webp", "gif")
+
                 // Load image with cache invalidation signature
                 val glideRequest = Glide.with(context)
                     .load(file)
                     .signature(com.bumptech.glide.signature.ObjectKey("${file.lastModified()}_${file.length()}"))
-                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-                    .override(widget.width.toInt(), widget.height.toInt())
 
-                when (effectiveScaleType) {
-                    OverlayWidget.ScaleType.FIT -> glideRequest.fitCenter()
-                    OverlayWidget.ScaleType.CROP -> glideRequest.centerCrop()
-                }.into(imageView)
+                if (isAnimatedFormat) {
+                    // For animated formats: skip disk cache and transformations
+                    android.util.Log.d("WidgetView", "Animated format detected - using NONE disk cache strategy")
+                    glideRequest
+                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
+                        .into(imageView)
+                } else {
+                    // For static images: use full caching and transformations
+                    glideRequest
+                        .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+                    // For static images, apply transformations with override
+                    glideRequest.override(widget.width.toInt(), widget.height.toInt())
+                    when (effectiveScaleType) {
+                        OverlayWidget.ScaleType.FIT -> glideRequest.fitCenter()
+                        OverlayWidget.ScaleType.CROP -> glideRequest.centerCrop()
+                    }.into(imageView)
+                }
                 android.util.Log.d("WidgetView", "Loaded custom logo file with full scaling: ${widget.imagePath}")
             } else {
                 // Only show text fallback for MARQUEE type
