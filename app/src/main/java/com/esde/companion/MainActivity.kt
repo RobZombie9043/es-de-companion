@@ -386,6 +386,11 @@ class MainActivity : AppCompatActivity() {
             musicManager?.setOnSongChangedListener { songName ->
                 showSongTitle(songName)
             }
+
+            // Set up music stopped callback
+            musicManager?.setOnMusicStoppedListener {
+                hideSongTitle()
+            }
         }
         // ========== MUSIC INTEGRATION END ==========
 

@@ -78,6 +78,8 @@ class MusicManager(
 
     // Callback for song title updates
     private var onSongChanged: ((String) -> Unit)? = null
+    // Callback for when music stops
+    private var onMusicStopped: (() -> Unit)? = null
 
     init {
         android.util.Log.d(TAG, "MusicManager initialized")
@@ -197,30 +199,18 @@ class MusicManager(
         if (wasMusicPlayingBeforeInvisible) {
             android.util.Log.d(TAG, "Resuming music (was playing before invisible)")
 
-            // Cancel any pending fade operations (e.g., from pause)
+            // Cancel any pending fade operations
             volumeFadeRunnable?.let { handler.removeCallbacks(it) }
 
-            // Force pause first (in case fade callback hasn't executed yet)
-            try {
-                musicPlayer?.pause()
-                android.util.Log.d(TAG, "Player paused, now resuming...")
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Error pausing before resume", e)
-            }
+            // Clear flag and restart music from the current source
+            wasMusicPlayingBeforeInvisible = false
 
-            // Resume the current track
-            try {
-                musicPlayer?.start()
-                isMusicPlaying = true
-                wasMusicPlayingBeforeInvisible = false
-
-                android.util.Log.d(TAG, "Music resumed successfully")
-
-                // Fade in from 0 to target volume
-                fadeVolume(0f, targetVolume, CROSS_FADE_DURATION)
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Error resuming music", e)
-                wasMusicPlayingBeforeInvisible = false
+            if (currentMusicSource != null) {
+                android.util.Log.d(TAG, "Restarting music from source: $currentMusicSource")
+                startMusic(currentMusicSource!!)
+            } else {
+                android.util.Log.d(TAG, "No music source to resume")
+                isMusicPlaying = false
             }
         } else {
             android.util.Log.d(TAG, "Not resuming music (was not playing)")
@@ -270,6 +260,13 @@ class MusicManager(
         onSongChanged = listener
     }
 
+    /**
+     * Set callback for when music stops
+     */
+    fun setOnMusicStoppedListener(listener: () -> Unit) {
+        onMusicStopped = listener
+    }
+
     // ========== MUSIC CONTROL ==========
 
     /**
@@ -312,6 +309,9 @@ class MusicManager(
         }
 
         android.util.Log.d(TAG, "Stopping music")
+
+        // Notify listener that music stopped
+        onMusicStopped?.invoke()
 
         // Fade out then stop
         fadeVolume(currentVolume, 0f, CROSS_FADE_DURATION) {

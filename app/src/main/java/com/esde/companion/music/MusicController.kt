@@ -72,4 +72,5 @@ interface MusicController {
      * - Any pending operations
      */
     fun release()
+
 }
