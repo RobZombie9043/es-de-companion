@@ -34,8 +34,8 @@ class MusicManager(
     companion object {
         private const val TAG = "MusicManager"
 
-        // Music folder paths
-        private const val BASE_MUSIC_PATH = "/storage/emulated/0/ES-DE Companion/music"
+        // Default music folder path
+        private const val DEFAULT_MUSIC_PATH = "/storage/emulated/0/ES-DE Companion/music"
 
         // Supported audio formats
         private val AUDIO_EXTENSIONS = listOf("mp3", "ogg", "flac", "m4a", "wav", "aac")
@@ -83,7 +83,17 @@ class MusicManager(
 
     init {
         android.util.Log.d(TAG, "MusicManager initialized")
-        android.util.Log.d(TAG, "Base music path: $BASE_MUSIC_PATH")
+        android.util.Log.d(TAG, "Base music path: ${getMusicPath()}")
+    }
+
+    // ========== PATH MANAGEMENT ==========
+
+    /**
+     * Get the music path from preferences, or use default.
+     */
+    private fun getMusicPath(): String {
+        val customPath = prefs.getString("music_path", null)
+        return customPath ?: DEFAULT_MUSIC_PATH
     }
 
     // ========== PUBLIC API (MusicController Interface) ==========
@@ -514,7 +524,7 @@ class MusicManager(
      * Load all audio files from a music source.
      */
     private fun loadPlaylist(source: MusicSource): List<File> {
-        val sourcePath = source.getPath(BASE_MUSIC_PATH)
+        val sourcePath = source.getPath(getMusicPath())
         val sourceDir = File(sourcePath)
 
         android.util.Log.d(TAG, "Loading playlist from: $sourcePath")

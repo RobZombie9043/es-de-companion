@@ -914,7 +914,7 @@
                                 android:layout_weight="1"
                                 android:text="Background Opacity"
                                 android:textColor="#FFFFFF"
-                                android:textSize="14sp" />
+                                android:textSize="16sp" />
 
                             <TextView
                                 android:id="@+id/musicSongTitleOpacityText"
@@ -927,6 +927,14 @@
                                 android:minWidth="60dp"
                                 android:gravity="end" />
                         </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Opacity of the song title background"
+                            android:textColor="#999999"
+                            android:textSize="13sp"
+                            android:layout_marginBottom="8dp" />
 
                         <SeekBar
                             android:id="@+id/musicSongTitleOpacitySeekBar"
@@ -2018,7 +2026,44 @@
 
                 </LinearLayout>
 
+                <!-- Music Path -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Music Path (Optional)"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Location for background music files (MP3, M4A, OGG, WAV). Supports generic music and system-specific folders."
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/musicPathText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Default: /storage/emulated/0/ES-DE Companion/music"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="12dp" />
+
+                <Button
+                    android:id="@+id/selectMusicPathButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Select Directory"
+                    android:textColor="#FFFFFF"
+                    android:backgroundTint="#BB86FC" />
+
             </LinearLayout>
+
         </androidx.cardview.widget.CardView>
 
         <!-- Version Info Footer -->

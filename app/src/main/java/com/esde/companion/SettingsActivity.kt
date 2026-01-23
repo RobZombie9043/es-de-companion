@@ -95,6 +95,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var musicSongTitleDurationText: TextView
     private lateinit var musicSongTitleOpacitySeekBar: SeekBar
     private lateinit var musicSongTitleOpacityText: TextView
+    private lateinit var musicPathText: TextView
+    private lateinit var selectMusicPathButton: Button
     // ========== MUSIC INTEGRATION END ==========
 
     private var initialDimming: Int = 0
@@ -116,7 +118,7 @@ class SettingsActivity : AppCompatActivity() {
     private var pathSelectionType = PathSelection.MEDIA
 
     enum class PathSelection {
-        MEDIA, SYSTEM, SCRIPTS, SYSTEM_LOGOS, CUSTOM_BACKGROUND
+        MEDIA, SYSTEM, SCRIPTS, SYSTEM_LOGOS, CUSTOM_BACKGROUND, MUSIC
     }
 
     private var isInSetupWizard = false
@@ -205,6 +207,14 @@ class SettingsActivity : AppCompatActivity() {
                     // But need to handle it for exhaustive when
                     android.util.Log.w("SettingsActivity", "directoryPicker called for CUSTOM_BACKGROUND - should use imagePicker instead")
                 }
+                // ========== MUSIC INTEGRATION START ==========
+                PathSelection.MUSIC -> {
+                    prefs.edit().putString("music_path", path).apply()
+                    musicPathText.text = path
+                    Toast.makeText(this, "Music path updated", Toast.LENGTH_SHORT).show()
+                    android.util.Log.d("SettingsActivity", "Music path set to: $path")
+                }
+                // ========== MUSIC INTEGRATION END ==========
             }
         }
     }
@@ -484,6 +494,8 @@ class SettingsActivity : AppCompatActivity() {
             musicSongTitleDurationText = findViewById(R.id.musicSongTitleDurationText)
             musicSongTitleOpacitySeekBar = findViewById(R.id.musicSongTitleOpacitySeekBar)
             musicSongTitleOpacityText = findViewById(R.id.musicSongTitleOpacityText)
+            musicPathText = findViewById(R.id.musicPathText)
+            selectMusicPathButton = findViewById(R.id.selectMusicPathButton)
         }
         // ========== MUSIC INTEGRATION END ==========
     }
@@ -534,6 +546,13 @@ class SettingsActivity : AppCompatActivity() {
             customBackgroundPicker.launch(intent)
         }
 
+        // ========== MUSIC INTEGRATION START ==========
+        selectMusicPathButton.setOnClickListener {
+            pathSelectionType = PathSelection.MUSIC
+            directoryPicker.launch(null)
+        }
+        // ========== MUSIC INTEGRATION END ==========
+
         clearCustomBackgroundButton.setOnClickListener {
             // Clear the custom background using the correct key
             prefs.edit().remove(CUSTOM_BACKGROUND_KEY).apply()
@@ -578,6 +597,7 @@ class SettingsActivity : AppCompatActivity() {
         updateSystemPathDisplay()
         updateScriptsPathDisplay()
         updateCustomBackgroundDisplay()
+        updateMusicPathDisplay()    // ========== MUSIC INTEGRATION
     }
 
     /**
@@ -2177,6 +2197,13 @@ class SettingsActivity : AppCompatActivity() {
             customBackgroundStatusDescription.text = "⚠ Error: ${e.message}"
         }
     }
+
+    // ========== MUSIC INTEGRATION START ==========
+    private fun updateMusicPathDisplay() {
+        val path = prefs.getString("music_path", "/storage/emulated/0/ES-DE Companion/music") ?: "/storage/emulated/0/ES-DE Companion/music"
+        musicPathText.text = path
+    }
+    // ========== MUSIC INTEGRATION END ==========
 
     /**
      * Show dialog asking if user wants to update scripts after path change
