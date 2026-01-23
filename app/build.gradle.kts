@@ -20,6 +20,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "recents"
+
+    productFlavors {
+        create("standard") {
+            dimension = "recents"
+            applicationIdSuffix = ""
+            versionNameSuffix = ""
+            // Standard version - shows in recents (default Android behavior)
+        }
+
+        create("persistent") {
+            dimension = "recents"
+            applicationIdSuffix = ""
+            versionNameSuffix = "h"
+            // Persistent version - hidden from recents
+        }
+    }
+
     signingConfigs {
         create("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -58,7 +76,8 @@ android {
         outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             if (buildType.name == "release") {
-                output.outputFileName = "ES-DE-Companion-v${defaultConfig.versionName}.apk"
+                // Use the variant's versionName (which includes the suffix) instead of defaultConfig
+                output.outputFileName = "ES-DE-Companion-v${versionName}.apk"
             }
         }
     }

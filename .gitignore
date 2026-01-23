@@ -23,6 +23,8 @@ keystore.properties
 # Build artifacts
 app/release/
 app/debug/
+app/persistent/
+app/standard/
 */output-metadata.json
 */baselineProfiles/
 
