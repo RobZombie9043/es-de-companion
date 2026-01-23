@@ -2974,7 +2974,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Update state tracking
             updateState(AppState.SystemBrowsing(systemName))
 
-            // CRITICAL: Check if solid color is selected for system view BEFORE checking for custom images
+            // CRITICAL: Check if solid color or custom image is selected for system view BEFORE checking for custom images
             val systemImagePref = prefs.getString("system_image_preference", "fanart") ?: "fanart"
             if (systemImagePref == "solid_color") {
                 val solidColor = prefs.getInt("system_background_color", android.graphics.Color.parseColor("#1A1A1A"))
@@ -2984,6 +2984,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 gameImageView.visibility = View.VISIBLE
 
                 // Update system widgets after setting solid color
+                updateWidgetsForCurrentSystem()
+                showWidgets()
+                return
+            }
+
+            if (systemImagePref == "custom_image") {
+                android.util.Log.d("MainActivity", "System view custom image selected - loading custom background")
+                loadFallbackBackground()
+
+                // Update system widgets after loading custom image
                 updateWidgetsForCurrentSystem()
                 showWidgets()
                 return
@@ -3111,8 +3121,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 val solidColor = prefs.getInt("game_background_color", android.graphics.Color.parseColor("#1A1A1A"))
                 val drawable = android.graphics.drawable.ColorDrawable(solidColor)
                 gameImageView.setImageDrawable(drawable)
+            } else if (gameImagePref == "custom_image") {
+                // Custom image selected - always show custom background or built-in default
+                android.util.Log.d("MainActivity", "Game view custom image selected - loading custom background")
+                loadFallbackBackground()
             } else {
-                // Try to find game-specific artwork
+                // Fanart or Screenshot preference - try to find game-specific artwork
                 val gameImage = findGameImage(systemName, gameNameRaw)
 
                 if (gameImage != null && gameImage.exists()) {

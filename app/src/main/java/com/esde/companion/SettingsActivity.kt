@@ -902,6 +902,7 @@ class SettingsActivity : AppCompatActivity() {
         val systemChipToCheck = when (systemPref) {
             "screenshot" -> R.id.systemImagePrefScreenshot
             "solid_color" -> R.id.systemImagePrefSolidColor
+            "custom_image" -> R.id.systemImagePrefCustom
             else -> R.id.systemImagePrefFanart
         }
         systemImagePreferenceChipGroup.check(systemChipToCheck)
@@ -915,6 +916,7 @@ class SettingsActivity : AppCompatActivity() {
                 val preference = when (checkedIds[0]) {
                     R.id.systemImagePrefScreenshot -> "screenshot"
                     R.id.systemImagePrefSolidColor -> "solid_color"
+                    R.id.systemImagePrefCustom -> "custom_image"
                     R.id.systemImagePrefFanart -> "fanart"
                     else -> "fanart"
                 }
@@ -948,6 +950,7 @@ class SettingsActivity : AppCompatActivity() {
         val gameChipToCheck = when (gamePref) {
             "screenshot" -> R.id.gameImagePrefScreenshot
             "solid_color" -> R.id.gameImagePrefSolidColor
+            "custom_image" -> R.id.gameImagePrefCustom
             else -> R.id.gameImagePrefFanart
         }
         gameImagePreferenceChipGroup.check(gameChipToCheck)
@@ -961,6 +964,7 @@ class SettingsActivity : AppCompatActivity() {
                 val preference = when (checkedIds[0]) {
                     R.id.gameImagePrefScreenshot -> "screenshot"
                     R.id.gameImagePrefSolidColor -> "solid_color"
+                    R.id.gameImagePrefCustom -> "custom_image"
                     R.id.gameImagePrefFanart -> "fanart"
                     else -> "fanart"
                 }

@@ -153,6 +153,17 @@
                         app:chipStrokeWidth="2dp" />
 
                     <com.google.android.material.chip.Chip
+                        android:id="@+id/systemImagePrefCustom"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom Image"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
                         android:id="@+id/systemImagePrefSolidColor"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -235,6 +246,17 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Screenshot"
+                        android:textColor="#FFFFFF"
+                        android:checkable="true"
+                        app:chipBackgroundColor="@color/chip_background_selector"
+                        app:chipStrokeColor="#FFB74D"
+                        app:chipStrokeWidth="2dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/gameImagePrefCustom"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom Image"
                         android:textColor="#FFFFFF"
                         android:checkable="true"
                         app:chipBackgroundColor="@color/chip_background_selector"
