@@ -647,7 +647,6 @@ class MusicManager(
                 }
             }
             is AppState.GameBrowsing -> {
-                // Use same source as SystemBrowsing would use
                 if (state.systemName.isNotEmpty()) {
                     MusicSource.System(state.systemName)
                 } else {
@@ -674,7 +673,7 @@ class MusicManager(
      * @return The actual source that will be used, or null if no music available
      */
     private fun resolveActualSource(requestedSource: MusicSource): MusicSource? {
-        val baseMusicPath = "/storage/emulated/0/ES-DE Companion/music"
+        val baseMusicPath = getMusicPath()
 
         // For Generic source, check if it exists
         if (requestedSource is MusicSource.Generic) {
@@ -710,9 +709,8 @@ class MusicManager(
             return false
         }
 
-        val audioExtensions = listOf("mp3", "ogg", "flac", "m4a", "wav", "aac")
         val audioFiles = dir.listFiles { file ->
-            file.isFile && audioExtensions.any { ext ->
+            file.isFile && AUDIO_EXTENSIONS.any { ext ->
                 file.name.endsWith(".$ext", ignoreCase = true)
             }
         }
