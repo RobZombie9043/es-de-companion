@@ -354,6 +354,7 @@ class MusicManager(
     private fun crossFadeToSource(newSource: MusicSource) {
         android.util.Log.d(TAG, "Cross-fading to source: $newSource")
 
+        // Save reference to old player BEFORE changing musicPlayer
         val oldPlayer = musicPlayer
 
         // Load new playlist
@@ -369,15 +370,59 @@ class MusicManager(
         currentPlaylist = newPlaylist
         currentTrackIndex = 0
 
-        // Fade out old player
+        // Reset volume state for new playback - start from silence
+        currentVolume = 0f
+        targetVolume = NORMAL_VOLUME
+        isMusicDucked = false
+        wasMusicPausedForVideo = false
+
+        // Fade out and release old player independently
         if (oldPlayer != null && oldPlayer.isPlaying) {
-            fadeVolume(currentVolume, 0f, CROSS_FADE_DURATION) {
-                oldPlayer.stop()
+            android.util.Log.d(TAG, "Fading out old player independently")
+
+            // Create independent fade for old player
+            var oldPlayerVolume = 1.0f
+            val fadeSteps = (CROSS_FADE_DURATION / 50).toInt()
+            val volumeStep = oldPlayerVolume / fadeSteps
+            var currentStep = 0
+
+            val oldPlayerFadeRunnable = object : Runnable {
+                override fun run() {
+                    if (currentStep < fadeSteps) {
+                        oldPlayerVolume -= volumeStep
+                        if (oldPlayerVolume < 0f) oldPlayerVolume = 0f
+
+                        try {
+                            oldPlayer.setVolume(oldPlayerVolume, oldPlayerVolume)
+                            currentStep++
+                            handler.postDelayed(this, 50)
+                        } catch (e: Exception) {
+                            android.util.Log.d(TAG, "Old player already released")
+                        }
+                    } else {
+                        // Fade complete - release old player
+                        try {
+                            oldPlayer.stop()
+                            oldPlayer.release()
+                            android.util.Log.d(TAG, "Old player released after fade")
+                        } catch (e: Exception) {
+                            android.util.Log.d(TAG, "Error releasing old player: ${e.message}")
+                        }
+                    }
+                }
+            }
+            handler.post(oldPlayerFadeRunnable)
+        } else if (oldPlayer != null) {
+            // Old player exists but isn't playing - release it immediately
+            android.util.Log.d(TAG, "Releasing old player (not playing)")
+            try {
                 oldPlayer.release()
+            } catch (e: Exception) {
+                android.util.Log.d(TAG, "Error releasing old player: ${e.message}")
             }
         }
 
-        // Start new player (it will fade in)
+        // Start new player immediately (it will fade in from 0)
         playTrack(newPlaylist[0])
         isMusicPlaying = true
     }
