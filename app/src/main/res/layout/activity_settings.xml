@@ -900,6 +900,51 @@
                             android:splitTrack="false"
                             android:thumbOffset="0dp" />
 
+                        <!-- Background Opacity -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp"
+                            android:layout_marginBottom="4dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Background Opacity"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp" />
+
+                            <TextView
+                                android:id="@+id/musicSongTitleOpacityText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="80%"
+                                android:textColor="#FFB74D"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:minWidth="60dp"
+                                android:gravity="end" />
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/musicSongTitleOpacitySeekBar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="16dp"
+                            android:thumbTint="#FFB74D"
+                            android:paddingTop="8dp"
+                            android:paddingBottom="8dp"
+                            android:minHeight="32dp"
+                            android:max="20"
+                            android:progress="16"
+                            android:progressDrawable="@drawable/slider_progress_orange"
+                            android:thumb="@drawable/slider_thumb"
+                            android:splitTrack="false"
+                            android:thumbOffset="0dp" />
+
                     </LinearLayout>
 
                 </LinearLayout>

@@ -226,6 +226,7 @@ class MainActivity : AppCompatActivity() {
                 result.data?.getBooleanExtra("APPS_HIDDEN_CHANGED", false) ?: false
             // ========== MUSIC ==========
             val musicSettingsChanged = result.data?.getBooleanExtra("MUSIC_SETTINGS_CHANGED", false) ?: false
+            val musicMasterToggleChanged = result.data?.getBooleanExtra("MUSIC_MASTER_TOGGLE_CHANGED", false) ?: false
             // ===========================
             val closeDrawer = result.data?.getBooleanExtra("CLOSE_DRAWER", false) ?: false
             val videoSettingsChanged =
@@ -308,10 +309,31 @@ class MainActivity : AppCompatActivity() {
                     skipNextReload = true
                 }
                 // ========== MUSIC ==========
+            } else if (musicMasterToggleChanged) {
+                // Music MASTER TOGGLE changed - only handle if actually turning OFF
+                val musicEnabled = prefs.getBoolean("music.enabled", false)
+
+                if (!musicEnabled) {
+                    // Music was turned OFF - stop it
+                    android.util.Log.d("MainActivity", "Music master toggle changed to OFF - stopping music")
+                    hideSongTitle()
+                    musicManager?.onStateChanged(state)
+                } else {
+                    // Music was turned ON - onActivityVisible already resumed it if needed
+                    android.util.Log.d("MainActivity", "Music master toggle changed to ON - already handled by resume")
+                }
+
+                skipNextReload = true
             } else if (musicSettingsChanged) {
-                // Music settings changed - trigger state change to restart/stop music
-                android.util.Log.d("MainActivity", "Music settings changed - updating music state")
-                musicManager?.onStateChanged(state)
+                // Other music settings changed (not master toggle) - just update song title if needed
+                android.util.Log.d("MainActivity", "Music settings changed (not master) - music continues playing")
+
+                // Check if song title display was toggled off
+                val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+                if (!songTitleEnabled) {
+                    hideSongTitle()
+                }
+
                 skipNextReload = true
                 // ===========================
             } else {
@@ -1230,6 +1252,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         super.onStart()
         isActivityVisible = true
         android.util.Log.d("MainActivity", "Activity VISIBLE (onStart) - videos allowed if other conditions met")
+
+        // ========== MUSIC ==========
+        musicManager?.onActivityVisible()
+        // ===========================
     }
 
     override fun onStop() {
@@ -1237,6 +1263,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         isActivityVisible = false
         android.util.Log.d("MainActivity", "Activity NOT VISIBLE (onStop) - blocking videos")
         releasePlayer()
+
+        // ========== MUSIC ==========
+        musicManager?.onActivityInvisible()
+        hideSongTitle()
+        // ===========================
     }
 
     private fun updateBlurEffect() {
@@ -2346,21 +2377,28 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     // ========== MUSIC INTEGRATION START ==========
-    /**
+     /**
      * Show song title overlay with fade in/out animation
      */
-    private fun showSongTitle(songName: String) {
-        // Check if feature is enabled
-        val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
-        if (!songTitleEnabled) {
-            return
-        }
+     private fun showSongTitle(songName: String) {
+         // Check if feature is enabled
+         val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+         if (!songTitleEnabled) {
+             return
+         }
 
-        // Cancel any pending hide
-        songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
+         // Cancel any pending hide
+         songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
 
-        // Set text
-        songTitleOverlay.text = "♫ $songName"
+         // Set text
+         songTitleOverlay.text = "♫ $songName"
+
+         // Apply background opacity setting
+         val opacity = prefs.getInt("music.song_title_opacity", 80) // 0-100, default 80%
+         val alpha = (opacity * 255 / 100).coerceIn(0, 255)
+         val hexAlpha = String.format("%02x", alpha)
+         val backgroundColor = android.graphics.Color.parseColor("#${hexAlpha}000000")
+         songTitleOverlay.setBackgroundColor(backgroundColor)
 
         // Fade in
         songTitleOverlay.visibility = View.VISIBLE
@@ -2394,6 +2432,26 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         songTitleHandler?.postDelayed(songTitleRunnable!!, displayDuration)
     }
+
+    /**
+     * Hide song title overlay immediately (used when music is disabled)
+     */
+    private fun hideSongTitle() {
+        // Cancel any pending hide
+        songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
+
+        // Hide immediately with fade out animation
+        if (songTitleOverlay.visibility == View.VISIBLE) {
+            songTitleOverlay.animate()
+                .alpha(0.0f)
+                .setDuration(300)
+                .withEndAction {
+                    songTitleOverlay.visibility = View.GONE
+                }
+                .start()
+        }
+    }
+
     // ========== MUSIC INTEGRATION END ==========
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

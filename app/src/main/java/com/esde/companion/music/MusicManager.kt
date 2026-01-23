@@ -71,6 +71,11 @@ class MusicManager(
     // Track if music is actually playing (stopped during GamePlaying)
     private var isMusicPlaying: Boolean = false
 
+    // Track if activity is visible (onStart/onStop lifecycle)
+    private var isActivityVisible: Boolean = true
+    // Track if music was playing before becoming invisible
+    private var wasMusicPlayingBeforeInvisible: Boolean = false
+
     // Callback for song title updates
     private var onSongChanged: ((String) -> Unit)? = null
 
@@ -84,6 +89,18 @@ class MusicManager(
     override fun onStateChanged(newState: AppState) {
         android.util.Log.d(TAG, "━━━ STATE CHANGE ━━━")
         android.util.Log.d(TAG, "New state: $newState")
+
+        // CRITICAL: Don't play music if activity is not visible
+        // This prevents music from playing when:
+        // - Device is asleep
+        // - Another app is on top (e.g., ES-DE when scrolling)
+        // - User has switched away from companion
+        if (!isActivityVisible) {
+            android.util.Log.d(TAG, "Music blocked - activity not visible")
+            stopMusic()
+            lastState = newState
+            return
+        }
 
         // Check if music is globally enabled
         if (!isMusicEnabled()) {
@@ -169,6 +186,64 @@ class MusicManager(
             restoreMusicVolume()
         } else if (wasMusicPausedForVideo) {
             resumeMusicFromVideo()
+        }
+    }
+
+    override fun onActivityVisible() {
+        android.util.Log.d(TAG, "━━━ ACTIVITY VISIBLE ━━━")
+        isActivityVisible = true
+
+        // Resume music if it was playing before becoming invisible
+        if (wasMusicPlayingBeforeInvisible) {
+            android.util.Log.d(TAG, "Resuming music (was playing before invisible)")
+
+            // Cancel any pending fade operations (e.g., from pause)
+            volumeFadeRunnable?.let { handler.removeCallbacks(it) }
+
+            // Force pause first (in case fade callback hasn't executed yet)
+            try {
+                musicPlayer?.pause()
+                android.util.Log.d(TAG, "Player paused, now resuming...")
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error pausing before resume", e)
+            }
+
+            // Resume the current track
+            try {
+                musicPlayer?.start()
+                isMusicPlaying = true
+                wasMusicPlayingBeforeInvisible = false
+
+                android.util.Log.d(TAG, "Music resumed successfully")
+
+                // Fade in from 0 to target volume
+                fadeVolume(0f, targetVolume, CROSS_FADE_DURATION)
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error resuming music", e)
+                wasMusicPlayingBeforeInvisible = false
+            }
+        } else {
+            android.util.Log.d(TAG, "Not resuming music (was not playing)")
+        }
+    }
+
+    override fun onActivityInvisible() {
+        android.util.Log.d(TAG, "━━━ ACTIVITY INVISIBLE ━━━")
+        isActivityVisible = false
+
+        // Pause music if currently playing
+        if (musicPlayer?.isPlaying == true) {
+            android.util.Log.d(TAG, "Pausing music (activity not visible)")
+
+            wasMusicPlayingBeforeInvisible = true
+
+            // Fade out then pause
+            fadeVolume(currentVolume, 0f, CROSS_FADE_DURATION) {
+                musicPlayer?.pause()
+            }
+        } else {
+            android.util.Log.d(TAG, "Music not playing - no pause needed")
+            wasMusicPlayingBeforeInvisible = false
         }
     }
 

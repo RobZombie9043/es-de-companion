@@ -93,6 +93,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var musicSongTitleDurationSection: LinearLayout
     private lateinit var musicSongTitleDurationSeekBar: SeekBar
     private lateinit var musicSongTitleDurationText: TextView
+    private lateinit var musicSongTitleOpacitySeekBar: SeekBar
+    private lateinit var musicSongTitleOpacityText: TextView
     // ========== MUSIC INTEGRATION END ==========
 
     private var initialDimming: Int = 0
@@ -108,6 +110,7 @@ class SettingsActivity : AppCompatActivity() {
     private var customBackgroundChanged: Boolean = false
     // ========== MUSIC INTEGRATION START ==========
     private var musicSettingsChanged: Boolean = false
+    private var musicMasterToggleChanged: Boolean = false // Track if master toggle specifically changed
     // ========== MUSIC INTEGRATION END ==========
 
     private var pathSelectionType = PathSelection.MEDIA
@@ -479,6 +482,8 @@ class SettingsActivity : AppCompatActivity() {
             musicSongTitleDurationSection = findViewById(R.id.musicSongTitleDurationSection)
             musicSongTitleDurationSeekBar = findViewById(R.id.musicSongTitleDurationSeekBar)
             musicSongTitleDurationText = findViewById(R.id.musicSongTitleDurationText)
+            musicSongTitleOpacitySeekBar = findViewById(R.id.musicSongTitleOpacitySeekBar)
+            musicSongTitleOpacityText = findViewById(R.id.musicSongTitleOpacityText)
         }
         // ========== MUSIC INTEGRATION END ==========
     }
@@ -618,9 +623,14 @@ class SettingsActivity : AppCompatActivity() {
                 if (currentHiddenApps != initialHiddenApps) {
                     intent.putExtra("APPS_HIDDEN_CHANGED", true)
                 }
+                // ========== MUSIC ==========
                 if (musicSettingsChanged) {
                     intent.putExtra("MUSIC_SETTINGS_CHANGED", true)
                 }
+                if (musicMasterToggleChanged) {
+                    intent.putExtra("MUSIC_MASTER_TOGGLE_CHANGED", true)
+                }
+                // ===========================
                 if (videoSettingsChanged) {
                     intent.putExtra("VIDEO_SETTINGS_CHANGED", true)
                 }
@@ -1353,6 +1363,7 @@ class SettingsActivity : AppCompatActivity() {
 
                 // Mark as changed
                 musicSettingsChanged = true
+                musicMasterToggleChanged = true // Track master toggle specifically
 
                 android.util.Log.d("SettingsActivity", "Music master toggle: $enabled")
             }
@@ -1476,6 +1487,29 @@ class SettingsActivity : AppCompatActivity() {
             }
         })
 
+        // Song title background opacity
+        val songTitleOpacity = prefs.getInt("music.song_title_opacity", 80) // 0-100 (default 80%)
+        val opacityProgress = songTitleOpacity / 5 // Convert 0-100 to 0-20
+        musicSongTitleOpacitySeekBar.progress = opacityProgress
+        updateSongTitleOpacityText(songTitleOpacity)
+
+        musicSongTitleOpacitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val opacityPercent = progress * 5 // Convert 0-20 to 0-100
+                updateSongTitleOpacityText(opacityPercent)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                seekBar?.let {
+                    val opacityPercent = it.progress * 5 // Convert 0-20 to 0-100
+                    prefs.edit().putInt("music.song_title_opacity", opacityPercent).apply()
+                    musicSettingsChanged = true
+                }
+            }
+        })
+
         android.util.Log.d("SettingsActivity", "Music settings setup complete")
     }
 
@@ -1489,6 +1523,11 @@ class SettingsActivity : AppCompatActivity() {
             "${duration}s"
         }
         musicSongTitleDurationText.text = text
+    }
+
+    private fun updateSongTitleOpacityText(progress: Int) {
+        // progress is 0-100 in 5% increments (0, 5, 10, ... 95, 100)
+        musicSongTitleOpacityText.text = "$progress%"
     }
 
     // ========== MUSIC INTEGRATION END ==========

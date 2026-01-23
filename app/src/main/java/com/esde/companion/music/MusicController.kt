@@ -50,6 +50,20 @@ interface MusicController {
     fun onVideoEnded()
 
     /**
+     * Called when activity becomes visible (onStart).
+     *
+     * Music will resume if it was playing before visibility was lost.
+     */
+    fun onActivityVisible()
+
+    /**
+     * Called when activity becomes invisible (onStop, device sleep).
+     *
+     * Music will pause and track that it should resume when visible again.
+     */
+    fun onActivityInvisible()
+
+    /**
      * Release all music resources.
      *
      * Called in MainActivity.onDestroy() to clean up:
