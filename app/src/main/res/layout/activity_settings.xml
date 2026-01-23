@@ -759,57 +759,6 @@
 
                     </com.google.android.material.chip.ChipGroup>
 
-                    <!-- System-Specific Music -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Play System-Specific Music"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="4dp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Use per-system music folders when available (falls back to generic)"
-                        android:textColor="#999999"
-                        android:textSize="13sp"
-                        android:layout_marginBottom="8dp" />
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/musicSystemSpecificChipGroup"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="20dp"
-                        app:singleSelection="true"
-                        app:selectionRequired="true">
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/musicSystemSpecificOff"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Off"
-                            android:checked="true"
-                            android:textColor="#FFFFFF"
-                            android:checkable="true"
-                            app:chipBackgroundColor="@color/chip_background_selector"
-                            app:chipStrokeColor="#FFB74D"
-                            app:chipStrokeWidth="2dp" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/musicSystemSpecificOn"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="On"
-                            android:textColor="#FFFFFF"
-                            android:checkable="true"
-                            app:chipBackgroundColor="@color/chip_background_selector"
-                            app:chipStrokeColor="#FFB74D"
-                            app:chipStrokeWidth="2dp" />
-
-                    </com.google.android.material.chip.ChipGroup>
-
                     <!-- Song Title Display -->
                     <TextView
                         android:layout_width="match_parent"

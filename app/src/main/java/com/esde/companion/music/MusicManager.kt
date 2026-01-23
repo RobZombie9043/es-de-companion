@@ -133,11 +133,22 @@ class MusicManager(
         }
 
         // Get the music source for this state
-        val newSource = getMusicSourceForState(newState)
-        android.util.Log.d(TAG, "Music source: $newSource")
+        val requestedSource = getMusicSourceForState(newState)
+        android.util.Log.d(TAG, "Requested music source: $requestedSource")
 
-        if (newSource == null) {
+        if (requestedSource == null) {
             android.util.Log.d(TAG, "No music source available")
+            stopMusic()
+            lastState = newState
+            return
+        }
+
+        // Resolve the actual source (after fallback) to determine if cross-fade is needed
+        val actualSource = resolveActualSource(requestedSource)
+        android.util.Log.d(TAG, "Actual music source (after fallback): $actualSource")
+
+        if (actualSource == null) {
+            android.util.Log.d(TAG, "No music files available")
             stopMusic()
             lastState = newState
             return
@@ -145,22 +156,22 @@ class MusicManager(
 
         // Determine if we need to cross-fade or continue
         val oldSource = currentMusicSource
-        val needsCrossFade = shouldCrossFade(oldSource, newSource, lastState, newState)
+        val needsCrossFade = shouldCrossFade(oldSource, actualSource, lastState, newState)
 
         android.util.Log.d(TAG, "Old source: $oldSource")
         android.util.Log.d(TAG, "Needs cross-fade: $needsCrossFade")
 
         if (needsCrossFade) {
             // Different source - cross-fade
-            crossFadeToSource(newSource)
+            crossFadeToSource(actualSource)
         } else if (!isMusicPlaying) {
             // Music was stopped (even if source is the same) - start fresh
             android.util.Log.d(TAG, "Starting music (was not playing)")
-            startMusic(newSource)
+            startMusic(actualSource)
         } else if (oldSource == null) {
             // No music playing - start fresh
             android.util.Log.d(TAG, "Starting music (no previous source)")
-            startMusic(newSource)
+            startMusic(actualSource)
         } else {
             // Same source AND already playing - continue
             android.util.Log.d(TAG, "Continuing current music (same source)")
@@ -493,24 +504,43 @@ class MusicManager(
 
         currentVolume = fromVolume
         targetVolume = toVolume
-        player.setVolume(fromVolume, fromVolume)
+
+        // SAFETY: Check if player is valid before setting volume
+        try {
+            if (player.isPlaying || !player.isPlaying) { // Triggers IllegalStateException if released
+                player.setVolume(fromVolume, fromVolume)
+            }
+        } catch (e: IllegalStateException) {
+            android.util.Log.w(TAG, "Player already released, canceling fade")
+            return
+        }
 
         val startTime = System.currentTimeMillis()
         val volumeDelta = toVolume - fromVolume
 
         volumeFadeRunnable = object : Runnable {
             override fun run() {
-                val elapsed = System.currentTimeMillis() - startTime
-                val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
+                // SAFETY: Check if player still exists and is valid
+                try {
+                    // Verify player is still the same instance and not released
+                    if (player.isPlaying || !player.isPlaying) { // Triggers IllegalStateException if released
+                        val elapsed = System.currentTimeMillis() - startTime
+                        val progress = (elapsed.toFloat() / duration).coerceIn(0f, 1f)
 
-                val newVolume = fromVolume + (volumeDelta * progress)
-                currentVolume = newVolume
-                player.setVolume(newVolume, newVolume)
+                        val newVolume = fromVolume + (volumeDelta * progress)
+                        currentVolume = newVolume
+                        player.setVolume(newVolume, newVolume)
 
-                if (progress < 1f) {
-                    handler.postDelayed(this, 16) // ~60fps
-                } else {
-                    onComplete?.invoke()
+                        if (progress < 1f) {
+                            handler.postDelayed(this, 16) // ~60fps
+                        } else {
+                            onComplete?.invoke()
+                        }
+                    }
+                } catch (e: IllegalStateException) {
+                    // Player was released during fade - this is normal during cross-fades
+                    android.util.Log.d(TAG, "Fade canceled: player was released")
+                    // Don't call onComplete - the release was intentional
                 }
             }
         }
@@ -608,11 +638,9 @@ class MusicManager(
      * Get the music source for a given state.
      */
     private fun getMusicSourceForState(state: AppState): MusicSource? {
-        val systemSpecificEnabled = prefs.getBoolean("music.system_specific_enabled", false)
-
         return when (state) {
             is AppState.SystemBrowsing -> {
-                if (systemSpecificEnabled && state.systemName.isNotEmpty()) {
+                if (state.systemName.isNotEmpty()) {
                     MusicSource.System(state.systemName)
                 } else {
                     MusicSource.Generic
@@ -620,7 +648,7 @@ class MusicManager(
             }
             is AppState.GameBrowsing -> {
                 // Use same source as SystemBrowsing would use
-                if (systemSpecificEnabled && state.systemName.isNotEmpty()) {
+                if (state.systemName.isNotEmpty()) {
                     MusicSource.System(state.systemName)
                 } else {
                     MusicSource.Generic
@@ -636,6 +664,63 @@ class MusicManager(
     }
 
     /**
+     * Resolve the actual music source after fallback logic.
+     *
+     * This determines what source will ACTUALLY be used after the loadPlaylist()
+     * fallback logic is applied. This prevents unnecessary cross-fades when
+     * multiple systems fall back to the same Generic source.
+     *
+     * @param requestedSource The initially requested source
+     * @return The actual source that will be used, or null if no music available
+     */
+    private fun resolveActualSource(requestedSource: MusicSource): MusicSource? {
+        val baseMusicPath = "/storage/emulated/0/ES-DE Companion/music"
+
+        // For Generic source, check if it exists
+        if (requestedSource is MusicSource.Generic) {
+            val sourcePath = requestedSource.getPath(baseMusicPath)
+            return if (hasAudioFiles(sourcePath)) requestedSource else null
+        }
+
+        // For System source, check if system folder exists with audio files
+        if (requestedSource is MusicSource.System) {
+            val sourcePath = requestedSource.getPath(baseMusicPath)
+
+            // If system folder has audio files, use it
+            if (hasAudioFiles(sourcePath)) {
+                return requestedSource
+            }
+
+            // System folder doesn't exist/is empty - will fall back to Generic
+            android.util.Log.d(TAG, "System folder not found/empty, will use generic fallback")
+            val genericPath = MusicSource.Generic.getPath(baseMusicPath)
+            return if (hasAudioFiles(genericPath)) MusicSource.Generic else null
+        }
+
+        return null
+    }
+
+    /**
+     * Check if a directory exists and contains audio files.
+     */
+    private fun hasAudioFiles(path: String): Boolean {
+        val dir = File(path)
+
+        if (!dir.exists() || !dir.isDirectory) {
+            return false
+        }
+
+        val audioExtensions = listOf("mp3", "ogg", "flac", "m4a", "wav", "aac")
+        val audioFiles = dir.listFiles { file ->
+            file.isFile && audioExtensions.any { ext ->
+                file.name.endsWith(".$ext", ignoreCase = true)
+            }
+        }
+
+        return audioFiles?.isNotEmpty() ?: false
+    }
+
+    /**
      * Determine if a state transition requires cross-fading.
      *
      * Cross-fade when:
@@ -646,6 +731,7 @@ class MusicManager(
      * - SystemBrowsing → GameBrowsing (same system)
      * - GameBrowsing → SystemBrowsing (same system)
      */
+
     private fun shouldCrossFade(
         oldSource: MusicSource?,
         newSource: MusicSource,

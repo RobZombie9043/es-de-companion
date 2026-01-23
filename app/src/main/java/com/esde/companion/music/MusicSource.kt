@@ -14,7 +14,7 @@ package com.esde.companion.music
 sealed class MusicSource {
     /**
      * Generic/frontend music from the base music folder.
-     * Used for: System browsing (when system-specific is off), screensavers
+     * Used as fallback when system-specific folder doesn't exist, and for screensavers
      *
      * Path: /storage/emulated/0/ES-DE Companion/music/
      */
@@ -26,7 +26,7 @@ sealed class MusicSource {
 
     /**
      * System-specific music from a system subfolder.
-     * Used for: System/game browsing (when system-specific is on)
+     * Used for: System/game browsing (automatically falls back to Generic if folder doesn't exist)
      *
      * Path: /storage/emulated/0/ES-DE Companion/music/{systemName}/
      *

@@ -88,7 +88,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var musicGameChipGroup: ChipGroup
     private lateinit var musicScreensaverChipGroup: ChipGroup
     private lateinit var musicVideoChipGroup: ChipGroup
-    private lateinit var musicSystemSpecificChipGroup: ChipGroup
     private lateinit var musicSongTitleChipGroup: ChipGroup
     private lateinit var musicSongTitleDurationSection: LinearLayout
     private lateinit var musicSongTitleDurationSeekBar: SeekBar
@@ -487,7 +486,6 @@ class SettingsActivity : AppCompatActivity() {
             musicGameChipGroup = findViewById(R.id.musicGameChipGroup)
             musicScreensaverChipGroup = findViewById(R.id.musicScreensaverChipGroup)
             musicVideoChipGroup = findViewById(R.id.musicVideoChipGroup)
-            musicSystemSpecificChipGroup = findViewById(R.id.musicSystemSpecificChipGroup)
             musicSongTitleChipGroup = findViewById(R.id.musicSongTitleChipGroup)
             musicSongTitleDurationSection = findViewById(R.id.musicSongTitleDurationSection)
             musicSongTitleDurationSeekBar = findViewById(R.id.musicSongTitleDurationSeekBar)
@@ -1453,20 +1451,6 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 prefs.edit().putString("music.video_behavior", behavior).apply()
                 android.util.Log.d("SettingsActivity", "Video music behavior: $behavior")
-            }
-        }
-
-        // System-specific music
-        val systemSpecificEnabled = prefs.getBoolean("music.system_specific_enabled", false)
-        val systemSpecificChipToCheck = if (systemSpecificEnabled) R.id.musicSystemSpecificOn else R.id.musicSystemSpecificOff
-        musicSystemSpecificChipGroup.check(systemSpecificChipToCheck)
-
-        musicSystemSpecificChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
-            if (checkedIds.isNotEmpty()) {
-                val enabled = checkedIds[0] == R.id.musicSystemSpecificOn
-                prefs.edit().putBoolean("music.system_specific_enabled", enabled).apply()
-                musicSettingsChanged = true
-                android.util.Log.d("SettingsActivity", "System-specific music: $enabled")
             }
         }
 
