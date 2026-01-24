@@ -38,6 +38,16 @@ android {
         }
     }
 
+    // Configure source sets to use flavor-specific manifests
+    sourceSets {
+        getByName("persistent") {
+            manifest.srcFile("src/main/persistent/AndroidManifest.xml")
+        }
+        getByName("standard") {
+            manifest.srcFile("src/main/AndroidManifest.xml")
+        }
+    }
+
     signingConfigs {
         create("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
