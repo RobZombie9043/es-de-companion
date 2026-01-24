@@ -1,14 +1,36 @@
 # 🔄 Changelog
 
-## [0.4.6] - TBC
-- Implement Android Standard gesture controls for Long Press Timeout, Double Tap Timeout and Touch Slop on Long Press
-- Add a method to cancel the long press timer when a widget starts being interacted with
-- Add excludeFromRecents flag to AndroidManifest.xml to hide app from recents menu
-- Fix cache invalidation to apply to widgets
-- Code refactoring:
-  - Implement State Management
-  - Extract MediaFileLocator to eliminate duplicate code
-  - Extract Long Functions Code Cleanup
+## [0.5.0] - TBC
+### New Features
+- Background Music support added
+  - Master Off/On control
+  - Separate Off/On controls for System View/Game View/Screensaver (always turns off for game play or when ES-DE companion app loses focus)
+  - Option to control volume during ES-DE Companion initiated videos - Continue (100%)/Lower (20%)/Pause  (this control is unable to be extended to videos playing in the main ES-DE app unfortunately)
+  - Display Song Titles Off/On
+    - Display Duration 
+    - Background Opacity
+    
+- Added support for animated logos and background images (gif/animated webp)
+
+- Added a Custom Image selection to System and GAme View Background Image selections
+  - This will use the image set using the Custom Background Image (optional) image picker and display it as the system or game view background.
+  - If no image has been setup it will fallback to the built in default image.
+
+- Add a separate build that uses the excludeFromRecents flag in AndroidManifest.xml to hide the app from recents menu [Thanks to BrianJR03]. 
+  - Going forward there will be two builds for each release:
+    - ES-DE-Companion-v0.5.0.apk - this is the standard app version that will show ES-DE Companion in recent apps
+    - ES-DE-Companion-v0.5.0h.apk - this is the hidden version that hides ES-DE Companion from the recents apps (cleaner look but more difficult to exit app)
+ 
+### Bug fixes:
+- Fix the cache invalidation to apply to widget images so that image changes are refreshed properly
+- Removed focus window being applied to widgets when navigating with built-in controls
+- Implemented some Android Standard gesture controls to provide a more consistent navigation experience
+- Cancel the long press timer when a widget starts being interacted with to avoid acccidentally opening widget menu
+
+### Backend changes:
+- Refactor: State Management
+- Refactor: Extract MediaFileLocator to eliminate duplicate code
+- Refactor: Extract Long Functions Code Cleanup
 
 ## [0.4.5] - 2026-01-19
 - Fixed incorrect default for screensaver image type
