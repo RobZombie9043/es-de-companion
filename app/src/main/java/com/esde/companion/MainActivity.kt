@@ -5315,15 +5315,53 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Sanitize the game filename for comparison
             val sanitizedFilename = sanitizeGameFilename(gameFilename)
 
-            // Look for the game entry with matching path
-            // Match pattern: <path>./filename</path>
-            val pathPattern = "<path>\\./\\Q$sanitizedFilename\\E</path>".toRegex()
-            val pathMatch = pathPattern.find(xmlContent)
+            android.util.Log.d("MainActivity", "Searching for game: '$sanitizedFilename'")
+
+            // ES-DE only encodes & as &amp; in <path> tags, not other characters like ' or "
+            // So we need to try the filename with & encoded
+            val filenameWithEncodedAmpersand = sanitizedFilename.replace("&", "&amp;")
+
+            // Try to find the game with different encoding strategies
+            var pathMatch: MatchResult? = null
+
+            // Strategy 1: Try with & encoded (most common case)
+            if (filenameWithEncodedAmpersand != sanitizedFilename) {
+                android.util.Log.d("MainActivity", "  Trying with &amp; encoding: '$filenameWithEncodedAmpersand'")
+                val pattern1 = "<path>\\./\\Q$filenameWithEncodedAmpersand\\E</path>".toRegex()
+                pathMatch = pattern1.find(xmlContent)
+            }
+
+            // Strategy 2: Try exact match (for files without &)
+            if (pathMatch == null) {
+                android.util.Log.d("MainActivity", "  Trying exact match: '$sanitizedFilename'")
+                val pattern2 = "<path>\\./\\Q$sanitizedFilename\\E</path>".toRegex()
+                pathMatch = pattern2.find(xmlContent)
+            }
 
             if (pathMatch == null) {
                 android.util.Log.d("MainActivity", "Game not found in gamelist: $sanitizedFilename")
+
+                // Debug: Show similar paths from the gamelist to help diagnose
+                val allPathsPattern = "<path>\\./([^<]+)</path>".toRegex()
+                val allPaths = allPathsPattern.findAll(xmlContent).map { it.groupValues[1] }.toList()
+                android.util.Log.d("MainActivity", "Total paths in gamelist: ${allPaths.size}")
+
+                // Find paths that start with the same first word
+                val firstWord = sanitizedFilename.split(" ", "'", "-").firstOrNull()?.take(10) ?: ""
+                if (firstWord.isNotEmpty()) {
+                    val similarPaths = allPaths.filter { it.startsWith(firstWord, ignoreCase = true) }
+                    if (similarPaths.isNotEmpty()) {
+                        android.util.Log.d("MainActivity", "Found ${similarPaths.size} path(s) starting with '$firstWord':")
+                        similarPaths.take(5).forEach { path ->
+                            android.util.Log.d("MainActivity", "  - '$path'")
+                        }
+                    }
+                }
+
                 return null
             }
+
+            android.util.Log.d("MainActivity", "Game found in gamelist!")
 
             // Find the <desc> tag after this <path> tag
             val gameStartIndex = pathMatch.range.first
@@ -5342,11 +5380,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             val descMatch = descPattern.find(searchSpace)
 
             return if (descMatch != null) {
-                val description = descMatch.groupValues[1].trim()
+                // Decode XML entities in the description text (not in path)
+                val rawDescription = descMatch.groupValues[1].trim()
+                val description = decodeXmlEntities(rawDescription)
                 android.util.Log.d("MainActivity", "Found description: ${description.take(100)}...")
                 description
             } else {
-                android.util.Log.d("MainActivity", "No description found for game: $sanitizedFilename")
+                android.util.Log.d("MainActivity", "No <desc> tag found for game: $sanitizedFilename")
                 null
             }
 
@@ -5354,6 +5394,19 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.e("MainActivity", "Error parsing gamelist.xml", e)
             return null
         }
+    }
+
+    /**
+     * Decode XML entities to regular characters for display
+     */
+    private fun decodeXmlEntities(text: String): String {
+        return text
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&amp;", "&")
+            .replace("&quot;", "\"")
+            .replace("&apos;", "'")
+            .replace("&#39;", "'")
     }
 
     private fun updateWidgetsForCurrentGame() {
