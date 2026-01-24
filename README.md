@@ -8,7 +8,7 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-0.4.5-blue)
+![Version](https://img.shields.io/badge/version-0.5.0-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 
@@ -29,6 +29,7 @@ A companion app for [ES-DE](https://es-de.org/) that displays beautiful game art
   - Configurable delay (instant to 5 seconds) before video starts
   - Optional audio control (muted by default)
   - Videos automatically stop during gameplay and screensavers
+- **Background Music Support** - Play background music when browsing
 - **System view support** - Displays built-in system logos, custom images, or random game artwork when browsing systems
 - **Smooth animations** - Configurable fade and scale effects with custom timing options
 - **Background customization** - Adjustable dimming and blur effects

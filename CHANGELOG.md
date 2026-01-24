@@ -1,6 +1,6 @@
 # 🔄 Changelog
 
-## [0.5.0] - TBC
+## [0.5.0] - 25/01/2026
 ### New Features
 - Background Music support added
   - Master Off/On control
@@ -15,7 +15,7 @@
     
 - Added support for animated logos and background images (gif/animated webp)
 
-- Added a Custom Image selection to System and GAme View Background Image selections
+- Added a Custom Image selection to System and Game View Background Image selections
   - This will use the image set using the Custom Background Image (optional) image picker and display it as the system or game view background.
   - If no image has been setup it will fallback to the built in default image.
 
