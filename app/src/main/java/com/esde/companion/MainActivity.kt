@@ -1426,13 +1426,24 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             0.95f
         }
 
+        // Check if this is an animated format that needs special handling
+        val extension = imageFile.extension.lowercase()
+        val isAnimatedFormat = extension in listOf("webp", "gif")
+        val diskStrategy = if (isAnimatedFormat) {
+            // Animated formats can't be cached to disk
+            android.util.Log.d("MainActivity", "Animated format detected for background - using NONE disk cache")
+            DiskCacheStrategy.NONE
+        } else {
+            DiskCacheStrategy.ALL
+        }
+
         when (animationStyle) {
             "none" -> {
                 // No animation - instant display with crossfade disabled
                 Glide.with(this)
                     .load(imageFile)
                     .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .diskCacheStrategy(diskStrategy)
                     .dontAnimate()  // Disable all transitions
                     .listener(object : RequestListener<Drawable> {
                         override fun onLoadFailed(
@@ -1463,7 +1474,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 Glide.with(this)
                     .load(imageFile)
                     .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .diskCacheStrategy(diskStrategy)
                     .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
                     .listener(object : RequestListener<Drawable> {
                         override fun onLoadFailed(
@@ -1494,7 +1505,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 Glide.with(this)
                     .load(imageFile)
                     .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .diskCacheStrategy(diskStrategy)
                     .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
                     .listener(object : RequestListener<Drawable> {
                         override fun onLoadFailed(
@@ -3016,7 +3027,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // Check for custom system image with multiple format support
             var imageToUse: File? = null
             val systemImagePath = getSystemImagePath()
-            val imageExtensions = listOf("webp", "png", "jpg", "jpeg")
+            val imageExtensions = listOf("webp", "png", "jpg", "jpeg", "gif")
 
             for (ext in imageExtensions) {
                 val imageFile = File(systemImagePath, "$baseFileName.$ext")
@@ -3053,20 +3064,30 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 val isCustomSystemImage = imageToUse.absolutePath.contains(getSystemImagePath())
 
                 if (isCustomSystemImage) {
-                    // Load custom system image with downscaling to prevent OOM
-                    android.util.Log.d("MainActivity", "Loading custom system image with downscaling")
-                    val bitmap = loadScaledBitmap(imageToUse.absolutePath, 1920, 1080)
-                    if (bitmap != null) {
-                        val drawable = android.graphics.drawable.BitmapDrawable(resources, bitmap)
+                    // Check if it's an animated format
+                    val extension = imageToUse.extension.lowercase()
+                    val isAnimatedFormat = extension in listOf("webp", "gif")
 
-                        // Clear any cached images first
-                        Glide.with(this).clear(gameImageView)
-
-                        gameImageView.setImageDrawable(drawable)
-                        android.util.Log.d("MainActivity", "Custom system image loaded successfully")
+                    if (isAnimatedFormat) {
+                        // Use loadImageWithAnimation for animated formats (supports animation)
+                        android.util.Log.d("MainActivity", "Loading animated custom system image via Glide")
+                        loadImageWithAnimation(imageToUse, gameImageView)
                     } else {
-                        android.util.Log.e("MainActivity", "Failed to load custom system image, using fallback")
-                        loadFallbackBackground()
+                        // Load static custom system image with downscaling to prevent OOM
+                        android.util.Log.d("MainActivity", "Loading custom system image with downscaling")
+                        val bitmap = loadScaledBitmap(imageToUse.absolutePath, 1920, 1080)
+                        if (bitmap != null) {
+                            val drawable = android.graphics.drawable.BitmapDrawable(resources, bitmap)
+
+                            // Clear any cached images first
+                            Glide.with(this).clear(gameImageView)
+
+                            gameImageView.setImageDrawable(drawable)
+                            android.util.Log.d("MainActivity", "Custom system image loaded successfully")
+                        } else {
+                            android.util.Log.e("MainActivity", "Failed to load custom system image, using fallback")
+                            loadFallbackBackground()
+                        }
                     }
                 } else {
                     // Normal game artwork - use Glide with animation
