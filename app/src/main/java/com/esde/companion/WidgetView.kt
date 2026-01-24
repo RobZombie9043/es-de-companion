@@ -546,6 +546,9 @@ class WidgetView(
                             imageView.setImageDrawable(null)
                         }
                     }
+                    // ========== START: Prevent fall-through to generic file loading ==========
+                    return  // Exit after handling custom logo
+                    // ========== END: Prevent fall-through ==========
                 } else {
                     // No custom logo - use built-in SVG from assets
                     android.util.Log.d("WidgetView", "Loading built-in SVG logo from assets")
@@ -566,8 +569,14 @@ class WidgetView(
                         android.util.Log.e("WidgetView", "Failed to load built-in logo")
                         imageView.setImageDrawable(null)
                     }
+                    // ========== START: Prevent fall-through to generic file loading ==========
+                    return  // Exit after handling built-in logo
+                    // ========== END: Prevent fall-through ==========
                 }
             }
+            // ========== START: Prevent fall-through if MainActivity is null ==========
+            return  // Exit after handling system logo (even if MainActivity was null)
+            // ========== END: Prevent fall-through ==========
         } else {
             // Load from file (custom logo path)
             val file = File(widget.imagePath)

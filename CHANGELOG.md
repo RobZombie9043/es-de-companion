@@ -1,5 +1,10 @@
 # 🔄 Changelog
 
+## [0.5.1] - 25/01/2026
+### Bug fixes:
+- Game description widget not working for some game names with special characters
+- System logo override svg logos not working
+
 ## [0.5.0] - 25/01/2026
 ### New Features
 - Background Music support added

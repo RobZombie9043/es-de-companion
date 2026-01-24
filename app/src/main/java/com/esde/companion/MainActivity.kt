@@ -5027,21 +5027,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 return
             }
 
-            // Find system logo (custom path or built-in)
-            val systemLogoPath = findSystemLogo(systemName)
-
-            if (systemLogoPath == null) {
-                android.widget.Toast.makeText(
-                    this,
-                    "No system logo found for $systemName",
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
-                return
-            }
-
+            // System logos always use builtin:// prefix - WidgetView handles finding custom vs built-in
+            // Normalize system name to handle auto-collections
+            val normalizedName = normalizeSystemName(systemName)
             val widget = OverlayWidget(
                 imageType = OverlayWidget.ImageType.SYSTEM_LOGO,
-                imagePath = systemLogoPath,
+                imagePath = "builtin://$normalizedName",
                 x = displayMetrics.widthPixels / 2f - 150f,
                 y = displayMetrics.heightPixels / 2f - 200f,
                 width = 300f,
@@ -5205,6 +5196,19 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         return "builtin://$baseFileName"
     }
 
+    /**
+     * Normalize system names to handle ES-DE auto-collections
+     * Maps various collection names to their standard auto-* format
+     */
+    private fun normalizeSystemName(systemName: String): String {
+        return when (systemName.lowercase()) {
+            "all", "allgames" -> "auto-allgames"
+            "favorites" -> "auto-favorites"
+            "recent", "lastplayed" -> "auto-lastplayed"
+            else -> systemName.lowercase()
+        }
+    }
+
     private fun updateWidgetsForCurrentSystem() {
         android.util.Log.d("MainActivity", "═══ updateWidgetsForCurrentSystem START ═══")
         android.util.Log.d("MainActivity", "Current state: $state")
@@ -5240,23 +5244,16 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             val sortedWidgets = systemWidgets.sortedBy { it.zIndex }
             android.util.Log.d("MainActivity", "Sorted ${sortedWidgets.size} system widgets by z-index")
 
-            // Reload all system widgets with current system logo
+            // Process each widget
             sortedWidgets.forEachIndexed { index, widget ->
                 android.util.Log.d("MainActivity", "Processing system widget $index: type=${widget.imageType}, zIndex=${widget.zIndex}")
 
-                // Find system logo
-                val systemLogoPath = findSystemLogo(systemName)
-
-                android.util.Log.d("MainActivity", "  System logo path: $systemLogoPath")
-
-                // Create widget with system logo
-                val widgetToAdd = if (systemLogoPath != null) {
-                    android.util.Log.d("MainActivity", "  Creating system widget with logo")
-                    widget.copy(imagePath = systemLogoPath)
-                } else {
-                    android.util.Log.d("MainActivity", "  No system logo found, using empty path")
-                    widget.copy(imagePath = "")
-                }
+                // System logos always use builtin:// prefix - WidgetView handles finding custom vs built-in
+                // Normalize system name to handle auto-collections
+                val normalizedName = normalizeSystemName(systemName)
+                val widgetToAdd = widget.copy(imagePath = "builtin://$normalizedName")
+                android.util.Log.d("MainActivity", "  System logo path: builtin://$normalizedName")
+                android.util.Log.d("MainActivity", "  Creating system widget with logo")
 
                 addWidgetToScreenWithoutSaving(widgetToAdd)
                 android.util.Log.d("MainActivity", "  System widget added to screen")
