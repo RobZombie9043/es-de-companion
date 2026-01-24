@@ -1334,19 +1334,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun loadFallbackBackground(forceCustomImageOnly: Boolean = false) {
         android.util.Log.d("MainActivity", "═══ loadFallbackBackground CALLED (forceCustomImageOnly=$forceCustomImageOnly) ═══")
 
-        // CRITICAL: Only check solid color preference if NOT forcing custom image only
+        // CRITICAL: Don't check solid color when forcing custom image only
         // When forceCustomImageOnly=true (screensaver/game launch "default_image" behavior),
         // we skip the solid color check and go straight to custom background image
+        //
+        // NOTE: This function is context-independent - it only loads the custom background
+        // or built-in fallback. Solid color handling should be done by the caller
+        // (loadSystemImage or loadGameInfo) before calling this function.
         if (!forceCustomImageOnly) {
-            val gameImagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
-            if (gameImagePref == "solid_color") {
-                val solidColor = prefs.getInt("game_background_color", android.graphics.Color.parseColor("#1A1A1A"))
-                android.util.Log.d("MainActivity", "Game view solid color selected - using color: ${String.format("#%06X", 0xFFFFFF and solidColor)}")
-                val drawable = android.graphics.drawable.ColorDrawable(solidColor)
-                gameImageView.setImageDrawable(drawable)
-                gameImageView.visibility = View.VISIBLE
-                return
-            }
+            android.util.Log.d("MainActivity", "loadFallbackBackground: Solid color should be handled by caller, not here")
         }
 
         // Check if user has set a custom background
