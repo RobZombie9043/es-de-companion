@@ -311,6 +311,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="4dp" />
 
                 <TextView
@@ -425,6 +426,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:layout_marginTop="4dp"
                         android:layout_marginBottom="8dp">
 
                         <TextView
@@ -484,11 +486,11 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Enable Background Music"
+                    android:text="Background Music"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="4dp" />
 
                 <TextView
@@ -938,6 +940,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:textStyle="bold"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="4dp" />
 
                 <TextView
