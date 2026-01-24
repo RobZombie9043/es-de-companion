@@ -28,7 +28,7 @@ sealed class MusicSource {
      * System-specific music from a system subfolder.
      * Used for: System/game browsing (automatically falls back to Generic if folder doesn't exist)
      *
-     * Path: /storage/emulated/0/ES-DE Companion/music/{systemName}/
+     * Path: /storage/emulated/0/ES-DE Companion/music/systems/{systemName}/
      *
      * @param systemName The ES-DE system name (e.g., "snes", "arcade")
      */
@@ -45,7 +45,7 @@ sealed class MusicSource {
     fun getPath(basePath: String): String {
         return when (this) {
             is Generic -> basePath
-            is System -> "$basePath/$systemName"
+            is System -> "$basePath/systems/$systemName"
         }
     }
 }
