@@ -4998,23 +4998,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Save lock state to preferences
         prefs.edit().putBoolean("widgets_locked", widgetsLocked).apply()
 
-        // Handle video playback and widget reload when toggling widget lock
+        // Handle video playback when toggling widget lock
         if (widgetsLocked) {
-            // Locked (edit mode OFF) - videos can resume if other conditions allow
-            android.util.Log.d("MainActivity", "Widget edit mode OFF - allowing videos")
-            // Reload current state to potentially start videos
-            if (state is AppState.SystemBrowsing) {
-                loadSystemImage()
-            } else if (state !is AppState.GamePlaying) {
-                loadGameInfo()
-            }
+            // Locked (edit mode OFF) - videos can now play if conditions allow
+            // No need to reload - video check happens automatically on next event
+            android.util.Log.d("MainActivity", "Widget edit mode OFF - videos now allowed")
         } else {
-            // Unlocked (edit mode ON) - stop videos and reload widgets
-            android.util.Log.d("MainActivity", "Widget edit mode ON - blocking videos and reloading widgets")
+            // Unlocked (edit mode ON) - stop any playing videos
+            android.util.Log.d("MainActivity", "Widget edit mode ON - blocking videos")
             releasePlayer()
-
-            // Reload widgets with current images so they're visible during editing
-            updateWidgetsForCurrentGame()
         }
     }
 
