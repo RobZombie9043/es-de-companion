@@ -5268,8 +5268,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.d("MainActivity", "Total system widgets added: ${activeWidgets.size}")
             android.util.Log.d("MainActivity", "Widget container children: ${widgetContainer.childCount}")
 
-            // Make sure container is visible
+            // Make sure container is visible and grid is updated
             widgetContainer.visibility = View.VISIBLE
+            updateGridOverlay()
             android.util.Log.d("MainActivity", "Widget container visibility: ${widgetContainer.visibility}")
         } else {
             android.util.Log.d("MainActivity", "System name is null - not updating widgets")
@@ -5541,7 +5542,11 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun hideWidgetsForState() {
         android.util.Log.d("MainActivity", "Not in game view - hiding widgets")
         widgetContainer.visibility = View.GONE
-        gridOverlayView?.visibility = View.GONE
+
+        // Only hide grid if showGrid is actually off
+        if (!showGrid) {
+            gridOverlayView?.visibility = View.GONE
+        }
     }
 
     private fun addWidgetToScreenWithoutSaving(widget: OverlayWidget) {
@@ -5635,7 +5640,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun updateGridOverlay() {
-        if (showGrid && widgetContainer.visibility == View.VISIBLE) {
+        if (showGrid) {
+            // Make container visible when showing grid (needed for system view)
+            if (widgetContainer.visibility != View.VISIBLE) {
+                widgetContainer.visibility = View.VISIBLE
+            }
+
             // Always recreate grid overlay to ensure it's properly attached
             if (gridOverlayView != null && gridOverlayView?.parent != null) {
                 // Remove existing grid if it exists
