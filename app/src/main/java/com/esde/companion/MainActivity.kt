@@ -310,7 +310,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 // ========== MUSIC ==========
             } else if (musicMasterToggleChanged) {
-                // Music MASTER TOGGLE changed - only handle if actually turning OFF
+                // Music MASTER TOGGLE changed - re-evaluate for both ON and OFF
                 val musicEnabled = prefs.getBoolean("music.enabled", false)
 
                 if (!musicEnabled) {
@@ -319,20 +319,25 @@ class MainActivity : AppCompatActivity() {
                     hideSongTitle()
                     musicManager?.onStateChanged(state)
                 } else {
-                    // Music was turned ON - onActivityVisible already resumed it if needed
-                    android.util.Log.d("MainActivity", "Music master toggle changed to ON - already handled by resume")
+                    // Music was turned ON - evaluate if it should play for current state
+                    android.util.Log.d("MainActivity", "Music master toggle changed to ON - evaluating music state")
+                    musicManager?.onStateChanged(state)
                 }
 
                 skipNextReload = true
             } else if (musicSettingsChanged) {
-                // Other music settings changed (not master toggle) - just update song title if needed
-                android.util.Log.d("MainActivity", "Music settings changed (not master) - music continues playing")
+                // Other music settings changed (not master toggle) - re-evaluate music for current state
+                android.util.Log.d("MainActivity", "Music settings changed (not master) - re-evaluating music state")
 
                 // Check if song title display was toggled off
                 val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
                 if (!songTitleEnabled) {
                     hideSongTitle()
                 }
+
+                // Re-evaluate music for current state with new settings
+                // This will start/stop music based on the new per-state toggles
+                musicManager?.onStateChanged(state)
 
                 skipNextReload = true
                 // ===========================
