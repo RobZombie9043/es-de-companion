@@ -246,25 +246,52 @@ class MediaFileLocator(private val prefs: SharedPreferences) {
         
         return cleaned
     }
-    
+
     /**
      * Extract the subfolder path from a full game path.
-     * 
-     * Examples:
-     * - "subfolder/game.zip" -> "subfolder"
-     * - "deep/nested/game.zip" -> "deep/nested"
-     * - "game.zip" -> null
-     * 
-     * @param fullPath The full path from ES-DE
-     * @return The subfolder path, or null if no subfolder
+     *
+     * Handles both relative and absolute paths from ES-DE:
+     * - Relative: "subfolder/game.zip" -> "subfolder"
+     * - Relative nested: "deep/nested/game.zip" -> "deep/nested"
+     * - Absolute: "/storage/XXX/ROMs/psx/subfolder/game.zip" -> "subfolder"
+     * - Absolute nested: "/storage/XXX/ROMs/psx/deep/nested/game.zip" -> "deep/nested"
+     * - No subfolder: "game.zip" -> null
+     * - No subfolder absolute: "/storage/XXX/ROMs/psx/game.zip" -> null
+     *
+     * @param fullPath The full path from ES-DE (may be absolute or relative)
+     * @return The relative subfolder path within the ROM folder, or null if no subfolder
      */
     private fun extractSubfolderPath(fullPath: String): String? {
         // Get everything before the filename
         val beforeFilename = fullPath.substringBeforeLast("/", "")
-        
-        // Get just the immediate subfolder (everything after the system name)
-        val subfolder = beforeFilename.substringAfterLast("/", "")
-        
-        return if (subfolder.isNotEmpty()) subfolder else null
+
+        if (beforeFilename.isEmpty()) {
+            return null // No path at all - just a filename
+        }
+
+        // Check if this is an absolute path (starts with /storage/)
+        if (beforeFilename.startsWith("/storage/")) {
+            // Extract just the subfolder structure after the ROM system folder
+            // Path format: /storage/XXXX/ROMs/{system}/{subfolders}/filename
+
+            // Find the system folder by looking for known ROM folder patterns
+            val romsFolderIndex = beforeFilename.indexOf("/ROMs/")
+            if (romsFolderIndex == -1) {
+                // Not a standard ROMs folder structure - treat whole path as subfolder
+                return beforeFilename
+            }
+
+            // Get everything after /ROMs/{system}/
+            val afterRoms = beforeFilename.substring(romsFolderIndex + "/ROMs/".length)
+
+            // Skip the system name (first segment after /ROMs/)
+            val afterSystem = afterRoms.substringAfter("/", "")
+
+            // Return the subfolder path, or null if there's nothing after the system
+            return if (afterSystem.isNotEmpty()) afterSystem else null
+        }
+
+        // Relative path - return as-is
+        return beforeFilename
     }
 }

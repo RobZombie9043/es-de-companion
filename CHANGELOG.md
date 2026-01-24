@@ -9,6 +9,9 @@
   - Display Song Titles Off/On
     - Display Duration 
     - Background Opacity
+  - Customisable music path - default uses /storage/emulated/0/ES-DE Companion/music
+  - Per system music overrides by placing music in ~music/systems/{systemname}/
+      - This will play any per system music found when scrolling to the system in system view or scrolling within the game view of that system
     
 - Added support for animated logos and background images (gif/animated webp)
 

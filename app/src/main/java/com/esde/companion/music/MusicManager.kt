@@ -597,6 +597,7 @@ class MusicManager(
 
     /**
      * Load all audio files from a music source.
+     * Scans recursively through all subdirectories.
      */
     private fun loadPlaylist(source: MusicSource): List<File> {
         val sourcePath = source.getPath(getMusicPath())
@@ -616,12 +617,8 @@ class MusicManager(
             return emptyList()
         }
 
-        // Find all audio files
-        val audioFiles = sourceDir.listFiles { file ->
-            file.isFile && AUDIO_EXTENSIONS.any { ext ->
-                file.name.endsWith(".$ext", ignoreCase = true)
-            }
-        }?.toList() ?: emptyList()
+        // Find all audio files recursively, excluding "systems" subfolder for generic source
+        val audioFiles = scanAudioFilesRecursively(sourceDir, excludeSystemsFolder = (source is MusicSource.Generic))
 
         if (audioFiles.isEmpty()) {
             android.util.Log.d(TAG, "No audio files found in: $sourcePath")
@@ -636,18 +633,61 @@ class MusicManager(
         }
 
         // Sort alphabetically then shuffle
-        val sortedFiles = audioFiles.sortedBy { it.name }
+        val sortedFiles = audioFiles.sortedBy { it.absolutePath }
         val shuffledFiles = sortedFiles.shuffled()
 
         android.util.Log.d(TAG, "Found ${shuffledFiles.size} audio files (shuffled):")
         shuffledFiles.take(5).forEach { file ->
-            android.util.Log.d(TAG, "  - ${file.name}")
+            android.util.Log.d(TAG, "  - ${file.relativeTo(sourceDir).path}")
         }
         if (shuffledFiles.size > 5) {
             android.util.Log.d(TAG, "  ... and ${shuffledFiles.size - 5} more")
         }
 
         return shuffledFiles
+    }
+
+    /**
+     * Recursively scan a directory for audio files.
+     *
+     * @param directory The directory to scan
+     * @param excludeSystemsFolder If true, skip the "systems" subfolder (for generic music)
+     * @return List of audio files found
+     */
+    private fun scanAudioFilesRecursively(directory: File, excludeSystemsFolder: Boolean = false): List<File> {
+        val audioFiles = mutableListOf<File>()
+
+        val filesToProcess = mutableListOf(directory)
+
+        while (filesToProcess.isNotEmpty()) {
+            val currentDir = filesToProcess.removeAt(0)
+
+            // Skip if not a directory
+            if (!currentDir.isDirectory) continue
+
+            // Skip "systems" folder if this is generic music scan
+            if (excludeSystemsFolder && currentDir.name == "systems" && currentDir.parentFile == directory) {
+                android.util.Log.d(TAG, "Skipping systems folder in generic scan: ${currentDir.absolutePath}")
+                continue
+            }
+
+            currentDir.listFiles()?.forEach { file ->
+                when {
+                    file.isFile && AUDIO_EXTENSIONS.any { ext ->
+                        file.name.endsWith(".$ext", ignoreCase = true)
+                    } -> {
+                        // Audio file found - add to list
+                        audioFiles.add(file)
+                    }
+                    file.isDirectory -> {
+                        // Subdirectory found - add to processing queue
+                        filesToProcess.add(file)
+                    }
+                }
+            }
+        }
+
+        return audioFiles
     }
 
     // ========== STATE LOGIC ==========
@@ -745,7 +785,7 @@ class MusicManager(
     }
 
     /**
-     * Check if a directory exists and contains audio files.
+     * Check if a directory exists and contains audio files (recursively).
      */
     private fun hasAudioFiles(path: String): Boolean {
         val dir = File(path)
@@ -754,13 +794,11 @@ class MusicManager(
             return false
         }
 
-        val audioFiles = dir.listFiles { file ->
-            file.isFile && AUDIO_EXTENSIONS.any { ext ->
-                file.name.endsWith(".$ext", ignoreCase = true)
-            }
-        }
+        // Use recursive scan to check for audio files
+        val excludeSystems = !path.contains("/systems/") // Exclude systems folder only for generic path
+        val audioFiles = scanAudioFilesRecursively(dir, excludeSystemsFolder = excludeSystems)
 
-        return audioFiles?.isNotEmpty() ?: false
+        return audioFiles.isNotEmpty()
     }
 
     /**
