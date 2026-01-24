@@ -578,6 +578,17 @@ class SettingsActivity : AppCompatActivity() {
         setupScreensaverBehavior()
         setupBlackOverlay()
 
+        // Set version text dynamically
+        try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            val versionName = packageInfo.versionName ?: "Unknown"
+            versionText.text = "ES-DE Companion v$versionName"
+            android.util.Log.d("SettingsActivity", "Version text set to: $versionName")
+        } catch (e: Exception) {
+            versionText.text = "ES-DE Companion"
+            android.util.Log.e("SettingsActivity", "Failed to get version name", e)
+        }
+
         android.util.Log.d("SettingsActivity", "All UI components setup complete")
 
         // ========== MUSIC INTEGRATION START ==========
