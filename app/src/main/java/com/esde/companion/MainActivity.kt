@@ -192,6 +192,8 @@ class MainActivity : AppCompatActivity() {
     // Filter out game-select on game-start and game-end
     private var lastGameStartTime = 0L
     private var lastGameEndTime = 0L
+    // Track whether the currently displayed image is the custom fallback
+    private var isShowingCustomFallback = false
     private val GAME_EVENT_DEBOUNCE = 2000L  // 2 seconds
 
     // Broadcast receiver for app install/uninstall events
@@ -1360,11 +1362,23 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 android.util.Log.d("MainActivity", "File exists: ${file.exists()}, canRead: ${file.canRead()}")
 
                 if (file.exists() && file.canRead()) {
-                    // Use loadImageWithAnimation for consistent behavior
-                    loadImageWithAnimation(file, gameImageView) {
-                        android.util.Log.d("MainActivity", "✓ Loaded custom background successfully")
+                    // Only skip animation if we're already showing the custom fallback
+                    // This ensures transitions FROM other images TO custom still animate
+                    val skipAnimation = forceCustomImageOnly && isShowingCustomFallback
+
+                    if (skipAnimation) {
+                        // Load without animation - same custom image reloading
+                        loadImageInstantly(file, gameImageView)
+                        android.util.Log.d("MainActivity", "✓ Loaded custom background (no animation - already showing)")
+                    } else {
+                        // Load with animation - transitioning from different image
+                        loadImageWithAnimation(file, gameImageView) {
+                            android.util.Log.d("MainActivity", "✓ Loaded custom background with animation")
+                        }
                     }
-                    android.util.Log.d("MainActivity", "Loading custom background from: $customBackgroundPath")
+
+                    // Mark that we're now showing custom fallback
+                    isShowingCustomFallback = true
                     return
                 } else {
                     android.util.Log.w("MainActivity", "Custom background file not accessible: $customBackgroundPath")
@@ -1375,14 +1389,19 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
 
         // No custom background or loading failed - use built-in default
+        // Only skip animation if we're already showing the custom fallback
+        val skipAnimation = forceCustomImageOnly && isShowingCustomFallback
         android.util.Log.d("MainActivity", "Loading built-in fallback background")
-        loadBuiltInFallbackBackground()
+        loadBuiltInFallbackBackground(skipAnimation = skipAnimation)
+
+        // Mark that we're now showing custom fallback
+        isShowingCustomFallback = forceCustomImageOnly
     }
 
-    private fun loadBuiltInFallbackBackground() {
+    private fun loadBuiltInFallbackBackground(skipAnimation: Boolean = false) {
         try {
             val assetPath = "fallback/default_background.webp"
-            // Copy asset to cache for loadImageWithAnimation
+            // Copy asset to cache for loading
             val fallbackFile = File(cacheDir, "default_background.webp")
             if (!fallbackFile.exists()) {
                 assets.open(assetPath).use { input ->
@@ -1392,9 +1411,15 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 }
             }
 
-            // Use loadImageWithAnimation for consistent behavior
-            loadImageWithAnimation(fallbackFile, gameImageView) {
-                android.util.Log.d("MainActivity", "Loaded built-in fallback image from assets")
+            if (skipAnimation) {
+                // Load without animation when in "Custom Image" mode
+                loadImageInstantly(fallbackFile, gameImageView)
+                android.util.Log.d("MainActivity", "Loaded built-in fallback image (no animation)")
+            } else {
+                // Use loadImageWithAnimation for normal behavior
+                loadImageWithAnimation(fallbackFile, gameImageView) {
+                    android.util.Log.d("MainActivity", "Loaded built-in fallback image from assets")
+                }
             }
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Failed to load built-in fallback image, using solid color", e)
@@ -2869,6 +2894,43 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     /**
+     * Load an image instantly without any animation or clearing
+     * Used for custom background images that are reloaded repeatedly
+     */
+    private fun loadImageInstantly(
+        imageFile: File,
+        targetView: ImageView
+    ) {
+        Glide.with(this)
+            .load(imageFile)
+            .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile)))
+            .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
+            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                override fun onLoadFailed(
+                    e: com.bumptech.glide.load.engine.GlideException?,
+                    model: Any?,
+                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: android.graphics.drawable.Drawable,
+                    model: Any,
+                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                    dataSource: com.bumptech.glide.load.DataSource,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    // Directly set the drawable without any transition
+                    targetView.setImageDrawable(resource)
+                    return true  // Return true to prevent Glide from doing its own transition
+                }
+            })
+            .into(targetView)
+    }
+
+    /**
      * Get a signature for an image file to invalidate cache when file changes
      * Uses file's last modified time to detect changes
      */
@@ -3007,9 +3069,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 return
             }
 
+            // Reset custom fallback tracking when NOT using custom image mode
+            if (systemImagePref != "custom_image") {
+                isShowingCustomFallback = false
+            }
+
             if (systemImagePref == "custom_image") {
                 android.util.Log.d("MainActivity", "System view custom image selected - loading custom background")
-                loadFallbackBackground()
+                loadFallbackBackground(forceCustomImageOnly = true)
 
                 // Update system widgets after loading custom image
                 updateWidgetsForCurrentSystem()
@@ -3143,16 +3210,23 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 gameName = gameDisplayName
             ))
 
-            // Check if solid color is selected for game view
+            // CRITICAL: Check if solid color or custom image is selected for game view BEFORE trying to load game images
             val gameImagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
+
+            // Reset custom fallback tracking when NOT using custom image mode
+            if (gameImagePref != "custom_image") {
+                isShowingCustomFallback = false
+            }
+
             if (gameImagePref == "solid_color") {
                 val solidColor = prefs.getInt("game_background_color", android.graphics.Color.parseColor("#1A1A1A"))
                 val drawable = android.graphics.drawable.ColorDrawable(solidColor)
                 gameImageView.setImageDrawable(drawable)
+                isShowingCustomFallback = false  // Not showing custom fallback
             } else if (gameImagePref == "custom_image") {
                 // Custom image selected - always show custom background or built-in default
                 android.util.Log.d("MainActivity", "Game view custom image selected - loading custom background")
-                loadFallbackBackground()
+                loadFallbackBackground(forceCustomImageOnly = true)
             } else {
                 // Fanart or Screenshot preference - try to find game-specific artwork
                 val gameImage = findGameImage(systemName, gameNameRaw)
