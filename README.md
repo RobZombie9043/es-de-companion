@@ -31,7 +31,7 @@ The app requires ES-DE to be installed on your device.
 
 ## Additional Information
 
-[USERGUIDE.md](USERGUIDE.md) - Comprehensive guide covering setup, features, and advanced configuration [Coming Soon]
+[USERGUIDE.md](USERGUIDE.md) - Comprehensive guide covering setup, features, and advanced configuration
 
 [FAQ.md](FAQ.md) - Frequently asked questions and troubleshooting [Coming Soon]
 
@@ -221,4 +221,4 @@ This project is open source. See the LICENSE file for details.
 https://github.com/RobZombie9043/es-de-companion/issues
 
 **Documentation:**\
-See [USERGUIDE.md](USERGUIDE.md) for comprehensive documentation [Coming Soon]
+See [USERGUIDE.md](USERGUIDE.md) for comprehensive documentation
