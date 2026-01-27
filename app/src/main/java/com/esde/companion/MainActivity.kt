@@ -1639,6 +1639,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Stop video immediately
         releasePlayer()
 
+        // ========== MUSIC: Stop music when showing black overlay ==========
+        musicManager?.onBlackOverlayChanged(true)
+        // ==================================================================
+
         // Show overlay instantly without animation
         blackOverlay.visibility = View.VISIBLE
         blackOverlay.translationY = 0f
@@ -1651,11 +1655,20 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.util.Log.d("MainActivity", "Hiding black overlay")
         isBlackOverlayShown = false
 
+        // ========== MUSIC: Resume music when hiding black overlay ==========
+        musicManager?.onBlackOverlayChanged(false)
+        // ===================================================================
+
         // Hide overlay instantly without animation
         blackOverlay.visibility = View.GONE
 
         val displayHeight = resources.displayMetrics.heightPixels.toFloat()
         blackOverlay.translationY = -displayHeight
+
+        // ========== MUSIC ==========
+        // Re-evaluate music for current state (in case user scrolled while overlay was shown)
+        musicManager?.onStateChanged(state)
+        // ===================================================================
 
         // Reload video if applicable (don't reload images)
         when (val s = state) {
@@ -4704,9 +4717,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Release video player
      */
     private fun releasePlayer() {
-        // ========== MUSIC ==========
-        musicManager?.onVideoEnded()
-        // ===========================
 
         // Cancel any pending video load
         videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
@@ -4728,7 +4738,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     // Show the game image view again
                     gameImageView.visibility = View.VISIBLE
 
-                    // Show widgets when game is playing (FIXED)
+                    // Show widgets when game is playing
                     if (state is AppState.GamePlaying) {
                         val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
                         if (hasWidgets) {
@@ -4743,7 +4753,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             gameImageView.visibility = View.VISIBLE
             currentVideoPath = null
 
-            // Show widgets when game is playing (FIXED)
+            // Show widgets when game is playing
             if (state is AppState.GamePlaying) {
                 val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
                 if (hasWidgets) {
@@ -4790,6 +4800,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Block videos during widget edit mode
         if (!widgetsLocked) {
             android.util.Log.d("MainActivity", "Video blocked - widget edit mode active")
+            releasePlayer()
+            return false
+        }
+
+        // Block videos when black overlay is shown
+        if (isBlackOverlayShown) {
+            android.util.Log.d("MainActivity", "Video blocked - black overlay shown")
             releasePlayer()
             return false
         }

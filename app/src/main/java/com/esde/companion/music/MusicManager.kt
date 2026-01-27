@@ -75,6 +75,8 @@ class MusicManager(
     private var isActivityVisible: Boolean = true
     // Track if music was playing before becoming invisible
     private var wasMusicPlayingBeforeInvisible: Boolean = false
+    // Track if black overlay is shown
+    private var isBlackOverlayShown: Boolean = false
 
     // Callback for song title updates
     private var onSongChanged: ((String) -> Unit)? = null
@@ -109,6 +111,15 @@ class MusicManager(
         // - User has switched away from companion
         if (!isActivityVisible) {
             android.util.Log.d(TAG, "Music blocked - activity not visible")
+            stopMusic()
+            lastState = newState
+            return
+        }
+
+        // CRITICAL: Don't play music if black overlay is shown
+        // User has explicitly hidden the companion display
+        if (isBlackOverlayShown) {
+            android.util.Log.d(TAG, "Music blocked - black overlay shown")
             stopMusic()
             lastState = newState
             return
@@ -209,6 +220,38 @@ class MusicManager(
             restoreMusicVolume()
         } else if (wasMusicPausedForVideo) {
             resumeMusicFromVideo()
+        }
+    }
+
+    override fun onBlackOverlayChanged(isShown: Boolean) {
+        android.util.Log.d(TAG, "━━━ BLACK OVERLAY ${if (isShown) "SHOWN" else "HIDDEN"} ━━━")
+        isBlackOverlayShown = isShown
+
+        if (isShown) {
+            // Black overlay shown - pause music
+            android.util.Log.d(TAG, "Pausing music (black overlay shown)")
+
+            if (musicPlayer?.isPlaying == true) {
+                wasMusicPausedForVideo = true
+
+                // Fade out then pause
+                fadeVolume(currentVolume, 0f, CROSS_FADE_DURATION) {
+                    musicPlayer?.pause()
+                }
+            }
+        } else {
+            // Black overlay hidden - resume music
+            android.util.Log.d(TAG, "Resuming music (black overlay hidden)")
+
+            // Resume if we paused it
+            if (wasMusicPausedForVideo) {
+                musicPlayer?.start()
+                fadeVolume(0f, NORMAL_VOLUME, CROSS_FADE_DURATION)
+                wasMusicPausedForVideo = false
+            }
+
+            // NOTE: MainActivity will call onStateChanged() after this to handle
+            // the case where user scrolled to a different game while overlay was shown
         }
     }
 

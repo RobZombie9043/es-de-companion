@@ -64,6 +64,16 @@ interface MusicController {
     fun onActivityInvisible()
 
     /**
+     * Called when black overlay state changes.
+     *
+     * When shown (true): Stops music playback
+     * When hidden (false): Resumes music if it should be playing for current state
+     *
+     * @param isShown true if black overlay is now shown, false if hidden
+     */
+    fun onBlackOverlayChanged(isShown: Boolean)
+
+    /**
      * Release all music resources.
      *
      * Called in MainActivity.onDestroy() to clean up:
