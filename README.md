@@ -33,7 +33,7 @@ The app requires ES-DE to be installed on your device.
 
 [USERGUIDE.md](USERGUIDE.md) - Comprehensive guide covering setup, features, and advanced configuration
 
-[FAQ.md](FAQ.md) - Frequently asked questions and troubleshooting [Coming Soon]
+[FAQ.md](FAQ.md) - Frequently asked questions and troubleshooting
 
 [CHANGELOG.md](CHANGELOG.md) - Detailed release history and changelog
 
