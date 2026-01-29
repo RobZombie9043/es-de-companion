@@ -76,10 +76,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediaFileLocator: MediaFileLocator
 
     // ========== MUSIC INTEGRATION START ==========
-    // DELETE THIS PROPERTY when removing music feature
-    private lateinit var songTitleOverlay: TextView
+    // DELETE THESE PROPERTIES when removing music feature
+    private lateinit var songTitleOverlay: LinearLayout
+    private lateinit var songTitleText: TextView
+    private lateinit var musicPlayPauseButton: ImageButton
+    private lateinit var musicNextButton: ImageButton
     private var songTitleHandler: Handler? = null
     private var songTitleRunnable: Runnable? = null
+    private var isMusicActive = false  // Track if music system is active (playing or paused, not stopped)
     private val musicController: MusicController? = if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
         null // Will be initialized in onCreate after prefs are ready
     } else {
@@ -154,6 +158,12 @@ class MainActivity : AppCompatActivity() {
     // Double-tap detection variables
     private var tapCount = 0
     private var lastTapTime = 0L
+    // Two-finger tap detection for music controls
+    private var twoFingerTapCount = 0
+    private var lastTwoFingerTapTime = 0L
+    private val TWO_FINGER_TAP_TIMEOUT by lazy {
+        ViewConfiguration.getDoubleTapTimeout().toLong()  // Standard Android double-tap timeout (~300ms)
+    }
     // Standard Android double-tap timeout (max time between taps)
     private val DOUBLE_TAP_TIMEOUT by lazy {
         ViewConfiguration.getDoubleTapTimeout().toLong() // Default: 300ms
@@ -318,6 +328,7 @@ class MainActivity : AppCompatActivity() {
                 if (!musicEnabled) {
                     // Music was turned OFF - stop it
                     android.util.Log.d("MainActivity", "Music master toggle changed to OFF - stopping music")
+                    isMusicActive = false  // ADDED: Reset active state
                     hideSongTitle()
                     musicManager?.onStateChanged(state)
                 } else {
@@ -398,6 +409,11 @@ class MainActivity : AppCompatActivity() {
             musicManager?.setOnMusicStoppedListener {
                 hideSongTitle()
             }
+
+            // Set up playback state callback
+            musicManager?.setOnPlaybackStateChangedListener { isPlaying ->
+                updatePlayPauseButton(isPlaying)
+            }
         }
         // ========== MUSIC INTEGRATION END ==========
 
@@ -416,6 +432,16 @@ class MainActivity : AppCompatActivity() {
         androidSettingsButton = findViewById(R.id.androidSettingsButton)
         videoView = findViewById(R.id.videoView)
         blackOverlay = findViewById(R.id.blackOverlay)
+        // ========== MUSIC CONTROL VIEWS START ==========
+        if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
+            songTitleText = findViewById(R.id.songTitleText)
+            musicPlayPauseButton = findViewById(R.id.musicPlayPauseButton)
+            musicNextButton = findViewById(R.id.musicNextButton)
+
+            // Set up button click listeners
+            setupMusicControlButtons()
+        }
+        // ========== MUSIC CONTROL VIEWS END ==========
         // ========== MUSIC INTEGRATION START ==========
         songTitleOverlay = findViewById(R.id.songTitleOverlay)
         songTitleHandler = Handler(Looper.getMainLooper())
@@ -1228,6 +1254,37 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Update video volume based on current system volume
         updateVideoVolume()
 
+        // ========== MUSIC STATE SYNC START ==========
+        // Sync isMusicActive with MusicManager state on resume
+        if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
+            val musicEnabled = prefs.getBoolean("music.enabled", false)
+
+            if (!musicEnabled) {
+                // Music is disabled - ensure state is reset
+                isMusicActive = false
+                android.util.Log.d("MainActivity", "onResume: Music disabled, isMusicActive=false")
+            } else {
+                // Music is enabled - sync with MusicManager state
+                musicManager?.let { manager ->
+                    // Check if MusicManager has an active player (playing or paused)
+                    val hasActiveMusic = manager.isPlaying() || manager.isPaused()
+                    isMusicActive = hasActiveMusic
+
+                    // Update button state to reflect actual playback
+                    if (hasActiveMusic) {
+                        if (manager.isPlaying()) {
+                            musicPlayPauseButton.setImageResource(R.drawable.ic_pause)
+                        } else {
+                            musicPlayPauseButton.setImageResource(R.drawable.ic_play)
+                        }
+                    }
+
+                    android.util.Log.d("MainActivity", "onResume: isMusicActive=$isMusicActive, isPlaying=${manager.isPlaying()}, isPaused=${manager.isPaused()}")
+                }
+            }
+        }
+        // ========== MUSIC STATE SYNC END ==========
+
         // Clear search bar
         if (::appSearchBar.isInitialized) {
             appSearchBar.text.clear()
@@ -1604,6 +1661,65 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         })
     }
 
+    // ========== MUSIC CONTROL START ==========
+    /**
+     * Set up click listeners for music control buttons.
+     */
+    private fun setupMusicControlButtons() {
+        musicPlayPauseButton.setOnClickListener {
+            toggleMusicPlayback()
+        }
+
+        musicNextButton.setOnClickListener {
+            playNextTrack()
+        }
+    }
+
+    /**
+     * Toggle music playback between play and pause.
+     */
+    private fun toggleMusicPlayback() {
+        musicManager?.let { manager ->
+            // Check actual playback state from MusicManager
+            val isPlaying = manager.isPlaying()
+
+            if (isPlaying) {
+                // Pause music
+                manager.pauseMusic()
+                musicPlayPauseButton.setImageResource(R.drawable.ic_play)
+                android.util.Log.d("MainActivity", "Music paused via button")
+            } else {
+                // Resume music
+                manager.resumeMusic()
+                musicPlayPauseButton.setImageResource(R.drawable.ic_pause)
+                android.util.Log.d("MainActivity", "Music resumed via button")
+            }
+
+            // Music is still active (just paused/playing), don't change isMusicActive
+            // isMusicActive only becomes false when music completely stops (hideSongTitle)
+        }
+    }
+
+    /**
+     * Skip to next track in playlist.
+     */
+    private fun playNextTrack() {
+        musicManager?.skipToNextTrack()
+        android.util.Log.d("MainActivity", "Skipped to next track via button")
+    }
+
+    /**
+     * Update play/pause button icon based on playback state.
+     */
+    private fun updatePlayPauseButton(isPlaying: Boolean) {
+        musicPlayPauseButton.setImageResource(
+            if (isPlaying) R.drawable.ic_pause
+            else R.drawable.ic_play
+        )
+        android.util.Log.d("MainActivity", "Play/pause button updated: isPlaying=$isPlaying")
+    }
+    // ========== MUSIC CONTROL END ==========
+
     private fun isTouchOnWidget(x: Float, y: Float): Boolean {
         for (widgetView in activeWidgets) {
             val location = IntArray(2)
@@ -1691,6 +1807,61 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         val drawerState = bottomSheetBehavior.state
         val isDrawerOpen = drawerState == BottomSheetBehavior.STATE_EXPANDED ||
                 drawerState == BottomSheetBehavior.STATE_SETTLING
+
+        // ========== TWO-FINGER TAP FOR MUSIC CONTROLS START ==========
+        // Check for two-finger tap to toggle song title visibility (only when music is enabled)
+        if (!isDrawerOpen && FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
+            val musicEnabled = prefs.getBoolean("music.enabled", false)
+            val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+
+            android.util.Log.d("MainActivity", "Two-finger check: pointerCount=${ev.pointerCount}, action=${ev.action}, musicEnabled=$musicEnabled, songTitleEnabled=$songTitleEnabled, isMusicActive=$isMusicActive")
+
+            // Only process two-finger gestures when music and song title are enabled
+            if (musicEnabled && songTitleEnabled && ev.pointerCount == 2 && ev.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                val currentTime = System.currentTimeMillis()
+                val timeSinceLast = currentTime - lastTwoFingerTapTime
+
+                android.util.Log.d("MainActivity", "Two-finger tap detected: timeSinceLast=${timeSinceLast}ms")
+
+                // Reset if too much time passed
+                if (timeSinceLast > TWO_FINGER_TAP_TIMEOUT) {
+                    twoFingerTapCount = 0
+                }
+
+                twoFingerTapCount++
+                lastTwoFingerTapTime = currentTime
+
+                android.util.Log.d("MainActivity", "Two-finger tap count: $twoFingerTapCount")
+
+                // Trigger on first two-finger tap
+                if (twoFingerTapCount >= 1) {
+                    android.util.Log.d("MainActivity", "Two-finger tap confirmed - toggling song title")
+                    twoFingerTapCount = 0
+
+                    // Check if music is active (playing or paused, not completely stopped)
+                    if (isMusicActive) {
+                        // Toggle based on current visibility
+                        val isVisible = songTitleOverlay.visibility == View.VISIBLE
+                        android.util.Log.d("MainActivity", "Current overlay visibility: ${songTitleOverlay.visibility}, isVisible=$isVisible")
+
+                        if (isVisible) {
+                            // Currently visible - hide it
+                            android.util.Log.d("MainActivity", "Hiding visible song title")
+                            hideSongTitleOverlay()
+                        } else {
+                            // Currently hidden - show it with timeout
+                            android.util.Log.d("MainActivity", "Showing hidden song title with timeout")
+                            showSongTitleOverlay()
+                        }
+                    } else {
+                        android.util.Log.d("MainActivity", "Music not active - ignoring two-finger tap")
+                    }
+
+                    return true
+                }
+            }
+        }
+        // ========== TWO-FINGER TAP FOR MUSIC CONTROLS END ==========
 
         // Handle black overlay double-tap detection ONLY when drawer is closed and feature is enabled
         if (!isDrawerOpen && blackOverlayEnabled) {
@@ -2432,28 +2603,44 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     // ========== MUSIC INTEGRATION START ==========
-     /**
-     * Show song title overlay with fade in/out animation
+    /**
+     * Show song title overlay with fade in/out animation.
+     * This is called automatically when songs change.
      */
-     private fun showSongTitle(songName: String) {
-         // Check if feature is enabled
-         val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
-         if (!songTitleEnabled) {
-             return
-         }
+    private fun showSongTitle(songName: String) {
+        // Update playback state
+        isMusicActive = true
 
-         // Cancel any pending hide
-         songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
+        // Note: Play/pause button is updated via onPlaybackStateChanged callback
 
-         // Set text
-         songTitleOverlay.text = "♫ $songName"
+        // Check if feature is enabled
+        val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+        if (!songTitleEnabled) {
+            android.util.Log.d("MainActivity", "Song title display disabled in settings")
+            return
+        }
 
-         // Apply background opacity setting
-         val opacity = prefs.getInt("music.song_title_opacity", 80) // 0-100, default 80%
-         val alpha = (opacity * 255 / 100).coerceIn(0, 255)
-         val hexAlpha = String.format("%02x", alpha)
-         val backgroundColor = android.graphics.Color.parseColor("#${hexAlpha}000000")
-         songTitleOverlay.setBackgroundColor(backgroundColor)
+        // Update text
+        songTitleText.text = "$songName"
+
+        // Show the overlay with timeout
+        showSongTitleOverlay()
+    }
+
+    /**
+     * Show the song title overlay with current settings and timeout.
+     * Always shows the overlay and schedules auto-hide based on duration setting.
+     */
+    private fun showSongTitleOverlay() {
+        // Cancel any pending hide
+        songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
+
+        // Apply background opacity setting
+        val opacity = prefs.getInt("music.song_title_opacity", 80) // 0-100, default 80%
+        val alpha = (opacity * 255 / 100).coerceIn(0, 255)
+        val hexAlpha = String.format("%02x", alpha)
+        val backgroundColor = android.graphics.Color.parseColor("#${hexAlpha}000000")
+        songTitleOverlay.setBackgroundColor(backgroundColor)
 
         // Fade in
         songTitleOverlay.visibility = View.VISIBLE
@@ -2472,39 +2659,41 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
 
         // Calculate duration: 0->2s, 1->4s, 2->6s, ... 14->30s
-        val displayDuration = ((durationSetting + 1) * 2) * 1000L // Convert to milliseconds
+        val displayDuration = ((durationSetting + 1) * 2) * 1000L
 
-        // Schedule fade out
+        // Always schedule fade out after timeout
         songTitleRunnable = Runnable {
-            songTitleOverlay.animate()
-                .alpha(0.0f)
-                .setDuration(300)
-                .withEndAction {
-                    songTitleOverlay.visibility = View.GONE
-                }
-                .start()
+            hideSongTitleOverlay()
         }
-
         songTitleHandler?.postDelayed(songTitleRunnable!!, displayDuration)
+
+        android.util.Log.d("MainActivity", "Song title will auto-hide after ${displayDuration}ms")
     }
 
     /**
-     * Hide song title overlay immediately (used when music is disabled)
+     * Hide the song title overlay with fade out animation.
      */
-    private fun hideSongTitle() {
-        // Cancel any pending hide
+    private fun hideSongTitleOverlay() {
+        // Cancel any pending callbacks
         songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
 
-        // Hide immediately with fade out animation
-        if (songTitleOverlay.visibility == View.VISIBLE) {
-            songTitleOverlay.animate()
-                .alpha(0.0f)
-                .setDuration(300)
-                .withEndAction {
-                    songTitleOverlay.visibility = View.GONE
-                }
-                .start()
-        }
+        songTitleOverlay.animate()
+            .alpha(0.0f)
+            .setDuration(300)
+            .withEndAction {
+                songTitleOverlay.visibility = View.GONE
+            }
+            .start()
+
+        android.util.Log.d("MainActivity", "Song title overlay hidden")
+    }
+
+    /**
+     * Hide song title overlay (called when music stops).
+     */
+    private fun hideSongTitle() {
+        isMusicActive = false  // Music has completely stopped
+        hideSongTitleOverlay()
     }
 
     // ========== MUSIC INTEGRATION END ==========

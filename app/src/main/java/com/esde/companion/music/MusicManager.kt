@@ -82,6 +82,8 @@ class MusicManager(
     private var onSongChanged: ((String) -> Unit)? = null
     // Callback for when music stops
     private var onMusicStopped: (() -> Unit)? = null
+    // Callback for when playback state changes (playing/paused)
+    private var onPlaybackStateChanged: ((Boolean) -> Unit)? = null
 
     init {
         android.util.Log.d(TAG, "MusicManager initialized")
@@ -259,16 +261,19 @@ class MusicManager(
         android.util.Log.d(TAG, "━━━ ACTIVITY VISIBLE ━━━")
         isActivityVisible = true
 
-        // Resume music if it was playing before becoming invisible
+        // Check if music is enabled before resuming
+        val musicEnabled = prefs.getBoolean("music.enabled", false)
+        if (!musicEnabled) {
+            android.util.Log.d(TAG, "Music disabled - not resuming")
+            wasMusicPlayingBeforeInvisible = false
+            return
+        }
+
+        // Resume music if it was playing before visibility was lost
         if (wasMusicPlayingBeforeInvisible) {
             android.util.Log.d(TAG, "Resuming music (was playing before invisible)")
 
-            // Cancel any pending fade operations
-            volumeFadeRunnable?.let { handler.removeCallbacks(it) }
-
-            // Clear flag and restart music from the current source
-            wasMusicPlayingBeforeInvisible = false
-
+            // Restart the music source that was playing
             if (currentMusicSource != null) {
                 android.util.Log.d(TAG, "Restarting music from source: $currentMusicSource")
                 startMusic(currentMusicSource!!)
@@ -329,6 +334,14 @@ class MusicManager(
      */
     fun setOnMusicStoppedListener(listener: () -> Unit) {
         onMusicStopped = listener
+    }
+
+    /**
+     * Set callback for when playback state changes (playing/paused).
+     * @param listener Callback with Boolean parameter: true = playing, false = paused
+     */
+    fun setOnPlaybackStateChangedListener(listener: (Boolean) -> Unit) {
+        onPlaybackStateChanged = listener
     }
 
     // ========== MUSIC CONTROL ==========
@@ -490,6 +503,8 @@ class MusicManager(
                 setOnPreparedListener { mp ->
                     android.util.Log.d(TAG, "Track prepared, starting playback")
                     mp.start()
+                    // Notify that playback started
+                    onPlaybackStateChanged?.invoke(true)
                     // Fade in from 0 to target volume
                     fadeVolume(0f, targetVolume, CROSS_FADE_DURATION)
                 }
@@ -526,6 +541,63 @@ class MusicManager(
 
         playTrack(currentPlaylist[currentTrackIndex])
     }
+
+    // ========== PUBLIC PLAYBACK CONTROLS START ==========
+    /**
+     * Pause music playback (called by UI controls).
+     */
+    fun pauseMusic() {
+        musicPlayer?.let { player ->
+            if (player.isPlaying) {
+                android.util.Log.d(TAG, "Pausing music via user control")
+                player.pause()
+                onPlaybackStateChanged?.invoke(false)
+            }
+        }
+    }
+
+    /**
+     * Resume music playback (called by UI controls).
+     */
+    fun resumeMusic() {
+        musicPlayer?.let { player ->
+            if (!player.isPlaying) {
+                android.util.Log.d(TAG, "Resuming music via user control")
+                player.start()
+                onPlaybackStateChanged?.invoke(true)
+            }
+        }
+    }
+
+    /**
+     * Skip to next track in playlist (called by UI controls).
+     */
+    fun skipToNextTrack() {
+        android.util.Log.d(TAG, "Skipping to next track via user control")
+        playNextTrack()
+    }
+
+    /**
+     * Check if music is currently playing.
+     */
+    fun isPlaying(): Boolean {
+        return musicPlayer?.isPlaying ?: false
+    }
+
+    /**
+     * Check if music player exists and is paused (not playing, but not released).
+     */
+    fun isPaused(): Boolean {
+        val player = musicPlayer ?: return false
+        return try {
+            // If player exists and is NOT playing, it's paused
+            !player.isPlaying
+        } catch (e: IllegalStateException) {
+            // Player was released
+            false
+        }
+    }
+    // ========== PUBLIC PLAYBACK CONTROLS END ==========
 
     // ========== VOLUME CONTROL ==========
 

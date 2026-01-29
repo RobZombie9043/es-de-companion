@@ -48,26 +48,73 @@
         android:focusable="false" />
 
     <!-- ========== MUSIC INTEGRATION START ========== -->
-    <!-- Song Title Overlay (positioned before app drawer for correct z-index) -->
-    <TextView
+    <!-- DELETE THIS SECTION when removing music feature (FeatureFlags.ENABLE_BACKGROUND_MUSIC) -->
+    <LinearLayout
         android:id="@+id/songTitleOverlay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="32dp"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
         android:background="#CC000000"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold"
+        android:orientation="vertical"
         android:visibility="gone"
         android:elevation="5dp"
-        android:alpha="0.0"
-        tools:text="♫ Now Playing: Song Title" />
+        android:alpha="0.0">
+
+        <!-- Song title text -->
+        <TextView
+            android:id="@+id/songTitleText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"
+            tools:text="♫ Now Playing: Song Title" />
+
+        <!-- Control buttons row -->
+        <LinearLayout
+            android:id="@+id/musicControlButtons"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Play/Pause button -->
+            <ImageButton
+                android:id="@+id/musicPlayPauseButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="16dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_pause"
+                android:tint="#FFFFFF"
+                android:contentDescription="Play or pause music"
+                android:scaleType="fitCenter"
+                android:padding="8dp" />
+
+            <!-- Next track button -->
+            <ImageButton
+                android:id="@+id/musicNextButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_skip_next"
+                android:tint="#FFFFFF"
+                android:contentDescription="Next track"
+                android:scaleType="fitCenter"
+                android:padding="8dp" />
+        </LinearLayout>
+    </LinearLayout>
     <!-- ========== MUSIC INTEGRATION END ========== -->
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
