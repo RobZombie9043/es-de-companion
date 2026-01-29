@@ -215,6 +215,10 @@ Check these settings:
 4. **Volume**: Ensure music volume isn't set to 0%
 5. **Permissions**: Storage permissions must be granted
 
+### How do I control background music while playing?
+1. Two finger tap gesture on the main screen will show the song title display if hidden
+2. Play/pause and next track controls can be used to control the music
+
 ### Can music play during videos?
 
 Yes, there are three video behavior modes:

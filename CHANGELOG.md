@@ -2,8 +2,17 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-01-30
+
+### Added
+- Two-finger tap gesture to display/hide song title 
+- Play/pause/next controls added to song title display
+
 ### Changed
 - Modified when Custom Image is set as the Background Image type to not apply fade and scale transition animations as its not changing images
+
+### Fixed
+- Double tap black overlay pauses background music
 
 ## [0.5.1] - 2026-01-25
 
