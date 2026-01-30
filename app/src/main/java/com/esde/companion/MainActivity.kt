@@ -3053,6 +3053,13 @@ Access this help anytime from the widget menu!
             android.util.Log.d("MainActivity", "  videoDelay: ${videoDelay}ms")
             android.util.Log.d("MainActivity", "  instantVideoWillPlay: $instantVideoWillPlay")
 
+            // When user scrolls to a new game, stop the old game's video immediately
+            // This prevents the old video from continuing to play with the new game's widgets
+            if (videoManager.stopCurrentVideoForNewGame()) {
+                android.util.Log.d("MainActivity", "Stopped old video - showing game image")
+                gameImageView.visibility = View.VISIBLE
+            }
+
             // Update game widgets after determining video status
             // Note: updateWidgetsForCurrentGame() calls showWidgets() internally via loadGameWidgets()
             updateWidgetsForCurrentGame()

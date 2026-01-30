@@ -183,6 +183,35 @@ class VideoManager(
         videoView.visibility = View.GONE
     }
 
+    /**
+     * Stop current video immediately when scrolling to new game.
+     *
+     * This is different from stopVideo() in that it's specifically designed
+     * to be called before starting a new video, so it:
+     * - Cancels any OLD pending video delays
+     * - Releases the current player
+     * - Hides the video view
+     * - But does NOT interfere with NEW video delays that will be scheduled after this call
+     *
+     * @return true if a video was stopped, false if no video was playing
+     */
+    fun stopCurrentVideoForNewGame(): Boolean {
+        val wasPlaying = exoPlayer != null && videoView.visibility == View.VISIBLE
+
+        if (wasPlaying) {
+            android.util.Log.d(TAG, "Stopping current video for new game")
+
+            // Cancel any pending OLD video delays
+            cancelVideoDelay()
+
+            // Release player and hide view
+            releasePlayer()
+            videoView.visibility = View.GONE
+        }
+
+        return wasPlaying
+    }
+
     // ========== VOLUME CONTROL ==========
 
     /**
