@@ -193,6 +193,13 @@ class VideoManager(
     fun updateVideoVolume() {
         val player = exoPlayer ?: return
 
+        // Check if video audio is disabled in settings
+        if (!prefsManager.videoAudioEnabled) {
+            player.volume = 0f
+            android.util.Log.d(TAG, "Video audio disabled - volume set to 0")
+            return
+        }
+
         try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE)
                     as android.media.AudioManager
