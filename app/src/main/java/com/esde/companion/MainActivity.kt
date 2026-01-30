@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Bundle
@@ -31,11 +30,6 @@ import androidx.core.view.GestureDetectorCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import android.graphics.drawable.Drawable
 import android.view.animation.DecelerateInterpolator
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.button.MaterialButton
@@ -47,18 +41,16 @@ import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import java.io.File
 import kotlin.math.abs
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import android.os.Handler
 import android.os.Looper
 // ========== MUSIC INTEGRATION START ==========
-import com.esde.companion.FeatureFlags
 import com.esde.companion.music.MusicController
 import com.esde.companion.music.MusicManager
 // ========== MUSIC INTEGRATION END ==========
 import com.esde.companion.managers.PreferencesManager
+import com.esde.companion.managers.ImageManager
+import com.esde.companion.managers.VideoManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -75,6 +67,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var prefsManager: PreferencesManager
     private lateinit var appLaunchPrefs: AppLaunchPreferences
     private lateinit var mediaFileLocator: MediaFileLocator
+    private lateinit var imageManager: ImageManager
+    private lateinit var videoManager: VideoManager
 
     // ========== MUSIC INTEGRATION START ==========
     // DELETE THESE PROPERTIES when removing music feature
@@ -145,11 +139,7 @@ class MainActivity : AppCompatActivity() {
     private var screensaverInitialized = false  // Track if screensaver has loaded its first game
 
     // Video playback variables
-    private var player: ExoPlayer? = null
     private lateinit var videoView: PlayerView
-    private var videoDelayHandler: Handler? = null
-    private var videoDelayRunnable: Runnable? = null
-    private var currentVideoPath: String? = null
     private var volumeChangeReceiver: BroadcastReceiver? = null
     private var isActivityVisible = true  // Track onStart/onStop - most reliable signal
 
@@ -394,6 +384,10 @@ class MainActivity : AppCompatActivity() {
         prefsManager = PreferencesManager(this)
         appLaunchPrefs = AppLaunchPreferences(this)
         mediaFileLocator = MediaFileLocator(prefsManager)
+        imageManager = ImageManager(this, prefsManager)
+
+        // Initialize VideoManager (must be after videoView is initialized)
+        // Note: videoView initialization happens in findViewById calls below
 
         // ========== MUSIC INTEGRATION START ==========
         // Initialize music manager if feature is enabled
@@ -433,6 +427,8 @@ class MainActivity : AppCompatActivity() {
         androidSettingsButton = findViewById(R.id.androidSettingsButton)
         videoView = findViewById(R.id.videoView)
         blackOverlay = findViewById(R.id.blackOverlay)
+        // Initialize VideoManager now that videoView is ready
+        videoManager = VideoManager(this, prefsManager, mediaFileLocator, videoView)
         // ========== MUSIC CONTROL VIEWS START ==========
         if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
             songTitleText = findViewById(R.id.songTitleText)
@@ -1236,7 +1232,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     override fun onPause() {
         super.onPause()
         // Cancel any pending video delay timers (prevent video loading while in settings)
-        videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
+        videoManager.cancelVideoDelay()
         // Stop and release video player when app goes to background
         // This fixes video playback issues on devices with identical display names (e.g., Ayaneo Pocket DS)
         releasePlayer()
@@ -1495,138 +1491,18 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         targetView: ImageView,
         onComplete: (() -> Unit)? = null
     ) {
-        val animationStyle = prefsManager.animationStyle
-
-        // Get custom settings if using custom style
-        val duration = if (animationStyle == "custom") {
-            prefsManager.animationDuration
-        } else {
-            250
-        }
-
-        val scaleAmount = if (animationStyle == "custom") {
-            prefsManager.animationScale / 100f
-        } else {
-            0.95f
-        }
-
-        // Check if this is an animated format that needs special handling
-        val extension = imageFile.extension.lowercase()
-        val isAnimatedFormat = extension in listOf("webp", "gif")
-        val diskStrategy = if (isAnimatedFormat) {
-            // Animated formats can't be cached to disk
-            android.util.Log.d("MainActivity", "Animated format detected for background - using NONE disk cache")
-            DiskCacheStrategy.NONE
-        } else {
-            DiskCacheStrategy.ALL
-        }
-
-        when (animationStyle) {
-            "none" -> {
-                // No animation - instant display with crossfade disabled
-                Glide.with(this)
-                    .load(imageFile)
-                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(diskStrategy)
-                    .dontAnimate()  // Disable all transitions
-                    .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(
-                            e: GlideException?,
-                            model: Any?,
-                            target: com.bumptech.glide.request.target.Target<Drawable>,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
-
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            model: Any,
-                            target: com.bumptech.glide.request.target.Target<Drawable>?,
-                            dataSource: DataSource,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
-                    })
-                    .into(targetView)
+        // Use ImageManager for consistent loading
+        imageManager.loadGameBackground(
+            imageView = targetView,
+            imagePath = imageFile.absolutePath,
+            applyBlur = true,  // ImageManager will check prefsManager.blurLevel
+            applyTransition = true,  // ImageManager will use prefsManager.animationStyle
+            onLoaded = { onComplete?.invoke() },
+            onFailed = {
+                android.util.Log.w("MainActivity", "Failed to load image: ${imageFile.absolutePath}")
+                onComplete?.invoke()
             }
-            "fade" -> {
-                // Use Glide's built-in crossfade transition
-                Glide.with(this)
-                    .load(imageFile)
-                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(diskStrategy)
-                    .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
-                    .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(
-                            e: GlideException?,
-                            model: Any?,
-                            target: com.bumptech.glide.request.target.Target<Drawable>,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
-
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            model: Any,
-                            target: com.bumptech.glide.request.target.Target<Drawable>?,
-                            dataSource: DataSource,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
-                    })
-                    .into(targetView)
-            }
-            else -> {
-                // "scale_fade" - Use Glide crossfade + custom scale animation
-                Glide.with(this)
-                    .load(imageFile)
-                    .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile))) // Cache invalidation
-                    .diskCacheStrategy(diskStrategy)
-                    .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade(duration))
-                    .listener(object : RequestListener<Drawable> {
-                        override fun onLoadFailed(
-                            e: GlideException?,
-                            model: Any?,
-                            target: com.bumptech.glide.request.target.Target<Drawable>,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            onComplete?.invoke()
-                            return false
-                        }
-
-                        override fun onResourceReady(
-                            resource: Drawable,
-                            model: Any,
-                            target: com.bumptech.glide.request.target.Target<Drawable>?,
-                            dataSource: DataSource,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            // Apply scale animation on top of Glide's crossfade
-                            targetView.scaleX = scaleAmount
-                            targetView.scaleY = scaleAmount
-                            targetView.animate()
-                                .scaleX(1f)
-                                .scaleY(1f)
-                                .setDuration(duration.toLong())
-                                .setInterpolator(DecelerateInterpolator())
-                                .withEndAction {
-                                    onComplete?.invoke()
-                                }
-                                .start()
-                            return false
-                        }
-                    })
-                    .into(targetView)
-            }
-        }
+        )
     }
 
     private fun setupGestureDetector() {
@@ -2582,6 +2458,10 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     override fun onDestroy() {
+        // Cleanup managers first
+        imageManager.cleanup()
+        videoManager.cleanup()
+
         super.onDestroy()
         // Stop script verification
         scriptVerificationRunnable?.let { scriptVerificationHandler?.removeCallbacks(it) }
@@ -2595,7 +2475,6 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         imageLoadRunnable?.let { imageLoadHandler.removeCallbacks(it) }
         // Release video player
         releasePlayer()
-        videoDelayHandler = null
 
         // ========== MUSIC ==========
         musicManager?.release()
@@ -3104,33 +2983,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         imageFile: File,
         targetView: ImageView
     ) {
-        Glide.with(this)
-            .load(imageFile)
-            .signature(com.bumptech.glide.signature.ObjectKey(getFileSignature(imageFile)))
-            .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.ALL)
-            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
-                override fun onLoadFailed(
-                    e: com.bumptech.glide.load.engine.GlideException?,
-                    model: Any?,
-                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    return false
-                }
-
-                override fun onResourceReady(
-                    resource: android.graphics.drawable.Drawable,
-                    model: Any,
-                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
-                    dataSource: com.bumptech.glide.load.DataSource,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    // Directly set the drawable without any transition
-                    targetView.setImageDrawable(resource)
-                    return true  // Return true to prevent Glide from doing its own transition
-                }
-            })
-            .into(targetView)
+        // Use ImageManager with transitions disabled
+        imageManager.loadGameBackground(
+            imageView = targetView,
+            imagePath = imageFile.absolutePath,
+            applyBlur = false,  // No blur for instant loads
+            applyTransition = false,  // No animation for instant loads
+            onLoaded = null,
+            onFailed = {
+                android.util.Log.w("MainActivity", "Failed to load image instantly: ${imageFile.absolutePath}")
+            }
+        )
     }
 
     /**
@@ -3444,7 +3307,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             }
 
             // Check if instant video will play (delay = 0)
-            val videoPath = findVideoForGame(systemName, gameName, gameNameRaw)
+            val videoPath = mediaFileLocator.findVideoFile(systemName, gameNameRaw)
             val videoDelay = getVideoDelay()
             val instantVideoWillPlay = videoPath != null && isVideoEnabled() && widgetsLocked && videoDelay == 0L
 
@@ -4040,7 +3903,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     android.util.Log.d("MainActivity", "Game: ${s.gameFilename}")
 
                     // Check if instant video will play
-                    val videoPath = findVideoForGame(s.systemName, s.gameName, s.gameFilename)
+                    val videoPath = mediaFileLocator.findVideoFile(s.systemName, s.gameFilename)
                     val videoDelay = getVideoDelay()
                     val instantVideoWillPlay = videoPath != null && isVideoEnabled() && widgetsLocked && videoDelay == 0L
 
@@ -4596,90 +4459,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         return prefsManager.videoEnabled
     }
 
-    /**
-     * Update video volume based on system volume for the current display
-     * This respects per-display volume controls on devices like Ayn Thor
-     *
-     * Ayn Thor uses:
-     * - Standard STREAM_MUSIC volume for top screen (display 0)
-     * - Settings.System "secondary_screen_volume_level" for bottom screen (display 1)
-     */
     private fun updateVideoVolume() {
-        if (player == null) return
-
-        val audioEnabled = prefsManager.videoAudioEnabled
-
-        if (!audioEnabled) {
-            // User has disabled video audio - mute completely
-            player?.volume = 0f
-            android.util.Log.d("MainActivity", "Video audio disabled by user - volume: 0")
-            return
-        }
-
-        try {
-            // Get the audio manager
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-
-            // Determine which display we're on
-            val currentDisplayId = getCurrentDisplayId()
-
-            var normalizedVolume: Float
-
-            if (currentDisplayId == 0) {
-                // Primary display (top screen) - use standard STREAM_MUSIC volume
-                val currentVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
-                val maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
-
-                normalizedVolume = if (maxVolume > 0) {
-                    currentVolume.toFloat() / maxVolume.toFloat()
-                } else {
-                    1f
-                }
-
-                android.util.Log.d("MainActivity", "Top screen - Using STREAM_MUSIC: $currentVolume/$maxVolume = $normalizedVolume")
-
-            } else {
-                // Secondary display (bottom screen) - use secondary_screen_volume_level
-                try {
-                    val secondaryVolume = Settings.System.getInt(
-                        contentResolver,
-                        "secondary_screen_volume_level"
-                    )
-                    val maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
-
-                    normalizedVolume = if (maxVolume > 0) {
-                        secondaryVolume.toFloat() / maxVolume.toFloat()
-                    } else {
-                        1f
-                    }
-
-                    android.util.Log.d("MainActivity", "Bottom screen - Using secondary_screen_volume_level: $secondaryVolume/$maxVolume = $normalizedVolume")
-
-                } catch (e: Settings.SettingNotFoundException) {
-                    // Setting not found - fallback to standard volume
-                    android.util.Log.w("MainActivity", "secondary_screen_volume_level not found, using STREAM_MUSIC")
-
-                    val currentVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
-                    val maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
-
-                    normalizedVolume = if (maxVolume > 0) {
-                        currentVolume.toFloat() / maxVolume.toFloat()
-                    } else {
-                        1f
-                    }
-                }
-            }
-
-            // Apply the calculated volume to the video player
-            player?.volume = normalizedVolume
-
-            android.util.Log.d("MainActivity", "Video volume updated: $normalizedVolume (display: $currentDisplayId)")
-
-        } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Error updating video volume", e)
-            // Fallback to full volume if there's an error
-            player?.volume = 1f
-        }
+        videoManager.updateVideoVolume()
     }
 
     /**
@@ -4775,7 +4556,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Check if video is currently playing
      */
     private fun isVideoPlaying(): Boolean {
-        return player != null && currentVideoPath != null
+        return videoView.player != null && videoView.visibility == View.VISIBLE
     }
 
     /**
@@ -4787,201 +4568,58 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     /**
-     * Find video file for a game
-     * @param systemName ES-DE system name (e.g., "snes", "arcade")
-     * @param strippedName Game filename without extension (e.g., "Super Mario World")
-     * @param rawName Game filename with extension (e.g., "Super Mario World.zip")
-     * @return Video file path or null if not found
-     */
-    private fun findVideoForGame(systemName: String?, strippedName: String?, rawName: String?): String? {
-        if (systemName == null || rawName == null) {
-            android.util.Log.d("MainActivity", "findVideoForGame - systemName or rawName is null")
-            return null
-        }
-
-        android.util.Log.d("MainActivity", "findVideoForGame - Looking for video:")
-        android.util.Log.d("MainActivity", "  systemName: $systemName")
-        android.util.Log.d("MainActivity", "  rawName: $rawName")
-
-        return mediaFileLocator.findVideoFile(systemName, rawName)
-    }
-
-    /**
-     * Load and play video with animation based on settings
-     */
-    private fun loadVideo(videoPath: String) {
-        try {
-            // If same video is already playing, don't reload
-            if (currentVideoPath == videoPath && player != null) {
-                android.util.Log.d("MainActivity", "Same video already playing: $videoPath")
-                return
-            }
-
-            // Stop previous player without animation
-            player?.release()
-            player = null
-
-            // Create new player
-            player = ExoPlayer.Builder(this).build()
-            videoView.player = player
-
-            // Set volume based on system volume
-            updateVideoVolume()
-
-            // Create media item
-            val mediaItem = MediaItem.fromUri(videoPath)
-            player?.setMediaItem(mediaItem)
-            player?.prepare()
-            player?.playWhenReady = true
-            player?.repeatMode = Player.REPEAT_MODE_ONE // Loop video
-
-            // Hide the game image view and marquee so video is visible
-            gameImageView.visibility = View.GONE
-
-            // Hide widgets when video plays
-            hideWidgets()
-
-            // ========== MUSIC ==========
-            musicManager?.onVideoStarted()
-            // ===========================
-
-            // Get animation settings (same as images)
-            val animationStyle = prefsManager.animationStyle
-            val duration = if (animationStyle == "custom") {
-                prefsManager.animationDuration
-            } else {
-                250
-            }
-            val scaleAmount = if (animationStyle == "custom") {
-                prefsManager.animationScale / 100f
-            } else {
-                0.95f
-            }
-
-            // Show video view with animation
-            videoView.visibility = View.VISIBLE
-
-            when (animationStyle) {
-                "none" -> {
-                    // No animation - instant display
-                    videoView.alpha = 1f
-                    videoView.scaleX = 1f
-                    videoView.scaleY = 1f
-                }
-                "fade" -> {
-                    // Fade only - no scale
-                    videoView.alpha = 0f
-                    videoView.scaleX = 1f
-                    videoView.scaleY = 1f
-                    videoView.animate()
-                        .alpha(1f)
-                        .setDuration(duration.toLong())
-                        .setInterpolator(DecelerateInterpolator())
-                        .start()
-                }
-                else -> {
-                    // "scale_fade" - default with scale + fade
-                    videoView.alpha = 0f
-                    videoView.scaleX = scaleAmount
-                    videoView.scaleY = scaleAmount
-                    videoView.animate()
-                        .alpha(1f)
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(duration.toLong())
-                        .setInterpolator(DecelerateInterpolator())
-                        .start()
-                }
-            }
-
-            currentVideoPath = videoPath
-            android.util.Log.d("MainActivity", "Video loaded with ${animationStyle} animation (${duration}ms, scale: ${scaleAmount})")
-
-        } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Error loading video: $videoPath", e)
-            releasePlayer()
-        }
-    }
-
-    /**
      * Release video player
      */
     private fun releasePlayer() {
+        // Stop video with animation
+        videoView.animate().cancel()
 
-        // Cancel any pending video load
-        videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
+        videoView.animate()
+            .alpha(0f)
+            .setDuration(200)
+            .withEndAction {
+                videoManager.stopVideo()
 
-        if (player != null) {
-            // Cancel any ongoing animations
-            videoView.animate().cancel()
+                // Show the game image view again
+                gameImageView.visibility = View.VISIBLE
 
-            // Fade out video and release
-            videoView.animate()
-                .alpha(0f)
-                .setDuration(200)
-                .withEndAction {
-                    videoView.visibility = View.GONE
-                    player?.release()
-                    player = null
-                    currentVideoPath = null
-
-                    // Show the game image view again
-                    gameImageView.visibility = View.VISIBLE
-
-                    // Show widgets when game is playing
-                    if (state is AppState.GamePlaying) {
-                        val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-                        if (hasWidgets) {
-                            showWidgets()
-                        }
+                // Show widgets when game is playing
+                if (state is AppState.GamePlaying) {
+                    val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+                    if (hasWidgets) {
+                        showWidgets()
                     }
                 }
-                .start()
-        } else {
-            // No player, just hide the video view and show image view
-            videoView.visibility = View.GONE
-            gameImageView.visibility = View.VISIBLE
-            currentVideoPath = null
-
-            // Show widgets when game is playing
-            if (state is AppState.GamePlaying) {
-                val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
-                if (hasWidgets) {
-                    showWidgets()
-                }
             }
-        }
+            .start()
     }
 
     /**
      * Handle video loading with delay
      */
     private fun handleVideoForGame(systemName: String?, strippedName: String?, rawName: String?): Boolean {
-        // Cancel any pending video load
-        videoDelayRunnable?.let { videoDelayHandler?.removeCallbacks(it) }
-
         // Only trust isActivityVisible (onStart/onStop) - it's the only truly reliable signal
-        // on devices with identical display names.
         if (!isActivityVisible) {
             android.util.Log.d("MainActivity", "Video blocked - activity not visible (onStop called)")
             releasePlayer()
             return false
         }
 
-        // Additional check: If ES-DE reports a game is playing, block videos
-        // This handles same-screen game launches where onStop doesn't fire
+        // Block videos if game is playing
         if (state is AppState.GamePlaying) {
             android.util.Log.d("MainActivity", "Video blocked - game is playing (ES-DE event)")
             releasePlayer()
             return false
         }
 
+        // Block videos during screensaver
         if (state is AppState.Screensaver) {
             android.util.Log.d("MainActivity", "Video blocked - screensaver active")
             releasePlayer()
             return false
         }
 
+        // Check if video is enabled in settings
         if (!isVideoEnabled()) {
             releasePlayer()
             return false
@@ -5001,59 +4639,103 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             return false
         }
 
-        // Pass the raw name (full path) to findVideoForGame
-        val videoPath = findVideoForGame(systemName, strippedName, rawName)
+        // Validate required parameters
+        if (systemName == null || rawName == null) {
+            android.util.Log.d("MainActivity", "Video blocked - missing systemName or rawName")
+            releasePlayer()
+            return false
+        }
 
-        if (videoPath != null) {
-            val delay = getVideoDelay()
+        // Use VideoManager to play video with delay
+        val videoWillPlay = videoManager.playVideoWithDelay(
+            systemName = systemName,
+            gameFilename = rawName,
+            onStarted = {
+                android.util.Log.d("MainActivity", "Video started playing")
 
-            android.util.Log.d("MainActivity", "Video enabled, delay: ${delay}ms, path: $videoPath")
+                // Hide the game image view so video is visible
+                gameImageView.visibility = View.GONE
 
-            if (delay == 0L) {
-                // Instant - load video immediately
-                loadVideo(videoPath)
-                return true  // Video will play
-            } else {
-                // Delayed - show image first, then video
-                releasePlayer() // Stop any current video
+                // Hide widgets when video plays
+                hideWidgets()
 
-                if (videoDelayHandler == null) {
-                    videoDelayHandler = Handler(Looper.getMainLooper())
-                }
+                // ========== MUSIC ==========
+                musicManager?.onVideoStarted()
+                // ===========================
 
-                videoDelayRunnable = Runnable {
-                    // Check if conditions are still valid for playing video
-                    // Only check reliable signals
-                    val shouldAllowDelayedVideo = isActivityVisible &&        // Still visible (window-level, not app state)
-                            state is AppState.GameBrowsing &&                 // Still browsing (not playing or screensaver)
-                            widgetsLocked                                     // Widget edit mode OFF
+                // Apply animation to video view
+                applyVideoAnimation()
+            },
+            onEnded = {
+                android.util.Log.d("MainActivity", "Video playback ended")
 
-                    if (shouldAllowDelayedVideo) {
-                        loadVideo(videoPath)
-                    } else {
-                        // Build list of reasons video was cancelled
-                        val reasons = mutableListOf<String>()
-                        if (!isActivityVisible) reasons.add("not visible")
-                        when (state) {
-                            is AppState.GamePlaying -> reasons.add("game playing")
-                            is AppState.Screensaver -> reasons.add("screensaver")
-                            is AppState.SystemBrowsing -> reasons.add("system view")
-                            else -> reasons.add("unexpected state: $state")
-                        }
-                        if (!widgetsLocked) reasons.add("widget edit mode")
+                // Show game image view again
+                gameImageView.visibility = View.VISIBLE
 
-                        android.util.Log.d("MainActivity", "Video delayed load cancelled - ${reasons.joinToString(", ")}")
+                // Show widgets again if applicable
+                if (state is AppState.GamePlaying) {
+                    val hasWidgets = widgetManager.loadWidgets().isNotEmpty()
+                    if (hasWidgets) {
+                        showWidgets()
                     }
                 }
 
-                videoDelayHandler?.postDelayed(videoDelayRunnable!!, delay)
-                return true  // Video will play (after delay)
+                // ========== MUSIC ==========
+                musicManager?.onVideoEnded()
+                // ===========================
             }
+        )
+
+        if (videoWillPlay) {
+            android.util.Log.d("MainActivity", "Video scheduled for playback: $systemName / $rawName")
         } else {
-            // No video found, release player
-            android.util.Log.d("MainActivity", "No video found for system: $systemName, game: $strippedName")
-            releasePlayer()
-            return false
+            android.util.Log.d("MainActivity", "No video found for: $systemName / $rawName")
+        }
+
+        return videoWillPlay
+    }
+
+    /**
+     * Apply animation to video view based on user preferences
+     */
+    private fun applyVideoAnimation() {
+        val animationStyle = prefsManager.animationStyle
+        val duration = prefsManager.animationDuration
+        val scaleAmount = prefsManager.animationScale / 100f
+
+        videoView.visibility = View.VISIBLE
+
+        when (animationStyle) {
+            "none" -> {
+                // No animation - instant display
+                videoView.alpha = 1f
+                videoView.scaleX = 1f
+                videoView.scaleY = 1f
+            }
+            "fade" -> {
+                // Fade only - no scale
+                videoView.alpha = 0f
+                videoView.scaleX = 1f
+                videoView.scaleY = 1f
+                videoView.animate()
+                    .alpha(1f)
+                    .setDuration(duration.toLong())
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+            else -> {
+                // "scale_fade" - default with scale + fade
+                videoView.alpha = 0f
+                videoView.scaleX = scaleAmount
+                videoView.scaleY = scaleAmount
+                videoView.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(duration.toLong())
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
         }
     }
 
@@ -5074,23 +4756,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             this,
             widget,
             onDelete = { view ->
-                removeWidget(view)
+                // delete handler
             },
             onUpdate = { updatedWidget ->
-                // Update the widget in storage
-                val allWidgets = widgetManager.loadWidgets().toMutableList()
-                val widgetIndex = allWidgets.indexOfFirst { it.id == updatedWidget.id }
-                if (widgetIndex != -1) {
-                    allWidgets[widgetIndex] = updatedWidget
-                    widgetManager.saveWidgets(allWidgets)
-                    android.util.Log.d("MainActivity", "Widget ${updatedWidget.id} updated: pos=(${updatedWidget.x}, ${updatedWidget.y}), size=(${updatedWidget.width}, ${updatedWidget.height})")
-                } else {
-                    // New widget - add it
-                    allWidgets.add(updatedWidget)
-                    widgetManager.saveWidgets(allWidgets)
-                    android.util.Log.d("MainActivity", "New widget ${updatedWidget.id} added")
-                }
-            }
+                // update handler
+            },
+            imageManager = imageManager
         )
 
         // Apply current lock state to new widget
@@ -5882,21 +5553,22 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         var widgetViewRef: WidgetView? = null
 
         val widgetView = WidgetView(
-            this,
-            widget,
-            onDelete = { view ->
-                removeWidget(view)
-            },
-            onUpdate = { updatedWidget ->
-                // Update the widget in storage
-                val allWidgets = widgetManager.loadWidgets().toMutableList()
-                val widgetIndex = allWidgets.indexOfFirst { it.id == updatedWidget.id }
-                if (widgetIndex != -1) {
-                    allWidgets[widgetIndex] = updatedWidget
-                    widgetManager.saveWidgets(allWidgets)
-                    android.util.Log.d("MainActivity", "Widget ${updatedWidget.id} updated: pos=(${updatedWidget.x}, ${updatedWidget.y}), size=(${updatedWidget.width}, ${updatedWidget.height})")
-                }
+                this,
+        widget,
+        onDelete = { view ->
+            removeWidget(view)
+        },
+        onUpdate = { updatedWidget ->
+            // Update the widget in storage
+            val allWidgets = widgetManager.loadWidgets().toMutableList()
+            val widgetIndex = allWidgets.indexOfFirst { it.id == updatedWidget.id }
+            if (widgetIndex != -1) {
+                allWidgets[widgetIndex] = updatedWidget
+                widgetManager.saveWidgets(allWidgets)
+                android.util.Log.d("MainActivity", "Widget ${updatedWidget.id} updated: pos=(${updatedWidget.x}, ${updatedWidget.y}), size=(${updatedWidget.width}, ${updatedWidget.height})")
             }
+        },
+        imageManager = imageManager
         )
 
         widgetViewRef = widgetView
