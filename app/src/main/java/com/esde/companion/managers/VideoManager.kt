@@ -139,9 +139,10 @@ class VideoManager(
                             onVideoStarted?.invoke()
                         }
                         Player.STATE_ENDED -> {
-                            android.util.Log.d(TAG, "Video ended")
+                            android.util.Log.d(TAG, "Video ended naturally")
                             videoView.visibility = View.GONE
-                            onVideoEnded?.invoke()
+                            // Don't invoke callback here - releasePlayer() will do it
+                            // This prevents double-invocation
                             releasePlayer()
                         }
                     }
@@ -157,7 +158,7 @@ class VideoManager(
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error playing video", e)
             releasePlayer()
-            onVideoEnded?.invoke()
+            // Don't invoke callback here - releasePlayer() will do it
         }
     }
 
@@ -273,10 +274,20 @@ class VideoManager(
      * Release ExoPlayer resources.
      */
     fun releasePlayer() {
+        // Check if we're releasing an active player
+        val hadActivePlayer = exoPlayer != null
+
         exoPlayer?.release()
         exoPlayer = null
         videoView.player = null
         android.util.Log.d(TAG, "Player released")
+
+        // If we had an active player, notify that video ended
+        // This ensures music is restored even if video didn't complete naturally
+        if (hadActivePlayer) {
+            onVideoEnded?.invoke()
+            onVideoEnded = null // Clear callback after invoking
+        }
     }
 
     /**
