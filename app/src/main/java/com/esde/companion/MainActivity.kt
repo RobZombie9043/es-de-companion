@@ -194,8 +194,7 @@ class MainActivity : AppCompatActivity() {
     // Filter out game-select on game-start and game-end
     private var lastGameStartTime = 0L
     private var lastGameEndTime = 0L
-    // Track whether the currently displayed image is the custom fallback
-    private var isShowingCustomFallback = false
+
     private val GAME_EVENT_DEBOUNCE = 2000L  // 2 seconds
 
     // Broadcast receiver for app install/uninstall events
@@ -1208,23 +1207,11 @@ Access this help anytime from the widget menu!
                 android.util.Log.d("MainActivity", "File exists: ${file.exists()}, canRead: ${file.canRead()}")
 
                 if (file.exists() && file.canRead()) {
-                    // Only skip animation if we're already showing the custom fallback
-                    // This ensures transitions FROM other images TO custom still animate
-                    val skipAnimation = forceCustomImageOnly && isShowingCustomFallback
-
-                    if (skipAnimation) {
-                        // Load without animation - same custom image reloading
-                        loadImageInstantly(file, gameImageView)
-                        android.util.Log.d("MainActivity", "✓ Loaded custom background (no animation - already showing)")
-                    } else {
-                        // Load with animation - transitioning from different image
-                        loadImageWithAnimation(file, gameImageView) {
-                            android.util.Log.d("MainActivity", "✓ Loaded custom background with animation")
-                        }
+                    // ImageManager will automatically skip animation if same image is already loaded
+                    loadImageWithAnimation(file, gameImageView) {
+                        android.util.Log.d("MainActivity", "✓ Loaded custom background")
                     }
 
-                    // Mark that we're now showing custom fallback
-                    isShowingCustomFallback = true
                     return
                 } else {
                     android.util.Log.w("MainActivity", "Custom background file not accessible: $customBackgroundPath")
@@ -1235,16 +1222,12 @@ Access this help anytime from the widget menu!
         }
 
         // No custom background or loading failed - use built-in default
-        // Only skip animation if we're already showing the custom fallback
-        val skipAnimation = forceCustomImageOnly && isShowingCustomFallback
         android.util.Log.d("MainActivity", "Loading built-in fallback background")
-        loadBuiltInFallbackBackground(skipAnimation = skipAnimation)
+        loadBuiltInFallbackBackground()
 
-        // Mark that we're now showing custom fallback
-        isShowingCustomFallback = forceCustomImageOnly
     }
 
-    private fun loadBuiltInFallbackBackground(skipAnimation: Boolean = false) {
+    private fun loadBuiltInFallbackBackground() {
         try {
             val assetPath = "fallback/default_background.webp"
             // Copy asset to cache for loading
@@ -1257,15 +1240,9 @@ Access this help anytime from the widget menu!
                 }
             }
 
-            if (skipAnimation) {
-                // Load without animation when in "Custom Image" mode
-                loadImageInstantly(fallbackFile, gameImageView)
-                android.util.Log.d("MainActivity", "Loaded built-in fallback image (no animation)")
-            } else {
-                // Use loadImageWithAnimation for normal behavior
-                loadImageWithAnimation(fallbackFile, gameImageView) {
-                    android.util.Log.d("MainActivity", "Loaded built-in fallback image from assets")
-                }
+            // ImageManager will automatically skip animation if same image is already loaded
+            loadImageWithAnimation(fallbackFile, gameImageView) {
+                android.util.Log.d("MainActivity", "Loaded built-in fallback image from assets")
             }
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Failed to load built-in fallback image, using solid color", e)
@@ -2768,27 +2745,6 @@ Access this help anytime from the widget menu!
     }
 
     /**
-     * Load an image instantly without any animation or clearing
-     * Used for custom background images that are reloaded repeatedly
-     */
-    private fun loadImageInstantly(
-        imageFile: File,
-        targetView: ImageView
-    ) {
-        // Use ImageManager with transitions disabled
-        imageManager.loadGameBackground(
-            imageView = targetView,
-            imagePath = imageFile.absolutePath,
-            applyBlur = false,  // No blur for instant loads
-            applyTransition = false,  // No animation for instant loads
-            onLoaded = null,
-            onFailed = {
-                android.util.Log.w("MainActivity", "Failed to load image instantly: ${imageFile.absolutePath}")
-            }
-        )
-    }
-
-    /**
      * Get a signature for an image file to invalidate cache when file changes
      * Uses file's last modified time to detect changes
      */
@@ -2925,11 +2881,6 @@ Access this help anytime from the widget menu!
                 updateWidgetsForCurrentSystem()
                 showWidgets()
                 return
-            }
-
-            // Reset custom fallback tracking when NOT using custom image mode
-            if (systemImagePref != "custom_image") {
-                isShowingCustomFallback = false
             }
 
             if (systemImagePref == "custom_image") {
@@ -3071,16 +3022,10 @@ Access this help anytime from the widget menu!
             // CRITICAL: Check if solid color or custom image is selected for game view BEFORE trying to load game images
             val gameImagePref = prefsManager.gameViewBackgroundType
 
-            // Reset custom fallback tracking when NOT using custom image mode
-            if (gameImagePref != "custom_image") {
-                isShowingCustomFallback = false
-            }
-
             if (gameImagePref == "solid_color") {
                 val solidColor = prefsManager.gameBackgroundColor
                 val drawable = android.graphics.drawable.ColorDrawable(solidColor)
                 gameImageView.setImageDrawable(drawable)
-                isShowingCustomFallback = false  // Not showing custom fallback
             } else if (gameImagePref == "custom_image") {
                 // Custom image selected - always show custom background or built-in default
                 android.util.Log.d("MainActivity", "Game view custom image selected - loading custom background")

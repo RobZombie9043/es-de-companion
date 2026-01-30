@@ -47,9 +47,12 @@ class ImageManager(
         private var cacheVersion = 1
     }
 
-    private val renderScript: RenderScript by lazy {
+        private val renderScript: RenderScript by lazy {
         RenderScript.create(context)
     }
+
+    // Track the last loaded image path to skip animation when same image is loaded
+    private var lastLoadedImagePath: String? = null
 
     // ========== GAME BACKGROUND LOADING ==========
 
@@ -79,7 +82,29 @@ class ImageManager(
             return
         }
 
-        android.util.Log.d(TAG, "Loading game background: $imagePath")
+// ========== START: Enhanced debugging for same image detection ==========
+        android.util.Log.d(TAG, "════════════════════════════════════════")
+        android.util.Log.d(TAG, "loadGameBackground called")
+        android.util.Log.d(TAG, "  Current path:  $imagePath")
+        android.util.Log.d(TAG, "  Last path:     $lastLoadedImagePath")
+        android.util.Log.d(TAG, "  applyTransition: $applyTransition")
+
+        val isSameImage = lastLoadedImagePath == imagePath
+        android.util.Log.d(TAG, "  isSameImage:   $isSameImage")
+
+        if (isSameImage) {
+            android.util.Log.d(TAG, "  ✓ SAME IMAGE - Will skip animation")
+        } else {
+            android.util.Log.d(TAG, "  ✗ DIFFERENT IMAGE - Will animate")
+            // Update the last loaded path
+            lastLoadedImagePath = imagePath
+        }
+
+        // Skip animation if it's the same image being reloaded
+        val shouldAnimate = applyTransition && !isSameImage
+        android.util.Log.d(TAG, "  shouldAnimate: $shouldAnimate")
+        android.util.Log.d(TAG, "════════════════════════════════════════")
+// ========== END: Enhanced debugging ==========
 
         var request = Glide.with(context)
             .load(imageFile)
@@ -90,28 +115,26 @@ class ImageManager(
             request = request.transform(BlurTransformation(context, prefsManager.blurLevel))
         }
 
-        // Apply transition animation if enabled
-        if (applyTransition) {
+        // Apply transition animation if enabled (and not same image)
+        if (shouldAnimate) {
             val animationStyle = prefsManager.animationStyle
             val duration = prefsManager.animationDuration
-            val scale = prefsManager.animationScale / 100f + 1f
+            val scaleAmount = prefsManager.animationScale / 100f
+
+            android.util.Log.d(TAG, "Applying animation: style=$animationStyle, duration=$duration, scale=$scaleAmount")
 
             when (animationStyle) {
                 "fade" -> {
-                    request = request.transition(
-                        com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-                            .withCrossFade(duration)
-                    )
+                    // Fade only - no scale
+                    request = request
+                        .transition(
+                            com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+                                .withCrossFade(duration)
+                        )
+                        .listener(createSimpleListener(onLoaded, onFailed))
                 }
-                "slide" -> {
-                    // Custom slide animation (implemented separately)
-                    request = request.transition(
-                        com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-                            .withCrossFade(duration)
-                    )
-                }
-                "scale" -> {
-                    // Scale animation handled by listener
+                "scale_fade", "custom" -> {
+                    // Scale + Fade animation (used for both "scale_fade" preset and "custom")
                     request = request.listener(object : RequestListener<Drawable> {
                         override fun onLoadFailed(
                             e: GlideException?,
@@ -130,48 +153,103 @@ class ImageManager(
                             dataSource: DataSource,
                             isFirstResource: Boolean
                         ): Boolean {
-                            // Animate scale
-                            imageView.scaleX = scale
-                            imageView.scaleY = scale
+                            // Reset any previous animations
+                            imageView.animate().cancel()
+
+                            // Start from scaled down + transparent
+                            imageView.alpha = 0f
+                            imageView.scaleX = scaleAmount
+                            imageView.scaleY = scaleAmount
+
+                            // Animate to full size + opaque
                             imageView.animate()
+                                .alpha(1f)
                                 .scaleX(1f)
                                 .scaleY(1f)
                                 .setDuration(duration.toLong())
+                                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                                .withEndAction {
+                                    onLoaded?.invoke()
+                                }
                                 .start()
 
+                            return false  // Let Glide handle the drawable setting
+                        }
+                    })
+                }
+                "none" -> {
+                    // No animation - instant display (ensure no residual animation state)
+                    request = request.listener(object : RequestListener<Drawable> {
+                        override fun onLoadFailed(
+                            e: GlideException?,
+                            model: Any?,
+                            target: Target<Drawable>,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            onFailed?.invoke()
+                            return false
+                        }
+
+                        override fun onResourceReady(
+                            resource: Drawable,
+                            model: Any,
+                            target: Target<Drawable>,
+                            dataSource: DataSource,
+                            isFirstResource: Boolean
+                        ): Boolean {
+                            // Ensure imageView is at normal state (no animation artifacts)
+                            imageView.alpha = 1f
+                            imageView.scaleX = 1f
+                            imageView.scaleY = 1f
                             onLoaded?.invoke()
                             return false
                         }
                     })
                 }
                 else -> {
-                    // No animation
+                    // Fallback for any unrecognized style - no animation
+                    android.util.Log.w(TAG, "Unknown animation style: $animationStyle, using no animation")
+                    request = request.listener(createSimpleListener(onLoaded, onFailed))
                 }
             }
         } else {
-            // No transition - still need listener for callbacks
-            request = request.listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(
-                    e: GlideException?,
-                    model: Any?,
-                    target: Target<Drawable>,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    onFailed?.invoke()
-                    return false
-                }
+            // ========== START: Same image - no animation, ensure clean state ==========
+            android.util.Log.d(TAG, "Skipping animation for same image")
 
-                override fun onResourceReady(
-                    resource: Drawable,
-                    model: Any,
-                    target: Target<Drawable>,
-                    dataSource: DataSource,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    onLoaded?.invoke()
-                    return false
-                }
-            })
+            // CRITICAL: Disable ALL Glide transitions when same image
+            request = request
+                .dontAnimate()  // This is the key - tells Glide to skip all transitions
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?,
+                        model: Any?,
+                        target: Target<Drawable>,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        onFailed?.invoke()
+                        return false
+                    }
+
+                    override fun onResourceReady(
+                        resource: Drawable,
+                        model: Any,
+                        target: Target<Drawable>,
+                        dataSource: DataSource,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        // Cancel any ongoing animations
+                        imageView.animate().cancel()
+
+                        // Ensure imageView is at normal state (no scale/alpha artifacts)
+                        imageView.alpha = 1f
+                        imageView.scaleX = 1f
+                        imageView.scaleY = 1f
+
+                        onLoaded?.invoke()
+                        return false
+                    }
+                })
+            // ========== END: Same image - no animation ==========
         }
 
         request.into(imageView)
@@ -388,6 +466,7 @@ class ImageManager(
         }
 
         // Build Glide request with appropriate cache strategy
+        // Note: Widgets don't animate - only backgrounds animate
         val glideRequest = Glide.with(context)
             .load(imageFile)
             .signature(getCacheSignature())
@@ -417,6 +496,8 @@ class ImageManager(
         cacheVersion++
         prefsManager.lastImageCacheVersion = cacheVersion
 
+        lastLoadedImagePath = null
+
         // Clear Glide memory cache
         Glide.get(context).clearMemory()
 
@@ -424,6 +505,16 @@ class ImageManager(
         Thread {
             Glide.get(context).clearDiskCache()
         }.start()
+    }
+
+    /**
+     * Clear the last loaded image path.
+     * Call this when you want the next image load to always animate,
+     * regardless of whether it's the same image.
+     */
+    fun clearLastLoadedImage() {
+        android.util.Log.d(TAG, "Clearing last loaded image path")
+        lastLoadedImagePath = null
     }
 
     /**
