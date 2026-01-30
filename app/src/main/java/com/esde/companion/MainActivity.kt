@@ -3064,9 +3064,15 @@ Access this help anytime from the widget menu!
             // Note: updateWidgetsForCurrentGame() calls showWidgets() internally via loadGameWidgets()
             updateWidgetsForCurrentGame()
 
+            // Hide gameImageView BEFORE starting instant video to prevent background flash
+            // Must happen after stopCurrentVideoForNewGame() which shows gameImageView
+            if (instantVideoWillPlay) {
+                gameImageView.visibility = View.GONE
+                android.util.Log.d("MainActivity", "Pre-hiding gameImageView for instant video")
+            }
+
             // Handle video playback for the current game
             handleVideoForGame(systemName, gameName, gameNameRaw)
-
             // Hide widgets ONLY if instant video is playing (delay = 0)
             // For delayed videos, widgets stay visible until loadVideo() hides them
             when (state) {
