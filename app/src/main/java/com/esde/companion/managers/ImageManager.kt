@@ -82,29 +82,14 @@ class ImageManager(
             return
         }
 
-// ========== START: Enhanced debugging for same image detection ==========
-        android.util.Log.d(TAG, "════════════════════════════════════════")
-        android.util.Log.d(TAG, "loadGameBackground called")
-        android.util.Log.d(TAG, "  Current path:  $imagePath")
-        android.util.Log.d(TAG, "  Last path:     $lastLoadedImagePath")
-        android.util.Log.d(TAG, "  applyTransition: $applyTransition")
-
+        // Check if same image is already loaded
         val isSameImage = lastLoadedImagePath == imagePath
-        android.util.Log.d(TAG, "  isSameImage:   $isSameImage")
-
-        if (isSameImage) {
-            android.util.Log.d(TAG, "  ✓ SAME IMAGE - Will skip animation")
-        } else {
-            android.util.Log.d(TAG, "  ✗ DIFFERENT IMAGE - Will animate")
-            // Update the last loaded path
+        if (!isSameImage) {
             lastLoadedImagePath = imagePath
         }
 
         // Skip animation if it's the same image being reloaded
         val shouldAnimate = applyTransition && !isSameImage
-        android.util.Log.d(TAG, "  shouldAnimate: $shouldAnimate")
-        android.util.Log.d(TAG, "════════════════════════════════════════")
-// ========== END: Enhanced debugging ==========
 
         var request = Glide.with(context)
             .load(imageFile)
@@ -120,8 +105,6 @@ class ImageManager(
             val animationStyle = prefsManager.animationStyle
             val duration = prefsManager.animationDuration
             val scaleAmount = prefsManager.animationScale / 100f
-
-            android.util.Log.d(TAG, "Applying animation: style=$animationStyle, duration=$duration, scale=$scaleAmount")
 
             when (animationStyle) {
                 "fade" -> {
@@ -213,8 +196,6 @@ class ImageManager(
                 }
             }
         } else {
-            // ========== START: Same image - no animation, ensure clean state ==========
-            android.util.Log.d(TAG, "Skipping animation for same image")
 
             // CRITICAL: Disable ALL Glide transitions when same image
             request = request
@@ -249,7 +230,6 @@ class ImageManager(
                         return false
                     }
                 })
-            // ========== END: Same image - no animation ==========
         }
 
         request.into(imageView)
