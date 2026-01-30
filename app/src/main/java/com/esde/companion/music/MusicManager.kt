@@ -1,7 +1,7 @@
 package com.esde.companion.music
 
 import android.content.Context
-import android.content.SharedPreferences
+import com.esde.companion.managers.PreferencesManager
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
@@ -28,7 +28,7 @@ import java.io.File
  */
 class MusicManager(
     private val context: Context,
-    private val prefs: SharedPreferences
+    private val prefsManager: PreferencesManager
 ) : MusicController {
 
     companion object {
@@ -96,8 +96,7 @@ class MusicManager(
      * Get the music path from preferences, or use default.
      */
     private fun getMusicPath(): String {
-        val customPath = prefs.getString("music_path", null)
-        return customPath ?: DEFAULT_MUSIC_PATH
+        return prefsManager.musicPath
     }
 
     // ========== PUBLIC API (MusicController Interface) ==========
@@ -198,7 +197,7 @@ class MusicManager(
             return
         }
 
-        val behavior = prefs.getString("music.video_behavior", "duck") ?: "duck"
+        val behavior = prefsManager.musicVideoBehavior
         android.util.Log.d(TAG, "Video started - behavior: $behavior")
 
         when (behavior) {
@@ -262,7 +261,7 @@ class MusicManager(
         isActivityVisible = true
 
         // Check if music is enabled before resuming
-        val musicEnabled = prefs.getBoolean("music.enabled", false)
+        val musicEnabled = prefsManager.musicEnabled
         if (!musicEnabled) {
             android.util.Log.d(TAG, "Music disabled - not resuming")
             wasMusicPlayingBeforeInvisible = false
@@ -811,7 +810,7 @@ class MusicManager(
      * Check if music is globally enabled.
      */
     private fun isMusicEnabled(): Boolean {
-        return prefs.getBoolean("music.enabled", false)
+        return prefsManager.musicEnabled
     }
 
     /**
@@ -820,16 +819,16 @@ class MusicManager(
     private fun shouldPlayMusicForState(state: AppState): Boolean {
         return when (state) {
             is AppState.SystemBrowsing -> {
-                prefs.getBoolean("music.system_enabled", true)
+                prefsManager.musicSystemEnabled
             }
             is AppState.GameBrowsing -> {
-                prefs.getBoolean("music.game_enabled", true)
+                prefsManager.musicGameEnabled
             }
             is AppState.GamePlaying -> {
                 false // Never play music during gameplay
             }
             is AppState.Screensaver -> {
-                prefs.getBoolean("music.screensaver_enabled", false)
+                prefsManager.musicScreensaverEnabled
             }
         }
     }

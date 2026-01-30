@@ -27,9 +27,11 @@ import java.io.File
 import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.core.view.GestureDetectorCompat
+
+import com.esde.companion.managers.PreferencesManager
 class SettingsActivity : AppCompatActivity() {
 
-    private lateinit var prefs: SharedPreferences
+    private lateinit var prefsManager: PreferencesManager
     private lateinit var setupWizardButton: Button
     private lateinit var mediaPathText: TextView
     private lateinit var mediaStatusText: TextView
@@ -142,7 +144,7 @@ class SettingsActivity : AppCompatActivity() {
 
             when (pathSelectionType) {
                 PathSelection.MEDIA -> {
-                    prefs.edit().putString(MEDIA_PATH_KEY, path).apply()
+                    prefsManager.mediaPath = path
                     updateMediaPathDisplay()
 
                     // Mark that media path changed (only if not in wizard)
@@ -165,7 +167,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
                 PathSelection.SYSTEM -> {
-                    prefs.edit().putString(SYSTEM_PATH_KEY, path).apply()
+                    prefsManager.systemPath = path
                     updateSystemPathDisplay()
 
                     // Continue wizard if active
@@ -174,7 +176,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
                 PathSelection.SCRIPTS -> {
-                    prefs.edit().putString(SCRIPTS_PATH_KEY, path).apply()
+                    prefsManager.scriptsPath = path
                     updateScriptsPathDisplay()
 
                     // Warn if path doesn't look like ES-DE scripts folder
@@ -197,7 +199,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
                 PathSelection.SYSTEM_LOGOS -> {
-                    prefs.edit().putString("system_logos_path", path).apply()
+                    prefsManager.systemLogosPath = path
                     systemLogosPathText.text = path
                     Toast.makeText(this, "System logos path updated", Toast.LENGTH_SHORT).show()
                 }
@@ -208,7 +210,7 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 // ========== MUSIC INTEGRATION START ==========
                 PathSelection.MUSIC -> {
-                    prefs.edit().putString("music_path", path).apply()
+                    prefsManager.musicPath = path
                     musicPathText.text = path
                     Toast.makeText(this, "Music path updated", Toast.LENGTH_SHORT).show()
                     android.util.Log.d("SettingsActivity", "Music path set to: $path")
@@ -254,7 +256,7 @@ class SettingsActivity : AppCompatActivity() {
 
                         if (file.exists() && file.canRead() && file.isFile) {
                             // File is accessible - save path
-                            prefs.edit().putString(CUSTOM_BACKGROUND_KEY, path).apply()
+                            prefsManager.customBackgroundPath = path
                             updateCustomBackgroundDisplay()
                             customBackgroundChanged = true
 
@@ -394,13 +396,13 @@ class SettingsActivity : AppCompatActivity() {
             setContentView(R.layout.activity_settings)
             android.util.Log.d("SettingsActivity", "Layout inflated successfully")
 
-            prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            prefsManager = PreferencesManager(this)
             android.util.Log.d("SettingsActivity", "Prefs initialized")
 
             // Store initial values
-            initialDimming = prefs.getInt(DIMMING_KEY, 25)
-            initialBlur = prefs.getInt(BLUR_KEY, 0)
-            initialDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
+            initialDimming = prefsManager.dimmingLevel
+            initialBlur = prefsManager.blurLevel
+            initialDrawerTransparency = prefsManager.drawerTransparency
 
             // Initialize all views
             initializeViews()
@@ -553,7 +555,7 @@ class SettingsActivity : AppCompatActivity() {
 
         clearCustomBackgroundButton.setOnClickListener {
             // Clear the custom background using the correct key
-            prefs.edit().remove(CUSTOM_BACKGROUND_KEY).apply()
+            prefsManager.customBackgroundPath = ""  // or null if property is nullable
 
             // Update display immediately
             updateCustomBackgroundDisplay()
@@ -632,15 +634,15 @@ class SettingsActivity : AppCompatActivity() {
      * Setup back button handler with state change tracking
      */
     private fun setupBackButtonHandler() {
-        val initialHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+        val initialHiddenApps = prefsManager.hiddenApps
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 // Check all changed states
-                val currentDimming = prefs.getInt(DIMMING_KEY, 25)
-                val currentBlur = prefs.getInt(BLUR_KEY, 0)
-                val currentDrawerTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
-                val currentHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+                val currentDimming = prefsManager.dimmingLevel
+                val currentBlur = prefsManager.blurLevel
+                val currentDrawerTransparency = prefsManager.drawerTransparency
+                val currentHiddenApps = prefsManager.hiddenApps
 
                 val intent = Intent()
 
@@ -716,7 +718,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun setupColumnCountSlider() {
-        val currentColumns = prefs.getInt(COLUMN_COUNT_KEY, 4)
+        val currentColumns = prefsManager.columnCount
         columnCountSeekBar.min = 2
         columnCountSeekBar.max = 8
         columnCountSeekBar.progress = currentColumns
@@ -731,14 +733,14 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
-                    prefs.edit().putInt(COLUMN_COUNT_KEY, it.progress).apply()
+                    prefsManager.columnCount = it.progress
                 }
             }
         })
     }
 
     private fun setupDimmingSlider() {
-        val currentDimming = prefs.getInt(DIMMING_KEY, 25)
+        val currentDimming = prefsManager.dimmingLevel
         dimmingSeekBar.min = 0
         dimmingSeekBar.max = 20  // 0-20 range = 0-100% in 5% increments
         dimmingSeekBar.progress = currentDimming / 5
@@ -755,14 +757,14 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
                     val percentage = it.progress * 5
-                    prefs.edit().putInt(DIMMING_KEY, percentage).commit()
+                    prefsManager.dimmingLevel = percentage
                 }
             }
         })
     }
 
     private fun setupBlurSlider() {
-        val currentBlur = prefs.getInt(BLUR_KEY, 0)
+        val currentBlur = prefsManager.blurLevel
         blurSeekBar.min = 0
         blurSeekBar.max = 25
         blurSeekBar.progress = currentBlur
@@ -777,14 +779,14 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
-                    prefs.edit().putInt(BLUR_KEY, it.progress).commit()
+                    prefsManager.blurLevel = it.progress
                 }
             }
         })
     }
 
     private fun setupDrawerTransparencySlider() {
-        val currentTransparency = prefs.getInt(DRAWER_TRANSPARENCY_KEY, 70)
+        val currentTransparency = prefsManager.drawerTransparency
         drawerTransparencySeekBar.min = 0
         drawerTransparencySeekBar.max = 20  // 0-20 range = 0-100% in 5% increments
         drawerTransparencySeekBar.progress = currentTransparency / 5
@@ -801,14 +803,14 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
                     val percentage = it.progress * 5
-                    prefs.edit().putInt(DRAWER_TRANSPARENCY_KEY, percentage).commit()
+                    prefsManager.drawerTransparency = percentage
                 }
             }
         })
     }
 
     private fun setupAnimationStyleChips() {
-        val currentStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
+        val currentStyle = prefsManager.animationStyle
 
         val chipToCheck = when (currentStyle) {
             "none" -> R.id.animationNone
@@ -835,7 +837,7 @@ class SettingsActivity : AppCompatActivity() {
                     R.id.animationCustom -> "custom"
                     else -> "scale_fade"
                 }
-                prefs.edit().putString("animation_style", style).apply()
+                prefsManager.animationStyle = style
 
                 // Show/hide custom settings with animation
                 if (style == "custom") {
@@ -860,7 +862,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupCustomAnimationControls() {
         // Duration Slider (100ms - 500ms, in 10ms steps)
-        val currentDuration = prefs.getInt("animation_duration", 250)
+        val currentDuration = prefsManager.animationDuration
         animationDurationSeekBar.max = 40  // 0-40 = 100ms-500ms (10ms steps)
         animationDurationSeekBar.progress = (currentDuration - 100) / 10
         animationDurationText.text = "${currentDuration}ms"
@@ -876,13 +878,13 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
                     val duration = 100 + (it.progress * 10)
-                    prefs.edit().putInt("animation_duration", duration).apply()
+                    prefsManager.animationDuration = duration
                 }
             }
         })
 
         // Scale Amount Slider (85% - 100%, in 1% steps)
-        val currentScale = prefs.getInt("animation_scale", 95)
+        val currentScale = prefsManager.animationScale
         animationScaleSeekBar.max = 15  // 0-15 = 85%-100%
         animationScaleSeekBar.progress = currentScale - 85
         animationScaleText.text = "${currentScale}%"
@@ -898,7 +900,7 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
                     val scale = 85 + it.progress
-                    prefs.edit().putInt("animation_scale", scale).apply()
+                    prefsManager.animationScale = scale
                 }
             }
         })
@@ -907,7 +909,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun setupImagePreferenceChips() {
 
         // Setup System View Background Priority
-        val systemPref = prefs.getString(SYSTEM_IMAGE_PREFERENCE_KEY, "fanart") ?: "fanart"
+        val systemPref = prefsManager.systemViewBackgroundType
         val systemChipToCheck = when (systemPref) {
             "screenshot" -> R.id.systemImagePrefScreenshot
             "solid_color" -> R.id.systemImagePrefSolidColor
@@ -929,7 +931,7 @@ class SettingsActivity : AppCompatActivity() {
                     R.id.systemImagePrefFanart -> "fanart"
                     else -> "fanart"
                 }
-                prefs.edit().putString(SYSTEM_IMAGE_PREFERENCE_KEY, preference).apply()
+                prefsManager.systemViewBackgroundType = preference
 
                 // Show/hide color picker
                 systemColorPickerLayout.visibility =
@@ -940,22 +942,21 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // Setup system color picker button
-        val systemColor =
-            prefs.getInt(SYSTEM_BACKGROUND_COLOR_KEY, android.graphics.Color.parseColor("#1A1A1A"))
+        val systemColor = prefsManager.systemBackgroundColor
         systemColorPickerButton.setBackgroundColor(systemColor)
 
         systemColorPickerButton.setOnClickListener {
             // Get current color from prefs (in case it was changed since last read)
-            val currentSystemColor = prefs.getInt(SYSTEM_BACKGROUND_COLOR_KEY, android.graphics.Color.parseColor("#1A1A1A"))
+            val currentSystemColor = prefsManager.systemBackgroundColor
             showColorPicker(currentSystemColor, "System View Background Color") { selectedColor ->
-                prefs.edit().putInt(SYSTEM_BACKGROUND_COLOR_KEY, selectedColor).apply()
+                prefsManager.systemBackgroundColor = selectedColor
                 systemColorPickerButton.setBackgroundColor(selectedColor)
                 imagePreferenceChanged = true
             }
         }
 
         // Setup Game View Background Priority
-        val gamePref = prefs.getString(GAME_IMAGE_PREFERENCE_KEY, "fanart") ?: "fanart"
+        val gamePref = prefsManager.gameViewBackgroundType
         val gameChipToCheck = when (gamePref) {
             "screenshot" -> R.id.gameImagePrefScreenshot
             "solid_color" -> R.id.gameImagePrefSolidColor
@@ -977,10 +978,10 @@ class SettingsActivity : AppCompatActivity() {
                     R.id.gameImagePrefFanart -> "fanart"
                     else -> "fanart"
                 }
-                prefs.edit().putString(GAME_IMAGE_PREFERENCE_KEY, preference).apply()
+                prefsManager.gameViewBackgroundType = preference
 
                 // DEBUG: Verify preference was saved
-                val savedPref = prefs.getString(GAME_IMAGE_PREFERENCE_KEY, "NOT_FOUND")
+                val savedPref = prefsManager.gameViewBackgroundType
                 android.util.Log.d("SettingsActivity", "━━━ IMAGE PREFERENCE DEBUG ━━━")
                 android.util.Log.d("SettingsActivity", "Chip ID selected: ${checkedIds[0]}")
                 android.util.Log.d("SettingsActivity", "Preference value to save: $preference")
@@ -997,15 +998,14 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // Setup game color picker button
-        val gameColor =
-            prefs.getInt(GAME_BACKGROUND_COLOR_KEY, android.graphics.Color.parseColor("#1A1A1A"))
+        val gameColor = prefsManager.gameBackgroundColor
         gameColorPickerButton.setBackgroundColor(gameColor)
 
         gameColorPickerButton.setOnClickListener {
             // Get current color from prefs (in case it was changed since last read)
-            val currentGameColor = prefs.getInt(GAME_BACKGROUND_COLOR_KEY, android.graphics.Color.parseColor("#1A1A1A"))
+            val currentGameColor = prefsManager.gameBackgroundColor
             showColorPicker(currentGameColor, "Game View Background Color") { selectedColor ->
-                prefs.edit().putInt(GAME_BACKGROUND_COLOR_KEY, selectedColor).apply()
+                prefsManager.gameBackgroundColor = selectedColor
                 gameColorPickerButton.setBackgroundColor(selectedColor)
                 imagePreferenceChanged = true
             }
@@ -1076,8 +1076,8 @@ class SettingsActivity : AppCompatActivity() {
 
             // Pre-fill with current color - READ FROM PREFS to get latest saved value
             val latestColor = when(title) {
-                "System View Background Color" -> prefs.getInt(SYSTEM_BACKGROUND_COLOR_KEY, currentColor)
-                "Game View Background Color" -> prefs.getInt(GAME_BACKGROUND_COLOR_KEY, currentColor)
+                "System View Background Color" -> prefsManager.systemBackgroundColor
+                "Game View Background Color" -> prefsManager.gameBackgroundColor
                 else -> currentColor
             }
             val currentHex = String.format("#%06X", 0xFFFFFF and latestColor)
@@ -1105,8 +1105,8 @@ class SettingsActivity : AppCompatActivity() {
 
         // Get the latest color from prefs for proper initial selection
         val initialSelectedColor = when(title) {
-            "System View Background Color" -> prefs.getInt(SYSTEM_BACKGROUND_COLOR_KEY, currentColor)
-            "Game View Background Color" -> prefs.getInt(GAME_BACKGROUND_COLOR_KEY, currentColor)
+            "System View Background Color" -> prefsManager.systemBackgroundColor
+            "Game View Background Color" -> prefsManager.gameBackgroundColor
             else -> currentColor
         }
 
@@ -1247,7 +1247,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupVideoSettings() {
         // Load saved video enabled state (default: false/off)
-        val videoEnabled = prefs.getBoolean(VIDEO_ENABLED_KEY, false)
+        val videoEnabled = prefsManager.videoEnabled
 
         // Set initial chip selection
         val chipToCheck = if (videoEnabled) R.id.videoOn else R.id.videoOff
@@ -1260,7 +1260,7 @@ class SettingsActivity : AppCompatActivity() {
         videoSupportChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.videoOn
-                prefs.edit().putBoolean(VIDEO_ENABLED_KEY, enabled).apply()
+                prefsManager.videoEnabled = enabled
 
                 // Show/hide video settings box
                 videoSettings.visibility = if (enabled) View.VISIBLE else View.GONE
@@ -1271,7 +1271,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // Setup video delay slider (0-5 seconds in 0.5s increments = 0-10 on seekbar)
-        val savedDelay = prefs.getInt(VIDEO_DELAY_KEY, 4) // Default: 4 (2 seconds)
+        val savedDelay = prefsManager.videoDelay
         videoDelaySeekBar.progress = savedDelay
         updateVideoDelayText(savedDelay)
 
@@ -1284,7 +1284,7 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
-                    prefs.edit().putInt(VIDEO_DELAY_KEY, it.progress).apply()
+                    prefsManager.videoDelay = it.progress
                     // Mark that video settings changed
                     videoSettingsChanged = true
                 }
@@ -1292,14 +1292,14 @@ class SettingsActivity : AppCompatActivity() {
         })
 
         // Setup video audio chips
-        val audioEnabled = prefs.getBoolean(VIDEO_AUDIO_ENABLED_KEY, false)
+        val audioEnabled = prefsManager.videoAudioEnabled
         val audioChipToCheck = if (audioEnabled) R.id.videoAudioOn else R.id.videoAudioOff
         videoAudioChipGroup.check(audioChipToCheck)
 
         videoAudioChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.videoAudioOn
-                prefs.edit().putBoolean(VIDEO_AUDIO_ENABLED_KEY, enabled).apply()
+                prefsManager.videoAudioEnabled = enabled
                 // Don't mark as changed - audio is handled by onResume
             }
         }
@@ -1316,7 +1316,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupGameLaunchBehavior() {
         // Load saved game launch behavior (default: "game_image")
-        val gameLaunchBehavior = prefs.getString(GAME_LAUNCH_BEHAVIOR_KEY, "game_image") ?: "game_image"
+        val gameLaunchBehavior = prefsManager.gameLaunchBehavior
 
         // Set initial chip selection
         val chipToCheck = when (gameLaunchBehavior) {
@@ -1334,7 +1334,7 @@ class SettingsActivity : AppCompatActivity() {
                     R.id.gameLaunchBlackScreen -> "black_screen"
                     else -> "default_image"
                 }
-                prefs.edit().putString(GAME_LAUNCH_BEHAVIOR_KEY, behavior).apply()
+                prefsManager.gameLaunchBehavior = behavior
                 // Mark as changed
                 gameLaunchBehaviorChanged = true
             }
@@ -1343,7 +1343,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupScreensaverBehavior() {
         // Load saved screensaver behavior (default: "game_image")
-        val screensaverBehavior = prefs.getString(SCREENSAVER_BEHAVIOR_KEY, "game_image") ?: "game_image"
+        val screensaverBehavior = prefsManager.screensaverBehavior
 
         // Set initial chip selection
         val chipToCheck = when (screensaverBehavior) {
@@ -1361,7 +1361,7 @@ class SettingsActivity : AppCompatActivity() {
                     R.id.screensaverBlackScreen -> "black_screen"
                     else -> "default_image"
                 }
-                prefs.edit().putString(SCREENSAVER_BEHAVIOR_KEY, behavior).apply()
+                prefsManager.screensaverBehavior = behavior
                 // Mark as changed
                 screensaverBehaviorChanged = true
             }
@@ -1378,7 +1378,7 @@ class SettingsActivity : AppCompatActivity() {
         android.util.Log.d("SettingsActivity", "Setting up music settings")
 
         // Master toggle
-        val musicEnabled = prefs.getBoolean("music.enabled", false)
+        val musicEnabled = prefsManager.musicEnabled
         val masterChipToCheck = if (musicEnabled) R.id.musicMasterOn else R.id.musicMasterOff
         musicMasterChipGroup.check(masterChipToCheck)
 
@@ -1389,7 +1389,7 @@ class SettingsActivity : AppCompatActivity() {
         musicMasterChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.musicMasterOn
-                prefs.edit().putBoolean("music.enabled", enabled).apply()
+                prefsManager.musicEnabled = enabled
 
                 // Show/hide detailed settings
                 musicSettings.visibility = if (enabled) View.VISIBLE else View.GONE
@@ -1403,49 +1403,49 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // System view music
-        val systemMusicEnabled = prefs.getBoolean("music.system_enabled", true)
+        val systemMusicEnabled = prefsManager.musicSystemEnabled
         val systemChipToCheck = if (systemMusicEnabled) R.id.musicSystemOn else R.id.musicSystemOff
         musicSystemChipGroup.check(systemChipToCheck)
 
         musicSystemChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.musicSystemOn
-                prefs.edit().putBoolean("music.system_enabled", enabled).apply()
+                prefsManager.musicSystemEnabled = enabled
                 musicSettingsChanged = true
                 android.util.Log.d("SettingsActivity", "System music: $enabled")
             }
         }
 
         // Game view music
-        val gameMusicEnabled = prefs.getBoolean("music.game_enabled", true)
+        val gameMusicEnabled = prefsManager.musicGameEnabled
         val gameChipToCheck = if (gameMusicEnabled) R.id.musicGameOn else R.id.musicGameOff
         musicGameChipGroup.check(gameChipToCheck)
 
         musicGameChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.musicGameOn
-                prefs.edit().putBoolean("music.game_enabled", enabled).apply()
+                prefsManager.musicGameEnabled = enabled
                 musicSettingsChanged = true
                 android.util.Log.d("SettingsActivity", "Game music: $enabled")
             }
         }
 
         // Screensaver music
-        val screensaverMusicEnabled = prefs.getBoolean("music.screensaver_enabled", false)
+        val screensaverMusicEnabled = prefsManager.musicScreensaverEnabled
         val screensaverChipToCheck = if (screensaverMusicEnabled) R.id.musicScreensaverOn else R.id.musicScreensaverOff
         musicScreensaverChipGroup.check(screensaverChipToCheck)
 
         musicScreensaverChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.musicScreensaverOn
-                prefs.edit().putBoolean("music.screensaver_enabled", enabled).apply()
+                prefsManager.musicScreensaverEnabled = enabled
                 musicSettingsChanged = true
                 android.util.Log.d("SettingsActivity", "Screensaver music: $enabled")
             }
         }
 
         // Music during videos
-        val videoBehavior = prefs.getString("music.video_behavior", "duck") ?: "duck"
+        val videoBehavior = prefsManager.musicVideoBehavior
         val videoChipToCheck = when (videoBehavior) {
             "continue" -> R.id.musicVideoContinue
             "pause" -> R.id.musicVideoPause
@@ -1460,7 +1460,7 @@ class SettingsActivity : AppCompatActivity() {
                     R.id.musicVideoPause -> "pause"
                     else -> "duck"
                 }
-                prefs.edit().putString("music.video_behavior", behavior).apply()
+                prefsManager.musicVideoBehavior = behavior
                 android.util.Log.d("SettingsActivity", "Video music behavior: $behavior")
             }
         }
@@ -1468,7 +1468,7 @@ class SettingsActivity : AppCompatActivity() {
         android.util.Log.d("SettingsActivity", "Music settings setup complete")
 
         // Song title display
-        val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+        val songTitleEnabled = prefsManager.musicSongTitleEnabled
         val songTitleChipToCheck = if (songTitleEnabled) R.id.musicSongTitleOn else R.id.musicSongTitleOff
         musicSongTitleChipGroup.check(songTitleChipToCheck)
 
@@ -1478,7 +1478,7 @@ class SettingsActivity : AppCompatActivity() {
         musicSongTitleChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.musicSongTitleOn
-                prefs.edit().putBoolean("music.song_title_enabled", enabled).apply()
+                prefsManager.musicSongTitleEnabled = enabled
 
                 // Show/hide duration section
                 musicSongTitleDurationSection.visibility = if (enabled) View.VISIBLE else View.GONE
@@ -1488,7 +1488,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // Song title duration
-        val songTitleDuration = prefs.getInt("music.song_title_duration", 0) // 0-15 (0=2s, 15=infinite)
+        val songTitleDuration = prefsManager.musicSongTitleDuration // 0-15 (0=2s, 15=infinite)
         musicSongTitleDurationSeekBar.progress = songTitleDuration
         updateSongTitleDurationText(songTitleDuration)
 
@@ -1501,13 +1501,13 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
-                    prefs.edit().putInt("music.song_title_duration", it.progress).apply()
+                    prefsManager.musicSongTitleDuration = it.progress
                 }
             }
         })
 
         // Song title background opacity
-        val songTitleOpacity = prefs.getInt("music.song_title_opacity", 80) // 0-100 (default 80%)
+        val songTitleOpacity = prefsManager.musicSongTitleOpacity // 0-100 (default 80%)
         val opacityProgress = songTitleOpacity / 5 // Convert 0-100 to 0-20
         musicSongTitleOpacitySeekBar.progress = opacityProgress
         updateSongTitleOpacityText(songTitleOpacity)
@@ -1523,7 +1523,7 @@ class SettingsActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
                     val opacityPercent = it.progress * 5 // Convert 0-20 to 0-100
-                    prefs.edit().putInt("music.song_title_opacity", opacityPercent).apply()
+                    prefsManager.musicSongTitleOpacity = opacityPercent
                     musicSettingsChanged = true
                 }
             }
@@ -1553,7 +1553,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupBlackOverlay() {
         // Load saved black overlay enabled state (default: false/off)
-        val blackOverlayEnabled = prefs.getBoolean(BLACK_OVERLAY_ENABLED_KEY, false)
+        val blackOverlayEnabled = prefsManager.blackOverlayEnabled
 
         // Set initial chip selection
         val chipToCheck = if (blackOverlayEnabled) R.id.blackOverlayOn else R.id.blackOverlayOff
@@ -1563,13 +1563,13 @@ class SettingsActivity : AppCompatActivity() {
         blackOverlayChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (checkedIds.isNotEmpty()) {
                 val enabled = checkedIds[0] == R.id.blackOverlayOn
-                prefs.edit().putBoolean(BLACK_OVERLAY_ENABLED_KEY, enabled).apply()
+                prefsManager.blackOverlayEnabled = enabled
             }
         }
     }
 
     private fun updateMediaPathDisplay() {
-        val path = prefs.getString(MEDIA_PATH_KEY, "/storage/emulated/0/ES-DE/downloaded_media") ?: "/storage/emulated/0/ES-DE/downloaded_media"
+        val path = prefsManager.mediaPath
         mediaPathText.text = path
 
         // Check if folder exists
@@ -1603,15 +1603,12 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateSystemPathDisplay() {
-        val path = prefs.getString(SYSTEM_PATH_KEY, null)
+        val path = prefsManager.systemPath.takeIf { it.isNotEmpty() }
         val defaultPath = "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_images"
         systemPathText.text = path ?: "Default: $defaultPath"
 
         // Setup System Logos Path
-        val systemLogosPath = prefs.getString(
-            "system_logos_path",
-            null
-        )
+        val systemLogosPath = prefsManager.systemLogosPath.takeIf { it.isNotEmpty() }
         val defaultLogosPath = "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_logos"
         systemLogosPathText.text = systemLogosPath ?: "Default: $defaultLogosPath"
     }
@@ -2011,7 +2008,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateScriptsPathDisplay() {
-        val path = prefs.getString(SCRIPTS_PATH_KEY, "/storage/emulated/0/ES-DE/scripts") ?: "/storage/emulated/0/ES-DE/scripts"
+        val path = prefsManager.scriptsPath
         scriptsPathText.text = path
 
         val scriptsDir = java.io.File(path)
@@ -2156,7 +2153,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateCustomBackgroundDisplay() {
-        val customBackgroundPath = prefs.getString(CUSTOM_BACKGROUND_KEY, null)
+        val customBackgroundPath = prefsManager.customBackgroundPath.takeIf { it.isNotEmpty() }
 
         if (customBackgroundPath == null) {
             // No custom background set
@@ -2199,7 +2196,7 @@ class SettingsActivity : AppCompatActivity() {
 
     // ========== MUSIC INTEGRATION START ==========
     private fun updateMusicPathDisplay() {
-        val path = prefs.getString("music_path", "/storage/emulated/0/ES-DE Companion/music") ?: "/storage/emulated/0/ES-DE Companion/music"
+        val path = prefsManager.musicPath
         musicPathText.text = path
     }
     // ========== MUSIC INTEGRATION END ==========
@@ -2252,8 +2249,7 @@ class SettingsActivity : AppCompatActivity() {
      * Update scripts directly in settings (similar to MainActivity version)
      */
     private fun updateScriptsInSettings() {
-        val scriptsPath = prefs.getString(SCRIPTS_PATH_KEY, "/storage/emulated/0/ES-DE/scripts")
-            ?: "/storage/emulated/0/ES-DE/scripts"
+        val scriptsPath = prefsManager.scriptsPath
 
         try {
             val scriptsDir = java.io.File(scriptsPath)
@@ -2606,8 +2602,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun createScriptFiles() {
-        val scriptsPath = prefs.getString(SCRIPTS_PATH_KEY, "/storage/emulated/0/ES-DE/scripts")
-            ?: "/storage/emulated/0/ES-DE/scripts"
+        val scriptsPath = prefsManager.scriptsPath
 
         try {
             val scriptsDir = File(scriptsPath)
@@ -2901,7 +2896,7 @@ echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
         }
 
         // Check if this is first launch
-        val hasCompletedSetup = prefs.getBoolean("setup_completed", false)
+        val hasCompletedSetup = prefsManager.setupCompleted
 
         android.util.Log.d("SettingsActivity", "Auto-start check - hasPermission: $hasPermission, hasCompletedSetup: $hasCompletedSetup")
 
@@ -3011,7 +3006,7 @@ echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
                     onCancel = { isInSetupWizard = false },
                     onTopRight = {
                         // Use default path
-                        prefs.edit().putString(SCRIPTS_PATH_KEY, "/storage/emulated/0/ES-DE/scripts").apply()
+                        prefsManager.scriptsPath = "/storage/emulated/0/ES-DE/scripts"
                         updateScriptsPathDisplay()
                         continueSetupWizard()
                     },
@@ -3031,7 +3026,7 @@ echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
                     onCancel = { isInSetupWizard = false },
                     onTopRight = {
                         // Check if all 7 scripts exist
-                        val scriptsPath = prefs.getString(SCRIPTS_PATH_KEY, "/storage/emulated/0/ES-DE/scripts") ?: "/storage/emulated/0/ES-DE/scripts"
+                        val scriptsPath = prefsManager.scriptsPath
                         val scriptsDir = java.io.File(scriptsPath)
                         val scriptFiles = listOf(
                             java.io.File(scriptsDir, "game-select/esdecompanion-game-select.sh"),
@@ -3068,7 +3063,7 @@ echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
                     onCancel = { isInSetupWizard = false },
                     onTopRight = {
                         // Use default path
-                        prefs.edit().putString(MEDIA_PATH_KEY, "/storage/emulated/0/ES-DE/downloaded_media").apply()
+                        prefsManager.mediaPath = "/storage/emulated/0/ES-DE/downloaded_media"
                         updateMediaPathDisplay()
                         continueSetupWizard()
                     },
@@ -3100,7 +3095,7 @@ echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
                 isInSetupWizard = false
 
                 // Mark setup as completed
-                prefs.edit().putBoolean("setup_completed", true).apply()
+                prefsManager.setupCompleted = true
 
                 // Show comprehensive tutorial dialog
                 showPostSetupTutorial(triggerVerification = true)
@@ -3191,7 +3186,7 @@ echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
             .sortedBy { it.name.lowercase() }
 
         // Load hidden apps from preferences
-        val hiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+        val hiddenApps = prefsManager.hiddenApps
         val selectedApps = apps.map { !hiddenApps.contains(it.packageName) }.toBooleanArray()
 
         // Create ListView
@@ -3261,7 +3256,7 @@ echo -n "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
                     }
                 }
                 android.util.Log.d("SettingsActivity", "Saving hidden apps: $newHiddenApps")
-                prefs.edit().putStringSet("hidden_apps", newHiddenApps).apply()
+                prefsManager.hiddenApps = newHiddenApps
 
                 // Notify MainActivity to refresh app list
                 setResult(Activity.RESULT_OK, Intent().apply {

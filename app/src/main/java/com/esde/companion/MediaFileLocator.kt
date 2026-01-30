@@ -1,6 +1,6 @@
 package com.esde.companion
 
-import android.content.SharedPreferences
+import com.esde.companion.managers.PreferencesManager
 import java.io.File
 
 /**
@@ -14,7 +14,7 @@ import java.io.File
  * 
  * This class eliminates duplicate file-finding logic across MainActivity.
  */
-class MediaFileLocator(private val prefs: SharedPreferences) {
+class MediaFileLocator(private val prefsManager: PreferencesManager) {
     
     companion object {
         private val IMAGE_EXTENSIONS = listOf("jpg", "jpeg", "png", "webp", "gif")
@@ -37,8 +37,7 @@ class MediaFileLocator(private val prefs: SharedPreferences) {
         gameFilename: String,
         folderName: String
     ): File? {
-        val mediaPath = prefs.getString("media_path", "/storage/emulated/0/ES-DE/downloaded_media")
-            ?: return null
+        val mediaPath = prefsManager.mediaPath
         
         val dir = File(mediaPath, "$systemName/$folderName")
         if (!dir.exists()) {
@@ -93,8 +92,7 @@ class MediaFileLocator(private val prefs: SharedPreferences) {
         gameFilename: String,
         preferScreenshot: Boolean
     ): File? {
-        val mediaPath = prefs.getString("media_path", "/storage/emulated/0/ES-DE/downloaded_media")
-            ?: return null
+        val mediaPath = prefsManager.mediaPath
         
         val mediaBase = File(mediaPath, systemName)
         if (!mediaBase.exists()) return null
@@ -127,8 +125,7 @@ class MediaFileLocator(private val prefs: SharedPreferences) {
      * @return The video file path if found, null otherwise
      */
     fun findVideoFile(systemName: String, gameFilename: String): String? {
-        val mediaPath = prefs.getString("media_path", "/storage/emulated/0/ES-DE/downloaded_media")
-            ?: return null
+        val mediaPath = prefsManager.mediaPath
         
         val videoDir = File(mediaPath, "$systemName/videos")
         if (!videoDir.exists()) {

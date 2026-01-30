@@ -58,6 +58,7 @@ import com.esde.companion.FeatureFlags
 import com.esde.companion.music.MusicController
 import com.esde.companion.music.MusicManager
 // ========== MUSIC INTEGRATION END ==========
+import com.esde.companion.managers.PreferencesManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -71,7 +72,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerBackButton: ImageButton
     private lateinit var settingsButton: ImageButton
     private lateinit var androidSettingsButton: ImageButton
-    private lateinit var prefs: SharedPreferences
+    private lateinit var prefsManager: PreferencesManager
     private lateinit var appLaunchPrefs: AppLaunchPreferences
     private lateinit var mediaFileLocator: MediaFileLocator
 
@@ -323,7 +324,7 @@ class MainActivity : AppCompatActivity() {
                 // ========== MUSIC ==========
             } else if (musicMasterToggleChanged) {
                 // Music MASTER TOGGLE changed - re-evaluate for both ON and OFF
-                val musicEnabled = prefs.getBoolean("music.enabled", false)
+                val musicEnabled = prefsManager.musicEnabled
 
                 if (!musicEnabled) {
                     // Music was turned OFF - stop it
@@ -341,9 +342,9 @@ class MainActivity : AppCompatActivity() {
             } else if (musicSettingsChanged) {
                 // Other music settings changed (not master toggle) - re-evaluate music for current state
                 android.util.Log.d("MainActivity", "Music settings changed (not master) - re-evaluating music state")
-
+                val songTitleEnabled = prefsManager.musicSongTitleEnabled
                 // Check if song title display was toggled off
-                val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+
                 if (!songTitleEnabled) {
                     hideSongTitle()
                 }
@@ -371,7 +372,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateDimmingOverlay() {
-        val dimmingPercent = prefs.getInt("dimming", 25)
+        val dimmingPercent = prefsManager.dimmingLevel
 
         // Convert percentage (0-100) to hex alpha (00-FF)
         val alpha = (dimmingPercent * 255 / 100).coerceIn(0, 255)
@@ -390,14 +391,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        prefs = getSharedPreferences("ESDESecondScreenPrefs", MODE_PRIVATE)
+        prefsManager = PreferencesManager(this)
         appLaunchPrefs = AppLaunchPreferences(this)
-        mediaFileLocator = MediaFileLocator(prefs)
+        mediaFileLocator = MediaFileLocator(prefsManager)
 
         // ========== MUSIC INTEGRATION START ==========
         // Initialize music manager if feature is enabled
         if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            musicManager = MusicManager(this, prefs)
+            musicManager = MusicManager(this, prefsManager)
             android.util.Log.d("MainActivity", "MusicManager initialized")
 
             // Set up song title callback
@@ -451,11 +452,11 @@ class MainActivity : AppCompatActivity() {
         widgetContainer = findViewById(R.id.widgetContainer)
         widgetManager = WidgetManager(this)
         // Load lock state
-        widgetsLocked = prefs.getBoolean("widgets_locked", true)
+        widgetsLocked = prefsManager.widgetsLocked
         // Load snap to grid state
-        snapToGrid = prefs.getBoolean("snap_to_grid", true)
+        snapToGrid = prefsManager.snapToGrid
         // Load show grid state
-        showGrid = prefs.getBoolean("show_grid", false)
+        showGrid = prefsManager.showGrid
 
         // Create default widgets on first launch
         createDefaultWidgets()
@@ -550,14 +551,14 @@ class MainActivity : AppCompatActivity() {
             val currentVersion = packageInfo.versionName ?: "0.4.3"
             android.util.Log.d("MainActivity", "Current version from package: $currentVersion")
 
-            val lastSeenVersion = prefs.getString("last_seen_app_version", "0.0.0") ?: "0.0.0"
+            val lastSeenVersion = prefsManager.tutorialVersionShown
             android.util.Log.d("MainActivity", "Last seen version from prefs: $lastSeenVersion")
 
-            val hasSeenWidgetTutorial = prefs.getBoolean("widget_tutorial_shown", false)
+            val hasSeenWidgetTutorial = !prefsManager.tutorialVersionShown.isEmpty()
             android.util.Log.d("MainActivity", "Has seen widget tutorial: $hasSeenWidgetTutorial")
 
             // Check if default widgets were created (indicates not a fresh install)
-            val hasCreatedDefaultWidgets = prefs.getBoolean("default_widgets_created", false)
+            val hasCreatedDefaultWidgets = prefsManager.defaultWidgetsCreated
             android.util.Log.d("MainActivity", "Has created default widgets: $hasCreatedDefaultWidgets")
 
             // NEW LOGIC:
@@ -580,7 +581,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Always update the version tracking
-            prefs.edit().putString("last_seen_app_version", currentVersion).apply()
+            prefsManager.tutorialVersionShown = currentVersion
             android.util.Log.d("MainActivity", "Saved current version to prefs: $currentVersion")
 
         } catch (e: Exception) {
@@ -616,7 +617,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAndLaunchSetupWizard() {
         // Check if setup has been completed
-        val hasCompletedSetup = prefs.getBoolean("setup_completed", false)
+        val hasCompletedSetup = prefsManager.setupCompleted
 
         // Check if permissions are granted
         val hasPermission = when {
@@ -764,11 +765,11 @@ Access this help anytime from the widget menu!
             .setView(mainContainer)
             .setPositiveButton("Got It!") { _, _ ->
                 // Mark as shown
-                prefs.edit().putBoolean("widget_tutorial_shown", true).apply()
+                prefsManager.widgetTutorialShown = true
 
                 // If user checked "don't show again", mark preference
                 if (checkbox.isChecked) {
-                    prefs.edit().putBoolean("widget_tutorial_dont_show_auto", true).apply()
+                    prefsManager.widgetTutorialDontShowAuto = true
                 }
             }
             .setCancelable(true)
@@ -791,7 +792,7 @@ Access this help anytime from the widget menu!
      * Check for scripts with retry logic to handle SD card mounting delays
      */
     private fun checkScriptsWithRetry(attempt: Int = 0, maxAttempts: Int = 5) {
-        val scriptsPath = prefs.getString("scripts_path", null)
+        val scriptsPath = prefsManager.scriptsPath.ifEmpty { null }
 
         // If no custom scripts path is set, scripts are likely on internal storage
         // Check immediately without retry
@@ -902,7 +903,7 @@ Access this help anytime from the widget menu!
 
     private fun checkForCorrectScripts(): Boolean {
         // Get scripts path (return false if not set)
-        val scriptsPath = prefs.getString("scripts_path", null) ?: return false
+        val scriptsPath = prefsManager.scriptsPath.ifEmpty { return false }
         val scriptsDir = File(scriptsPath)
 
         // Define required scripts with their expected content signatures
@@ -1026,7 +1027,7 @@ Access this help anytime from the widget menu!
      * Update scripts directly without going through wizard
      */
     private fun updateScriptsDirectly() {
-        val scriptsPath = prefs.getString("scripts_path", "/storage/emulated/0/ES-DE/scripts")
+        val scriptsPath = prefsManager.scriptsPath
             ?: "/storage/emulated/0/ES-DE/scripts"
 
         try {
@@ -1161,7 +1162,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
     private fun createDefaultWidgets() {
         // Check if we've already created default widgets
-        val hasCreatedDefaults = prefs.getBoolean("default_widgets_created", false)
+        val hasCreatedDefaults = prefsManager.defaultWidgetsCreated
         if (hasCreatedDefaults) {
             android.util.Log.d("MainActivity", "Default widgets already created on previous launch")
             return
@@ -1210,7 +1211,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         widgetManager.saveWidgets(defaultWidgets)
 
         // Mark that we've created default widgets
-        prefs.edit().putBoolean("default_widgets_created", true).apply()
+        prefsManager.defaultWidgetsCreated = true
 
         android.util.Log.d("MainActivity", "Created ${defaultWidgets.size} default widgets")
     }
@@ -1257,7 +1258,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // ========== MUSIC STATE SYNC START ==========
         // Sync isMusicActive with MusicManager state on resume
         if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            val musicEnabled = prefs.getBoolean("music.enabled", false)
+            val musicEnabled = prefsManager.musicEnabled
 
             if (!musicEnabled) {
                 // Music is disabled - ensure state is reset
@@ -1291,7 +1292,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
 
         // Reload grid layout in case column count changed
-        val columnCount = prefs.getInt("column_count", 4)
+        val columnCount = prefsManager.columnCount
         appRecyclerView.layoutManager = GridLayoutManager(this, columnCount)
 
         // Reload images and videos based on current state (don't change modes)
@@ -1341,7 +1342,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
     private fun updateBlurEffect() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            val blurRadius = prefs.getInt("blur", 0)
+            val blurRadius = prefsManager.blurLevel
 
             if (blurRadius > 0) {
                 val blurEffect = android.graphics.RenderEffect.createBlurEffect(
@@ -1357,7 +1358,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun updateDrawerTransparency() {
-        val transparencyPercent = prefs.getInt("drawer_transparency", 70)
+        val transparencyPercent = prefsManager.drawerTransparency
         // Convert percentage (0-100) to hex alpha (00-FF)
         val alpha = (transparencyPercent * 255 / 100).coerceIn(0, 255)
         val hexAlpha = String.format("%02x", alpha)
@@ -1368,21 +1369,21 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     }
 
     private fun getMediaBasePath(): String {
-        val customPath = prefs.getString("media_path", null)
+        val customPath = if (prefsManager.mediaPath.isEmpty()) null else prefsManager.mediaPath
         val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE/downloaded_media"
         android.util.Log.d("ESDESecondScreen", "Media base path: $path")
         return path
     }
 
     private fun getSystemImagePath(): String {
-        val customPath = prefs.getString("system_path", null)
+        val customPath = if (prefsManager.systemPath.isEmpty()) null else prefsManager.systemPath
         val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_images"
         android.util.Log.d("ESDESecondScreen", "System image path: $path")
         return path
     }
 
     private fun getSystemLogosPath(): String {
-        val customPath = prefs.getString("system_logos_path", null)
+        val customPath = if (prefsManager.systemLogosPath.isEmpty()) null else prefsManager.systemLogosPath
         val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_logos"
         android.util.Log.d("ESDESecondScreen", "System logos path: $path")
         return path
@@ -1410,7 +1411,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
 
         // Check if user has set a custom background
-        val customBackgroundPath = prefs.getString("custom_background_uri", null)
+        val customBackgroundPath = prefsManager.customBackgroundPath.ifEmpty { null }
         android.util.Log.d("MainActivity", "Custom background path: $customBackgroundPath")
 
         if (customBackgroundPath != null) {
@@ -1494,17 +1495,17 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         targetView: ImageView,
         onComplete: (() -> Unit)? = null
     ) {
-        val animationStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
+        val animationStyle = prefsManager.animationStyle
 
         // Get custom settings if using custom style
         val duration = if (animationStyle == "custom") {
-            prefs.getInt("animation_duration", 250)
+            prefsManager.animationDuration
         } else {
             250
         }
 
         val scaleAmount = if (animationStyle == "custom") {
-            prefs.getInt("animation_scale", 95) / 100f
+            prefsManager.animationScale / 100f
         } else {
             0.95f
         }
@@ -1801,7 +1802,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         // Check if black overlay feature is enabled
-        val blackOverlayEnabled = prefs.getBoolean("black_overlay_enabled", false)
+        val blackOverlayEnabled = prefsManager.blackOverlayEnabled
 
         // Check drawer state first
         val drawerState = bottomSheetBehavior.state
@@ -1811,8 +1812,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // ========== TWO-FINGER TAP FOR MUSIC CONTROLS START ==========
         // Check for two-finger tap to toggle song title visibility (only when music is enabled)
         if (!isDrawerOpen && FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            val musicEnabled = prefs.getBoolean("music.enabled", false)
-            val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+            val musicEnabled = prefsManager.musicEnabled
+            val songTitleEnabled = prefsManager.musicSongTitleEnabled
 
             android.util.Log.d("MainActivity", "Two-finger check: pointerCount=${ev.pointerCount}, action=${ev.action}, musicEnabled=$musicEnabled, songTitleEnabled=$songTitleEnabled, isMusicActive=$isMusicActive")
 
@@ -2011,13 +2012,13 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             android.util.Log.d("MainActivity", "AppDrawer state set to HIDDEN: ${bottomSheetBehavior.state}")
         }
 
-        val columnCount = prefs.getInt(COLUMN_COUNT_KEY, 4)
+        val columnCount = prefsManager.columnCount
         appRecyclerView.layoutManager = GridLayoutManager(this, columnCount)
 
         val mainIntent = Intent(Intent.ACTION_MAIN, null)
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
 
-        val hiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+        val hiddenApps = prefsManager.hiddenApps
         allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
             .filter { !hiddenApps.contains(it.activityInfo?.packageName ?: "") }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
@@ -2041,14 +2042,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      */
     private fun showSettingsPulseHint() {
         // Only show if user has completed setup
-        if (!prefs.getBoolean("setup_completed", false)) return
+        if (!prefsManager.setupCompleted) return
 
         // Check how many times hint has been shown (max 3 times total)
-        val hintCount = prefs.getInt("settings_hint_count", 0)
+        val hintCount = prefsManager.settingsHintCount
         if (hintCount >= 3) return
 
         // Increment the hint counter
-        prefs.edit().putInt("settings_hint_count", hintCount + 1).apply()
+        prefsManager.settingsHintCount = hintCount + 1
 
         // Delay slightly so drawer animation completes first
         Handler(Looper.getMainLooper()).postDelayed({
@@ -2110,7 +2111,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                 // Show/hide clear button based on whether there's text
                 searchClearButton.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
 
-                val hiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+                val hiddenApps = prefsManager.hiddenApps
 
                 val filteredApps = if (query.isEmpty()) {
                     // No search query - show only visible apps (current behavior)
@@ -2343,7 +2344,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                                         android.util.Log.d("MainActivity", "Saved state for screensaver: $savedState")
 
                                         // Apply screensaver behavior preferences
-                                        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
+                                        val screensaverBehavior = prefsManager.screensaverBehavior
                                         android.util.Log.d("MainActivity", "Applying screensaver behavior: $screensaverBehavior")
 
                                         // Handle black screen preference
@@ -2498,8 +2499,8 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             ).show()
 
             // Check if this is first time seeing widget tutorial after setup
-            val hasSeenWidgetTutorial = prefs.getBoolean("widget_tutorial_shown", false)
-            val hasCompletedSetup = prefs.getBoolean("setup_completed", false)
+            val hasSeenWidgetTutorial = prefsManager.widgetTutorialShown
+            val hasCompletedSetup = prefsManager.setupCompleted
 
             if (!hasSeenWidgetTutorial && hasCompletedSetup) {
                 // Show widget tutorial after successful verification following setup
@@ -2614,7 +2615,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         // Note: Play/pause button is updated via onPlaybackStateChanged callback
 
         // Check if feature is enabled
-        val songTitleEnabled = prefs.getBoolean("music.song_title_enabled", false)
+        val songTitleEnabled = prefsManager.musicSongTitleEnabled
         if (!songTitleEnabled) {
             android.util.Log.d("MainActivity", "Song title display disabled in settings")
             return
@@ -2636,7 +2637,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
 
         // Apply background opacity setting
-        val opacity = prefs.getInt("music.song_title_opacity", 80) // 0-100, default 80%
+        val opacity = prefsManager.musicSongTitleOpacity // 0-100, default 80%
         val alpha = (opacity * 255 / 100).coerceIn(0, 255)
         val hexAlpha = String.format("%02x", alpha)
         val backgroundColor = android.graphics.Color.parseColor("#${hexAlpha}000000")
@@ -2650,7 +2651,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             .start()
 
         // Get display duration
-        val durationSetting = prefs.getInt("music.song_title_duration", 0) // 0-15
+        val durationSetting = prefsManager.musicSongTitleDuration // 0-15
 
         // If infinite (15), don't schedule fade out
         if (durationSetting == 15) {
@@ -3257,9 +3258,9 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             updateState(AppState.SystemBrowsing(systemName))
 
             // CRITICAL: Check if solid color or custom image is selected for system view BEFORE checking for custom images
-            val systemImagePref = prefs.getString("system_image_preference", "fanart") ?: "fanart"
+            val systemImagePref = prefsManager.systemViewBackgroundType
             if (systemImagePref == "solid_color") {
-                val solidColor = prefs.getInt("system_background_color", android.graphics.Color.parseColor("#1A1A1A"))
+                val solidColor = prefsManager.systemBackgroundColor
                 android.util.Log.d("MainActivity", "System view solid color selected - using color: ${String.format("#%06X", 0xFFFFFF and solidColor)}")
                 val drawable = android.graphics.drawable.ColorDrawable(solidColor)
                 gameImageView.setImageDrawable(drawable)
@@ -3413,7 +3414,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             ))
 
             // CRITICAL: Check if solid color or custom image is selected for game view BEFORE trying to load game images
-            val gameImagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
+            val gameImagePref = prefsManager.gameViewBackgroundType
 
             // Reset custom fallback tracking when NOT using custom image mode
             if (gameImagePref != "custom_image") {
@@ -3421,7 +3422,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             }
 
             if (gameImagePref == "solid_color") {
-                val solidColor = prefs.getInt("game_background_color", android.graphics.Color.parseColor("#1A1A1A"))
+                val solidColor = prefsManager.gameBackgroundColor
                 val drawable = android.graphics.drawable.ColorDrawable(solidColor)
                 gameImageView.setImageDrawable(drawable)
                 isShowingCustomFallback = false  // Not showing custom fallback
@@ -3491,7 +3492,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         fullGamePath: String
     ): File? {
         // Get image preference
-        val imagePref = prefs.getString("game_image_preference", "fanart") ?: "fanart"
+        val imagePref = prefsManager.gameViewBackgroundType
 
         // Return null if solid color is selected - handled in loadGameInfo()
         if (imagePref == "solid_color") {
@@ -3684,7 +3685,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         dialogAppName.text = appName
 
         // Check if app is currently hidden and update button
-        val hiddenApps = prefs.getStringSet("hidden_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+        val hiddenApps = prefsManager.hiddenApps.toMutableSet()
         val isHidden = hiddenApps.contains(packageName)
 
         if (isHidden) {
@@ -3719,18 +3720,18 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         // Hide/Unhide App button
         btnHideApp.setOnClickListener {
-            val currentHiddenApps = prefs.getStringSet("hidden_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+            val currentHiddenApps = prefsManager.hiddenApps.toMutableSet()
             val currentlyHidden = currentHiddenApps.contains(packageName)
 
             if (currentlyHidden) {
                 // Unhide - no confirmation
                 currentHiddenApps.remove(packageName)
-                prefs.edit().putStringSet("hidden_apps", currentHiddenApps).apply()
+                prefsManager.hiddenApps = currentHiddenApps
                 dialog.dismiss()
 
                 val mainIntent = Intent(Intent.ACTION_MAIN, null)
                 mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-                val updatedHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+                val updatedHiddenApps = prefsManager.hiddenApps
                 allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
                     .filter { !updatedHiddenApps.contains(it.activityInfo?.packageName ?: "") }
                     .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
@@ -3744,12 +3745,12 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
                     .setMessage("Hide \"$appName\" from the app drawer?\n\nYou can unhide it later from Settings → App Drawer → Manage Apps, or by searching for it.")
                     .setPositiveButton("Hide") { _, _ ->
                         currentHiddenApps.add(packageName)
-                        prefs.edit().putStringSet("hidden_apps", currentHiddenApps).apply()
+                        prefsManager.hiddenApps = currentHiddenApps
                         dialog.dismiss()
 
                         val mainIntent = Intent(Intent.ACTION_MAIN, null)
                         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-                        val updatedHiddenApps = prefs.getStringSet("hidden_apps", setOf()) ?: setOf()
+                        val updatedHiddenApps = prefsManager.hiddenApps
                         allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
                             .filter { !updatedHiddenApps.contains(it.activityInfo?.packageName ?: "") }
                             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
@@ -3828,7 +3829,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.util.Log.d("MainActivity", "Current state: $state")
 
         // Get the game launch behavior
-        val gameLaunchBehavior = prefs.getString("game_launch_behavior", "game_image") ?: "game_image"
+        val gameLaunchBehavior = prefsManager.gameLaunchBehavior
         android.util.Log.d("MainActivity", "Game launch behavior: $gameLaunchBehavior")
 
         // CRITICAL: If black screen, clear everything IMMEDIATELY
@@ -3932,7 +3933,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         android.util.Log.d("MainActivity", "Game start from screensaver")
 
-        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
+        val screensaverBehavior = prefsManager.screensaverBehavior
 
         // If both behaviors match, display is already correct
         if (screensaverBehavior == gameLaunchBehavior) {
@@ -4027,7 +4028,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         }
 
         // Determine how to handle display after game end
-        val gameLaunchBehavior = prefs.getString("game_launch_behavior", "game_image") ?: "game_image"
+        val gameLaunchBehavior = prefsManager.gameLaunchBehavior
         android.util.Log.d("MainActivity", "Game launch behavior: $gameLaunchBehavior")
 
         when (val s = state) {
@@ -4116,7 +4117,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
 
         android.util.Log.d("MainActivity", "Saved previous state: $previousState")
 
-        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
+        val screensaverBehavior = prefsManager.screensaverBehavior
         android.util.Log.d("MainActivity", "Screensaver behavior preference: $screensaverBehavior")
         android.util.Log.d("MainActivity", "Current state after: $state")
         android.util.Log.d("MainActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -4178,7 +4179,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.util.Log.d("MainActivity", "SCREENSAVER BEHAVIOR CHANGE")
         android.util.Log.d("MainActivity", "Current state: $state")
 
-        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
+        val screensaverBehavior = prefsManager.screensaverBehavior
         android.util.Log.d("MainActivity", "New screensaver behavior: $screensaverBehavior")
 
         // Get current screensaver game (if any)
@@ -4392,7 +4393,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.util.Log.d("MainActivity", "SCREENSAVER GAME SELECT EVENT")
         android.util.Log.d("MainActivity", "Current state: $state")
 
-        val screensaverBehavior = prefs.getString("screensaver_behavior", "game_image") ?: "game_image"
+        val screensaverBehavior = prefsManager.screensaverBehavior
         android.util.Log.d("MainActivity", "Screensaver behavior: $screensaverBehavior")
 
         // Get current screensaver game from state
@@ -4592,7 +4593,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Check if video is enabled in settings
      */
     private fun isVideoEnabled(): Boolean {
-        return prefs.getBoolean("video_enabled", false)
+        return prefsManager.videoEnabled
     }
 
     /**
@@ -4606,7 +4607,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun updateVideoVolume() {
         if (player == null) return
 
-        val audioEnabled = prefs.getBoolean("video_audio_enabled", false)
+        val audioEnabled = prefsManager.videoAudioEnabled
 
         if (!audioEnabled) {
             // User has disabled video audio - mute completely
@@ -4781,7 +4782,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
      * Get video delay in milliseconds
      */
     private fun getVideoDelay(): Long {
-        val progress = prefs.getInt("video_delay", 4) // 4 (2 seconds)
+        val progress = prefsManager.videoDelay // 4 (2 seconds)
         return (progress * 500L) // Convert to milliseconds (0-5000ms)
     }
 
@@ -4845,14 +4846,14 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
             // ===========================
 
             // Get animation settings (same as images)
-            val animationStyle = prefs.getString("animation_style", "scale_fade") ?: "scale_fade"
+            val animationStyle = prefsManager.animationStyle
             val duration = if (animationStyle == "custom") {
-                prefs.getInt("animation_duration", 250)
+                prefsManager.animationDuration
             } else {
                 250
             }
             val scaleAmount = if (animationStyle == "custom") {
-                prefs.getInt("animation_scale", 95) / 100f
+                prefsManager.animationScale / 100f
             } else {
                 0.95f
             }
@@ -5248,7 +5249,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         activeWidgets.forEach { it.setSnapToGrid(snapToGrid, gridSize) }
 
         // Save snap state to preferences
-        prefs.edit().putBoolean("snap_to_grid", snapToGrid).apply()
+        prefsManager.snapToGrid = snapToGrid
     }
 
     private fun toggleShowGrid() {
@@ -5256,7 +5257,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         updateGridOverlay()
 
         // Save show grid state to preferences
-        prefs.edit().putBoolean("show_grid", showGrid).apply()
+        prefsManager.showGrid = showGrid
 
         android.util.Log.d("MainActivity", "Show grid toggled: $showGrid")
     }
@@ -5276,7 +5277,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
         android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
 
         // Save lock state to preferences
-        prefs.edit().putBoolean("widgets_locked", widgetsLocked).apply()
+        prefsManager.widgetsLocked = widgetsLocked
 
         // Handle video playback when toggling widget lock
         if (widgetsLocked) {
@@ -5569,7 +5570,7 @@ echo -n "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
     private fun getGameDescription(systemName: String, gameFilename: String): String? {
         try {
             // Get scripts path and navigate to ES-DE folder
-            val scriptsPath = prefs.getString("scripts_path", "/storage/emulated/0/ES-DE/scripts")
+            val scriptsPath = prefsManager.scriptsPath
                 ?: return null
 
             // Get ES-DE root folder (parent of scripts folder)
