@@ -144,7 +144,7 @@ object PreferenceKeys {
     const val DEFAULT_ANIMATION_STYLE = "scale_fade"
 
     const val KEY_ANIMATION_DURATION = "animation_duration"
-    const val DEFAULT_ANIMATION_DURATION = 250
+    const val DEFAULT_ANIMATION_DURATION = 300
 
     const val KEY_ANIMATION_SCALE = "animation_scale"
     const val DEFAULT_ANIMATION_SCALE = 95

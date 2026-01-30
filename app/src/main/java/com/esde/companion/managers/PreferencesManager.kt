@@ -26,6 +26,12 @@ import com.esde.companion.data.PreferenceKeys
  */
 class PreferencesManager(context: Context) {
 
+    companion object {
+        // Animation preset constants
+        const val PRESET_ANIMATION_DURATION = 300  // milliseconds
+        const val PRESET_ANIMATION_SCALE = 95      // percentage (95% = 0.95f)
+    }
+
     private val prefs: SharedPreferences = context.getSharedPreferences(
         PreferenceKeys.PREFS_NAME,
         Context.MODE_PRIVATE

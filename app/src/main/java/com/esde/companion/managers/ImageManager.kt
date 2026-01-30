@@ -103,8 +103,18 @@ class ImageManager(
         // Apply transition animation if enabled (and not same image)
         if (shouldAnimate) {
             val animationStyle = prefsManager.animationStyle
-            val duration = prefsManager.animationDuration
-            val scaleAmount = prefsManager.animationScale / 100f
+
+            val duration = if (animationStyle == "custom") {
+                prefsManager.animationDuration
+            } else {
+                PreferencesManager.PRESET_ANIMATION_DURATION
+            }
+
+            val scaleAmount = if (animationStyle == "custom") {
+                prefsManager.animationScale / 100f
+            } else {
+                PreferencesManager.PRESET_ANIMATION_SCALE / 100f
+            }
 
             when (animationStyle) {
                 "fade" -> {
