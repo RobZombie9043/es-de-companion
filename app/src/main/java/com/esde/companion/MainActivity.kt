@@ -4450,6 +4450,10 @@ Access this help anytime from the widget menu!
      * Handle video loading with delay
      */
     private fun handleVideoForGame(systemName: String?, strippedName: String?, rawName: String?): Boolean {
+        // When scrolling rapidly through games, we need to cancel pending video delays
+        // BEFORE any validation checks, so old videos don't start playing
+        videoManager.cancelVideoDelay()
+
         // Only trust isActivityVisible (onStart/onStop) - it's the only truly reliable signal
         if (!isActivityVisible) {
             android.util.Log.d("MainActivity", "Video blocked - activity not visible (onStop called)")
