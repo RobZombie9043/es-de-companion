@@ -197,7 +197,7 @@ class MainActivity : AppCompatActivity() {
     private var lastGameStartTime = 0L
     private var lastGameEndTime = 0L
 
-    private val GAME_EVENT_DEBOUNCE = 2000L  // 2 seconds
+    private val GAME_EVENT_DEBOUNCE = 500L  //  500ms - allow scrolling shortly after game start/end
 
     // Broadcast receiver for app install/uninstall events
     private val appChangeReceiver = object : BroadcastReceiver() {
@@ -1931,10 +1931,8 @@ Access this help anytime from the widget menu!
                                         android.util.Log.d("MainActivity", "Game scroll ignored - too soon after game start")
                                         return@postDelayed
                                     }
-                                    if (currentTime - lastGameEndTime < GAME_EVENT_DEBOUNCE) {
-                                        android.util.Log.d("MainActivity", "Game scroll ignored - too soon after game end")
-                                        return@postDelayed
-                                    }
+                                    // Only debounce game start, not game end (users often want to scroll immediately after exiting)
+                                    // Game end already sets state to GameBrowsing, so scrolling is safe
 
                                     // Read the game filename
                                     val gameFile = File(watchDir, "esde_game_filename.txt")
@@ -3700,16 +3698,20 @@ Access this help anytime from the widget menu!
             is AppState.GameBrowsing -> {
                 // We're in game browsing mode after game end
                 if (gameLaunchBehavior == "game_image") {
-                    // Images/widgets are already correct, but need to reload videos
-                    android.util.Log.d("MainActivity", "Game image behavior - reloading to restart videos")
+                    // Images/widgets are already correct, but need to reload widgets and restart videos
+                    android.util.Log.d("MainActivity", "Game image behavior - reloading widgets and videos")
                     android.util.Log.d("MainActivity", "Game: ${s.gameFilename}")
+
+                    // Update widgets for the current game (they may have been hidden during gameplay)
+                    updateWidgetsForCurrentGame()
+                    showWidgets()
 
                     // Check if instant video will play
                     val videoPath = mediaFileLocator.findVideoFile(s.systemName, s.gameFilename)
                     val videoDelay = getVideoDelay()
                     val instantVideoWillPlay = videoPath != null && isVideoEnabled() && widgetsLocked && videoDelay == 0L
 
-                    // Only reload if video needs to start (instant or delayed)
+                    // Handle video playback if video exists and is enabled
                     if (videoPath != null && isVideoEnabled() && widgetsLocked) {
                         android.util.Log.d("MainActivity", "Video enabled - calling handleVideoForGame to restart")
 
@@ -3720,7 +3722,7 @@ Access this help anytime from the widget menu!
 
                         handleVideoForGame(s.systemName, s.gameName, s.gameFilename)
                     } else {
-                        android.util.Log.d("MainActivity", "No video to restart - keeping current display")
+                        android.util.Log.d("MainActivity", "No video to restart - widgets updated, display ready")
                     }
                 } else {
                     // Different behavior - need to reload
