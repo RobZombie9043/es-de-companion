@@ -321,7 +321,7 @@ class MainActivity : AppCompatActivity() {
                 if (!musicEnabled) {
                     // Music was turned OFF - stop it
                     android.util.Log.d("MainActivity", "Music master toggle changed to OFF - stopping music")
-                    isMusicActive = false  // ADDED: Reset active state
+                    isMusicActive = false
                     hideSongTitle()
                     musicManager?.onStateChanged(state)
                 } else {
@@ -330,13 +330,21 @@ class MainActivity : AppCompatActivity() {
                     musicManager?.onStateChanged(state)
                 }
 
-                skipNextReload = true
+                // CRITICAL FIX: If in GameBrowsing, reload to ensure UI is correct
+                // (video might be playing and needs to be stopped, widgets hidden, etc.)
+                if (state is AppState.GameBrowsing) {
+                    android.util.Log.d("MainActivity", "Music master toggle changed in GameBrowsing - reloading game display")
+                    loadGameInfo()
+                    skipNextReload = true
+                } else {
+                    skipNextReload = true
+                }
             } else if (musicSettingsChanged) {
                 // Other music settings changed (not master toggle) - re-evaluate music for current state
                 android.util.Log.d("MainActivity", "Music settings changed (not master) - re-evaluating music state")
                 val songTitleEnabled = prefsManager.musicSongTitleEnabled
-                // Check if song title display was toggled off
 
+                // Check if song title display was toggled off
                 if (!songTitleEnabled) {
                     hideSongTitle()
                 }
@@ -345,7 +353,15 @@ class MainActivity : AppCompatActivity() {
                 // This will start/stop music based on the new per-state toggles
                 musicManager?.onStateChanged(state)
 
-                skipNextReload = true
+                // CRITICAL FIX: If in GameBrowsing, reload to ensure UI is correct
+                // (video might be playing and needs to be stopped, widgets hidden, etc.)
+                if (state is AppState.GameBrowsing) {
+                    android.util.Log.d("MainActivity", "Music settings changed in GameBrowsing - reloading game display")
+                    loadGameInfo()
+                    skipNextReload = true
+                } else {
+                    skipNextReload = true
+                }
                 // ===========================
             } else {
                 // No settings changed that require reload
