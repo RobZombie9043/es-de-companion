@@ -151,6 +151,30 @@ class VideoManager(
                         }
                     }
                 }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    android.util.Log.e(TAG, "Video playback error: ${error.message}")
+                    android.util.Log.e(TAG, "Error code: ${error.errorCode}")
+
+                    // Log specific error details
+                    if (error is androidx.media3.exoplayer.ExoPlaybackException) {
+                        when (error.type) {
+                            androidx.media3.exoplayer.ExoPlaybackException.TYPE_SOURCE -> {
+                                android.util.Log.e(TAG, "Source error - file may be corrupted or inaccessible")
+                            }
+                            androidx.media3.exoplayer.ExoPlaybackException.TYPE_RENDERER -> {
+                                android.util.Log.e(TAG, "Renderer error - codec may not support this video format")
+                            }
+                            androidx.media3.exoplayer.ExoPlaybackException.TYPE_UNEXPECTED -> {
+                                android.util.Log.e(TAG, "Unexpected error during playback")
+                            }
+                        }
+                    }
+
+                    // Hide video view and clean up - fallback to background image
+                    videoView.visibility = View.GONE
+                    releasePlayer()
+                }
             })
 
             // Prepare and play
