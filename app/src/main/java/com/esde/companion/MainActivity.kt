@@ -86,6 +86,8 @@ class MainActivity : AppCompatActivity() {
         null
     }
     private var musicManager: MusicManager? = null
+    // Track if we're navigating to another activity in our app (Settings, SystemSelection)
+    private var isNavigatingInternally = false
     // ========== MUSIC INTEGRATION END ==========
 
     private lateinit var blackOverlay: View
@@ -1110,7 +1112,12 @@ Access this help anytime from the widget menu!
         isActivityVisible = true
         android.util.Log.d("MainActivity", "Activity VISIBLE (onStart) - videos allowed if other conditions met")
 
+        // Reset internal navigation flag when returning
+        isNavigatingInternally = false
+
         // ========== MUSIC ==========
+        // Only resume music if we were truly in background
+        // If we were just in Settings, music never stopped
         musicManager?.onActivityVisible()
         // ===========================
     }
@@ -1122,8 +1129,15 @@ Access this help anytime from the widget menu!
         releasePlayer()
 
         // ========== MUSIC ==========
-        musicManager?.onActivityInvisible()
-        hideSongTitle()
+        // Only pause music if we're ACTUALLY going to background
+        // Don't pause if navigating to Settings or other internal activities
+        if (!isNavigatingInternally) {
+            android.util.Log.d("MainActivity", "Going to background - pausing music")
+            musicManager?.onActivityInvisible()
+            hideSongTitle()
+        } else {
+            android.util.Log.d("MainActivity", "Internal navigation detected - keeping music playing")
+        }
         // ===========================
     }
 
@@ -1814,6 +1828,9 @@ Access this help anytime from the widget menu!
 
             android.util.Log.d("MainActivity", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
+            // Mark that we're navigating internally (don't pause music)
+            isNavigatingInternally = true
+
             // Don't close the drawer - just launch Settings over it
             // The drawer will still be there when returning, but that's okay
             settingsLauncher.launch(Intent(this, SettingsActivity::class.java))
@@ -1830,6 +1847,10 @@ Access this help anytime from the widget menu!
 
     private fun setupAndroidSettingsButton() {
         androidSettingsButton.setOnClickListener {
+            // Android Settings is NOT internal navigation - pause music
+            // (This is the system settings app, not our SettingsActivity)
+            isNavigatingInternally = false
+
             val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
             startActivity(intent)
         }
@@ -3423,6 +3444,9 @@ Access this help anytime from the widget menu!
      */
     private fun openAppInfo(packageName: String) {
         try {
+            // This launches Android system settings - pause music
+            isNavigatingInternally = false
+
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
             intent.data = Uri.parse("package:$packageName")
             startActivity(intent)
