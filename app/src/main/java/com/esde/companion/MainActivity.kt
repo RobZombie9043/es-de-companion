@@ -3886,22 +3886,47 @@ Access this help anytime from the widget menu!
 
                 // If we have a current screensaver game, load it
                 if (screensaverGame != null) {
-                    val gameImage = findGameImage(screensaverGame.systemName, screensaverGame.gameFilename)
+                    // Check if solid color is selected for game view
+                    val gameImagePref = prefsManager.gameViewBackgroundType
+                    if (gameImagePref == "solid_color") {
+                        val solidColor = prefsManager.gameBackgroundColor
+                        android.util.Log.d("MainActivity", "Game view solid color selected - using color: ${String.format("#%06X", 0xFFFFFF and solidColor)}")
+                        val drawable = android.graphics.drawable.ColorDrawable(solidColor)
+                        gameImageView.setImageDrawable(drawable)
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
 
-                    if (gameImage != null && gameImage.exists()) {
-                        android.util.Log.d("MainActivity", "Loading current screensaver game image: ${gameImage.name}")
-                        loadImageWithAnimation(gameImage, gameImageView)
+                        // Load and show widgets
+                        loadGameWidgets(screensaverGame.systemName, screensaverGame.gameFilename)
+                        showWidgets()
+                    } else if (gameImagePref == "custom_image") {
+                        android.util.Log.d("MainActivity", "Game view custom image selected - loading custom background")
+                        loadFallbackBackground(forceCustomImageOnly = true)
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // Load and show widgets
+                        loadGameWidgets(screensaverGame.systemName, screensaverGame.gameFilename)
+                        showWidgets()
                     } else {
-                        android.util.Log.d("MainActivity", "No game image found, using fallback")
-                        loadFallbackBackground()
+                        // Fanart or Screenshot preference
+                        val gameImage = findGameImage(screensaverGame.systemName, screensaverGame.gameFilename)
+
+                        if (gameImage != null && gameImage.exists()) {
+                            android.util.Log.d("MainActivity", "Loading current screensaver game image: ${gameImage.name}")
+                            loadImageWithAnimation(gameImage, gameImageView)
+                        } else {
+                            android.util.Log.d("MainActivity", "No game artwork found, using fallback")
+                            loadFallbackBackground()
+                        }
+
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // Load and show widgets
+                        loadGameWidgets(screensaverGame.systemName, screensaverGame.gameFilename)
+                        showWidgets()
                     }
-
-                    gameImageView.visibility = View.VISIBLE
-                    videoView.visibility = View.GONE
-
-                    // Load and show widgets
-                    loadGameWidgets(screensaverGame.systemName, screensaverGame.gameFilename)
-                    showWidgets()
                 } else {
                     // No game selected yet - just wait
                     android.util.Log.d("MainActivity", "No screensaver game yet - display will update on next game-select")
@@ -4095,30 +4120,45 @@ Access this help anytime from the widget menu!
                     android.util.Log.d("MainActivity", "  - Game: ${screensaverGame.gameName ?: gameName}")
                     android.util.Log.d("MainActivity", "  - Filename: ${screensaverGame.gameFilename}")
 
-                    // Load the screensaver game's artwork
-                    val gameImage = findGameImage(
-                        screensaverGame.systemName,
-                        screensaverGame.gameFilename
-                    )
-
-                    android.util.Log.d("MainActivity", "  - Found image path: $gameImage")
-                    android.util.Log.d("MainActivity", "  - Image exists: ${gameImage?.exists()}")
-
-                    if (gameImage != null && gameImage.exists()) {
-                        android.util.Log.d("MainActivity", "  ✓ Loading game image via loadImageWithAnimation()")
-                        android.util.Log.d("MainActivity", "  - Before load - gameImageView visibility: ${gameImageView.visibility}")
-                        loadImageWithAnimation(gameImage, gameImageView)
+                    // Check if solid color is selected for game view
+                    val gameImagePref = prefsManager.gameViewBackgroundType
+                    if (gameImagePref == "solid_color") {
+                        val solidColor = prefsManager.gameBackgroundColor
+                        android.util.Log.d("MainActivity", "  - Game view solid color selected - using color: ${String.format("#%06X", 0xFFFFFF and solidColor)}")
+                        val drawable = android.graphics.drawable.ColorDrawable(solidColor)
+                        gameImageView.setImageDrawable(drawable)
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+                    } else if (gameImagePref == "custom_image") {
+                        android.util.Log.d("MainActivity", "  - Game view custom image selected - loading custom background")
+                        loadFallbackBackground(forceCustomImageOnly = true)
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
                     } else {
-                        android.util.Log.e("MainActivity", "  ✗ Game image not found or doesn't exist")
-                        android.util.Log.d("MainActivity", "  - Falling back to default background")
-                        loadFallbackBackground()
-                    }
+                        // Fanart or Screenshot preference - try to find game artwork
+                        val gameImage = findGameImage(
+                            screensaverGame.systemName,
+                            screensaverGame.gameFilename
+                        )
 
-                    // Make sure views are visible
-                    gameImageView.visibility = View.VISIBLE
-                    videoView.visibility = View.GONE
-                    android.util.Log.d("MainActivity", "  - After load - gameImageView visibility: ${gameImageView.visibility}")
-                    android.util.Log.d("MainActivity", "  - After load - videoView visibility: ${videoView.visibility}")
+                        android.util.Log.d("MainActivity", "  - Found image path: $gameImage")
+                        android.util.Log.d("MainActivity", "  - Image exists: ${gameImage?.exists()}")
+
+                        if (gameImage != null && gameImage.exists()) {
+                            android.util.Log.d("MainActivity", "  ✓ Loading game image via loadImageWithAnimation()")
+                            android.util.Log.d("MainActivity", "  - Before load - gameImageView visibility: ${gameImageView.visibility}")
+                            loadImageWithAnimation(gameImage, gameImageView)
+                        } else {
+                            android.util.Log.d("MainActivity", "  - No game artwork found, falling back to custom background")
+                            loadFallbackBackground()
+                        }
+
+                        // Make sure views are visible
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+                        android.util.Log.d("MainActivity", "  - After load - gameImageView visibility: ${gameImageView.visibility}")
+                        android.util.Log.d("MainActivity", "  - After load - videoView visibility: ${videoView.visibility}")
+                    }
 
                     // Use existing function to load game widgets with correct images
                     android.util.Log.d("MainActivity", "Loading widgets for screensaver game")
