@@ -4839,6 +4839,9 @@ Access this help anytime from the widget menu!
 
             addWidgetToScreen(widget)
 
+            // Save the widget immediately so it persists when dialog dismisses
+            saveAllWidgets()
+
             android.widget.Toast.makeText(
                 this,
                 "System logo widget created!",
@@ -4903,9 +4906,13 @@ Access this help anytime from the widget menu!
 
                 addWidgetToScreen(widget)
 
+                // Save the widget immediately so it persists when dialog dismisses
+                saveAllWidgets()
+
                 android.widget.Toast.makeText(
                     this,
-                    if (description != null) "Game description widget created!" else "No description available for this game",
+                    if (description != null) "Game description widget created!"
+                    else "No description available for this game",
                     android.widget.Toast.LENGTH_LONG
                 ).show()
 
@@ -4949,6 +4956,9 @@ Access this help anytime from the widget menu!
             widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)
 
             addWidgetToScreen(widget)
+
+            // Save the widget immediately so it persists when dialog dismisses
+            saveAllWidgets()
 
             android.widget.Toast.makeText(
                 this,
