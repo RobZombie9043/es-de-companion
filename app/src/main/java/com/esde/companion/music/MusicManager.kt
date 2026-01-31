@@ -217,6 +217,16 @@ class MusicManager(
     override fun onVideoEnded() {
         android.util.Log.d(TAG, "Video ended")
 
+        // Don't restore music if we're in GamePlaying state
+        // Music should stay stopped during gameplay
+        if (lastState is AppState.GamePlaying) {
+            android.util.Log.d(TAG, "Not restoring music - game is playing")
+            // Reset video interaction flags
+            isMusicDucked = false
+            wasMusicPausedForVideo = false
+            return
+        }
+
         if (isMusicDucked) {
             restoreMusicVolume()
         } else if (wasMusicPausedForVideo) {
