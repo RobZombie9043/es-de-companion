@@ -348,8 +348,16 @@ class MainActivity : AppCompatActivity() {
                 skipNextReload = true
                 // ===========================
             } else {
-                // No settings changed that require reload - skip the reload in onResume
-                skipNextReload = true
+                // No settings changed that require reload
+                // However, if we're in GameBrowsing state, we should still reload
+                // to ensure video plays properly when returning from Settings
+                if (state is AppState.GameBrowsing) {
+                    android.util.Log.d("MainActivity", "No settings changed but in GameBrowsing - allowing reload for video")
+                    skipNextReload = false
+                } else {
+                    android.util.Log.d("MainActivity", "No settings changed - skipping reload")
+                    skipNextReload = true
+                }
             }
             // Note: Video audio changes are handled automatically in onResume
 
