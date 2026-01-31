@@ -128,6 +128,10 @@ class VideoManager(
             exoPlayer = ExoPlayer.Builder(context).build()
             videoView.player = exoPlayer
 
+            // Enable video looping
+            exoPlayer?.repeatMode = Player.REPEAT_MODE_ONE
+            android.util.Log.d(TAG, "Video repeat mode enabled")
+
             // Set up player listener
             exoPlayer?.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
