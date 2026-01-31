@@ -3611,23 +3611,51 @@ Access this help anytime from the widget menu!
 
                 if (gameInfo != null) {
                     val (systemName, gameFilename) = gameInfo
-                    val gameImage = findGameImage(systemName, gameFilename)
 
-                    if (gameImage != null && gameImage.exists()) {
-                        android.util.Log.d("MainActivity", "Loading game image: ${gameImage.name}")
-                        loadImageWithAnimation(gameImage, gameImageView)
+                    // Check if solid color is selected for game view
+                    val gameImagePref = prefsManager.gameViewBackgroundType
+                    if (gameImagePref == "solid_color") {
+                        val solidColor = prefsManager.gameBackgroundColor
+                        android.util.Log.d("MainActivity", "Game view solid color selected - using color: ${String.format("#%06X", 0xFFFFFF and solidColor)}")
+                        val drawable = android.graphics.drawable.ColorDrawable(solidColor)
+                        gameImageView.setImageDrawable(drawable)
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // Load and show widgets
+                        android.util.Log.d("MainActivity", "Loading widgets for game_image behavior (solid color)")
+                        loadGameWidgets(systemName, gameFilename)
+                        showWidgets()
+                    } else if (gameImagePref == "custom_image") {
+                        android.util.Log.d("MainActivity", "Game view custom image selected - loading custom background")
+                        loadFallbackBackground(forceCustomImageOnly = true)
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // Load and show widgets
+                        android.util.Log.d("MainActivity", "Loading widgets for game_image behavior (custom image)")
+                        loadGameWidgets(systemName, gameFilename)
+                        showWidgets()
                     } else {
-                        android.util.Log.d("MainActivity", "No game image found, using fallback")
-                        loadFallbackBackground()
+                        // Fanart or Screenshot preference
+                        val gameImage = findGameImage(systemName, gameFilename)
+
+                        if (gameImage != null && gameImage.exists()) {
+                            android.util.Log.d("MainActivity", "Loading game image: ${gameImage.name}")
+                            loadImageWithAnimation(gameImage, gameImageView)
+                        } else {
+                            android.util.Log.d("MainActivity", "No game artwork found, using fallback")
+                            loadFallbackBackground()
+                        }
+
+                        gameImageView.visibility = View.VISIBLE
+                        videoView.visibility = View.GONE
+
+                        // Load and show widgets
+                        android.util.Log.d("MainActivity", "Loading widgets for game_image behavior (fanart/screenshot)")
+                        loadGameWidgets(systemName, gameFilename)
+                        showWidgets()
                     }
-
-                    gameImageView.visibility = View.VISIBLE
-                    videoView.visibility = View.GONE
-
-                    // Load and show widgets directly (can't use updateWidgetsForCurrentGame because state is GamePlaying)
-                    android.util.Log.d("MainActivity", "Loading widgets for game_image behavior")
-                    loadGameWidgets(systemName, gameFilename)
-                    showWidgets()
                 } else {
                     android.util.Log.d("MainActivity", "No game info available, using fallback")
                     loadFallbackBackground()
