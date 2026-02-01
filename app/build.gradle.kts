@@ -1,9 +1,17 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 import java.util.Properties
 import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp") version "2.0.21-1.0.28"
 }
 
 android {
@@ -112,6 +120,7 @@ dependencies {
     implementation("androidx.cardview:cardview:1.0.0")
 
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    ksp("com.github.bumptech.glide:ksp:4.16.0")
 
     implementation("androidx.media3:media3-exoplayer:1.2.0")
     implementation("androidx.media3:media3-ui:1.2.0")
