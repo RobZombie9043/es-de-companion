@@ -1,7 +1,8 @@
-package com.esde.companion
+package com.esde.companion.managers
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.esde.companion.OverlayWidget
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 

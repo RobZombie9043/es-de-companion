@@ -1,6 +1,5 @@
 package com.esde.companion
 
-import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.view.LayoutInflater

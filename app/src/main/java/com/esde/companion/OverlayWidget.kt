@@ -1,6 +1,5 @@
 package com.esde.companion
 
-import android.graphics.Bitmap
 import java.util.UUID
 
 data class OverlayWidget(

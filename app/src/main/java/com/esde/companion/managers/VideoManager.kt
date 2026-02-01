@@ -5,7 +5,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import com.esde.companion.MediaFileLocator
-import com.esde.companion.OverlayWidget
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player

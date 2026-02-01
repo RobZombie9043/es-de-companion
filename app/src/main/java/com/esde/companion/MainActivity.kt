@@ -48,10 +48,11 @@ import android.os.Looper
 import com.esde.companion.music.MusicController
 import com.esde.companion.music.MusicManager
 // ========== MUSIC INTEGRATION END ==========
-import com.esde.companion.managers.PreferencesManager
 import com.esde.companion.managers.ImageManager
+import com.esde.companion.managers.PreferencesManager
 import com.esde.companion.managers.ScriptManager
 import com.esde.companion.managers.VideoManager
+import com.esde.companion.managers.WidgetManager
 
 class MainActivity : AppCompatActivity() {
 
