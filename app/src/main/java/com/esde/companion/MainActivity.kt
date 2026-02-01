@@ -2557,7 +2557,15 @@ Access this help anytime from the widget menu!
 
             // Fall back to built-in SVG assets
             val svgPath = "system_logos/$baseFileName.svg"
-            val svg = com.caverock.androidsvg.SVG.getFromAsset(assets, svgPath)
+            val svg = try {
+                com.caverock.androidsvg.SVG.getFromAsset(assets, svgPath)
+            } catch (e: java.io.FileNotFoundException) {
+                android.util.Log.w("MainActivity", "No built-in logo found for system: $baseFileName - using text fallback")
+                return createTextFallbackDrawable(baseFileName, width, height)
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Error loading built-in logo for $baseFileName", e)
+                return createTextFallbackDrawable(baseFileName, width, height)
+            }
 
             if (width > 0 && height > 0) {
                 // Create bitmap at target dimensions
