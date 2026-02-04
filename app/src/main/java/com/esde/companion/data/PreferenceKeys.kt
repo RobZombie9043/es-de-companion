@@ -22,10 +22,10 @@ object PreferenceKeys {
     const val DEFAULT_MEDIA_PATH = "/storage/emulated/0/ES-DE/downloaded_media"
 
     const val KEY_SYSTEM_PATH = "system_path"
-    const val DEFAULT_SYSTEM_PATH = "/storage/emulated/0/ES-DE/downloaded_media"
+    const val DEFAULT_SYSTEM_PATH = "/storage/emulated/0/ES-DE Companion/system_images"
 
     const val KEY_SYSTEM_LOGOS_PATH = "system_logos_path"
-    const val DEFAULT_SYSTEM_LOGOS_PATH = "/storage/emulated/0/ES-DE Companion/system_images"
+    const val DEFAULT_SYSTEM_LOGOS_PATH = "/storage/emulated/0/ES-DE Companion/system_logos"
 
     const val KEY_CUSTOM_BACKGROUND = "custom_background_uri"
     const val DEFAULT_CUSTOM_BACKGROUND = ""
@@ -75,20 +75,11 @@ object PreferenceKeys {
     const val KEY_MUSIC_PATH = "music_path"
     const val DEFAULT_MUSIC_PATH = "/storage/emulated/0/ES-DE Companion/music"
 
-    const val KEY_MUSIC_SYSTEM_VIEW = "music.system_view"
-    const val DEFAULT_MUSIC_SYSTEM_VIEW = true
-
-    const val KEY_MUSIC_GAME_VIEW = "music.game_view"
-    const val DEFAULT_MUSIC_GAME_VIEW = true
-
-    const val KEY_MUSIC_SCREENSAVER = "music.screensaver"
-    const val DEFAULT_MUSIC_SCREENSAVER = false
-
     const val KEY_MUSIC_VIDEO_BEHAVIOR = "music_video_behavior"
     const val DEFAULT_MUSIC_VIDEO_BEHAVIOR = "duck"
 
     const val KEY_MUSIC_SONG_TITLE_ENABLED = "music.song_title_enabled"
-    const val DEFAULT_MUSIC_SONG_TITLE_ENABLED = false
+    const val DEFAULT_MUSIC_SONG_TITLE_ENABLED = true
 
     const val KEY_MUSIC_SONG_TITLE_DURATION = "music.song_title_duration"
     const val DEFAULT_MUSIC_SONG_TITLE_DURATION = 5
@@ -111,8 +102,6 @@ object PreferenceKeys {
 
     const val KEY_SCREENSAVER_BEHAVIOR = "screensaver_behavior"
     const val DEFAULT_SCREENSAVER_BEHAVIOR = "game_image"
-
-    const val DEFAULT_IMAGE_PREFERENCE = "fanart"
 
     const val KEY_SYSTEM_VIEW_BACKGROUND_TYPE = "system_image_preference"
     const val DEFAULT_SYSTEM_VIEW_BACKGROUND_TYPE = "fanart"

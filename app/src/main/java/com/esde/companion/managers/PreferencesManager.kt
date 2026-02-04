@@ -204,33 +204,6 @@ class PreferencesManager(context: Context) {
             .putString(PreferenceKeys.KEY_MUSIC_PATH, value)
             .apply()
 
-    var musicSystemView: Boolean
-        get() = prefs.getBoolean(
-            PreferenceKeys.KEY_MUSIC_SYSTEM_VIEW,
-            PreferenceKeys.DEFAULT_MUSIC_SYSTEM_VIEW
-        )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_MUSIC_SYSTEM_VIEW, value)
-            .apply()
-
-    var musicGameView: Boolean
-        get() = prefs.getBoolean(
-            PreferenceKeys.KEY_MUSIC_GAME_VIEW,
-            PreferenceKeys.DEFAULT_MUSIC_GAME_VIEW
-        )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_MUSIC_GAME_VIEW, value)
-            .apply()
-
-    var musicScreensaver: Boolean
-        get() = prefs.getBoolean(
-            PreferenceKeys.KEY_MUSIC_SCREENSAVER,
-            PreferenceKeys.DEFAULT_MUSIC_SCREENSAVER
-        )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_MUSIC_SCREENSAVER, value)
-            .apply()
-
     var musicVideoBehavior: String
         get() = prefs.getString(
             PreferenceKeys.KEY_MUSIC_VIDEO_BEHAVIOR,
