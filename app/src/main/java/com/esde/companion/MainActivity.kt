@@ -440,7 +440,10 @@ class MainActivity : AppCompatActivity() {
         // ========== MUSIC INTEGRATION END ==========
 
         // Check if we should show widget tutorial for updating users
-        checkAndShowWidgetTutorialForUpdate()
+        // Skip if setup not completed - will show after verification instead
+        if (prefsManager.setupCompleted) {
+            checkAndShowWidgetTutorialForUpdate()
+        }
 
         rootLayout = findViewById(R.id.rootLayout)
         gameImageView = findViewById(R.id.gameImageView)
