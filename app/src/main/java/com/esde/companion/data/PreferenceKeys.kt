@@ -82,7 +82,7 @@ object PreferenceKeys {
     const val DEFAULT_MUSIC_SONG_TITLE_ENABLED = true
 
     const val KEY_MUSIC_SONG_TITLE_DURATION = "music.song_title_duration"
-    const val DEFAULT_MUSIC_SONG_TITLE_DURATION = 5
+    const val DEFAULT_MUSIC_SONG_TITLE_DURATION = 3
 
     const val KEY_MUSIC_SONG_TITLE_OPACITY = "music.song_title_opacity"
     const val DEFAULT_MUSIC_SONG_TITLE_OPACITY = 70
