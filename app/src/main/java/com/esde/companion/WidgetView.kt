@@ -3,21 +3,16 @@ package com.esde.companion
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.RectF
 import android.view.View
 import android.view.MotionEvent
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
-import android.widget.SeekBar
 import android.widget.TextView
-import com.bumptech.glide.Glide
-import com.google.android.material.button.MaterialButton
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 import com.esde.companion.managers.ImageManager
 

@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.widget.RelativeLayout  // Changed from FrameLayout
-import com.esde.companion.WidgetView
 
 class ResizableWidgetContainer @JvmOverloads constructor(
     context: Context,

@@ -44,6 +44,10 @@ import kotlin.math.abs
 import androidx.media3.ui.PlayerView
 import android.os.Handler
 import android.os.Looper
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 // ========== MUSIC INTEGRATION START ==========
 import com.esde.companion.music.MusicController
 import com.esde.companion.music.MusicManager
@@ -3047,112 +3051,134 @@ Access this help anytime from the widget menu!
             return
         }
 
-        try {
-            val logsDir = File(getLogsPath())
-            val gameFile = File(logsDir, "esde_game_filename.txt")
-            if (!gameFile.exists()) return
+        // Launch coroutine to handle async file reading without blocking UI
+        lifecycleScope.launch {
+            try {
+                val logsDir = File(getLogsPath())
+                val gameFile = File(logsDir, "esde_game_filename.txt")
+                if (!gameFile.exists()) return@launch
 
-            val gameNameRaw = gameFile.readText().trim()  // Full path from script
-            val gameName = sanitizeGameFilename(gameNameRaw).substringBeforeLast('.')  // FIXED: Sanitize first, then strip extension
+                // Read filename (should already exist since it triggers FileObserver)
+                val gameNameRaw = gameFile.readText().trim()  // Full path from script
+                val gameName = sanitizeGameFilename(gameNameRaw).substringBeforeLast('.')
 
-            // Read the display name from ES-DE if available
-            val gameDisplayNameFile = File(logsDir, "esde_game_name.txt")
-            val gameDisplayName = if (gameDisplayNameFile.exists()) {
-                gameDisplayNameFile.readText().trim()
-            } else {
-                gameName  // Fallback to filename-based name
-            }
+                // Read display name (may not exist yet due to race condition)
+                val gameDisplayNameFile = File(logsDir, "esde_game_name.txt")
+                val gameDisplayName = readNonBlankTextAsync(gameDisplayNameFile) ?: gameName
 
-            val systemFile = File(logsDir, "esde_game_system.txt")
-            if (!systemFile.exists()) return
-            val systemName = systemFile.readText().trim()
+                // CRITICAL: Wait for system file with retry logic (race condition fix)
+                val systemFile = File(logsDir, "esde_game_system.txt")
+                val systemName = readNonBlankTextAsync(systemFile)
 
-            // Update state tracking
-            updateState(AppState.GameBrowsing(
-                systemName = systemName,
-                gameFilename = gameNameRaw,
-                gameName = gameDisplayName
-            ))
-
-            // CRITICAL: Check if solid color or custom image is selected for game view BEFORE trying to load game images
-            val gameImagePref = prefsManager.gameViewBackgroundType
-
-            if (gameImagePref == "solid_color") {
-                val solidColor = prefsManager.gameBackgroundColor
-                val drawable = android.graphics.drawable.ColorDrawable(solidColor)
-                gameImageView.setImageDrawable(drawable)
-            } else if (gameImagePref == "custom_image") {
-                // Custom image selected - always show custom background or built-in default
-                android.util.Log.d("MainActivity", "Game view custom image selected - loading custom background")
-                loadFallbackBackground(forceCustomImageOnly = true)
-            } else {
-                // Fanart or Screenshot preference - try to find game-specific artwork
-                val gameImage = findGameImage(systemName, gameNameRaw)
-
-                if (gameImage != null && gameImage.exists()) {
-                    // Game has its own artwork - use it
-                    loadImageWithAnimation(gameImage, gameImageView)
-                } else {
-                    // No game artwork - show fallback background
-                    loadFallbackBackground()
+                if (systemName == null) {
+                    android.util.Log.w("MainActivity", "System name not available after retries - skipping game load")
+                    return@launch
                 }
-            }
 
-            // Check if instant video will play (delay = 0)
-            val videoPath = mediaFileLocator.findVideoFile(systemName, gameNameRaw)
-            val videoDelay = getVideoDelay()
-            val instantVideoWillPlay = videoPath != null && isVideoEnabled() && widgetsLocked && videoDelay == 0L
+                // Update state tracking (must be on main thread)
+                withContext(Dispatchers.Main) {
+                    updateState(AppState.GameBrowsing(
+                        systemName = systemName,
+                        gameFilename = gameNameRaw,
+                        gameName = gameDisplayName
+                    ))
 
-            android.util.Log.d("MainActivity", "loadGameInfo - Video check:")
-            android.util.Log.d("MainActivity", "  videoPath: $videoPath")
-            android.util.Log.d("MainActivity", "  videoDelay: ${videoDelay}ms")
-            android.util.Log.d("MainActivity", "  instantVideoWillPlay: $instantVideoWillPlay")
+                    // CRITICAL: Check if solid color or custom image is selected for game view BEFORE trying to load game images
+                    val gameImagePref = prefsManager.gameViewBackgroundType
 
-            // When user scrolls to a new game, stop the old game's video immediately
-            // This prevents the old video from continuing to play with the new game's widgets
-            if (videoManager.stopCurrentVideoForNewGame()) {
-                android.util.Log.d("MainActivity", "Stopped old video - showing game image")
-                gameImageView.visibility = View.VISIBLE
-            }
-
-            // Update game widgets after determining video status
-            // Note: updateWidgetsForCurrentGame() calls showWidgets() internally via loadGameWidgets()
-            updateWidgetsForCurrentGame()
-
-            // Hide gameImageView BEFORE starting instant video to prevent background flash
-            // Must happen after stopCurrentVideoForNewGame() which shows gameImageView
-            if (instantVideoWillPlay) {
-                gameImageView.visibility = View.GONE
-                android.util.Log.d("MainActivity", "Pre-hiding gameImageView for instant video")
-            }
-
-            // Handle video playback for the current game
-            handleVideoForGame(systemName, gameName, gameNameRaw)
-            // Hide widgets ONLY if instant video is playing (delay = 0)
-            // For delayed videos, widgets stay visible until loadVideo() hides them
-            when (state) {
-                is AppState.GameBrowsing -> {
-                    if (instantVideoWillPlay) {
-                        hideWidgets()
-                        android.util.Log.d("MainActivity", "Hiding widgets - instant video playing")
+                    if (gameImagePref == "solid_color") {
+                        val solidColor = prefsManager.gameBackgroundColor
+                        val drawable = android.graphics.drawable.ColorDrawable(solidColor)
+                        gameImageView.setImageDrawable(drawable)
+                    } else if (gameImagePref == "custom_image") {
+                        // Custom image selected - always show custom background or built-in default
+                        android.util.Log.d("MainActivity", "Game view custom image selected - loading custom background")
+                        loadFallbackBackground(forceCustomImageOnly = true)
                     } else {
-                        android.util.Log.d("MainActivity", "Keeping widgets shown - no instant video (delay=${videoDelay}ms)")
+                        // Fanart or Screenshot preference - try to find game-specific artwork
+                        val gameImage = findGameImage(systemName, gameNameRaw)
+
+                        if (gameImage != null && gameImage.exists()) {
+                            // Game has its own artwork - use it
+                            loadImageWithAnimation(gameImage, gameImageView)
+                        } else {
+                            // No game artwork - show fallback background
+                            loadFallbackBackground()
+                        }
+                    }
+
+                    // Check if instant video will play (delay = 0)
+                    val videoPath = mediaFileLocator.findVideoFile(systemName, gameNameRaw)
+                    val videoDelay = getVideoDelay()
+                    val instantVideoWillPlay = videoPath != null && isVideoEnabled() && widgetsLocked && videoDelay == 0L
+
+                    android.util.Log.d("MainActivity", "loadGameInfo - Video check:")
+                    android.util.Log.d("MainActivity", "  videoPath: $videoPath")
+                    android.util.Log.d("MainActivity", "  videoDelay: ${videoDelay}ms")
+                    android.util.Log.d("MainActivity", "  instantVideoWillPlay: $instantVideoWillPlay")
+
+                    // When user scrolls to a new game, stop the old game's video immediately
+                    if (videoManager.stopCurrentVideoForNewGame()) {
+                        android.util.Log.d("MainActivity", "Stopped old video - showing game image")
+                        gameImageView.visibility = View.VISIBLE
+                    }
+
+                    // Update game widgets after determining video status
+                    updateWidgetsForCurrentGame()
+
+                    // Hide gameImageView BEFORE starting instant video to prevent background flash
+                    if (instantVideoWillPlay) {
+                        gameImageView.visibility = View.GONE
+                        android.util.Log.d("MainActivity", "Pre-hiding gameImageView for instant video")
+                    }
+
+                    // Handle video playback for the current game
+                    handleVideoForGame(systemName, gameName, gameNameRaw)
+
+                    // Hide widgets ONLY if instant video is playing (delay = 0)
+                    when (state) {
+                        is AppState.GameBrowsing -> {
+                            if (instantVideoWillPlay) {
+                                hideWidgets()
+                                android.util.Log.d("MainActivity", "Hiding widgets - instant video playing")
+                            } else {
+                                android.util.Log.d("MainActivity", "Keeping widgets shown - no instant video (delay=${videoDelay}ms)")
+                            }
+                        }
+                        is AppState.Screensaver -> {
+                            android.util.Log.d("MainActivity", "Not showing widgets - Screensaver active")
+                        }
+                        else -> {
+                            android.util.Log.d("MainActivity", "Not showing widgets - state: $state")
+                        }
                     }
                 }
-                is AppState.Screensaver -> {
-                    // Don't show widgets during screensaver in loadGameInfo
-                    // (screensaver handles its own widget display)
-                    android.util.Log.d("MainActivity", "Not showing widgets - Screensaver active")
-                }
-                else -> {
-                    android.util.Log.d("MainActivity", "Not showing widgets - state: $state")
-                }
-            }
 
-        } catch (e: Exception) {
-            // Don't clear images on exception - keep last valid images
-            android.util.Log.e("MainActivity", "Error loading game info", e)
+            } catch (e: Exception) {
+                // Don't clear images on exception - keep last valid images
+                android.util.Log.e("MainActivity", "Error loading game info", e)
+            }
         }
+    }
+
+    /**
+     * Read text from file with retry logic for race conditions.
+     * CRITICAL: Uses coroutine delay instead of Thread.sleep to avoid blocking UI thread.
+     *
+     * @param file The file to read
+     * @param retries Number of retry attempts (default: 5)
+     * @param delayMs Delay between retries in milliseconds (default: 50ms)
+     * @return The trimmed text content, or null if file never becomes readable
+     */
+    private suspend fun readNonBlankTextAsync(file: File, retries: Int = 5, delayMs: Long = 50): String? {
+        repeat(retries) {
+            if (file.exists()) {
+                val text = file.readText().trim()
+                if (text.isNotBlank()) return text
+            }
+            kotlinx.coroutines.delay(delayMs)
+        }
+        return null
     }
 
     private fun findGameImage(
