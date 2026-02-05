@@ -412,6 +412,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        window.decorView.systemUiVisibility = (
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                )
+
         prefsManager = PreferencesManager(this)
         appLaunchPrefs = AppLaunchPreferences(this)
         mediaFileLocator = MediaFileLocator(prefsManager)
@@ -2400,14 +2409,16 @@ Access this help anytime from the widget menu!
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        hasWindowFocus = hasFocus
-
-        // Don't use focus changes to block videos - too unreliable
-        // Just log for debugging
         if (hasFocus) {
-            android.util.Log.d("MainActivity", "Window focus gained")
-        } else {
-            android.util.Log.d("MainActivity", "Window focus lost (ignoring for video blocking)")
+            // Restore immersive mode when user returns from nav bar swipe
+            window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            or View.SYSTEM_UI_FLAG_FULLSCREEN
+                            or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    )
         }
     }
 
