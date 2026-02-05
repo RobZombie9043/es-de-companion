@@ -93,7 +93,7 @@ class ImageManager(
 
         var request = Glide.with(context)
             .load(imageFile)
-            .signature(getCacheSignature())
+            .signature(getFileBasedSignature(imageFile))
 
         // Apply blur if enabled
         if (applyBlur && prefsManager.blurLevel > 0) {
@@ -284,11 +284,34 @@ class ImageManager(
                 // Regular image
                 Glide.with(context)
                     .load(logoFile)
-                    .signature(getCacheSignature())
+                    .signature(getFileBasedSignature(logoFile))
                     .listener(createSimpleListener(onLoaded, onFailed))
                     .into(imageView)
             }
         }
+    }
+
+    fun loadLargeImage(
+        imageView: ImageView,
+        imagePath: String,
+        maxWidth: Int = 1920,
+        maxHeight: Int = 1080,
+        onLoaded: (() -> Unit)? = null,
+        onFailed: (() -> Unit)? = null
+    ) {
+        val imageFile = File(imagePath)
+
+        if (!imageFile.exists()) {
+            onFailed?.invoke()
+            return
+        }
+
+        Glide.with(context)
+            .load(imageFile)
+            .override(maxWidth, maxHeight)  // Glide will downsample automatically
+            .signature(getFileBasedSignature(imageFile))
+            .listener(createSimpleListener(onLoaded, onFailed))
+            .into(imageView)
     }
 
     /**
@@ -459,7 +482,7 @@ class ImageManager(
         // Note: Widgets don't animate - only backgrounds animate
         val glideRequest = Glide.with(context)
             .load(imageFile)
-            .signature(getCacheSignature())
+            .signature(getFileBasedSignature(imageFile))
             .listener(createSimpleListener(onLoaded, onFailed))
 
         // Use different cache strategy for animated formats
@@ -512,6 +535,25 @@ class ImageManager(
      */
     private fun getCacheSignature(): com.bumptech.glide.signature.ObjectKey {
         return com.bumptech.glide.signature.ObjectKey(cacheVersion.toString())
+    }
+
+    /**
+     * Get a cache signature based on file metadata.
+     * This allows Glide to detect when a file has been modified on disk,
+     * even if the filename remains the same.
+     *
+     * @param file The image file to create a signature for
+     * @return ObjectKey combining file's last modified time and size
+     */
+    private fun getFileBasedSignature(file: File): com.bumptech.glide.signature.ObjectKey {
+        return if (file.exists()) {
+            // Combine last modified timestamp and file size for unique signature
+            val signatureKey = "${file.lastModified()}_${file.length()}"
+            com.bumptech.glide.signature.ObjectKey(signatureKey)
+        } else {
+            // File doesn't exist - use fallback signature
+            com.bumptech.glide.signature.ObjectKey("missing_file")
+        }
     }
 
     // ========== HELPER METHODS ==========

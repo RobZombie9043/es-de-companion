@@ -3043,21 +3043,21 @@ Access this help anytime from the widget menu!
                         android.util.Log.d("MainActivity", "Loading animated custom system image via Glide")
                         loadImageWithAnimation(imageToUse, gameImageView)
                     } else {
-                        // Load static custom system image with downscaling to prevent OOM
+                        // Load static custom system image with downscaling via ImageManager
                         android.util.Log.d("MainActivity", "Loading custom system image with downscaling")
-                        val bitmap = loadScaledBitmap(imageToUse.absolutePath, 1920, 1080)
-                        if (bitmap != null) {
-                            val drawable = android.graphics.drawable.BitmapDrawable(resources, bitmap)
-
-                            // Clear any cached images first
-                            Glide.with(this).clear(gameImageView)
-
-                            gameImageView.setImageDrawable(drawable)
-                            android.util.Log.d("MainActivity", "Custom system image loaded successfully")
-                        } else {
-                            android.util.Log.e("MainActivity", "Failed to load custom system image, using fallback")
-                            loadFallbackBackground()
-                        }
+                        imageManager.loadLargeImage(
+                            imageView = gameImageView,
+                            imagePath = imageToUse.absolutePath,
+                            maxWidth = 1920,
+                            maxHeight = 1080,
+                            onLoaded = {
+                                android.util.Log.d("MainActivity", "Custom system image loaded successfully")
+                            },
+                            onFailed = {
+                                android.util.Log.e("MainActivity", "Failed to load custom system image, using fallback")
+                                loadFallbackBackground()
+                            }
+                        )
                     }
                 } else {
                     // Normal game artwork - use Glide with animation
