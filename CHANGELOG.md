@@ -1,6 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## [0.5.4] - TBC
+
+### Added
+- Immersive mode for when Android set to 3-button mode
+
+### Fixed
+- Image cache invalidation for changed background images
 
 ## [0.5.3] - 2026-02-06
 
