@@ -584,7 +584,7 @@ class MainActivity : AppCompatActivity() {
             val lastSeenVersion = prefsManager.tutorialVersionShown
             android.util.Log.d("MainActivity", "Last seen version from prefs: $lastSeenVersion")
 
-            val hasSeenWidgetTutorial = !prefsManager.tutorialVersionShown.isEmpty()
+            val hasSeenWidgetTutorial = prefsManager.widgetTutorialShown
             android.util.Log.d("MainActivity", "Has seen widget tutorial: $hasSeenWidgetTutorial")
 
             // Check if default widgets were created (indicates not a fresh install)
