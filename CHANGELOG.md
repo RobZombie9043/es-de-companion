@@ -2,7 +2,29 @@
 
 ## [Unreleased]
 
-## [0.5.1] - 2026-01-30
+## [0.5.3] - 2026-02-06
+
+### Added
+- Video playback looping
+- KSP processor for Glide
+- Error handling added to video player and image display
+
+### Changed
+- Removed animations when transition has same image
+- Background music continues to play in app settings menu
+- Remove Game End Debounce
+- Refactor: Preferences Manager
+- Refactor: ImageManager
+- Refactor: VideoManager
+- Refactor: ScriptManager
+- Refactor: moved widgetManager to managers
+- Cleanup of imports
+
+- ### Fixed
+- Media lookup to remove ROMs hardcoding affecting image display
+- systemName race condition causing images to not display in rare instances
+
+## [0.5.2] - 2026-01-30
 
 ### Added
 - Two-finger tap gesture to display/hide song title 
