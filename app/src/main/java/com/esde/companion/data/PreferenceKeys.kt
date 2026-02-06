@@ -15,39 +15,36 @@ package com.esde.companion.data
  */
 object PreferenceKeys {
     // Shared preferences file name
-    const val PREFS_NAME = "ESDESecondScreenPrefs"
+    const val PREFS_NAME = AppConstants.Preferences.PREFS_NAME
 
     // ========== PATH PREFERENCES ==========
     const val KEY_MEDIA_PATH = "media_path"
-    const val DEFAULT_MEDIA_PATH = "/storage/emulated/0/ES-DE/downloaded_media"
+    val DEFAULT_MEDIA_PATH = AppConstants.Paths.DEFAULT_MEDIA_PATH
 
     const val KEY_SYSTEM_PATH = "system_path"
-    const val DEFAULT_SYSTEM_PATH = "/storage/emulated/0/ES-DE Companion/system_images"
+    val DEFAULT_SYSTEM_PATH = AppConstants.Paths.DEFAULT_SYSTEM_IMAGES_PATH
 
     const val KEY_SYSTEM_LOGOS_PATH = "system_logos_path"
-    const val DEFAULT_SYSTEM_LOGOS_PATH = "/storage/emulated/0/ES-DE Companion/system_logos"
+    val DEFAULT_SYSTEM_LOGOS_PATH = AppConstants.Paths.DEFAULT_SYSTEM_LOGOS_PATH
 
     const val KEY_CUSTOM_BACKGROUND = "custom_background_uri"
     const val DEFAULT_CUSTOM_BACKGROUND = ""
 
     const val KEY_SCRIPTS_PATH = "scripts_path"
-    const val DEFAULT_SCRIPTS_PATH = "/storage/emulated/0/ES-DE/scripts"
-
-    const val KEY_LOGS_PATH = "logs_path"
-    const val DEFAULT_LOGS_PATH = "/storage/emulated/0/ES-DE Companion/logs"
+    val DEFAULT_SCRIPTS_PATH = AppConstants.Paths.DEFAULT_SCRIPTS_PATH
 
     // ========== UI PREFERENCES ==========
     const val KEY_DIMMING = "dimming"
-    const val DEFAULT_DIMMING = 25
+    const val DEFAULT_DIMMING = AppConstants.UI.DEFAULT_DIMMING
 
     const val KEY_BLUR = "blur"
-    const val DEFAULT_BLUR = 0
+    const val DEFAULT_BLUR = AppConstants.UI.DEFAULT_BLUR
 
     const val KEY_DRAWER_TRANSPARENCY = "drawer_transparency"
-    const val DEFAULT_DRAWER_TRANSPARENCY = 70
+    const val DEFAULT_DRAWER_TRANSPARENCY = AppConstants.UI.DEFAULT_DRAWER_TRANSPARENCY
 
     const val KEY_COLUMN_COUNT = "column_count"
-    const val DEFAULT_COLUMN_COUNT = 4
+    const val DEFAULT_COLUMN_COUNT = AppConstants.UI.DEFAULT_COLUMN_COUNT
 
     // ========== WIDGET PREFERENCES ==========
     const val KEY_WIDGETS_LOCKED = "widgets_locked"
@@ -64,7 +61,7 @@ object PreferenceKeys {
     const val DEFAULT_VIDEO_ENABLED = false
 
     const val KEY_VIDEO_DELAY = "video_delay"
-    const val DEFAULT_VIDEO_DELAY = 3
+    const val DEFAULT_VIDEO_DELAY = AppConstants.UI.DEFAULT_VIDEO_DELAY
     const val KEY_VIDEO_AUDIO_ENABLED = "video_audio_enabled"
     const val DEFAULT_VIDEO_AUDIO_ENABLED = false
 
@@ -133,10 +130,10 @@ object PreferenceKeys {
     const val DEFAULT_ANIMATION_STYLE = "scale_fade"
 
     const val KEY_ANIMATION_DURATION = "animation_duration"
-    const val DEFAULT_ANIMATION_DURATION = 300
+    const val DEFAULT_ANIMATION_DURATION = AppConstants.Timing.DEFAULT_ANIMATION_DURATION
 
     const val KEY_ANIMATION_SCALE = "animation_scale"
-    const val DEFAULT_ANIMATION_SCALE = 95
+    const val DEFAULT_ANIMATION_SCALE = AppConstants.UI.DEFAULT_ANIMATION_SCALE
 
     // ========== SETUP/STATE PREFERENCES ==========
     const val KEY_SETUP_COMPLETED = "setup_completed"
@@ -162,6 +159,6 @@ object PreferenceKeys {
 
     // ========== CACHE KEYS ==========
     const val KEY_LAST_IMAGE_CACHE_VERSION = "last_image_cache_version"
-    const val DEFAULT_LAST_IMAGE_CACHE_VERSION = 1
+    const val DEFAULT_LAST_IMAGE_CACHE_VERSION = AppConstants.Cache.CURRENT_IMAGE_CACHE_VERSION
 
 }

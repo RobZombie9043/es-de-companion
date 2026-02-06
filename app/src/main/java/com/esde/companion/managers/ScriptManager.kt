@@ -1,5 +1,6 @@
 package com.esde.companion.managers
 
+import com.esde.companion.data.AppConstants
 import java.io.File
 
 /**
@@ -9,8 +10,8 @@ import java.io.File
 object ScriptManager {
 
     // Hardcoded paths - must match MainActivity.getLogsPath()
-    const val LOGS_PATH = "/storage/emulated/0/ES-DE Companion/logs"
-    const val DEFAULT_SCRIPTS_PATH = "/storage/emulated/0/ES-DE/scripts"
+    val LOGS_PATH = AppConstants.Paths.DEFAULT_LOGS_PATH
+    val DEFAULT_SCRIPTS_PATH = AppConstants.Paths.DEFAULT_SCRIPTS_PATH
 
     // Script directory names
     private val SCRIPT_DIRECTORIES = listOf(
@@ -375,7 +376,7 @@ fi
         val requiredScripts = mapOf(
             "game-select/esdecompanion-game-select.sh" to ValidationPattern(
                 required = listOf(
-                    "#!/bin/sh",
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
                     "esde_game_filename.txt",
@@ -385,21 +386,21 @@ fi
                 ),
                 forbidden = listOf(
                     "echo -n",      // Old format
-                    "#!/bin/bash"   // Old shebang
+                    AppConstants.Scripts.OLD_SHEBANG   // Old shebang
                 )
             ),
             "system-select/esdecompanion-system-select.sh" to ValidationPattern(
                 required = listOf(
-                    "#!/bin/sh",
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
                     "esde_system_name.txt"
                 ),
-                forbidden = listOf("echo -n", "#!/bin/bash")
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
             "game-start/esdecompanion-game-start.sh" to ValidationPattern(
                 required = listOf(
-                    "#!/bin/sh",
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
                     "esde_gamestart_filename.txt",
@@ -407,11 +408,11 @@ fi
                     "esde_gamestart_system.txt",
                     "if [ \"\$#\" -ge 4 ]"
                 ),
-                forbidden = listOf("echo -n", "#!/bin/bash")
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
             "game-end/esdecompanion-game-end.sh" to ValidationPattern(
                 required = listOf(
-                    "#!/bin/sh",
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
                     "esde_gameend_filename.txt",
@@ -419,29 +420,29 @@ fi
                     "esde_gameend_system.txt",
                     "if [ \"\$#\" -ge 4 ]"
                 ),
-                forbidden = listOf("echo -n", "#!/bin/bash")
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
             "screensaver-start/esdecompanion-screensaver-start.sh" to ValidationPattern(
                 required = listOf(
-                    "#!/bin/sh",
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
                     "esde_screensaver_start.txt"
                 ),
-                forbidden = listOf("echo -n", "#!/bin/bash")
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
             "screensaver-end/esdecompanion-screensaver-end.sh" to ValidationPattern(
                 required = listOf(
-                    "#!/bin/sh",
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
                     "esde_screensaver_end.txt"
                 ),
-                forbidden = listOf("echo -n", "#!/bin/bash")
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
             "screensaver-game-select/esdecompanion-screensaver-game-select.sh" to ValidationPattern(
                 required = listOf(
-                    "#!/bin/sh",
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
                     "esde_screensavergameselect_filename.txt",
@@ -449,7 +450,7 @@ fi
                     "esde_screensavergameselect_system.txt",
                     "if [ \"\$#\" -ge 4 ]"
                 ),
-                forbidden = listOf("echo -n", "#!/bin/bash")
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             )
         )
 
@@ -495,7 +496,7 @@ fi
         }
 
         return ScriptValidationResult(
-            allValid = validCount == 7,
+            allValid = validCount == AppConstants.Scripts.TOTAL_SCRIPT_COUNT,
             validCount = validCount,
             outdatedCount = outdatedScripts.size,
             missingCount = missingScripts.size,

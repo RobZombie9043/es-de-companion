@@ -2,6 +2,7 @@ package com.esde.companion.managers
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.esde.companion.data.AppConstants
 import com.esde.companion.data.PreferenceKeys
 
 /**
@@ -27,9 +28,9 @@ import com.esde.companion.data.PreferenceKeys
 class PreferencesManager(context: Context) {
 
     companion object {
-        // Animation preset constants
-        const val PRESET_ANIMATION_DURATION = 300  // milliseconds
-        const val PRESET_ANIMATION_SCALE = 95      // percentage (95% = 0.95f)
+        // Animation preset constants (reference AppConstants for consistency)
+        const val PRESET_ANIMATION_DURATION = AppConstants.Timing.DEFAULT_ANIMATION_DURATION
+        const val PRESET_ANIMATION_SCALE = AppConstants.UI.DEFAULT_ANIMATION_SCALE
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences(
@@ -82,15 +83,6 @@ class PreferencesManager(context: Context) {
         ) ?: PreferenceKeys.DEFAULT_SCRIPTS_PATH
         set(value) = prefs.edit()
             .putString(PreferenceKeys.KEY_SCRIPTS_PATH, value)
-            .apply()
-
-    var logsPath: String
-        get() = prefs.getString(
-            PreferenceKeys.KEY_LOGS_PATH,
-            PreferenceKeys.DEFAULT_LOGS_PATH
-        ) ?: PreferenceKeys.DEFAULT_LOGS_PATH
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_LOGS_PATH, value)
             .apply()
 
     // ========== UI PROPERTIES ==========

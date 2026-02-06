@@ -1,5 +1,7 @@
 package com.esde.companion.music
 
+import com.esde.companion.data.AppConstants
+
 /**
  * ═══════════════════════════════════════════════════════════
  * MUSIC SOURCE
@@ -45,7 +47,7 @@ sealed class MusicSource {
     fun getPath(basePath: String): String {
         return when (this) {
             is Generic -> basePath
-            is System -> "$basePath/systems/$systemName"
+            is System -> "$basePath/${AppConstants.Paths.MUSIC_SYSTEMS_SUBDIR}/$systemName"
         }
     }
 }

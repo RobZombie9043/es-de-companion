@@ -1,5 +1,6 @@
 package com.esde.companion
 
+import com.esde.companion.data.AppConstants
 import com.esde.companion.managers.PreferencesManager
 import java.io.File
 
@@ -17,8 +18,8 @@ import java.io.File
 class MediaFileLocator(private val prefsManager: PreferencesManager) {
 
     companion object {
-        private val IMAGE_EXTENSIONS = listOf("jpg", "jpeg", "png", "webp", "gif")
-        private val VIDEO_EXTENSIONS = listOf("mp4", "mkv", "avi", "wmv", "mov", "webm")
+        private val IMAGE_EXTENSIONS = AppConstants.FileExtensions.IMAGE
+        private val VIDEO_EXTENSIONS = AppConstants.FileExtensions.VIDEO
     }
 
     fun findImageInFolder(
@@ -46,15 +47,15 @@ class MediaFileLocator(private val prefsManager: PreferencesManager) {
         gameFilename: String
     ): File? {
         val folderName = when (type) {
-            OverlayWidget.ImageType.MARQUEE -> "marquees"
-            OverlayWidget.ImageType.BOX_2D -> "covers"
-            OverlayWidget.ImageType.BOX_3D -> "3dboxes"
-            OverlayWidget.ImageType.MIX_IMAGE -> "miximages"
-            OverlayWidget.ImageType.BACK_COVER -> "backcovers"
-            OverlayWidget.ImageType.PHYSICAL_MEDIA -> "physicalmedia"
-            OverlayWidget.ImageType.SCREENSHOT -> "screenshots"
-            OverlayWidget.ImageType.FANART -> "fanart"
-            OverlayWidget.ImageType.TITLE_SCREEN -> "titlescreens"
+            OverlayWidget.ImageType.MARQUEE -> AppConstants.Paths.MEDIA_MARQUEES
+            OverlayWidget.ImageType.BOX_2D -> AppConstants.Paths.MEDIA_COVERS
+            OverlayWidget.ImageType.BOX_3D -> AppConstants.Paths.MEDIA_3DBOXES
+            OverlayWidget.ImageType.MIX_IMAGE -> AppConstants.Paths.MEDIA_MIXIMAGES
+            OverlayWidget.ImageType.BACK_COVER -> AppConstants.Paths.MEDIA_BACKCOVERS
+            OverlayWidget.ImageType.PHYSICAL_MEDIA -> AppConstants.Paths.MEDIA_PHYSICALMEDIA
+            OverlayWidget.ImageType.SCREENSHOT -> AppConstants.Paths.MEDIA_SCREENSHOTS
+            OverlayWidget.ImageType.FANART -> AppConstants.Paths.MEDIA_FANART
+            OverlayWidget.ImageType.TITLE_SCREEN -> AppConstants.Paths.MEDIA_TITLESCREENS
             OverlayWidget.ImageType.GAME_DESCRIPTION,
             OverlayWidget.ImageType.SYSTEM_LOGO -> return null
         }

@@ -52,6 +52,7 @@ import kotlinx.coroutines.withContext
 import com.esde.companion.music.MusicController
 import com.esde.companion.music.MusicManager
 // ========== MUSIC INTEGRATION END ==========
+import com.esde.companion.data.AppConstants
 import com.esde.companion.managers.ImageManager
 import com.esde.companion.managers.PreferencesManager
 import com.esde.companion.managers.ScriptManager
@@ -108,7 +109,7 @@ class MainActivity : AppCompatActivity() {
     private val activeWidgets = mutableListOf<WidgetView>()
     private var widgetsLocked = false
     private var snapToGrid = false
-    private val gridSize = 40f
+    private val gridSize = AppConstants.UI.GRID_SIZE
     private var showGrid = false
     private var isInteractingWithWidget = false
     private var longPressHandler: Handler? = null
@@ -172,7 +173,7 @@ class MainActivity : AppCompatActivity() {
     // - 40ms filters touch controller artifacts (hardware-level)
     // - 100ms filters user errors like screen brushing (UX-level)
     // Still imperceptible to users while significantly reducing false positives
-    private val MIN_TAP_INTERVAL = 100L // 100ms minimum time between taps (prevents accidental fast touches)
+    private val MIN_TAP_INTERVAL = AppConstants.Timing.DOUBLE_TAP_MIN_INTERVAL
 
     // Scripts verification
     private var isWaitingForScriptVerification = false
@@ -180,7 +181,7 @@ class MainActivity : AppCompatActivity() {
     private var scriptVerificationRunnable: Runnable? = null
     private var currentVerificationDialog: AlertDialog? = null
     private var currentErrorDialog: AlertDialog? = null
-    private val SCRIPT_VERIFICATION_TIMEOUT = 15000L  // 15 seconds
+    private val SCRIPT_VERIFICATION_TIMEOUT = AppConstants.Timing.SCRIPT_VERIFICATION_TIMEOUT
 
     // Dynamic debouncing for fast scrolling - separate tracking for systems and games
     private val imageLoadHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -189,20 +190,21 @@ class MainActivity : AppCompatActivity() {
     private var lastGameScrollTime = 0L
 
     // System scrolling: Enable debouncing to reduce rapid updates
-    private val SYSTEM_FAST_SCROLL_THRESHOLD = 250L // If scrolling faster than 250ms between changes, it's "fast"
-    private val SYSTEM_FAST_SCROLL_DELAY = 300L // 300ms delay for fast system scrolling
-    private val SYSTEM_SLOW_SCROLL_DELAY = 150L // 150ms delay for slow system scrolling
+    private val SYSTEM_FAST_SCROLL_THRESHOLD = AppConstants.Timing.SYSTEM_FAST_SCROLL_THRESHOLD
+    private val SYSTEM_FAST_SCROLL_DELAY = AppConstants.Timing.SYSTEM_FAST_SCROLL_DELAY
+    private val SYSTEM_SLOW_SCROLL_DELAY = AppConstants.Timing.SYSTEM_SLOW_SCROLL_DELAY
 
     // Game scrolling: No debouncing for instant response
-    private val GAME_FAST_SCROLL_THRESHOLD = 250L
-    private val GAME_FAST_SCROLL_DELAY = 0L // No delay for games
-    private val GAME_SLOW_SCROLL_DELAY = 0L // No delay for games
+    private val GAME_FAST_SCROLL_THRESHOLD = AppConstants.Timing.GAME_FAST_SCROLL_THRESHOLD
+    private val GAME_FAST_SCROLL_DELAY = AppConstants.Timing.GAME_FAST_SCROLL_DELAY
+    private val GAME_SLOW_SCROLL_DELAY = AppConstants.Timing.GAME_SLOW_SCROLL_DELAY
 
     // Filter out game-select on game-start and game-end
+    // NOTE: These are runtime state (not constants), so they stay as regular variables
     private var lastGameStartTime = 0L
     private var lastGameEndTime = 0L
 
-    private val GAME_EVENT_DEBOUNCE = 500L  //  500ms - allow scrolling shortly after game start/end
+    private val GAME_EVENT_DEBOUNCE = AppConstants.Timing.GAME_EVENT_DEBOUNCE
 
     // Broadcast receiver for app install/uninstall events
     private val appChangeReceiver = object : BroadcastReceiver() {
@@ -229,7 +231,7 @@ class MainActivity : AppCompatActivity() {
                 // Delay slightly to let UI settle after settings closes
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     showWidgetSystemTutorial(fromUpdate = false)
-                }, 500)
+                }, AppConstants.Timing.WIZARD_DELAY)
             }
             val needsRecreate = result.data?.getBooleanExtra("NEEDS_RECREATE", false) ?: false
             val appsHiddenChanged =
@@ -387,7 +389,7 @@ class MainActivity : AppCompatActivity() {
                 // Delay slightly to let UI settle
                 Handler(Looper.getMainLooper()).postDelayed({
                     startScriptVerification()
-                }, 500)
+                }, AppConstants.Timing.WIZARD_DELAY)
             }
         }
     }
@@ -515,8 +517,8 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("MainActivity", "Logs directory: ${logsDir.absolutePath}")
         android.util.Log.d("MainActivity", "Logs directory exists: ${logsDir.exists()}")
 
-        val systemScrollFile = File(logsDir, "esde_system_name.txt")
-        val gameScrollFile = File(logsDir, "esde_game_filename.txt")
+        val systemScrollFile = File(logsDir, AppConstants.Paths.SYSTEM_NAME_LOG)
+        val gameScrollFile = File(logsDir, AppConstants.Paths.GAME_FILENAME_LOG)
 
         android.util.Log.d("MainActivity", "System scroll file: ${systemScrollFile.absolutePath}")
         android.util.Log.d("MainActivity", "System scroll file exists: ${systemScrollFile.exists()}")
@@ -609,7 +611,7 @@ class MainActivity : AppCompatActivity() {
                 android.util.Log.d("MainActivity", "✓ Showing widget tutorial")
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     showWidgetSystemTutorial(fromUpdate = true)
-                }, 3000)
+                }, AppConstants.Timing.TUTORIAL_DELAY)
             }
 
             // Always update the version tracking
@@ -673,7 +675,7 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(this, SettingsActivity::class.java)
                 intent.putExtra("AUTO_START_WIZARD", true)
                 settingsLauncher.launch(intent)
-            }, 1000)
+            }, AppConstants.Timing.SETTINGS_DELAY)
             return
         }
 
@@ -835,14 +837,14 @@ Access this help anytime from the widget menu!
                 android.util.Log.d("MainActivity", "Scripts missing/outdated on internal storage - showing dialog")
 
                 // Check if scripts exist at all (missing vs outdated)
-                val scriptsDir = File(scriptsPath ?: "/storage/emulated/0/ES-DE/scripts")
+                val scriptsDir = File(scriptsPath ?: AppConstants.Paths.DEFAULT_SCRIPTS_PATH)
                 val gameSelectScript = File(scriptsDir, "game-select/esdecompanion-game-select.sh")
 
                 if (gameSelectScript.exists()) {
                     // Scripts exist but are outdated - show update dialog
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         showScriptsUpdateAvailableDialog()
-                    }, 1000)
+                    }, AppConstants.Timing.SETTINGS_DELAY)
                 } else {
                     // Scripts missing - launch full wizard
                     launchSetupWizardForScripts()
@@ -858,13 +860,8 @@ Access this help anytime from the widget menu!
 
         if (!isAccessible && attempt < maxAttempts) {
             // SD card not mounted yet - wait and retry
-            val delayMs = when (attempt) {
-                0 -> 1000L  // 1 second
-                1 -> 2000L  // 2 seconds
-                2 -> 3000L  // 3 seconds
-                3 -> 4000L  // 4 seconds
-                else -> 5000L  // 5 seconds
-            }
+            val delayMs = ((attempt + 1) * AppConstants.Timing.SD_MOUNT_RETRY_BASE_DELAY)
+                .coerceAtMost(AppConstants.Timing.SD_MOUNT_RETRY_MAX_DELAY)
 
             android.util.Log.d("MainActivity", "Scripts path not accessible (attempt ${attempt + 1}/$maxAttempts) - waiting ${delayMs}ms for SD card mount: $scriptsPath")
 
@@ -893,14 +890,14 @@ Access this help anytime from the widget menu!
                         // Scripts missing - launch full wizard
                         launchSetupWizardForScripts()
                     }
-                }, 1000)
+                }, AppConstants.Timing.SETTINGS_DELAY)
             } else {
                 // Max attempts reached and still not accessible
                 // SD card might not be mounted - show a helpful message
                 android.util.Log.w("MainActivity", "Scripts path not accessible after $maxAttempts attempts: $scriptsPath")
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     showSdCardNotMountedDialog(scriptsPath)
-                }, 1000)
+                }, AppConstants.Timing.SETTINGS_DELAY)
             }
         } else {
             android.util.Log.d("MainActivity", "Scripts found and valid - no wizard needed")
@@ -915,7 +912,7 @@ Access this help anytime from the widget menu!
             val intent = Intent(this, SettingsActivity::class.java)
             intent.putExtra("AUTO_START_WIZARD", true)
             settingsLauncher.launch(intent)
-        }, 1000)
+        }, AppConstants.Timing.SETTINGS_DELAY)
     }
 
     /**
@@ -1205,7 +1202,7 @@ Access this help anytime from the widget menu!
 
     private fun getMediaBasePath(): String {
         val customPath = if (prefsManager.mediaPath.isEmpty()) null else prefsManager.mediaPath
-        val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE/downloaded_media"
+        val path = customPath ?: AppConstants.Paths.DEFAULT_MEDIA_PATH
         android.util.Log.d("ESDESecondScreen", "Media base path: $path")
         return path
     }
@@ -1226,11 +1223,11 @@ Access this help anytime from the widget menu!
 
     private fun getLogsPath(): String {
         // Always use fixed internal storage location for logs
-        // This ensures FileObserver works reliably (doesn't work well on SD card)
-        val path = "/storage/emulated/0/ES-DE Companion/logs"
-        android.util.Log.d("MainActivity", "Logs path: $path")
-        return path
+        // FileObserver requires internal storage for reliable monitoring (SD cards not supported)
+        // This path is NOT user-configurable due to this technical limitation
+        return AppConstants.Paths.DEFAULT_LOGS_PATH
     }
+
     private fun loadFallbackBackground(forceCustomImageOnly: Boolean = false) {
         android.util.Log.d("MainActivity", "═══ loadFallbackBackground CALLED (forceCustomImageOnly=$forceCustomImageOnly) ═══")
 
@@ -1905,10 +1902,10 @@ Access this help anytime from the widget menu!
             private var lastEventTime = 0L
 
             override fun onEvent(event: Int, path: String?) {
-                if (path != null && (path == "esde_game_filename.txt" || path == "esde_system_name.txt" ||
-                            path == "esde_gamestart_filename.txt" || path == "esde_gameend_filename.txt" ||
-                            path == "esde_screensaver_start.txt" || path == "esde_screensaver_end.txt" ||
-                            path == "esde_screensavergameselect_filename.txt")) {
+                if (path != null && (path == AppConstants.Paths.GAME_FILENAME_LOG || path == AppConstants.Paths.SYSTEM_NAME_LOG ||
+                            path == AppConstants.Paths.GAME_START_FILENAME_LOG || path == AppConstants.Paths.GAME_END_FILENAME_LOG ||
+                            path == AppConstants.Paths.SCREENSAVER_START_LOG || path == AppConstants.Paths.SCREENSAVER_END_LOG ||
+                            path == AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG)) {
                     // Debounce: ignore events that happen too quickly
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastEventTime < 100) {
@@ -1931,7 +1928,7 @@ Access this help anytime from the widget menu!
                             }
 
                             when (path) {
-                                "esde_system_name.txt" -> {
+                                AppConstants.Paths.SYSTEM_NAME_LOG -> {
                                     // Ignore if launching from screensaver (game-select event between screensaver-end and game-start)
                                     if (isLaunchingFromScreensaver) {
                                         android.util.Log.d("MainActivity", "Game scroll ignored - launching from screensaver")
@@ -1946,7 +1943,7 @@ Access this help anytime from the widget menu!
                                     android.util.Log.d("MainActivity", "System scroll detected")
                                     loadSystemImageDebounced()
                                 }
-                                "esde_game_filename.txt" -> {
+                                AppConstants.Paths.GAME_FILENAME_LOG -> {
                                     // Ignore if launching from screensaver (game-select event between screensaver-end and game-start)
                                     if (isLaunchingFromScreensaver) {
                                         android.util.Log.d("MainActivity", "Game scroll ignored - launching from screensaver")
@@ -1969,7 +1966,7 @@ Access this help anytime from the widget menu!
                                     // Game end already sets state to GameBrowsing, so scrolling is safe
 
                                     // Read the game filename
-                                    val gameFile = File(watchDir, "esde_game_filename.txt")
+                                    val gameFile = File(watchDir, AppConstants.Paths.GAME_FILENAME_LOG)
                                     if (gameFile.exists()) {
                                         val gameFilename = gameFile.readText().trim()
 
@@ -1983,21 +1980,21 @@ Access this help anytime from the widget menu!
                                     android.util.Log.d("MainActivity", "Game scroll detected")
                                     loadGameInfoDebounced()
                                 }
-                                "esde_gamestart_filename.txt" -> {
+                                AppConstants.Paths.GAME_START_FILENAME_LOG -> {
                                     android.util.Log.d("MainActivity", "Game start detected")
                                     handleGameStart()
                                 }
-                                "esde_gameend_filename.txt" -> {
+                                AppConstants.Paths.GAME_END_FILENAME_LOG -> {
                                     android.util.Log.d("MainActivity", "Game end detected")
                                     handleGameEnd()
                                 }
-                                "esde_screensaver_start.txt" -> {
+                                AppConstants.Paths.SCREENSAVER_START_LOG -> {
                                     android.util.Log.d("MainActivity", "Screensaver start detected")
                                     handleScreensaverStart()
                                 }
-                                "esde_screensaver_end.txt" -> {
+                                AppConstants.Paths.SCREENSAVER_END_LOG -> {
                                     // Read the screensaver end reason
-                                    val screensaverEndFile = File(watchDir, "esde_screensaver_end.txt")
+                                    val screensaverEndFile = File(watchDir, AppConstants.Paths.SCREENSAVER_END_LOG)
                                     val endReason = if (screensaverEndFile.exists()) {
                                         screensaverEndFile.readText().trim()
                                     } else {
@@ -2007,7 +2004,7 @@ Access this help anytime from the widget menu!
                                     android.util.Log.d("MainActivity", "Screensaver end detected: $endReason")
                                     handleScreensaverEnd(endReason)
                                 }
-                                "esde_screensavergameselect_filename.txt" -> {
+                                AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG -> {
                                     // DEFENSIVE FIX: Auto-initialize screensaver state if screensaver-start event was missed
                                     if (state !is AppState.Screensaver) {
                                         android.util.Log.w("MainActivity", "⚠️ FALLBACK: Screensaver game-select fired without screensaver-start event!")
@@ -2063,9 +2060,9 @@ Access this help anytime from the widget menu!
                                     }
 
                                     // Read screensaver game info and update state
-                                    val filenameFile = File(watchDir, "esde_screensavergameselect_filename.txt")
-                                    val nameFile = File(watchDir, "esde_screensavergameselect_name.txt")
-                                    val systemFile = File(watchDir, "esde_screensavergameselect_system.txt")
+                                    val filenameFile = File(watchDir, AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG)
+                                    val nameFile = File(watchDir, AppConstants.Paths.SCREENSAVER_GAME_NAME_LOG)
+                                    val systemFile = File(watchDir, AppConstants.Paths.SCREENSAVER_GAME_SYSTEM_LOG)
 
                                     var gameFilename: String? = null
                                     var gameName: String? = null
@@ -2205,7 +2202,7 @@ Access this help anytime from the widget menu!
                 android.util.Log.d("MainActivity", "Showing widget tutorial after setup verification")
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     showWidgetSystemTutorial(fromUpdate = false)
-                }, 1000)  // 1 second after verification success
+                }, AppConstants.Timing.SETTINGS_DELAY)  // 1 second after verification success
             }
         }
     }
@@ -2348,7 +2345,7 @@ Access this help anytime from the widget menu!
         songTitleOverlay.visibility = View.VISIBLE
         songTitleOverlay.animate()
             .alpha(1.0f)
-            .setDuration(300)
+            .setDuration(AppConstants.Timing.FADE_ANIMATION_DURATION)
             .start()
 
         // Get display duration
@@ -2361,7 +2358,7 @@ Access this help anytime from the widget menu!
         }
 
         // Calculate duration: 0->2s, 1->4s, 2->6s, ... 14->30s
-        val displayDuration = ((durationSetting + 1) * 2) * 1000L
+        val displayDuration = ((durationSetting + 1) * AppConstants.Timing.SONG_TITLE_STEP_SECONDS) * 1000L
 
         // Always schedule fade out after timeout
         songTitleRunnable = Runnable {
@@ -2381,7 +2378,7 @@ Access this help anytime from the widget menu!
 
         songTitleOverlay.animate()
             .alpha(0.0f)
-            .setDuration(300)
+            .setDuration(AppConstants.Timing.FADE_ANIMATION_DURATION)
             .withEndAction {
                 songTitleOverlay.visibility = View.GONE
             }
@@ -2953,7 +2950,7 @@ Access this help anytime from the widget menu!
             releasePlayer()
 
             val logsDir = File(getLogsPath())
-            val systemFile = File(logsDir, "esde_system_name.txt")
+            val systemFile = File(logsDir, AppConstants.Paths.SYSTEM_NAME_LOG)
             if (!systemFile.exists()) return
 
             val systemName = systemFile.readText().trim()
@@ -3089,7 +3086,7 @@ Access this help anytime from the widget menu!
         lifecycleScope.launch {
             try {
                 val logsDir = File(getLogsPath())
-                val gameFile = File(logsDir, "esde_game_filename.txt")
+                val gameFile = File(logsDir, AppConstants.Paths.GAME_FILENAME_LOG)
                 if (!gameFile.exists()) return@launch
 
                 // Read filename (should already exist since it triggers FileObserver)
@@ -3097,11 +3094,11 @@ Access this help anytime from the widget menu!
                 val gameName = sanitizeGameFilename(gameNameRaw).substringBeforeLast('.')
 
                 // Read display name (may not exist yet due to race condition)
-                val gameDisplayNameFile = File(logsDir, "esde_game_name.txt")
+                val gameDisplayNameFile = File(logsDir, AppConstants.Paths.GAME_NAME_LOG)
                 val gameDisplayName = readNonBlankTextAsync(gameDisplayNameFile) ?: gameName
 
                 // CRITICAL: Wait for system file with retry logic (race condition fix)
-                val systemFile = File(logsDir, "esde_game_system.txt")
+                val systemFile = File(logsDir, AppConstants.Paths.GAME_SYSTEM_LOG)
                 val systemName = readNonBlankTextAsync(systemFile)
 
                 if (systemName == null) {
@@ -3643,8 +3640,8 @@ Access this help anytime from the widget menu!
      */
     private fun tryReadGameInfoFromLogs(): Pair<String, String>? {
         val logsDir = File(getLogsPath())
-        val gameFile = File(logsDir, "esde_game_filename.txt")
-        val systemFile = File(logsDir, "esde_game_system.txt")
+        val gameFile = File(logsDir, AppConstants.Paths.GAME_FILENAME_LOG)
+        val systemFile = File(logsDir, AppConstants.Paths.GAME_SYSTEM_LOG)
 
         return if (gameFile.exists() && systemFile.exists()) {
             Pair(systemFile.readText().trim(), gameFile.readText().trim())
@@ -4503,8 +4500,8 @@ Access this help anytime from the widget menu!
      * Get video delay in milliseconds
      */
     private fun getVideoDelay(): Long {
-        val progress = prefsManager.videoDelay // 4 (2 seconds)
-        return (progress * 500L) // Convert to milliseconds (0-5000ms)
+        val progress = prefsManager.videoDelay
+        return (progress * AppConstants.Timing.VIDEO_DELAY_MULTIPLIER)
     }
 
     /**

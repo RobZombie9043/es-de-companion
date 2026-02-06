@@ -27,6 +27,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import androidx.core.view.GestureDetectorCompat
 
+import com.esde.companion.data.AppConstants
 import com.esde.companion.managers.PreferencesManager
 import com.esde.companion.managers.ScriptManager
 
@@ -154,7 +155,7 @@ class SettingsActivity : AppCompatActivity() {
                     }
 
                     // Warn if path doesn't look like ES-DE downloaded_media folder
-                    if (!path.contains("downloaded_media", ignoreCase = true)) {
+                    if (!path.contains(AppConstants.Paths.MEDIA_DIR, ignoreCase = true)) {
                         if (isInSetupWizard) {
                             showNonStandardMediaPathWarningForWizard(path)
                         } else {
@@ -181,7 +182,8 @@ class SettingsActivity : AppCompatActivity() {
                     updateScriptsPathDisplay()
 
                     // Warn if path doesn't look like ES-DE scripts folder
-                    if (!path.contains("ES-DE", ignoreCase = true) || !path.contains("scripts", ignoreCase = true)) {
+                    if (!path.contains("ES-DE", ignoreCase = true) ||
+    !path.contains(AppConstants.Paths.SCRIPTS_DIR.substringAfterLast('/'), ignoreCase = true)) {
                         if (isInSetupWizard) {
                             showNonStandardScriptsPathWarningForWizard(path)
                         } else {
@@ -624,7 +626,7 @@ class SettingsActivity : AppCompatActivity() {
                 if (!isInSetupWizard) {
                     startSetupWizard()
                 }
-            }, 500)
+            }, AppConstants.Timing.WIZARD_DELAY)
         } else {
             // Normal auto-start check (for when settings opened directly)
             checkAndAutoStartWizard()
@@ -846,12 +848,12 @@ class SettingsActivity : AppCompatActivity() {
                     customAnimationSettings.alpha = 0f
                     customAnimationSettings.animate()
                         .alpha(1f)
-                        .setDuration(200)
+                        .setDuration(AppConstants.Timing.SLIDE_ANIMATION_DURATION)
                         .start()
                 } else {
                     customAnimationSettings.animate()
                         .alpha(0f)
-                        .setDuration(150)
+                        .setDuration(AppConstants.Timing.SLIDE_ANIMATION_DURATION)
                         .withEndAction {
                             customAnimationSettings.visibility = View.GONE
                         }
@@ -864,13 +866,18 @@ class SettingsActivity : AppCompatActivity() {
     private fun setupCustomAnimationControls() {
         // Duration Slider (100ms - 500ms, in 10ms steps)
         val currentDuration = prefsManager.animationDuration
-        animationDurationSeekBar.max = 40  // 0-40 = 100ms-500ms (10ms steps)
-        animationDurationSeekBar.progress = (currentDuration - 100) / 10
+        val seekBarMax = (AppConstants.Timing.ANIMATION_DURATION_MAX -
+                AppConstants.Timing.ANIMATION_DURATION_MIN) /
+                AppConstants.Timing.ANIMATION_DURATION_STEP
+        animationDurationSeekBar.max = seekBarMax
+        animationDurationSeekBar.progress = (currentDuration - AppConstants.Timing.ANIMATION_DURATION_MIN) /
+                AppConstants.Timing.ANIMATION_DURATION_STEP
         animationDurationText.text = "${currentDuration}ms"
 
         animationDurationSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val duration = 100 + (progress * 10)  // 100ms to 500ms
+                val duration = AppConstants.Timing.ANIMATION_DURATION_MIN +
+                        (progress * AppConstants.Timing.ANIMATION_DURATION_STEP)
                 animationDurationText.text = "${duration}ms"
             }
 

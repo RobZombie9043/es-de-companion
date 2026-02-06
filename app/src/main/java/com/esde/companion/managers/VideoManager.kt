@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import com.esde.companion.data.AppConstants
 import com.esde.companion.MediaFileLocator
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.common.MediaItem
@@ -101,7 +102,7 @@ class VideoManager(
         cancelVideoDelay()
 
         // Schedule video playback
-        val delay = (prefsManager.videoDelay * 500).toLong() // videoDelay is 0-10, multiply by 500ms
+        val delay = (prefsManager.videoDelay * AppConstants.Timing.VIDEO_DELAY_MULTIPLIER).toLong()
         android.util.Log.d(TAG, "Scheduling video playback in ${delay}ms")
 
         videoDelayHandler = Handler(Looper.getMainLooper())

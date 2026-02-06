@@ -1,6 +1,7 @@
 package com.esde.companion.music
 
 import android.content.Context
+import com.esde.companion.data.AppConstants
 import com.esde.companion.managers.PreferencesManager
 import android.media.MediaPlayer
 import android.os.Handler
@@ -35,18 +36,18 @@ class MusicManager(
         private const val TAG = "MusicManager"
 
         // Default music folder path
-        private const val DEFAULT_MUSIC_PATH = "/storage/emulated/0/ES-DE Companion/music"
+        private val DEFAULT_MUSIC_PATH = AppConstants.Paths.DEFAULT_MUSIC_PATH
 
         // Supported audio formats
-        private val AUDIO_EXTENSIONS = listOf("mp3", "ogg", "flac", "m4a", "wav", "aac")
+        private val AUDIO_EXTENSIONS = AppConstants.FileExtensions.AUDIO
 
         // Animation durations
-        private const val CROSS_FADE_DURATION = 300L // milliseconds
-        private const val DUCK_FADE_DURATION = 300L
+        private const val CROSS_FADE_DURATION = AppConstants.Timing.MUSIC_CROSS_FADE_DURATION
+        private const val DUCK_FADE_DURATION = AppConstants.Timing.MUSIC_DUCK_FADE_DURATION
 
         // Volume levels
-        private const val NORMAL_VOLUME = 1.0f
-        private const val DUCKED_VOLUME = 0.2f // 20%
+        private const val NORMAL_VOLUME = AppConstants.UI.MUSIC_NORMAL_VOLUME
+        private const val DUCKED_VOLUME = AppConstants.UI.MUSIC_DUCKED_VOLUME
     }
 
     // ========== PLAYBACK STATE ==========
@@ -790,7 +791,7 @@ class MusicManager(
             if (!currentDir.isDirectory) continue
 
             // Skip "systems" folder if this is generic music scan
-            if (excludeSystemsFolder && currentDir.name == "systems" && currentDir.parentFile == directory) {
+            if (excludeSystemsFolder && currentDir.name == AppConstants.Paths.MUSIC_SYSTEMS_SUBDIR && currentDir.parentFile == directory) {
                 android.util.Log.d(TAG, "Skipping systems folder in generic scan: ${currentDir.absolutePath}")
                 continue
             }
