@@ -653,18 +653,8 @@ class MainActivity : AppCompatActivity() {
         // Check if setup has been completed
         val hasCompletedSetup = prefsManager.setupCompleted
 
-        // Check if permissions are granted
-        val hasPermission = when {
-            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R ->
-                Environment.isExternalStorageManager()
-            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M -> {
-                androidx.core.content.ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            }
-            else -> true
-        }
+        // Check if permissions are granted (Android 13+ simplified)
+        val hasPermission = Environment.isExternalStorageManager()
 
         // Launch setup wizard immediately if:
         // 1. Setup not completed, OR

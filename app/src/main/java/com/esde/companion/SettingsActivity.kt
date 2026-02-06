@@ -373,23 +373,12 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
-    private val storagePermissionLauncher = registerForActivityResult(
+    // No longer needed for Android 13+ - MANAGE_EXTERNAL_STORAGE is granted via system settings
+    // Kept for potential notification permission requests
+    private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            if (isInSetupWizard) {
-                continueSetupWizard()
-            } else {
-                // Permission granted, create scripts
-                createScriptFiles()
-            }
-        } else {
-            // Permission denied, show explanation
-            showPermissionDeniedDialog()
-            if (isInSetupWizard) {
-                isInSetupWizard = false
-            }
-        }
+        android.util.Log.d("SettingsActivity", "Notification permission granted: $isGranted")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -702,16 +691,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // If we're in quick setup at step 1, check if permission was just granted
         if (isInSetupWizard && setupStep == 1) {
-            val hasPermission = when {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> Environment.isExternalStorageManager()
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                    ContextCompat.checkSelfPermission(
-                        this,
-                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    ) == PackageManager.PERMISSION_GRANTED
-                }
-                else -> true
-            }
+            val hasPermission = Environment.isExternalStorageManager()
 
             if (hasPermission) {
                 // Permission granted, continue wizard automatically
@@ -2192,31 +2172,11 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-                // Android 11+ - Check if we have MANAGE_EXTERNAL_STORAGE
-                if (Environment.isExternalStorageManager()) {
-                    createScriptFiles()
-                } else {
-                    showManageStoragePermissionDialog()
-                }
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                // Android 6-10 - Check WRITE_EXTERNAL_STORAGE
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    createScriptFiles()
-                } else {
-                    storagePermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
-            }
-            else -> {
-                // Android 5 and below - no runtime permissions needed
-                createScriptFiles()
-            }
+        // Android 13+ only - simplified permission model
+        if (Environment.isExternalStorageManager()) {
+            createScriptFiles()
+        } else {
+            showManageStoragePermissionDialog()
         }
     }
 
@@ -2371,17 +2331,14 @@ class SettingsActivity : AppCompatActivity() {
             .setCustomTitle(titleContainer)
             .setMessage("The app needs storage permissions to create script files and access media folders.\n\nClick 'Grant Permission' to open system settings. After granting permission, the wizard will automatically continue.")
             .setPositiveButton("Grant Permission") { _, _ ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    try {
-                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                        intent.data = Uri.parse("package:$packageName")
-                        startActivity(intent)
-                    } catch (e: Exception) {
-                        val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                        startActivity(intent)
-                    }
-                } else {
-                    storagePermissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                // Android 13+ - always use MANAGE_ALL_FILES_ACCESS_PERMISSION
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                    intent.data = Uri.parse("package:$packageName")
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                    startActivity(intent)
                 }
             }
             .setCancelable(false)
@@ -2563,17 +2520,8 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun checkAndAutoStartWizard() {
-        // Check if permissions are granted
-        val hasPermission = when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> Environment.isExternalStorageManager()
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
-            }
-            else -> true
-        }
+        // Check if permissions are granted (Android 13+ simplified)
+        val hasPermission = Environment.isExternalStorageManager()
 
         // Check if this is first launch
         val hasCompletedSetup = prefsManager.setupCompleted
@@ -2650,17 +2598,8 @@ class SettingsActivity : AppCompatActivity() {
 
         when (setupStep) {
             1 -> {
-                // Step 1: Check permissions
-                val hasPermission = when {
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> Environment.isExternalStorageManager()
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
-                        ContextCompat.checkSelfPermission(
-                            this,
-                            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                        ) == PackageManager.PERMISSION_GRANTED
-                    }
-                    else -> true
-                }
+                // Step 1: Check permissions (Android 13+ simplified)
+                val hasPermission = Environment.isExternalStorageManager()
 
                 if (hasPermission) {
                     // Permissions already granted

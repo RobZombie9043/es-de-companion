@@ -2,6 +2,7 @@ package com.esde.companion.managers
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.esde.companion.data.AppConstants
 import com.esde.companion.data.PreferenceKeys
 
@@ -45,45 +46,35 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_MEDIA_PATH,
             PreferenceKeys.DEFAULT_MEDIA_PATH
         ) ?: PreferenceKeys.DEFAULT_MEDIA_PATH
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_MEDIA_PATH, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_MEDIA_PATH, value) }
 
     var systemPath: String
         get() = prefs.getString(
             PreferenceKeys.KEY_SYSTEM_PATH,
             PreferenceKeys.DEFAULT_SYSTEM_PATH
         ) ?: PreferenceKeys.DEFAULT_SYSTEM_PATH
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_SYSTEM_PATH, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_SYSTEM_PATH, value) }
 
     var systemLogosPath: String
         get() = prefs.getString(
             PreferenceKeys.KEY_SYSTEM_LOGOS_PATH,
             PreferenceKeys.DEFAULT_SYSTEM_LOGOS_PATH
         ) ?: PreferenceKeys.DEFAULT_SYSTEM_LOGOS_PATH
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_SYSTEM_LOGOS_PATH, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_SYSTEM_LOGOS_PATH, value) }
 
     var customBackgroundPath: String
         get() = prefs.getString(
             PreferenceKeys.KEY_CUSTOM_BACKGROUND,
             PreferenceKeys.DEFAULT_CUSTOM_BACKGROUND
         ) ?: PreferenceKeys.DEFAULT_CUSTOM_BACKGROUND
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_CUSTOM_BACKGROUND, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_CUSTOM_BACKGROUND, value) }
 
     var scriptsPath: String
         get() = prefs.getString(
             PreferenceKeys.KEY_SCRIPTS_PATH,
             PreferenceKeys.DEFAULT_SCRIPTS_PATH
         ) ?: PreferenceKeys.DEFAULT_SCRIPTS_PATH
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_SCRIPTS_PATH, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_SCRIPTS_PATH, value) }
 
     // ========== UI PROPERTIES ==========
 
@@ -92,36 +83,28 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_DIMMING,
             PreferenceKeys.DEFAULT_DIMMING
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_DIMMING, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_DIMMING, value) }
 
     var blurLevel: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_BLUR,
             PreferenceKeys.DEFAULT_BLUR
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_BLUR, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_BLUR, value) }
 
     var drawerTransparency: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_DRAWER_TRANSPARENCY,
             PreferenceKeys.DEFAULT_DRAWER_TRANSPARENCY
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_DRAWER_TRANSPARENCY, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_DRAWER_TRANSPARENCY, value) }
 
     var columnCount: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_COLUMN_COUNT,
             PreferenceKeys.DEFAULT_COLUMN_COUNT
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_COLUMN_COUNT, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_COLUMN_COUNT, value) }
 
     // ========== WIDGET PROPERTIES ==========
 
@@ -130,27 +113,21 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_WIDGETS_LOCKED,
             PreferenceKeys.DEFAULT_WIDGETS_LOCKED
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_WIDGETS_LOCKED, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_WIDGETS_LOCKED, value) }
 
     var snapToGrid: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_SNAP_TO_GRID,
             PreferenceKeys.DEFAULT_SNAP_TO_GRID
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_SNAP_TO_GRID, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SNAP_TO_GRID, value) }
 
     var showGrid: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_SHOW_GRID,
             PreferenceKeys.DEFAULT_SHOW_GRID
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_SHOW_GRID, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SHOW_GRID, value) }
 
     // ========== VIDEO PROPERTIES ==========
 
@@ -159,22 +136,21 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_VIDEO_ENABLED,
             PreferenceKeys.DEFAULT_VIDEO_ENABLED
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_VIDEO_ENABLED, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_VIDEO_ENABLED, value) }
 
     var videoDelay: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_VIDEO_DELAY,
             PreferenceKeys.DEFAULT_VIDEO_DELAY
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_VIDEO_DELAY, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_VIDEO_DELAY, value) }
 
     var videoAudioEnabled: Boolean
-        get() = prefs.getBoolean(PreferenceKeys.KEY_VIDEO_AUDIO_ENABLED, PreferenceKeys.DEFAULT_VIDEO_AUDIO_ENABLED)
-        set(value) = prefs.edit().putBoolean(PreferenceKeys.KEY_VIDEO_AUDIO_ENABLED, value).apply()
+        get() = prefs.getBoolean(
+            PreferenceKeys.KEY_VIDEO_AUDIO_ENABLED,
+            PreferenceKeys.DEFAULT_VIDEO_AUDIO_ENABLED
+        )
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_VIDEO_AUDIO_ENABLED, value) }
 
     // ========== MUSIC PROPERTIES ==========
 
@@ -183,67 +159,64 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_MUSIC_ENABLED,
             PreferenceKeys.DEFAULT_MUSIC_ENABLED
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_MUSIC_ENABLED, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_MUSIC_ENABLED, value) }
 
     var musicPath: String
         get() = prefs.getString(
             PreferenceKeys.KEY_MUSIC_PATH,
             PreferenceKeys.DEFAULT_MUSIC_PATH
         ) ?: PreferenceKeys.DEFAULT_MUSIC_PATH
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_MUSIC_PATH, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_MUSIC_PATH, value) }
 
     var musicVideoBehavior: String
         get() = prefs.getString(
             PreferenceKeys.KEY_MUSIC_VIDEO_BEHAVIOR,
             PreferenceKeys.DEFAULT_MUSIC_VIDEO_BEHAVIOR
         ) ?: PreferenceKeys.DEFAULT_MUSIC_VIDEO_BEHAVIOR
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_MUSIC_VIDEO_BEHAVIOR, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_MUSIC_VIDEO_BEHAVIOR, value) }
 
     var musicSongTitleEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_MUSIC_SONG_TITLE_ENABLED,
             PreferenceKeys.DEFAULT_MUSIC_SONG_TITLE_ENABLED
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_MUSIC_SONG_TITLE_ENABLED, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_MUSIC_SONG_TITLE_ENABLED, value) }
 
     var musicSongTitleDuration: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_MUSIC_SONG_TITLE_DURATION,
             PreferenceKeys.DEFAULT_MUSIC_SONG_TITLE_DURATION
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_MUSIC_SONG_TITLE_DURATION, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_MUSIC_SONG_TITLE_DURATION, value) }
 
     var musicSongTitleOpacity: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_MUSIC_SONG_TITLE_OPACITY,
             PreferenceKeys.DEFAULT_MUSIC_SONG_TITLE_OPACITY
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_MUSIC_SONG_TITLE_OPACITY, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_MUSIC_SONG_TITLE_OPACITY, value) }
 
     // Music per-state toggles
     var musicSystemEnabled: Boolean
-        get() = prefs.getBoolean(PreferenceKeys.KEY_MUSIC_SYSTEM_ENABLED, PreferenceKeys.DEFAULT_MUSIC_SYSTEM_ENABLED)
-        set(value) = prefs.edit().putBoolean(PreferenceKeys.KEY_MUSIC_SYSTEM_ENABLED, value).apply()
+        get() = prefs.getBoolean(
+            PreferenceKeys.KEY_MUSIC_SYSTEM_ENABLED,
+            PreferenceKeys.DEFAULT_MUSIC_SYSTEM_ENABLED
+        )
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_MUSIC_SYSTEM_ENABLED, value) }
 
     var musicGameEnabled: Boolean
-        get() = prefs.getBoolean(PreferenceKeys.KEY_MUSIC_GAME_ENABLED, PreferenceKeys.DEFAULT_MUSIC_GAME_ENABLED)
-        set(value) = prefs.edit().putBoolean(PreferenceKeys.KEY_MUSIC_GAME_ENABLED, value).apply()
+        get() = prefs.getBoolean(
+            PreferenceKeys.KEY_MUSIC_GAME_ENABLED,
+            PreferenceKeys.DEFAULT_MUSIC_GAME_ENABLED
+        )
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_MUSIC_GAME_ENABLED, value) }
 
     var musicScreensaverEnabled: Boolean
-        get() = prefs.getBoolean(PreferenceKeys.KEY_MUSIC_SCREENSAVER_ENABLED, PreferenceKeys.DEFAULT_MUSIC_SCREENSAVER_ENABLED)
-        set(value) = prefs.edit().putBoolean(PreferenceKeys.KEY_MUSIC_SCREENSAVER_ENABLED, value).apply()
+        get() = prefs.getBoolean(
+            PreferenceKeys.KEY_MUSIC_SCREENSAVER_ENABLED,
+            PreferenceKeys.DEFAULT_MUSIC_SCREENSAVER_ENABLED
+        )
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_MUSIC_SCREENSAVER_ENABLED, value) }
 
     // ========== BEHAVIOR PROPERTIES ==========
 
@@ -252,48 +225,49 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_GAME_LAUNCH_BEHAVIOR,
             PreferenceKeys.DEFAULT_GAME_LAUNCH_BEHAVIOR
         ) ?: PreferenceKeys.DEFAULT_GAME_LAUNCH_BEHAVIOR
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_GAME_LAUNCH_BEHAVIOR, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_GAME_LAUNCH_BEHAVIOR, value) }
 
     var screensaverBehavior: String
         get() = prefs.getString(
             PreferenceKeys.KEY_SCREENSAVER_BEHAVIOR,
             PreferenceKeys.DEFAULT_SCREENSAVER_BEHAVIOR
         ) ?: PreferenceKeys.DEFAULT_SCREENSAVER_BEHAVIOR
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_SCREENSAVER_BEHAVIOR, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_SCREENSAVER_BEHAVIOR, value) }
 
     var systemViewBackgroundType: String
         get() = prefs.getString(
             PreferenceKeys.KEY_SYSTEM_VIEW_BACKGROUND_TYPE,
             PreferenceKeys.DEFAULT_SYSTEM_VIEW_BACKGROUND_TYPE
         ) ?: PreferenceKeys.DEFAULT_SYSTEM_VIEW_BACKGROUND_TYPE
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_SYSTEM_VIEW_BACKGROUND_TYPE, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_SYSTEM_VIEW_BACKGROUND_TYPE, value) }
 
     var gameViewBackgroundType: String
         get() = prefs.getString(
             PreferenceKeys.KEY_GAME_VIEW_BACKGROUND_TYPE,
             PreferenceKeys.DEFAULT_GAME_VIEW_BACKGROUND_TYPE
         ) ?: PreferenceKeys.DEFAULT_GAME_VIEW_BACKGROUND_TYPE
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_GAME_VIEW_BACKGROUND_TYPE, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_GAME_VIEW_BACKGROUND_TYPE, value) }
 
     var systemBackgroundColor: Int
-        get() = prefs.getInt(PreferenceKeys.KEY_SYSTEM_BACKGROUND_COLOR, PreferenceKeys.DEFAULT_SYSTEM_BACKGROUND_COLOR)
-        set(value) = prefs.edit().putInt(PreferenceKeys.KEY_SYSTEM_BACKGROUND_COLOR, value).apply()
+        get() = prefs.getInt(
+            PreferenceKeys.KEY_SYSTEM_BACKGROUND_COLOR,
+            PreferenceKeys.DEFAULT_SYSTEM_BACKGROUND_COLOR
+        )
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_SYSTEM_BACKGROUND_COLOR, value) }
 
     var gameBackgroundColor: Int
-        get() = prefs.getInt(PreferenceKeys.KEY_GAME_BACKGROUND_COLOR, PreferenceKeys.DEFAULT_GAME_BACKGROUND_COLOR)
-        set(value) = prefs.edit().putInt(PreferenceKeys.KEY_GAME_BACKGROUND_COLOR, value).apply()
+        get() = prefs.getInt(
+            PreferenceKeys.KEY_GAME_BACKGROUND_COLOR,
+            PreferenceKeys.DEFAULT_GAME_BACKGROUND_COLOR
+        )
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_GAME_BACKGROUND_COLOR, value) }
 
     var blackOverlayEnabled: Boolean
-        get() = prefs.getBoolean(PreferenceKeys.KEY_BLACK_OVERLAY_ENABLED, PreferenceKeys.DEFAULT_BLACK_OVERLAY_ENABLED)
-        set(value) = prefs.edit().putBoolean(PreferenceKeys.KEY_BLACK_OVERLAY_ENABLED, value).apply()
+        get() = prefs.getBoolean(
+            PreferenceKeys.KEY_BLACK_OVERLAY_ENABLED,
+            PreferenceKeys.DEFAULT_BLACK_OVERLAY_ENABLED
+        )
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_BLACK_OVERLAY_ENABLED, value) }
 
     // ========== LOGO PROPERTIES ==========
 
@@ -302,27 +276,21 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_SYSTEM_LOGO_SIZE,
             PreferenceKeys.DEFAULT_SYSTEM_LOGO_SIZE
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_SYSTEM_LOGO_SIZE, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_SYSTEM_LOGO_SIZE, value) }
 
     var showSystemLogo: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_SHOW_SYSTEM_LOGO,
             PreferenceKeys.DEFAULT_SHOW_SYSTEM_LOGO
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_SHOW_SYSTEM_LOGO, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SHOW_SYSTEM_LOGO, value) }
 
     var showGameLogo: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_SHOW_GAME_LOGO,
             PreferenceKeys.DEFAULT_SHOW_GAME_LOGO
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_SHOW_GAME_LOGO, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SHOW_GAME_LOGO, value) }
 
     // ========== ANIMATION PROPERTIES ==========
 
@@ -331,27 +299,21 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_ANIMATION_STYLE,
             PreferenceKeys.DEFAULT_ANIMATION_STYLE
         ) ?: PreferenceKeys.DEFAULT_ANIMATION_STYLE
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_ANIMATION_STYLE, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_ANIMATION_STYLE, value) }
 
     var animationDuration: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_ANIMATION_DURATION,
             PreferenceKeys.DEFAULT_ANIMATION_DURATION
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_ANIMATION_DURATION, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_ANIMATION_DURATION, value) }
 
     var animationScale: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_ANIMATION_SCALE,
             PreferenceKeys.DEFAULT_ANIMATION_SCALE
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_ANIMATION_SCALE, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_ANIMATION_SCALE, value) }
 
     // ========== SETUP/STATE PROPERTIES ==========
 
@@ -360,74 +322,49 @@ class PreferencesManager(context: Context) {
             PreferenceKeys.KEY_SETUP_COMPLETED,
             PreferenceKeys.DEFAULT_SETUP_COMPLETED
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_SETUP_COMPLETED, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SETUP_COMPLETED, value) }
 
     var tutorialVersionShown: String
         get() = prefs.getString(
             PreferenceKeys.KEY_TUTORIAL_VERSION_SHOWN,
             PreferenceKeys.DEFAULT_TUTORIAL_VERSION_SHOWN
         ) ?: PreferenceKeys.DEFAULT_TUTORIAL_VERSION_SHOWN
-        set(value) = prefs.edit()
-            .putString(PreferenceKeys.KEY_TUTORIAL_VERSION_SHOWN, value)
-            .apply()
+        set(value) = prefs.edit { putString(PreferenceKeys.KEY_TUTORIAL_VERSION_SHOWN, value) }
 
     var settingsHintCount: Int
         get() = prefs.getInt(
             PreferenceKeys.KEY_SETTINGS_HINT_COUNT,
             PreferenceKeys.DEFAULT_SETTINGS_HINT_COUNT
         )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_SETTINGS_HINT_COUNT, value)
-            .apply()
+        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_SETTINGS_HINT_COUNT, value) }
 
     var hiddenApps: Set<String>
         get() = prefs.getStringSet(
             PreferenceKeys.KEY_HIDDEN_APPS,
             emptySet()
         ) ?: emptySet()
-        set(value) = prefs.edit()
-            .putStringSet(PreferenceKeys.KEY_HIDDEN_APPS, value)
-            .apply()
+        set(value) = prefs.edit { putStringSet(PreferenceKeys.KEY_HIDDEN_APPS, value) }
 
     var defaultWidgetsCreated: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_DEFAULT_WIDGETS_CREATED,
             PreferenceKeys.DEFAULT_DEFAULT_WIDGETS_CREATED
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_DEFAULT_WIDGETS_CREATED, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_DEFAULT_WIDGETS_CREATED, value) }
 
     var widgetTutorialShown: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_WIDGET_TUTORIAL_SHOWN,
             PreferenceKeys.DEFAULT_WIDGET_TUTORIAL_SHOWN
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_WIDGET_TUTORIAL_SHOWN, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_WIDGET_TUTORIAL_SHOWN, value) }
 
     var widgetTutorialDontShowAuto: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_WIDGET_TUTORIAL_DONT_SHOW_AUTO,
             PreferenceKeys.DEFAULT_WIDGET_TUTORIAL_DONT_SHOW_AUTO
         )
-        set(value) = prefs.edit()
-            .putBoolean(PreferenceKeys.KEY_WIDGET_TUTORIAL_DONT_SHOW_AUTO, value)
-            .apply()
-
-    // ========== CACHE PROPERTIES ==========
-
-    var lastImageCacheVersion: Int
-        get() = prefs.getInt(
-            PreferenceKeys.KEY_LAST_IMAGE_CACHE_VERSION,
-            PreferenceKeys.DEFAULT_LAST_IMAGE_CACHE_VERSION
-        )
-        set(value) = prefs.edit()
-            .putInt(PreferenceKeys.KEY_LAST_IMAGE_CACHE_VERSION, value)
-            .apply()
+        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_WIDGET_TUTORIAL_DONT_SHOW_AUTO, value) }
 
     // ========== HELPER METHODS ==========
 
@@ -435,7 +372,7 @@ class PreferencesManager(context: Context) {
      * Clear all preferences (useful for testing or factory reset).
      */
     fun clearAll() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
 
     /**

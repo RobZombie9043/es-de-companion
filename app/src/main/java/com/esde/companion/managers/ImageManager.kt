@@ -1,7 +1,6 @@
 package com.esde.companion.managers
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.widget.ImageView
 import com.bumptech.glide.Glide
@@ -9,12 +8,11 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import com.caverock.androidsvg.SVG
 import java.io.File
-import android.renderscript.RenderScript
-import android.renderscript.Allocation
-import android.renderscript.Element
-import android.renderscript.ScriptIntrinsicBlur
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
+import androidx.annotation.RequiresApi
 
 /**
  * Centralized image loading manager using Glide.
@@ -39,16 +37,6 @@ class ImageManager(
 
     companion object {
         private const val TAG = "ImageManager"
-
-        // Animation durations
-        private const val FADE_DURATION = 300
-
-        // Cache signature for invalidation
-        private var cacheVersion = 1
-    }
-
-        private val renderScript: RenderScript by lazy {
-        RenderScript.create(context)
     }
 
     // Track the last loaded image path to skip animation when same image is loaded
@@ -95,10 +83,9 @@ class ImageManager(
             .load(imageFile)
             .signature(getFileBasedSignature(imageFile))
 
-        // Apply blur if enabled
-        if (applyBlur && prefsManager.blurLevel > 0) {
-            request = request.transform(BlurTransformation(context, prefsManager.blurLevel))
-        }
+        // Determine if blur should be applied
+        // Note: Blur is applied to ImageView after load, not as Glide transformation
+        val shouldApplyBlur = applyBlur && prefsManager.blurLevel > 0
 
         // Apply transition animation if enabled (and not same image)
         if (shouldAnimate) {
@@ -124,7 +111,34 @@ class ImageManager(
                             com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
                                 .withCrossFade(duration)
                         )
-                        .listener(createSimpleListener(onLoaded, onFailed))
+                        .listener(object : RequestListener<Drawable> {
+                            override fun onLoadFailed(
+                                e: GlideException?,
+                                model: Any?,
+                                target: Target<Drawable>,
+                                isFirstResource: Boolean
+                            ): Boolean {
+                                onFailed?.invoke()
+                                return false
+                            }
+
+                            override fun onResourceReady(
+                                resource: Drawable,
+                                model: Any,
+                                target: Target<Drawable>,
+                                dataSource: DataSource,
+                                isFirstResource: Boolean
+                            ): Boolean {
+                                // Apply blur after image loads (Android 13+ only)
+                                if (shouldApplyBlur) {
+                                    applyBlur(imageView, prefsManager.blurLevel)
+                                } else {
+                                    removeBlur(imageView)
+                                }
+                                onLoaded?.invoke()
+                                return false
+                            }
+                        })
                 }
                 "scale_fade", "custom" -> {
                     // Scale + Fade animation (used for both "scale_fade" preset and "custom")
@@ -162,6 +176,12 @@ class ImageManager(
                                 .setDuration(duration.toLong())
                                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                                 .withEndAction {
+                                    // Apply blur after animation completes (Android 13+ only)
+                                    if (shouldApplyBlur) {
+                                        applyBlur(imageView, prefsManager.blurLevel)
+                                    } else {
+                                        removeBlur(imageView)
+                                    }
                                     onLoaded?.invoke()
                                 }
                                 .start()
@@ -194,6 +214,14 @@ class ImageManager(
                             imageView.alpha = 1f
                             imageView.scaleX = 1f
                             imageView.scaleY = 1f
+
+                            // Apply blur (Android 13+ only)
+                            if (shouldApplyBlur) {
+                                applyBlur(imageView, prefsManager.blurLevel)
+                            } else {
+                                removeBlur(imageView)
+                            }
+
                             onLoaded?.invoke()
                             return false
                         }
@@ -206,7 +234,6 @@ class ImageManager(
                 }
             }
         } else {
-
             // CRITICAL: Disable ALL Glide transitions when same image
             request = request
                 .dontAnimate()  // This is the key - tells Glide to skip all transitions
@@ -236,6 +263,13 @@ class ImageManager(
                         imageView.scaleX = 1f
                         imageView.scaleY = 1f
 
+                        // Apply blur (Android 13+ only)
+                        if (shouldApplyBlur) {
+                            applyBlur(imageView, prefsManager.blurLevel)
+                        } else {
+                            removeBlur(imageView)
+                        }
+
                         onLoaded?.invoke()
                         return false
                     }
@@ -246,50 +280,6 @@ class ImageManager(
     }
 
     // ========== SYSTEM LOGO LOADING ==========
-
-    /**
-     * Load system logo (supports SVG).
-     *
-     * @param imageView Target ImageView
-     * @param logoPath Path to logo file (or "builtin://systemname" for assets)
-     * @param onLoaded Callback when logo loads
-     * @param onFailed Callback when logo fails
-     */
-    fun loadSystemLogo(
-        imageView: ImageView,
-        logoPath: String,
-        onLoaded: (() -> Unit)? = null,
-        onFailed: (() -> Unit)? = null
-    ) {
-        android.util.Log.d(TAG, "Loading system logo: $logoPath")
-
-        if (logoPath.startsWith("builtin://")) {
-            // Load from assets
-            val systemName = logoPath.removePrefix("builtin://")
-            loadLogoFromAssets(imageView, systemName, onLoaded, onFailed)
-        } else {
-            // Load from file
-            val logoFile = File(logoPath)
-
-            if (!logoFile.exists()) {
-                android.util.Log.w(TAG, "Logo file does not exist: $logoPath")
-                onFailed?.invoke()
-                return
-            }
-
-            // Check if SVG
-            if (logoPath.endsWith(".svg", ignoreCase = true)) {
-                loadSvgLogo(imageView, logoFile, onLoaded, onFailed)
-            } else {
-                // Regular image
-                Glide.with(context)
-                    .load(logoFile)
-                    .signature(getFileBasedSignature(logoFile))
-                    .listener(createSimpleListener(onLoaded, onFailed))
-                    .into(imageView)
-            }
-        }
-    }
 
     fun loadLargeImage(
         imageView: ImageView,
@@ -312,119 +302,6 @@ class ImageManager(
             .signature(getFileBasedSignature(imageFile))
             .listener(createSimpleListener(onLoaded, onFailed))
             .into(imageView)
-    }
-
-    /**
-     * Load logo from assets folder.
-     */
-    private fun loadLogoFromAssets(
-        imageView: ImageView,
-        systemName: String,
-        onLoaded: (() -> Unit)?,
-        onFailed: (() -> Unit)?
-    ) {
-        try {
-            val assetManager = context.assets
-            val extensions = listOf("svg", "png", "jpg")
-
-            for (ext in extensions) {
-                val assetPath = "system_logos/$systemName.$ext"
-
-                try {
-                    val inputStream = assetManager.open(assetPath)
-
-                    if (ext == "svg") {
-                        // Load SVG from assets
-                        val svg = SVG.getFromInputStream(inputStream)
-                        val bitmap = svgToBitmap(svg, imageView.width, imageView.height)
-                        imageView.setImageBitmap(bitmap)
-                        onLoaded?.invoke()
-                    } else {
-                        // Load regular image
-                        Glide.with(context)
-                            .load(inputStream)
-                            .listener(createSimpleListener(onLoaded, onFailed))
-                            .into(imageView)
-                    }
-                    return
-                } catch (e: Exception) {
-                    // Try next extension
-                    continue
-                }
-            }
-
-            // No logo found in assets
-            android.util.Log.w(TAG, "No logo found in assets for: $systemName")
-            onFailed?.invoke()
-
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Error loading logo from assets", e)
-            onFailed?.invoke()
-        }
-    }
-
-    /**
-     * Load SVG logo from file.
-     */
-    private fun loadSvgLogo(
-        imageView: ImageView,
-        svgFile: File,
-        onLoaded: (() -> Unit)?,
-        onFailed: (() -> Unit)?
-    ) {
-        try {
-            val svg = SVG.getFromInputStream(svgFile.inputStream())
-
-            // Wait for view to be measured
-            imageView.post {
-                val width = imageView.width
-                val height = imageView.height
-
-                if (width > 0 && height > 0) {
-                    val bitmap = svgToBitmap(svg, width, height)
-                    imageView.setImageBitmap(bitmap)
-                    onLoaded?.invoke()
-                } else {
-                    android.util.Log.w(TAG, "ImageView not measured yet")
-                    onFailed?.invoke()
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Error loading SVG logo", e)
-            onFailed?.invoke()
-        }
-    }
-
-    /**
-     * Convert SVG to Bitmap with proper scaling.
-     */
-    private fun svgToBitmap(svg: SVG, targetWidth: Int, targetHeight: Int): Bitmap {
-        val svgWidth = svg.documentWidth
-        val svgHeight = svg.documentHeight
-
-        val scale = if (svgWidth > 0 && svgHeight > 0) {
-            minOf(
-                targetWidth / svgWidth,
-                targetHeight / svgHeight
-            )
-        } else {
-            1f
-        }
-
-        val scaledWidth = (svgWidth * scale).toInt()
-        val scaledHeight = (svgHeight * scale).toInt()
-
-        val bitmap = Bitmap.createBitmap(
-            scaledWidth.coerceAtLeast(1),
-            scaledHeight.coerceAtLeast(1),
-            Bitmap.Config.ARGB_8888
-        )
-
-        val canvas = android.graphics.Canvas(bitmap)
-        canvas.scale(scale, scale)
-        svg.renderToCanvas(canvas)
-
-        return bitmap
     }
 
     // ========== WIDGET IMAGE LOADING ==========
@@ -501,43 +378,6 @@ class ImageManager(
     // ========== CACHE MANAGEMENT ==========
 
     /**
-     * Invalidate image cache.
-     * Call this when media files change or user changes media path.
-     */
-    fun invalidateCache() {
-        android.util.Log.d(TAG, "Invalidating image cache")
-        cacheVersion++
-        prefsManager.lastImageCacheVersion = cacheVersion
-
-        lastLoadedImagePath = null
-
-        // Clear Glide memory cache
-        Glide.get(context).clearMemory()
-
-        // Clear disk cache on background thread
-        Thread {
-            Glide.get(context).clearDiskCache()
-        }.start()
-    }
-
-    /**
-     * Clear the last loaded image path.
-     * Call this when you want the next image load to always animate,
-     * regardless of whether it's the same image.
-     */
-    fun clearLastLoadedImage() {
-        android.util.Log.d(TAG, "Clearing last loaded image path")
-        lastLoadedImagePath = null
-    }
-
-    /**
-     * Get current cache signature for Glide.
-     */
-    private fun getCacheSignature(): com.bumptech.glide.signature.ObjectKey {
-        return com.bumptech.glide.signature.ObjectKey(cacheVersion.toString())
-    }
-
-    /**
      * Get a cache signature based on file metadata.
      * This allows Glide to detect when a file has been modified on disk,
      * even if the filename remains the same.
@@ -590,72 +430,64 @@ class ImageManager(
     }
 
     /**
-     * Apply blur effect to bitmap using RenderScript.
+     * Apply blur effect using modern RenderEffect (Android 12+).
+     * This replaces the deprecated RenderScript API.
+     *
+     * On Android 10-11, blur is not available and this method does nothing.
+     * Since our min SDK is now 33 (Android 13), this will always work.
+     *
+     * @param imageView The ImageView to apply blur to
+     * @param blurRadius Blur radius (1-25)
      */
-    private fun applyBlur(bitmap: Bitmap, blurRadius: Int): Bitmap {
-        val output = Bitmap.createBitmap(bitmap)
+    private fun applyBlur(imageView: ImageView, blurRadius: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            applyModernBlur(imageView, blurRadius)
+        } else {
+            // This branch should never execute with min SDK 33, but kept for safety
+            android.util.Log.w(TAG, "Blur requires Android 12+, but min SDK is 33")
+        }
+    }
 
-        val input = Allocation.createFromBitmap(renderScript, bitmap)
-        val outputAlloc = Allocation.createFromBitmap(renderScript, output)
+    /**
+     * Apply blur effect using RenderEffect (Android 12+ only).
+     * GPU-accelerated, no resource management needed.
+     *
+     * @param imageView The ImageView to apply blur to
+     * @param blurRadius Blur radius (1-25)
+     */
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun applyModernBlur(imageView: ImageView, blurRadius: Int) {
+        val radius = blurRadius.coerceIn(1, 25).toFloat()
 
-        val script = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript))
-        script.setRadius(blurRadius.coerceIn(1, 25).toFloat())
-        script.setInput(input)
-        script.forEach(outputAlloc)
+        // Create blur effect using RenderEffect
+        val blurEffect = RenderEffect.createBlurEffect(
+            radius,
+            radius,
+            Shader.TileMode.CLAMP
+        )
 
-        outputAlloc.copyTo(output)
+        // Apply to ImageView (GPU-accelerated)
+        imageView.setRenderEffect(blurEffect)
 
-        input.destroy()
-        outputAlloc.destroy()
-        script.destroy()
+        android.util.Log.d(TAG, "Applied modern blur effect with radius: $radius")
+    }
 
-        return output
+    /**
+     * Remove blur effect from ImageView.
+     *
+     * @param imageView The ImageView to remove blur from
+     */
+    private fun removeBlur(imageView: ImageView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            imageView.setRenderEffect(null)
+        }
     }
 
     /**
      * Cleanup resources.
+     * No longer needed with RenderEffect (stateless), but kept for API compatibility.
      */
     fun cleanup() {
-        renderScript.destroy()
-    }
-}
-
-/**
- * Custom blur transformation for Glide.
- */
-class BlurTransformation(
-    private val context: Context,
-    private val blurRadius: Int
-) : com.bumptech.glide.load.resource.bitmap.BitmapTransformation() {
-
-    override fun transform(
-        pool: com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool,
-        toTransform: Bitmap,
-        outWidth: Int,
-        outHeight: Int
-    ): Bitmap {
-        val renderScript = RenderScript.create(context)
-
-        val output = Bitmap.createBitmap(toTransform)
-        val input = Allocation.createFromBitmap(renderScript, toTransform)
-        val outputAlloc = Allocation.createFromBitmap(renderScript, output)
-
-        val script = ScriptIntrinsicBlur.create(renderScript, Element.U8_4(renderScript))
-        script.setRadius(blurRadius.coerceIn(1, 25).toFloat())
-        script.setInput(input)
-        script.forEach(outputAlloc)
-
-        outputAlloc.copyTo(output)
-
-        input.destroy()
-        outputAlloc.destroy()
-        script.destroy()
-        renderScript.destroy()
-
-        return output
-    }
-
-    override fun updateDiskCacheKey(messageDigest: java.security.MessageDigest) {
-        messageDigest.update("blur_$blurRadius".toByteArray())
+        // No cleanup needed with RenderEffect
     }
 }

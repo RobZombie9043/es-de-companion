@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "com.esde.companion"
-        minSdk = 29  // Android 10+ required
+        minSdk = 33  // Android 13+ required
         targetSdk = 34
         versionCode = 24
         versionName = "0.5.3"
