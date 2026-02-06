@@ -1,12 +1,12 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 buildscript {
     repositories {
         google()
         mavenCentral()
     }
 }
-
-import java.util.Properties
-import java.io.FileInputStream
 
 plugins {
     id("com.android.application")

@@ -97,7 +97,7 @@
                 android:layout_marginEnd="16dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_pause"
-                android:tint="#FFFFFF"
+                app:tint="#FFFFFF"
                 android:contentDescription="Play or pause music"
                 android:scaleType="fitCenter"
                 android:padding="8dp" />
@@ -109,7 +109,7 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_skip_next"
-                android:tint="#FFFFFF"
+                app:tint="#FFFFFF"
                 android:contentDescription="Next track"
                 android:scaleType="fitCenter"
                 android:padding="8dp" />
