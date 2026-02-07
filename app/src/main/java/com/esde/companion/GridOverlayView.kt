@@ -25,7 +25,7 @@ class GridOverlayView(context: Context, private val gridSize: Float) : View(cont
     private val centerLinePaint = Paint().apply {
         style = Paint.Style.STROKE
         strokeWidth = 3f
-        color = 0x80FFFFFF.toInt()  // ADD .toInt()
+        color = 0x80FFFFFF.toInt()
         isAntiAlias = false
     }
 

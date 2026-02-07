@@ -92,7 +92,7 @@ class MediaFileLocator(private val prefsManager: PreferencesManager) {
     }
 
     fun findVideoFile(systemName: String, gameFilename: String): String? {
-        val videoDir = File(prefsManager.mediaPath, "$systemName/videos")
+        val videoDir = File(prefsManager.mediaPath, "$systemName/${AppConstants.Paths.MEDIA_VIDEOS}")
         if (!videoDir.exists()) return null
 
         return findFileInDirectory(

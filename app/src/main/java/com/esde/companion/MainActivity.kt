@@ -41,6 +41,7 @@ import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import java.io.File
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.media3.ui.PlayerView
 import android.os.Handler
 import android.os.Looper
@@ -492,9 +493,6 @@ class MainActivity : AppCompatActivity() {
         // Load show grid state
         showGrid = prefsManager.showGrid
 
-        // Create default widgets on first launch
-        createDefaultWidgets()
-
         // Set initial position off-screen (above the top)
         val displayHeight = resources.displayMetrics.heightPixels.toFloat()
         blackOverlay.translationY = -displayHeight
@@ -565,6 +563,9 @@ class MainActivity : AppCompatActivity() {
         // Register volume change listener for real-time updates
         registerVolumeListener()
         registerSecondaryVolumeObserver()
+
+        // Create default widgets on first launch
+        createDefaultWidgets()
     }
 
     /**
@@ -984,18 +985,17 @@ Access this help anytime from the widget menu!
         val centerX = displayMetrics.widthPixels / 2f
         val centerY = displayMetrics.heightPixels / 2f
 
-        // System logo size (medium equivalent - adjust as needed)
-        val systemLogoWidth = 800f
-        val systemLogoHeight = 300f
+        // Calculate responsive widget sizes from screen percentages
+        val systemLogoWidth = displayMetrics.widthPixels * AppConstants.UI.DEFAULT_WIDGET_WIDTH_PERCENT
+        val systemLogoHeight = displayMetrics.heightPixels * AppConstants.UI.DEFAULT_WIDGET_HEIGHT_PERCENT
 
-        // Game marquee size (medium equivalent - typically wider than system logo)
-        val gameMarqueeWidth = 800f
-        val gameMarqueeHeight = 300f
+        val gameMarqueeWidth = displayMetrics.widthPixels * AppConstants.UI.DEFAULT_WIDGET_WIDTH_PERCENT
+        val gameMarqueeHeight = displayMetrics.heightPixels * AppConstants.UI.DEFAULT_WIDGET_HEIGHT_PERCENT
 
         // Create default system logo widget (centered)
         val systemLogoWidget = OverlayWidget(
             imageType = OverlayWidget.ImageType.SYSTEM_LOGO,
-            imagePath = "",  // Will be updated when system loads
+            imagePath = "",
             x = centerX - (systemLogoWidth / 2),
             y = centerY - (systemLogoHeight / 2),
             width = systemLogoWidth,
@@ -1007,7 +1007,7 @@ Access this help anytime from the widget menu!
         // Create default game marquee widget (centered)
         val gameMarqueeWidget = OverlayWidget(
             imageType = OverlayWidget.ImageType.MARQUEE,
-            imagePath = "",  // Will be updated when game loads
+            imagePath = "",
             x = centerX - (gameMarqueeWidth / 2),
             y = centerY - (gameMarqueeHeight / 2),
             width = gameMarqueeWidth,
@@ -3546,6 +3546,24 @@ Access this help anytime from the widget menu!
         android.util.Log.d("MainActivity", "GAME START HANDLER")
         android.util.Log.d("MainActivity", "Current state: $state")
 
+        // Read game info from log files written by ES-DE scripts
+        val logsDir = File(getLogsPath())
+        val filenameFile = File(logsDir, AppConstants.Paths.GAME_START_FILENAME_LOG)
+        val nameFile = File(logsDir, AppConstants.Paths.GAME_START_NAME_LOG)
+        val systemFile = File(logsDir, AppConstants.Paths.GAME_START_SYSTEM_LOG)
+
+        // Read and sanitize the filenames
+        val rawGameFilename = if (filenameFile.exists()) filenameFile.readText().trim() else null
+        val gameFilename = rawGameFilename?.let { sanitizeGameFilename(it) }
+        val gameName = if (nameFile.exists()) nameFile.readText().trim() else null
+        val systemName = if (systemFile.exists()) systemFile.readText().trim() else null
+
+        android.util.Log.d("MainActivity", "Game start from logs:")
+        android.util.Log.d("MainActivity", "  Raw filename: $rawGameFilename")
+        android.util.Log.d("MainActivity", "  Sanitized filename: $gameFilename")
+        android.util.Log.d("MainActivity", "  Game name: $gameName")
+        android.util.Log.d("MainActivity", "  System: $systemName")
+
         // Get the game launch behavior
         val gameLaunchBehavior = prefsManager.gameLaunchBehavior
         android.util.Log.d("MainActivity", "Game launch behavior: $gameLaunchBehavior")
@@ -3555,16 +3573,24 @@ Access this help anytime from the widget menu!
             applyBlackScreenGameLaunch()
         }
 
-        // Extract game info from current state
-        val gameInfo = extractGameInfoFromState()
+        // Use log file data if available, otherwise fall back to current state
+        val gameInfo = if (gameFilename != null && systemName != null) {
+            Pair(systemName, gameFilename)
+        } else {
+            android.util.Log.w("MainActivity", "Log files missing or incomplete, using state fallback")
+            extractGameInfoFromState()
+        }
 
         // Update state to GamePlaying
         if (gameInfo != null) {
-            val (systemName, gameFilename) = gameInfo
+            val (sysName, filename) = gameInfo
             updateState(AppState.GamePlaying(
-                systemName = systemName,
-                gameFilename = gameFilename
+                systemName = sysName,
+                gameFilename = filename
             ))
+            android.util.Log.d("MainActivity", "State updated to GamePlaying: $filename")
+        } else {
+            android.util.Log.e("MainActivity", "Could not determine game info for GamePlaying state")
         }
 
         // Handle screensaver transition - if display is already correct, skip
@@ -3760,15 +3786,34 @@ Access this help anytime from the widget menu!
         android.util.Log.d("MainActivity", "Current state: $state")
         android.util.Log.d("MainActivity", "gameImageView visibility: ${gameImageView.visibility}")
 
+        // Read game info from log files written by ES-DE scripts
+        val logsDir = File(getLogsPath())
+        val filenameFile = File(logsDir, AppConstants.Paths.GAME_END_FILENAME_LOG)
+        val nameFile = File(logsDir, AppConstants.Paths.GAME_END_NAME_LOG)
+        val systemFile = File(logsDir, AppConstants.Paths.GAME_END_SYSTEM_LOG)
+
+        // Read and sanitize the filenames
+        val rawGameFilename = if (filenameFile.exists()) filenameFile.readText().trim() else null
+        val gameFilename = rawGameFilename?.let { sanitizeGameFilename(it) }
+        val gameName = if (nameFile.exists()) nameFile.readText().trim() else null
+        val systemName = if (systemFile.exists()) systemFile.readText().trim() else null
+
+        android.util.Log.d("MainActivity", "Game end from logs:")
+        android.util.Log.d("MainActivity", "  Raw filename: $rawGameFilename")
+        android.util.Log.d("MainActivity", "  Sanitized filename: $gameFilename")
+        android.util.Log.d("MainActivity", "  Game name: $gameName")
+        android.util.Log.d("MainActivity", "  System: $systemName")
+
         // Update state - transition from GamePlaying to GameBrowsing
         // Return to browsing the game that was just playing
         if (state is AppState.GamePlaying) {
             val playingState = state as AppState.GamePlaying
             updateState(AppState.GameBrowsing(
-                systemName = playingState.systemName,
-                gameFilename = playingState.gameFilename,
-                gameName = null  // Will be loaded by loadGameInfo if needed
+                systemName = systemName ?: playingState.systemName,
+                gameFilename = gameFilename ?: playingState.gameFilename,
+                gameName = gameName  // Use parsed name from script
             ))
+            android.util.Log.d("MainActivity", "State updated to GameBrowsing: $gameFilename")
         } else {
             android.util.Log.w("MainActivity", "Game end but not in GamePlaying state: $state")
         }
@@ -3777,38 +3822,15 @@ Access this help anytime from the widget menu!
         val gameLaunchBehavior = prefsManager.gameLaunchBehavior
         android.util.Log.d("MainActivity", "Game launch behavior: $gameLaunchBehavior")
 
-        when (val s = state) {
+        // Now handle the reload based on state and behavior
+        when (state) {
             is AppState.GameBrowsing -> {
-                // We're in game browsing mode after game end
+                // After game end, we're browsing the game we just played
                 if (gameLaunchBehavior == "game_image") {
-                    // Images/widgets are already correct, but need to reload widgets and restart videos
-                    android.util.Log.d("MainActivity", "Game image behavior - reloading widgets and videos")
-                    android.util.Log.d("MainActivity", "Game: ${s.gameFilename}")
-
-                    // Update widgets for the current game (they may have been hidden during gameplay)
-                    updateWidgetsForCurrentGame()
-                    showWidgets()
-
-                    // Check if instant video will play
-                    val videoPath = mediaFileLocator.findVideoFile(s.systemName, s.gameFilename)
-                    val videoDelay = getVideoDelay()
-                    val instantVideoWillPlay = videoPath != null && isVideoEnabled() && widgetsLocked && videoDelay == 0L
-
-                    // Handle video playback if video exists and is enabled
-                    if (videoPath != null && isVideoEnabled() && widgetsLocked) {
-                        android.util.Log.d("MainActivity", "Video enabled - calling handleVideoForGame to restart")
-
-                        // If instant video, hide widgets first to prevent flash
-                        if (instantVideoWillPlay) {
-                            hideWidgets()
-                        }
-
-                        handleVideoForGame(s.systemName, s.gameName, s.gameFilename)
-                    } else {
-                        android.util.Log.d("MainActivity", "No video to restart - widgets updated, display ready")
-                    }
+                    // If behavior is game_image, display is already correct
+                    android.util.Log.d("MainActivity", "Game image behavior - display already correct")
                 } else {
-                    // Different behavior - need to reload
+                    // Otherwise reload to show normal game browsing view
                     android.util.Log.d("MainActivity", "Reloading display (behavior: $gameLaunchBehavior)")
                     loadGameInfo()
                 }
@@ -5589,7 +5611,6 @@ Access this help anytime from the widget menu!
 
             // Always recreate grid overlay to ensure it's properly attached
             if (gridOverlayView != null && gridOverlayView?.parent != null) {
-                // Remove existing grid if it exists
                 widgetContainer.removeView(gridOverlayView)
                 gridOverlayView = null
             }
@@ -5600,16 +5621,15 @@ Access this help anytime from the widget menu!
                 RelativeLayout.LayoutParams.MATCH_PARENT,
                 RelativeLayout.LayoutParams.MATCH_PARENT
             )
-            widgetContainer.addView(gridOverlayView, 0)  // Add as first child (behind widgets)
+            widgetContainer.addView(gridOverlayView, 0)
             android.util.Log.d("MainActivity", "Grid overlay recreated and added")
         } else {
-            // Remove grid overlay completely (but keep widget container visible)
+            // Remove grid overlay completely
             if (gridOverlayView != null) {
                 widgetContainer.removeView(gridOverlayView)
                 gridOverlayView = null
                 android.util.Log.d("MainActivity", "Grid overlay removed")
             }
-            // Don't hide the widget container - widgets should still be visible
         }
     }
 

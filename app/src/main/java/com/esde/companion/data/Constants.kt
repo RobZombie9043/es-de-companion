@@ -104,7 +104,6 @@ object AppConstants {
      */
     object Timing {
         // Video delays (user-configurable multiplier applied to these)
-        const val VIDEO_DELAY_INSTANT = 0L
         const val VIDEO_DELAY_MULTIPLIER = 500L  // Multiply slider value (0-10) by this
 
         // System scrolling debounce
@@ -135,7 +134,6 @@ object AppConstants {
         // Animation durations
         const val FADE_ANIMATION_DURATION = 300L        // Standard fade duration
         const val SLIDE_ANIMATION_DURATION = 200L       // Drawer slide duration
-        const val SCALE_ANIMATION_DURATION = 300L       // Scale animation duration
 
         // Default animation values (user-configurable)
         const val DEFAULT_ANIMATION_DURATION = 300      // milliseconds
@@ -146,10 +144,6 @@ object AppConstants {
         // Music timing (if ENABLE_BACKGROUND_MUSIC)
         const val MUSIC_CROSS_FADE_DURATION = 300L
         const val MUSIC_DUCK_FADE_DURATION = 300L
-        const val SONG_TITLE_FADE_DURATION = 300L
-        const val SONG_TITLE_MIN_DURATION = 2000L      // 2 seconds minimum
-        const val SONG_TITLE_MAX_DURATION = 30000L     // 30 seconds maximum
-        const val SONG_TITLE_INFINITE = 15             // Slider value for infinite display
         const val SONG_TITLE_STEP_SECONDS = 2
 
         // SD card mount retry delays (progressive backoff: 1s, 2s, 3s, 4s, 5s)
@@ -170,9 +164,9 @@ object AppConstants {
      */
     object UI {
         // Widget grid system
-        const val GRID_SIZE = 40f                       // Grid cell size in dp
-        const val DEFAULT_WIDGET_WIDTH_PERCENT = 0.3f  // 30% of screen width
-        const val DEFAULT_WIDGET_HEIGHT_PERCENT = 0.2f // 20% of screen height
+        const val GRID_SIZE = 20f                       // Grid cell size in dp
+        const val DEFAULT_WIDGET_WIDTH_PERCENT = 0.75f  // 75% of screen width
+        const val DEFAULT_WIDGET_HEIGHT_PERCENT = 0.35f // 35% of screen height
 
         // App drawer
         const val DEFAULT_COLUMN_COUNT = 4
@@ -180,20 +174,13 @@ object AppConstants {
         const val MAX_COLUMN_COUNT = 8
 
         // Visual effects limits
-        const val DIMMING_MIN = 0
-        const val DIMMING_MAX = 100
         const val DEFAULT_DIMMING = 25
-
-        const val BLUR_MIN = 0
-        const val BLUR_MAX = 25
         const val DEFAULT_BLUR = 0
 
-        const val DRAWER_TRANSPARENCY_MIN = 0
-        const val DRAWER_TRANSPARENCY_MAX = 100
         const val DEFAULT_DRAWER_TRANSPARENCY = 70
 
         // Animation limits
-        const val ANIMATION_SCALE_MIN = 80
+        const val ANIMATION_SCALE_MIN = 85
         const val ANIMATION_SCALE_MAX = 100
         const val DEFAULT_ANIMATION_SCALE = 95          // percentage (95% = 0.95f)
 
@@ -201,15 +188,6 @@ object AppConstants {
         const val VIDEO_DELAY_MIN = 0                   // Slider minimum
         const val VIDEO_DELAY_MAX = 10                  // Slider maximum (0-5 seconds in 0.5s increments)
         const val DEFAULT_VIDEO_DELAY = 4               // 2 seconds (4 * 0.5)
-
-        // Music settings limits (if ENABLE_BACKGROUND_MUSIC)
-        const val MUSIC_SONG_TITLE_DURATION_MIN = 0     // 2 seconds
-        const val MUSIC_SONG_TITLE_DURATION_MAX = 15    // 30 seconds or infinite
-        const val DEFAULT_MUSIC_SONG_TITLE_DURATION = 3 // 8 seconds (3+1)*2
-
-        const val MUSIC_SONG_TITLE_OPACITY_MIN = 0
-        const val MUSIC_SONG_TITLE_OPACITY_MAX = 100
-        const val DEFAULT_MUSIC_SONG_TITLE_OPACITY = 70
 
         // Music volume ducking
         const val MUSIC_NORMAL_VOLUME = 1.0f
@@ -224,11 +202,8 @@ object AppConstants {
     object FileExtensions {
         val VIDEO = listOf("mp4", "mkv", "avi", "wmv", "mov", "webm")
         val IMAGE = listOf("jpg", "jpeg", "png", "webp", "gif")
-        val VECTOR = listOf("svg")
         val AUDIO = listOf("mp3", "ogg", "flac", "m4a", "wav", "aac")
 
-        // Combined image formats (raster + vector)
-        val IMAGE_ALL = IMAGE + VECTOR
     }
 
     // ========== CACHE VERSIONING ==========
@@ -251,7 +226,7 @@ object AppConstants {
         const val OLD_SHEBANG = "#!/bin/bash"          // Outdated format
 
         // Script file names
-        const val GAME_SELECT_SCRIPT = "esdecompanion-game-selected.sh"
+        const val GAME_SELECT_SCRIPT = "esdecompanion-game-select.sh"
         const val SYSTEM_SELECT_SCRIPT = "esdecompanion-system-select.sh"
         const val GAME_START_SCRIPT = "esdecompanion-game-start.sh"
         const val GAME_END_SCRIPT = "esdecompanion-game-end.sh"

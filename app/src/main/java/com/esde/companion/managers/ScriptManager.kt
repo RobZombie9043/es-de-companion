@@ -92,15 +92,32 @@ object ScriptManager {
      * Uses the improved POSIX-compatible syntax that handles embedded quotes
      */
     fun writeAllScriptFiles(scriptsDir: File) {
+        // Build log file paths once (Kotlin evaluates these at runtime)
+        val gameFilenameLog = AppConstants.Paths.GAME_FILENAME_LOG
+        val gameNameLog = AppConstants.Paths.GAME_NAME_LOG
+        val gameSystemLog = AppConstants.Paths.GAME_SYSTEM_LOG
+        val systemNameLog = AppConstants.Paths.SYSTEM_NAME_LOG
+        val gameStartFilenameLog = AppConstants.Paths.GAME_START_FILENAME_LOG
+        val gameStartNameLog = AppConstants.Paths.GAME_START_NAME_LOG
+        val gameStartSystemLog = AppConstants.Paths.GAME_START_SYSTEM_LOG
+        val gameEndFilenameLog = AppConstants.Paths.GAME_END_FILENAME_LOG
+        val gameEndNameLog = AppConstants.Paths.GAME_END_NAME_LOG
+        val gameEndSystemLog = AppConstants.Paths.GAME_END_SYSTEM_LOG
+        val screensaverStartLog = AppConstants.Paths.SCREENSAVER_START_LOG
+        val screensaverEndLog = AppConstants.Paths.SCREENSAVER_END_LOG
+        val screensaverGameFilenameLog = AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG
+        val screensaverGameNameLog = AppConstants.Paths.SCREENSAVER_GAME_NAME_LOG
+        val screensaverGameSystemLog = AppConstants.Paths.SCREENSAVER_GAME_SYSTEM_LOG
+
         // 1. Game select script
-        val gameSelectScript = File(File(scriptsDir, "game-select"), "esdecompanion-game-select.sh")
+        val gameSelectScript = File(File(scriptsDir, "game-select"), AppConstants.Scripts.GAME_SELECT_SCRIPT)
         gameSelectScript.writeText("""#!/bin/sh
 
 LOG_DIR="$LOGS_PATH"
 mkdir -p "${'$'}LOG_DIR"
 
 # Always write filename (arg 1)
-printf '%s' "${'$'}1" > "${'$'}LOG_DIR/esde_game_filename.txt"
+printf '%s' "${'$'}1" > "${'$'}LOG_DIR/$gameFilenameLog"
 
 # Check if we have at least 4 arguments
 if [ "${'$'}#" -ge 4 ]; then
@@ -121,36 +138,36 @@ if [ "${'$'}#" -ge 4 ]; then
     # Now ${'$'}1 is system short, ${'$'}2 is system full
     system_short="${'$'}1"
     
-    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/esde_game_name.txt"
-    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/esde_game_system.txt"
+    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/$gameNameLog"
+    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/$gameSystemLog"
 else
     # Fallback for edge cases
-    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/esde_game_name.txt"
-    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/esde_game_system.txt"
+    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/$gameNameLog"
+    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/$gameSystemLog"
 fi
 """)
         gameSelectScript.setExecutable(true)
 
         // 2. System select script
-        val systemSelectScript = File(File(scriptsDir, "system-select"), "esdecompanion-system-select.sh")
+        val systemSelectScript = File(File(scriptsDir, "system-select"), AppConstants.Scripts.SYSTEM_SELECT_SCRIPT)
         systemSelectScript.writeText("""#!/bin/sh
 
 LOG_DIR="$LOGS_PATH"
 mkdir -p "${'$'}LOG_DIR"
 
-printf '%s' "${'$'}1" > "${'$'}LOG_DIR/esde_system_name.txt" &
+printf '%s' "${'$'}1" > "${'$'}LOG_DIR/$systemNameLog" &
 """)
         systemSelectScript.setExecutable(true)
 
         // 3. Game start script
-        val gameStartScript = File(File(scriptsDir, "game-start"), "esdecompanion-game-start.sh")
+        val gameStartScript = File(File(scriptsDir, "game-start"), AppConstants.Scripts.GAME_START_SCRIPT)
         gameStartScript.writeText("""#!/bin/sh
 
 LOG_DIR="$LOGS_PATH"
 mkdir -p "${'$'}LOG_DIR"
 
 # Always write filename (arg 1)
-printf '%s' "${'$'}1" > "${'$'}LOG_DIR/esde_gamestart_filename.txt"
+printf '%s' "${'$'}1" > "${'$'}LOG_DIR/$gameStartFilenameLog"
 
 # Check if we have at least 4 arguments
 if [ "${'$'}#" -ge 4 ]; then
@@ -171,25 +188,25 @@ if [ "${'$'}#" -ge 4 ]; then
     # Now ${'$'}1 is system short, ${'$'}2 is system full
     system_short="${'$'}1"
     
-    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/esde_gamestart_name.txt"
-    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/esde_gamestart_system.txt"
+    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/$gameStartNameLog"
+    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/$gameStartSystemLog"
 else
     # Fallback for edge cases
-    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/esde_gamestart_name.txt"
-    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/esde_gamestart_system.txt"
+    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/$gameStartNameLog"
+    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/$gameStartSystemLog"
 fi
 """)
         gameStartScript.setExecutable(true)
 
         // 4. Game end script
-        val gameEndScript = File(File(scriptsDir, "game-end"), "esdecompanion-game-end.sh")
+        val gameEndScript = File(File(scriptsDir, "game-end"), AppConstants.Scripts.GAME_END_SCRIPT)
         gameEndScript.writeText("""#!/bin/sh
 
 LOG_DIR="$LOGS_PATH"
 mkdir -p "${'$'}LOG_DIR"
 
 # Always write filename (arg 1)
-printf '%s' "${'$'}1" > "${'$'}LOG_DIR/esde_gameend_filename.txt"
+printf '%s' "${'$'}1" > "${'$'}LOG_DIR/$gameEndFilenameLog"
 
 # Check if we have at least 4 arguments
 if [ "${'$'}#" -ge 4 ]; then
@@ -210,47 +227,47 @@ if [ "${'$'}#" -ge 4 ]; then
     # Now ${'$'}1 is system short, ${'$'}2 is system full
     system_short="${'$'}1"
     
-    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/esde_gameend_name.txt"
-    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/esde_gameend_system.txt"
+    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/$gameEndNameLog"
+    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/$gameEndSystemLog"
 else
     # Fallback for edge cases
-    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/esde_gameend_name.txt"
-    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/esde_gameend_system.txt"
+    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/$gameEndNameLog"
+    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/$gameEndSystemLog"
 fi
 """)
         gameEndScript.setExecutable(true)
 
         // 5. Screensaver start script
-        val screensaverStartScript = File(File(scriptsDir, "screensaver-start"), "esdecompanion-screensaver-start.sh")
+        val screensaverStartScript = File(File(scriptsDir, "screensaver-start"), AppConstants.Scripts.SCREENSAVER_START_SCRIPT)
         screensaverStartScript.writeText("""#!/bin/sh
 
 LOG_DIR="$LOGS_PATH"
 mkdir -p "${'$'}LOG_DIR"
 
-printf '%s' "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_start.txt"
+printf '%s' "${'$'}1" > "${'$'}LOG_DIR/$screensaverStartLog"
 """)
         screensaverStartScript.setExecutable(true)
 
         // 6. Screensaver end script
-        val screensaverEndScript = File(File(scriptsDir, "screensaver-end"), "esdecompanion-screensaver-end.sh")
+        val screensaverEndScript = File(File(scriptsDir, "screensaver-end"), AppConstants.Scripts.SCREENSAVER_END_SCRIPT)
         screensaverEndScript.writeText("""#!/bin/sh
 
 LOG_DIR="$LOGS_PATH"
 mkdir -p "${'$'}LOG_DIR"
 
-printf '%s' "${'$'}1" > "${'$'}LOG_DIR/esde_screensaver_end.txt"
+printf '%s' "${'$'}1" > "${'$'}LOG_DIR/$screensaverEndLog"
 """)
         screensaverEndScript.setExecutable(true)
 
         // 7. Screensaver game select script
-        val screensaverGameSelectScript = File(File(scriptsDir, "screensaver-game-select"), "esdecompanion-screensaver-game-select.sh")
+        val screensaverGameSelectScript = File(File(scriptsDir, "screensaver-game-select"), AppConstants.Scripts.SCREENSAVER_GAME_SELECT_SCRIPT)
         screensaverGameSelectScript.writeText("""#!/bin/sh
 
 LOG_DIR="$LOGS_PATH"
 mkdir -p "${'$'}LOG_DIR"
 
 # Always write filename (arg 1)
-printf '%s' "${'$'}1" > "${'$'}LOG_DIR/esde_screensavergameselect_filename.txt"
+printf '%s' "${'$'}1" > "${'$'}LOG_DIR/$screensaverGameFilenameLog"
 
 # Check if we have at least 4 arguments
 if [ "${'$'}#" -ge 4 ]; then
@@ -271,12 +288,12 @@ if [ "${'$'}#" -ge 4 ]; then
     # Now ${'$'}1 is system short, ${'$'}2 is system full
     system_short="${'$'}1"
     
-    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/esde_screensavergameselect_name.txt"
-    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
+    printf '%s' "${'$'}game_name" > "${'$'}LOG_DIR/$screensaverGameNameLog"
+    printf '%s' "${'$'}system_short" > "${'$'}LOG_DIR/$screensaverGameSystemLog"
 else
     # Fallback for edge cases
-    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/esde_screensavergameselect_name.txt"
-    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/esde_screensavergameselect_system.txt"
+    printf '%s' "${'$'}2" > "${'$'}LOG_DIR/$screensaverGameNameLog"
+    printf '%s' "${'$'}3" > "${'$'}LOG_DIR/$screensaverGameSystemLog"
 fi
 """)
         screensaverGameSelectScript.setExecutable(true)
@@ -287,13 +304,13 @@ fi
      */
     fun findExistingScripts(scriptsDir: File): List<File> {
         val scriptFiles = listOf(
-            File(scriptsDir, "game-select/esdecompanion-game-select.sh"),
-            File(scriptsDir, "system-select/esdecompanion-system-select.sh"),
-            File(scriptsDir, "game-start/esdecompanion-game-start.sh"),
-            File(scriptsDir, "game-end/esdecompanion-game-end.sh"),
-            File(scriptsDir, "screensaver-start/esdecompanion-screensaver-start.sh"),
-            File(scriptsDir, "screensaver-end/esdecompanion-screensaver-end.sh"),
-            File(scriptsDir, "screensaver-game-select/esdecompanion-screensaver-game-select.sh")
+            File(scriptsDir, "game-select/${AppConstants.Scripts.GAME_SELECT_SCRIPT}"),
+            File(scriptsDir, "system-select/${AppConstants.Scripts.SYSTEM_SELECT_SCRIPT}"),
+            File(scriptsDir, "game-start/${AppConstants.Scripts.GAME_START_SCRIPT}"),
+            File(scriptsDir, "game-end/${AppConstants.Scripts.GAME_END_SCRIPT}"),
+            File(scriptsDir, "screensaver-start/${AppConstants.Scripts.SCREENSAVER_START_SCRIPT}"),
+            File(scriptsDir, "screensaver-end/${AppConstants.Scripts.SCREENSAVER_END_SCRIPT}"),
+            File(scriptsDir, "screensaver-game-select/${AppConstants.Scripts.SCREENSAVER_GAME_SELECT_SCRIPT}")
         )
 
         return scriptFiles.filter { it.exists() }
@@ -374,14 +391,14 @@ fi
     fun validateScripts(scriptsDir: File): ScriptValidationResult {
         // Define required scripts with their expected content patterns
         val requiredScripts = mapOf(
-            "game-select/esdecompanion-game-select.sh" to ValidationPattern(
+            "game-select/${AppConstants.Scripts.GAME_SELECT_SCRIPT}" to ValidationPattern(
                 required = listOf(
                     AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
-                    "esde_game_filename.txt",
-                    "esde_game_name.txt",
-                    "esde_game_system.txt",
+                    AppConstants.Paths.GAME_FILENAME_LOG,
+                    AppConstants.Paths.GAME_NAME_LOG,
+                    AppConstants.Paths.GAME_SYSTEM_LOG,
                     "if [ \"\$#\" -ge 4 ]"  // Argument reconstruction logic
                 ),
                 forbidden = listOf(
@@ -389,65 +406,65 @@ fi
                     AppConstants.Scripts.OLD_SHEBANG   // Old shebang
                 )
             ),
-            "system-select/esdecompanion-system-select.sh" to ValidationPattern(
+            "system-select/${AppConstants.Scripts.SYSTEM_SELECT_SCRIPT}" to ValidationPattern(
                 required = listOf(
                     AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
-                    "esde_system_name.txt"
+                    AppConstants.Paths.SYSTEM_NAME_LOG
                 ),
                 forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
-            "game-start/esdecompanion-game-start.sh" to ValidationPattern(
+            "game-start/${AppConstants.Scripts.GAME_START_SCRIPT}" to ValidationPattern(
                 required = listOf(
                     AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
-                    "esde_gamestart_filename.txt",
-                    "esde_gamestart_name.txt",
-                    "esde_gamestart_system.txt",
+                    AppConstants.Paths.GAME_START_FILENAME_LOG,
+                    AppConstants.Paths.GAME_START_NAME_LOG,
+                    AppConstants.Paths.GAME_START_SYSTEM_LOG,
                     "if [ \"\$#\" -ge 4 ]"
                 ),
                 forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
-            "game-end/esdecompanion-game-end.sh" to ValidationPattern(
+            "game-end/${AppConstants.Scripts.GAME_END_SCRIPT}" to ValidationPattern(
                 required = listOf(
                     AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
-                    "esde_gameend_filename.txt",
-                    "esde_gameend_name.txt",
-                    "esde_gameend_system.txt",
+                    AppConstants.Paths.GAME_END_FILENAME_LOG,
+                    AppConstants.Paths.GAME_END_NAME_LOG,
+                    AppConstants.Paths.GAME_END_SYSTEM_LOG,
                     "if [ \"\$#\" -ge 4 ]"
                 ),
                 forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
-            "screensaver-start/esdecompanion-screensaver-start.sh" to ValidationPattern(
+            "screensaver-start/${AppConstants.Scripts.SCREENSAVER_START_SCRIPT}" to ValidationPattern(
                 required = listOf(
                     AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
-                    "esde_screensaver_start.txt"
+                    AppConstants.Paths.SCREENSAVER_START_LOG
                 ),
                 forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
-            "screensaver-end/esdecompanion-screensaver-end.sh" to ValidationPattern(
+            "screensaver-end/${AppConstants.Scripts.SCREENSAVER_END_SCRIPT}" to ValidationPattern(
                 required = listOf(
                     AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
-                    "esde_screensaver_end.txt"
+                    AppConstants.Paths.SCREENSAVER_END_LOG
                 ),
                 forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             ),
-            "screensaver-game-select/esdecompanion-screensaver-game-select.sh" to ValidationPattern(
+            "screensaver-game-select/${AppConstants.Scripts.SCREENSAVER_GAME_SELECT_SCRIPT}" to ValidationPattern(
                 required = listOf(
                     AppConstants.Scripts.EXPECTED_SHEBANG,
                     "LOG_DIR=\"$LOGS_PATH\"",
                     "printf '%s'",
-                    "esde_screensavergameselect_filename.txt",
-                    "esde_screensavergameselect_name.txt",
-                    "esde_screensavergameselect_system.txt",
+                    AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG,
+                    AppConstants.Paths.SCREENSAVER_GAME_NAME_LOG,
+                    AppConstants.Paths.SCREENSAVER_GAME_SYSTEM_LOG,
                     "if [ \"\$#\" -ge 4 ]"
                 ),
                 forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)

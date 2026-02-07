@@ -512,11 +512,11 @@ This section controls how images and logos are displayed.
 
 ##### Animation Scale
 - **Purpose**: Starting size for scale animation
-- **Control**: Slider (80-100%)
-- **Default**: 90%
+- **Control**: Slider (85-100%)
+- **Default**: 95%
 - **Values**:
-  - 80% = Starts very small
-  - 90% = Subtle zoom
+  - 85% = Starts very small
+  - 95% = Subtle zoom
   - 100% = No scaling
 - **Display**: Shows percentage
 - **Note**: Only affects Scale + Fade and Custom styles

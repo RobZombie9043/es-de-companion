@@ -702,8 +702,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupColumnCountSlider() {
         val currentColumns = prefsManager.columnCount
-        columnCountSeekBar.min = 2
-        columnCountSeekBar.max = 8
+        columnCountSeekBar.min = AppConstants.UI.MIN_COLUMN_COUNT
+        columnCountSeekBar.max = AppConstants.UI.MAX_COLUMN_COUNT
         columnCountSeekBar.progress = currentColumns
         columnCountText.text = "$currentColumns"
 
@@ -873,13 +873,13 @@ class SettingsActivity : AppCompatActivity() {
 
         // Scale Amount Slider (85% - 100%, in 1% steps)
         val currentScale = prefsManager.animationScale
-        animationScaleSeekBar.max = 15  // 0-15 = 85%-100%
-        animationScaleSeekBar.progress = currentScale - 85
+        animationScaleSeekBar.max = AppConstants.UI.ANIMATION_SCALE_MAX - AppConstants.UI.ANIMATION_SCALE_MIN  // 100 - 85 = 15
+        animationScaleSeekBar.progress = currentScale - AppConstants.UI.ANIMATION_SCALE_MIN  // currentScale - 85
         animationScaleText.text = "${currentScale}%"
 
         animationScaleSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val scale = 85 + progress  // 85% to 100%
+                val scale = AppConstants.UI.ANIMATION_SCALE_MIN + progress  // 85 + progress (0-15)
                 animationScaleText.text = "${scale}%"
             }
 
@@ -887,7 +887,7 @@ class SettingsActivity : AppCompatActivity() {
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 seekBar?.let {
-                    val scale = 85 + it.progress
+                    val scale = AppConstants.UI.ANIMATION_SCALE_MIN + it.progress  // 85 + progress
                     prefsManager.animationScale = scale
                 }
             }
@@ -1260,6 +1260,8 @@ class SettingsActivity : AppCompatActivity() {
 
         // Setup video delay slider (0-5 seconds in 0.5s increments = 0-10 on seekbar)
         val savedDelay = prefsManager.videoDelay
+        videoDelaySeekBar.min = AppConstants.UI.VIDEO_DELAY_MIN
+        videoDelaySeekBar.max = AppConstants.UI.VIDEO_DELAY_MAX
         videoDelaySeekBar.progress = savedDelay
         updateVideoDelayText(savedDelay)
 
@@ -2379,8 +2381,8 @@ class SettingsActivity : AppCompatActivity() {
                 showScriptOverwriteDialog(scriptsDir, existingScripts)
             } else {
                 // No existing scripts, create them
-                val gameSelectScript = File(scriptsDir, "game-select/esdecompanion-game-select.sh")
-                val systemSelectScript = File(scriptsDir, "system-select/esdecompanion-system-select.sh")
+                val gameSelectScript = File(scriptsDir, "game-select/${AppConstants.Scripts.GAME_SELECT_SCRIPT}")
+                val systemSelectScript = File(scriptsDir, "system-select/${AppConstants.Scripts.SYSTEM_SELECT_SCRIPT}")
                 writeScriptFiles(scriptsDir, gameSelectScript, systemSelectScript)
             }
 
@@ -2449,8 +2451,8 @@ class SettingsActivity : AppCompatActivity() {
                     "\n\nOverwriting them will replace any custom modifications you may have made.\n\n" +
                     "Do you want to overwrite the existing scripts?")
             .setPositiveButton("Overwrite") { _, _ ->
-                val gameSelectScript = File(scriptsDir, "game-select/esdecompanion-game-select.sh")
-                val systemSelectScript = File(scriptsDir, "system-select/esdecompanion-system-select.sh")
+                val gameSelectScript = File(scriptsDir, "game-select/${AppConstants.Scripts.GAME_SELECT_SCRIPT}")
+                val systemSelectScript = File(scriptsDir, "system-select/${AppConstants.Scripts.SYSTEM_SELECT_SCRIPT}")
                 writeScriptFiles(scriptsDir, gameSelectScript, systemSelectScript)
             }
             .setNegativeButton("Cancel") { _, _ ->
@@ -2648,13 +2650,13 @@ class SettingsActivity : AppCompatActivity() {
                         val scriptsPath = prefsManager.scriptsPath
                         val scriptsDir = java.io.File(scriptsPath)
                         val scriptFiles = listOf(
-                            java.io.File(scriptsDir, "game-select/esdecompanion-game-select.sh"),
-                            java.io.File(scriptsDir, "system-select/esdecompanion-system-select.sh"),
-                            java.io.File(scriptsDir, "game-start/esdecompanion-game-start.sh"),
-                            java.io.File(scriptsDir, "game-end/esdecompanion-game-end.sh"),
-                            java.io.File(scriptsDir, "screensaver-start/esdecompanion-screensaver-start.sh"),
-                            java.io.File(scriptsDir, "screensaver-end/esdecompanion-screensaver-end.sh"),
-                            java.io.File(scriptsDir, "screensaver-game-select/esdecompanion-screensaver-game-select.sh")
+                            java.io.File(scriptsDir, "game-select/${AppConstants.Scripts.GAME_SELECT_SCRIPT}"),
+                            java.io.File(scriptsDir, "system-select/${AppConstants.Scripts.SYSTEM_SELECT_SCRIPT}"),
+                            java.io.File(scriptsDir, "game-start/${AppConstants.Scripts.GAME_START_SCRIPT}"),
+                            java.io.File(scriptsDir, "game-end/${AppConstants.Scripts.GAME_END_SCRIPT}"),
+                            java.io.File(scriptsDir, "screensaver-start/${AppConstants.Scripts.SCREENSAVER_START_SCRIPT}"),
+                            java.io.File(scriptsDir, "screensaver-end/${AppConstants.Scripts.SCREENSAVER_END_SCRIPT}"),
+                            java.io.File(scriptsDir, "screensaver-game-select/${AppConstants.Scripts.SCREENSAVER_GAME_SELECT_SCRIPT}")
                         )
 
                         val allExist = scriptFiles.all { it.exists() }

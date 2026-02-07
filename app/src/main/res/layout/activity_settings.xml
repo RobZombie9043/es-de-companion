@@ -412,7 +412,6 @@
                         android:paddingTop="8dp"
                         android:paddingBottom="8dp"
                         android:minHeight="32dp"
-                        android:max="10"
                         android:progress="0"
                         android:progressDrawable="@drawable/slider_progress_orange"
                         android:thumb="@drawable/slider_thumb"
