@@ -10,6 +10,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
+import androidx.core.view.isVisible
 import java.io.File
 
 /**
@@ -27,6 +28,7 @@ import java.io.File
  * - Easier to test video behavior
  * - Clean video lifecycle management
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class VideoManager(
     private val context: Context,
     private val prefsManager: PreferencesManager,
@@ -136,15 +138,23 @@ class VideoManager(
             exoPlayer?.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     when (playbackState) {
+                        Player.STATE_IDLE -> {
+                            android.util.Log.d(TAG, "Player idle")
+                            // Player is idle - no action needed
+                        }
+                        Player.STATE_BUFFERING -> {
+                            android.util.Log.d(TAG, "Video buffering")
+                            // Video is loading - could show loading indicator here if desired
+                        }
                         Player.STATE_READY -> {
                             android.util.Log.d(TAG, "Video ready to play")
-                            videoView.visibility = View.VISIBLE
+                            videoView.isVisible = true
                             updateVideoVolume()
                             onVideoStarted?.invoke()
                         }
                         Player.STATE_ENDED -> {
                             android.util.Log.d(TAG, "Video ended naturally")
-                            videoView.visibility = View.GONE
+                            videoView.isVisible = false
                             // Don't invoke callback here - releasePlayer() will do it
                             // This prevents double-invocation
                             releasePlayer()
@@ -168,11 +178,14 @@ class VideoManager(
                             androidx.media3.exoplayer.ExoPlaybackException.TYPE_UNEXPECTED -> {
                                 android.util.Log.e(TAG, "Unexpected error during playback")
                             }
+                            androidx.media3.exoplayer.ExoPlaybackException.TYPE_REMOTE -> {
+                                android.util.Log.e(TAG, "Remote error - network or streaming issue")
+                            }
                         }
                     }
 
                     // Hide video view and clean up - fallback to background image
-                    videoView.visibility = View.GONE
+                    videoView.isVisible = false
                     releasePlayer()
                 }
             })
@@ -209,7 +222,7 @@ class VideoManager(
         android.util.Log.d(TAG, "Stopping video")
         cancelVideoDelay()
         releasePlayer()
-        videoView.visibility = View.GONE
+        videoView.isVisible = false
     }
 
     /**
@@ -225,7 +238,7 @@ class VideoManager(
      * @return true if a video was stopped, false if no video was playing
      */
     fun stopCurrentVideoForNewGame(): Boolean {
-        val wasPlaying = exoPlayer != null && videoView.visibility == View.VISIBLE
+        val wasPlaying = exoPlayer != null && videoView.isVisible
 
         if (wasPlaying) {
             android.util.Log.d(TAG, "Stopping current video for new game")
@@ -235,7 +248,7 @@ class VideoManager(
 
             // Release player and hide view
             releasePlayer()
-            videoView.visibility = View.GONE
+            videoView.isVisible = false
         }
 
         return wasPlaying
