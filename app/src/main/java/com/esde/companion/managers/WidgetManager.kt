@@ -2,6 +2,7 @@ package com.esde.companion.managers
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.esde.companion.OverlayWidget
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -24,7 +25,7 @@ class WidgetManager(private val context: Context) {
         // ========== END: Convert to percentages before saving ==========
 
         val json = gson.toJson(widgets)
-        prefs.edit().putString("widgets", json).apply()
+        prefs.edit { putString("widgets", json) }
     }
 
     fun loadWidgets(): List<OverlayWidget> {
