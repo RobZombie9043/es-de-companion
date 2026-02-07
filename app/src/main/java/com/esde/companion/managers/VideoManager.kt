@@ -102,7 +102,7 @@ class VideoManager(
         cancelVideoDelay()
 
         // Schedule video playback
-        val delay = (prefsManager.videoDelay * AppConstants.Timing.VIDEO_DELAY_MULTIPLIER).toLong()
+        val delay = prefsManager.videoDelay * AppConstants.Timing.VIDEO_DELAY_MULTIPLIER
         android.util.Log.d(TAG, "Scheduling video playback in ${delay}ms")
 
         videoDelayHandler = Handler(Looper.getMainLooper())

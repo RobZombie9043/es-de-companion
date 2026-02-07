@@ -41,29 +41,6 @@ class MediaFileLocator(private val prefsManager: PreferencesManager) {
         )
     }
 
-    fun findMediaFile(
-        type: OverlayWidget.ImageType,
-        systemName: String,
-        gameFilename: String
-    ): File? {
-        val folderName = when (type) {
-            OverlayWidget.ImageType.MARQUEE -> AppConstants.Paths.MEDIA_MARQUEES
-            OverlayWidget.ImageType.BOX_2D -> AppConstants.Paths.MEDIA_COVERS
-            OverlayWidget.ImageType.BOX_3D -> AppConstants.Paths.MEDIA_3DBOXES
-            OverlayWidget.ImageType.MIX_IMAGE -> AppConstants.Paths.MEDIA_MIXIMAGES
-            OverlayWidget.ImageType.BACK_COVER -> AppConstants.Paths.MEDIA_BACKCOVERS
-            OverlayWidget.ImageType.PHYSICAL_MEDIA -> AppConstants.Paths.MEDIA_PHYSICALMEDIA
-            OverlayWidget.ImageType.SCREENSHOT -> AppConstants.Paths.MEDIA_SCREENSHOTS
-            OverlayWidget.ImageType.FANART -> AppConstants.Paths.MEDIA_FANART
-            OverlayWidget.ImageType.TITLE_SCREEN -> AppConstants.Paths.MEDIA_TITLESCREENS
-            OverlayWidget.ImageType.GAME_DESCRIPTION,
-            OverlayWidget.ImageType.SYSTEM_LOGO -> return null
-        }
-
-        val gameName = sanitizeFilename(gameFilename).substringBeforeLast('.')
-        return findImageInFolder(systemName, gameName, gameFilename, folderName)
-    }
-
     fun findGameBackgroundImage(
         systemName: String,
         gameFilename: String,

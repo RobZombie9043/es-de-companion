@@ -206,15 +206,6 @@ object AppConstants {
 
     }
 
-    // ========== CACHE VERSIONING ==========
-
-    /**
-     * Cache version tracking for invalidation.
-     */
-    object Cache {
-        const val CURRENT_IMAGE_CACHE_VERSION = 1
-    }
-
     // ========== SCRIPT REQUIREMENTS ==========
 
     /**

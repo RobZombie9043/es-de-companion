@@ -105,25 +105,6 @@ sealed class SavedBrowsingState {
     ) : SavedBrowsingState()
 }
 
-/**
- * Helper extension functions for common state checks.
- */
-fun AppState.isInGameBrowsingMode(): Boolean = this is AppState.GameBrowsing
-
-fun AppState.isInSystemBrowsingMode(): Boolean = this is AppState.SystemBrowsing
-
-fun AppState.isGameCurrentlyPlaying(): Boolean = this is AppState.GamePlaying
-
-fun AppState.isScreensaverActive(): Boolean = this is AppState.Screensaver
-
-fun AppState.shouldShowWidgets(): Boolean {
-    return when (this) {
-        is AppState.GameBrowsing -> true
-        is AppState.Screensaver -> true  // If screensaver behavior is "game_image"
-        else -> false
-    }
-}
-
 fun AppState.getCurrentSystemName(): String? {
     return when (this) {
         is AppState.SystemBrowsing -> systemName

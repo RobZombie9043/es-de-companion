@@ -157,8 +157,4 @@ object PreferenceKeys {
     const val KEY_WIDGET_TUTORIAL_DONT_SHOW_AUTO = "widget_tutorial_dont_show_auto"
     const val DEFAULT_WIDGET_TUTORIAL_DONT_SHOW_AUTO = false
 
-    // ========== CACHE KEYS ==========
-    const val KEY_LAST_IMAGE_CACHE_VERSION = "last_image_cache_version"
-    const val DEFAULT_LAST_IMAGE_CACHE_VERSION = AppConstants.Cache.CURRENT_IMAGE_CACHE_VERSION
-
 }
