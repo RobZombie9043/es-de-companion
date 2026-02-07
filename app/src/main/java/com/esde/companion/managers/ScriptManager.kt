@@ -9,9 +9,9 @@ import java.io.File
  */
 object ScriptManager {
 
-    // Hardcoded paths - must match MainActivity.getLogsPath()
+    // Hardcoded log path - must match MainActivity.getLogsPath()
+    // This is embedded in generated script content, so it must be a compile-time constant
     val LOGS_PATH = AppConstants.Paths.DEFAULT_LOGS_PATH
-    val DEFAULT_SCRIPTS_PATH = AppConstants.Paths.DEFAULT_SCRIPTS_PATH
 
     // Script directory names
     private val SCRIPT_DIRECTORIES = listOf(
@@ -66,7 +66,7 @@ object ScriptManager {
                     if (!gameSelectOld.delete()) {
                         failedToDelete.add(scriptName)
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     failedToDelete.add(scriptName)
                 }
             }
@@ -78,7 +78,7 @@ object ScriptManager {
                     if (!systemSelectOld.delete()) {
                         failedToDelete.add(scriptName)
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     failedToDelete.add(scriptName)
                 }
             }
