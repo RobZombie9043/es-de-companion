@@ -41,7 +41,6 @@ import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import java.io.File
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import androidx.media3.ui.PlayerView
 import android.os.Handler
 import android.os.Looper
@@ -49,10 +48,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-// ========== MUSIC INTEGRATION START ==========
-import com.esde.companion.music.MusicController
-import com.esde.companion.music.MusicManager
-// ========== MUSIC INTEGRATION END ==========
+import com.esde.companion.managers.MusicManager
 import com.esde.companion.data.AppConstants
 import com.esde.companion.managers.ImageManager
 import com.esde.companion.managers.PreferencesManager
@@ -78,24 +74,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imageManager: ImageManager
     private lateinit var videoManager: VideoManager
 
-    // ========== MUSIC INTEGRATION START ==========
-    // DELETE THESE PROPERTIES when removing music feature
     private lateinit var songTitleOverlay: LinearLayout
     private lateinit var songTitleText: TextView
     private lateinit var musicPlayPauseButton: ImageButton
     private lateinit var musicNextButton: ImageButton
     private var songTitleHandler: Handler? = null
     private var songTitleRunnable: Runnable? = null
-    private var isMusicActive = false  // Track if music system is active (playing or paused, not stopped)
-    private val musicController: MusicController? = if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-        null // Will be initialized in onCreate after prefs are ready
-    } else {
-        null
-    }
-    private var musicManager: MusicManager? = null
+    private lateinit var musicManager: MusicManager
     // Track if we're navigating to another activity in our app (Settings, SystemSelection)
     private var isNavigatingInternally = false
-    // ========== MUSIC INTEGRATION END ==========
 
     private lateinit var blackOverlay: View
     private var isBlackOverlayShown = false
@@ -136,9 +123,7 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.d("MainActivity", "TO:   $value")
             android.util.Log.d("MainActivity", "━━━━━━━━━━━━━━━━━━━━")
 
-            // ========== MUSIC ==========
-            musicManager?.onStateChanged(value)
-            // ===========================
+            musicManager.onStateChanged(value)
         }
 
     private var fileObserver: FileObserver? = null
@@ -237,10 +222,8 @@ class MainActivity : AppCompatActivity() {
             val needsRecreate = result.data?.getBooleanExtra("NEEDS_RECREATE", false) ?: false
             val appsHiddenChanged =
                 result.data?.getBooleanExtra("APPS_HIDDEN_CHANGED", false) ?: false
-            // ========== MUSIC ==========
             val musicSettingsChanged = result.data?.getBooleanExtra("MUSIC_SETTINGS_CHANGED", false) ?: false
             val musicMasterToggleChanged = result.data?.getBooleanExtra("MUSIC_MASTER_TOGGLE_CHANGED", false) ?: false
-            // ===========================
             val closeDrawer = result.data?.getBooleanExtra("CLOSE_DRAWER", false) ?: false
             val videoSettingsChanged =
                 result.data?.getBooleanExtra("VIDEO_SETTINGS_CHANGED", false) ?: false
@@ -321,7 +304,6 @@ class MainActivity : AppCompatActivity() {
                     // Game is playing - skip reload
                     skipNextReload = true
                 }
-                // ========== MUSIC ==========
             } else if (musicMasterToggleChanged) {
                 // Music MASTER TOGGLE changed - re-evaluate for both ON and OFF
                 val musicEnabled = prefsManager.musicEnabled
@@ -329,13 +311,12 @@ class MainActivity : AppCompatActivity() {
                 if (!musicEnabled) {
                     // Music was turned OFF - stop it
                     android.util.Log.d("MainActivity", "Music master toggle changed to OFF - stopping music")
-                    isMusicActive = false
                     hideSongTitle()
-                    musicManager?.onStateChanged(state)
+                    musicManager.onStateChanged(state)
                 } else {
                     // Music was turned ON - evaluate if it should play for current state
                     android.util.Log.d("MainActivity", "Music master toggle changed to ON - evaluating music state")
-                    musicManager?.onStateChanged(state)
+                    musicManager.onStateChanged(state)
                 }
 
                 // CRITICAL FIX: If in GameBrowsing, reload to ensure UI is correct
@@ -359,7 +340,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Re-evaluate music for current state with new settings
                 // This will start/stop music based on the new per-state toggles
-                musicManager?.onStateChanged(state)
+                musicManager.onStateChanged(state)
 
                 // CRITICAL FIX: If in GameBrowsing, reload to ensure UI is correct
                 // (video might be playing and needs to be stopped, widgets hidden, etc.)
@@ -370,7 +351,6 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     skipNextReload = true
                 }
-                // ===========================
             } else {
                 // No settings changed that require reload
                 // However, if we're in GameBrowsing state, we should still reload
@@ -393,6 +373,116 @@ class MainActivity : AppCompatActivity() {
                 }, AppConstants.Timing.WIZARD_DELAY)
             }
         }
+    }
+
+    /**
+     * Set up music manager callbacks.
+     */
+    private fun setupMusicCallbacks() {
+        musicManager.setOnSongChangedListener { songName ->
+            showSongTitle(songName)
+        }
+
+        musicManager.setOnMusicStoppedListener {
+            hideSongTitle()
+            updateMusicControls()
+        }
+
+        musicManager.setOnPlaybackStateChangedListener { isPlaying ->
+            updateMusicControls()
+        }
+    }
+
+    /**
+     * Update music controls visibility and state based on MusicManager.
+     */
+    private fun updateMusicControls() {
+        val hasActiveMusic = musicManager.isPlaying() || musicManager.isPaused()
+
+        if (hasActiveMusic) {
+            musicPlayPauseButton.setImageResource(
+                if (musicManager.isPlaying()) R.drawable.ic_pause
+                else R.drawable.ic_play
+            )
+        }
+
+        android.util.Log.d("MainActivity", "Music controls updated: hasActiveMusic=$hasActiveMusic, isPlaying=${musicManager.isPlaying()}")
+    }
+
+    /**
+     * Show song title overlay with current settings.
+     */
+    private fun showSongTitle(songName: String) {
+        // Check if feature is enabled
+        if (!prefsManager.musicSongTitleEnabled) {
+            android.util.Log.d("MainActivity", "Song title display disabled in settings")
+            return
+        }
+
+        // Update text
+        songTitleText.text = songName
+
+        // Show overlay with timeout
+        showSongTitleOverlay()
+    }
+
+    /**
+     * Show the song title overlay with configured timeout.
+     */
+    private fun showSongTitleOverlay() {
+        // Cancel any pending hide
+        songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
+
+        // Apply background opacity setting
+        val opacity = prefsManager.musicSongTitleOpacity
+        val alpha = (opacity * 255 / 100).coerceIn(0, 255)
+        val hexAlpha = String.format("%02x", alpha)
+        val backgroundColor = android.graphics.Color.parseColor("#${hexAlpha}000000")
+        songTitleOverlay.setBackgroundColor(backgroundColor)
+
+        // Fade in
+        songTitleOverlay.visibility = View.VISIBLE
+        songTitleOverlay.animate()
+            .alpha(1.0f)
+            .setDuration(AppConstants.Timing.FADE_ANIMATION_DURATION)
+            .start()
+
+        // Get display duration
+        val durationSetting = prefsManager.musicSongTitleDuration
+
+        // If infinite (15), don't schedule fade out
+        if (durationSetting == 15) {
+            android.util.Log.d("MainActivity", "Song title set to infinite display")
+            return
+        }
+
+        // Calculate duration: 0->2s, 1->4s, 2->6s, ... 14->30s
+        val displayDuration = ((durationSetting + 1) * AppConstants.Timing.SONG_TITLE_STEP_SECONDS) * 1000L
+
+        // Schedule fade out
+        songTitleRunnable = Runnable {
+            hideSongTitleOverlay()
+        }
+        songTitleHandler?.postDelayed(songTitleRunnable!!, displayDuration)
+
+        android.util.Log.d("MainActivity", "Song title will auto-hide after ${displayDuration}ms")
+    }
+
+    /**
+     * Hide the song title overlay with fade animation.
+     */
+    private fun hideSongTitleOverlay() {
+        songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
+
+        songTitleOverlay.animate()
+            .alpha(0.0f)
+            .setDuration(AppConstants.Timing.FADE_ANIMATION_DURATION)
+            .withEndAction {
+                songTitleOverlay.visibility = View.GONE
+            }
+            .start()
+
+        android.util.Log.d("MainActivity", "Song title overlay hidden")
     }
 
     private fun updateDimmingOverlay() {
@@ -425,28 +515,9 @@ class MainActivity : AppCompatActivity() {
         // Initialize VideoManager (must be after videoView is initialized)
         // Note: videoView initialization happens in findViewById calls below
 
-        // ========== MUSIC INTEGRATION START ==========
-        // Initialize music manager if feature is enabled
-        if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            musicManager = MusicManager(this, prefsManager)
-            android.util.Log.d("MainActivity", "MusicManager initialized")
-
-            // Set up song title callback
-            musicManager?.setOnSongChangedListener { songName ->
-                showSongTitle(songName)
-            }
-
-            // Set up music stopped callback
-            musicManager?.setOnMusicStoppedListener {
-                hideSongTitle()
-            }
-
-            // Set up playback state callback
-            musicManager?.setOnPlaybackStateChangedListener { isPlaying ->
-                updatePlayPauseButton(isPlaying)
-            }
-        }
-        // ========== MUSIC INTEGRATION END ==========
+        // Initialize MusicManager
+        musicManager = MusicManager(this, prefsManager)
+        setupMusicCallbacks()
 
         // Check if we should show widget tutorial for updating users
         // Skip if setup not completed - will show after verification instead
@@ -468,20 +539,12 @@ class MainActivity : AppCompatActivity() {
         blackOverlay = findViewById(R.id.blackOverlay)
         // Initialize VideoManager now that videoView is ready
         videoManager = VideoManager(this, prefsManager, mediaFileLocator, videoView)
-        // ========== MUSIC CONTROL VIEWS START ==========
-        if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            songTitleText = findViewById(R.id.songTitleText)
-            musicPlayPauseButton = findViewById(R.id.musicPlayPauseButton)
-            musicNextButton = findViewById(R.id.musicNextButton)
-
-            // Set up button click listeners
-            setupMusicControlButtons()
-        }
-        // ========== MUSIC CONTROL VIEWS END ==========
-        // ========== MUSIC INTEGRATION START ==========
+        // Music UI components
+        songTitleText = findViewById(R.id.songTitleText)
         songTitleOverlay = findViewById(R.id.songTitleOverlay)
+        musicPlayPauseButton = findViewById(R.id.musicPlayPauseButton)
+        musicNextButton = findViewById(R.id.musicNextButton)
         songTitleHandler = Handler(Looper.getMainLooper())
-        // ========== MUSIC INTEGRATION END ==========
 
         // Initialize widget system
         widgetContainer = findViewById(R.id.widgetContainer)
@@ -506,6 +569,7 @@ class MainActivity : AppCompatActivity() {
         setupDrawerBackButton()
         setupSettingsButton()
         setupAndroidSettingsButton()
+        setupMusicControlButtons()
         loadWidgets()
 
         // Apply drawer transparency
@@ -1065,36 +1129,8 @@ Access this help anytime from the widget menu!
         // Update video volume based on current system volume
         updateVideoVolume()
 
-        // ========== MUSIC STATE SYNC START ==========
-        // Sync isMusicActive with MusicManager state on resume
-        if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            val musicEnabled = prefsManager.musicEnabled
-
-            if (!musicEnabled) {
-                // Music is disabled - ensure state is reset
-                isMusicActive = false
-                android.util.Log.d("MainActivity", "onResume: Music disabled, isMusicActive=false")
-            } else {
-                // Music is enabled - sync with MusicManager state
-                musicManager?.let { manager ->
-                    // Check if MusicManager has an active player (playing or paused)
-                    val hasActiveMusic = manager.isPlaying() || manager.isPaused()
-                    isMusicActive = hasActiveMusic
-
-                    // Update button state to reflect actual playback
-                    if (hasActiveMusic) {
-                        if (manager.isPlaying()) {
-                            musicPlayPauseButton.setImageResource(R.drawable.ic_pause)
-                        } else {
-                            musicPlayPauseButton.setImageResource(R.drawable.ic_play)
-                        }
-                    }
-
-                    android.util.Log.d("MainActivity", "onResume: isMusicActive=$isMusicActive, isPlaying=${manager.isPlaying()}, isPaused=${manager.isPaused()}")
-                }
-            }
-        }
-        // ========== MUSIC STATE SYNC END ==========
+        // Sync music controls with MusicManager state
+        updateMusicControls()
 
         // Clear search bar
         if (::appSearchBar.isInitialized) {
@@ -1136,11 +1172,8 @@ Access this help anytime from the widget menu!
         // Reset internal navigation flag when returning
         isNavigatingInternally = false
 
-        // ========== MUSIC ==========
-        // Only resume music if we were truly in background
-        // If we were just in Settings, music never stopped
-        musicManager?.onActivityVisible()
-        // ===========================
+        // Resume music if we were truly in background
+        musicManager.onActivityVisible()
     }
 
     override fun onStop() {
@@ -1149,17 +1182,15 @@ Access this help anytime from the widget menu!
         android.util.Log.d("MainActivity", "Activity NOT VISIBLE (onStop) - blocking videos")
         releasePlayer()
 
-        // ========== MUSIC ==========
         // Only pause music if we're ACTUALLY going to background
         // Don't pause if navigating to Settings or other internal activities
         if (!isNavigatingInternally) {
             android.util.Log.d("MainActivity", "Going to background - pausing music")
-            musicManager?.onActivityInvisible()
+            musicManager.onActivityInvisible()
             hideSongTitle()
         } else {
             android.util.Log.d("MainActivity", "Internal navigation detected - keeping music playing")
         }
-        // ===========================
     }
 
     private fun updateBlurEffect() {
@@ -1342,7 +1373,6 @@ Access this help anytime from the widget menu!
         })
     }
 
-    // ========== MUSIC CONTROL START ==========
     /**
      * Set up click listeners for music control buttons.
      */
@@ -1360,46 +1390,23 @@ Access this help anytime from the widget menu!
      * Toggle music playback between play and pause.
      */
     private fun toggleMusicPlayback() {
-        musicManager?.let { manager ->
-            // Check actual playback state from MusicManager
-            val isPlaying = manager.isPlaying()
-
-            if (isPlaying) {
-                // Pause music
-                manager.pauseMusic()
-                musicPlayPauseButton.setImageResource(R.drawable.ic_play)
-                android.util.Log.d("MainActivity", "Music paused via button")
-            } else {
-                // Resume music
-                manager.resumeMusic()
-                musicPlayPauseButton.setImageResource(R.drawable.ic_pause)
-                android.util.Log.d("MainActivity", "Music resumed via button")
-            }
-
-            // Music is still active (just paused/playing), don't change isMusicActive
-            // isMusicActive only becomes false when music completely stops (hideSongTitle)
+        if (musicManager.isPlaying()) {
+            musicManager.pauseMusic()
+            android.util.Log.d("MainActivity", "Music paused via button")
+        } else {
+            musicManager.resumeMusic()
+            android.util.Log.d("MainActivity", "Music resumed via button")
         }
+        // UI update handled by MusicManager callback
     }
 
     /**
      * Skip to next track in playlist.
      */
     private fun playNextTrack() {
-        musicManager?.skipToNextTrack()
+        musicManager.skipToNextTrack()
         android.util.Log.d("MainActivity", "Skipped to next track via button")
     }
-
-    /**
-     * Update play/pause button icon based on playback state.
-     */
-    private fun updatePlayPauseButton(isPlaying: Boolean) {
-        musicPlayPauseButton.setImageResource(
-            if (isPlaying) R.drawable.ic_pause
-            else R.drawable.ic_play
-        )
-        android.util.Log.d("MainActivity", "Play/pause button updated: isPlaying=$isPlaying")
-    }
-    // ========== MUSIC CONTROL END ==========
 
     private fun isTouchOnWidget(x: Float, y: Float): Boolean {
         for (widgetView in activeWidgets) {
@@ -1436,9 +1443,7 @@ Access this help anytime from the widget menu!
         // Stop video immediately
         releasePlayer()
 
-        // ========== MUSIC: Stop music when showing black overlay ==========
-        musicManager?.onBlackOverlayChanged(true)
-        // ==================================================================
+        musicManager.onBlackOverlayChanged(true)
 
         // Show overlay instantly without animation
         blackOverlay.visibility = View.VISIBLE
@@ -1452,9 +1457,7 @@ Access this help anytime from the widget menu!
         android.util.Log.d("MainActivity", "Hiding black overlay")
         isBlackOverlayShown = false
 
-        // ========== MUSIC: Resume music when hiding black overlay ==========
-        musicManager?.onBlackOverlayChanged(false)
-        // ===================================================================
+        musicManager.onBlackOverlayChanged(false)
 
         // Hide overlay instantly without animation
         blackOverlay.visibility = View.GONE
@@ -1462,10 +1465,8 @@ Access this help anytime from the widget menu!
         val displayHeight = resources.displayMetrics.heightPixels.toFloat()
         blackOverlay.translationY = -displayHeight
 
-        // ========== MUSIC ==========
         // Re-evaluate music for current state (in case user scrolled while overlay was shown)
-        musicManager?.onStateChanged(state)
-        // ===================================================================
+        musicManager.onStateChanged(state)
 
         // Reload video if applicable (don't reload images)
         when (val s = state) {
@@ -1489,13 +1490,12 @@ Access this help anytime from the widget menu!
         val isDrawerOpen = drawerState == BottomSheetBehavior.STATE_EXPANDED ||
                 drawerState == BottomSheetBehavior.STATE_SETTLING
 
-        // ========== TWO-FINGER TAP FOR MUSIC CONTROLS START ==========
-        // Check for two-finger tap to toggle song title visibility (only when music is enabled)
-        if (!isDrawerOpen && FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
+        // Two-finger tap to toggle song title visibility
+        if (!isDrawerOpen) {
             val musicEnabled = prefsManager.musicEnabled
             val songTitleEnabled = prefsManager.musicSongTitleEnabled
 
-            android.util.Log.d("MainActivity", "Two-finger check: pointerCount=${ev.pointerCount}, action=${ev.action}, musicEnabled=$musicEnabled, songTitleEnabled=$songTitleEnabled, isMusicActive=$isMusicActive")
+            android.util.Log.d("MainActivity", "Two-finger check: pointerCount=${ev.pointerCount}, action=${ev.action}, musicEnabled=$musicEnabled, songTitleEnabled=$songTitleEnabled, hasActiveMusic=${musicManager.isPlaying() || musicManager.isPaused()}")
 
             // Only process two-finger gestures when music and song title are enabled
             if (musicEnabled && songTitleEnabled && ev.pointerCount == 2 && ev.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
@@ -1520,7 +1520,7 @@ Access this help anytime from the widget menu!
                     twoFingerTapCount = 0
 
                     // Check if music is active (playing or paused, not completely stopped)
-                    if (isMusicActive) {
+                    if (musicManager.isPlaying() || musicManager.isPaused()) {
                         // Toggle based on current visibility
                         val isVisible = songTitleOverlay.visibility == View.VISIBLE
                         android.util.Log.d("MainActivity", "Current overlay visibility: ${songTitleOverlay.visibility}, isVisible=$isVisible")
@@ -2270,6 +2270,7 @@ Access this help anytime from the widget menu!
         // Cleanup managers first
         imageManager.cleanup()
         videoManager.cleanup()
+        musicManager.cleanup()
 
         super.onDestroy()
         // Stop script verification
@@ -2284,108 +2285,16 @@ Access this help anytime from the widget menu!
         imageLoadRunnable?.let { imageLoadHandler.removeCallbacks(it) }
         // Release video player
         releasePlayer()
-
-        // ========== MUSIC ==========
-        musicManager?.release()
+        // Cancel song title callbacks
         songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
-        // ===========================
-    }
-
-    // ========== MUSIC INTEGRATION START ==========
-    /**
-     * Show song title overlay with fade in/out animation.
-     * This is called automatically when songs change.
-     */
-    private fun showSongTitle(songName: String) {
-        // Update playback state
-        isMusicActive = true
-
-        // Note: Play/pause button is updated via onPlaybackStateChanged callback
-
-        // Check if feature is enabled
-        val songTitleEnabled = prefsManager.musicSongTitleEnabled
-        if (!songTitleEnabled) {
-            android.util.Log.d("MainActivity", "Song title display disabled in settings")
-            return
-        }
-
-        // Update text
-        songTitleText.text = "$songName"
-
-        // Show the overlay with timeout
-        showSongTitleOverlay()
-    }
-
-    /**
-     * Show the song title overlay with current settings and timeout.
-     * Always shows the overlay and schedules auto-hide based on duration setting.
-     */
-    private fun showSongTitleOverlay() {
-        // Cancel any pending hide
-        songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
-
-        // Apply background opacity setting
-        val opacity = prefsManager.musicSongTitleOpacity // 0-100, default 80%
-        val alpha = (opacity * 255 / 100).coerceIn(0, 255)
-        val hexAlpha = String.format("%02x", alpha)
-        val backgroundColor = android.graphics.Color.parseColor("#${hexAlpha}000000")
-        songTitleOverlay.setBackgroundColor(backgroundColor)
-
-        // Fade in
-        songTitleOverlay.visibility = View.VISIBLE
-        songTitleOverlay.animate()
-            .alpha(1.0f)
-            .setDuration(AppConstants.Timing.FADE_ANIMATION_DURATION)
-            .start()
-
-        // Get display duration
-        val durationSetting = prefsManager.musicSongTitleDuration // 0-15
-
-        // If infinite (15), don't schedule fade out
-        if (durationSetting == 15) {
-            android.util.Log.d("MainActivity", "Song title set to infinite display")
-            return
-        }
-
-        // Calculate duration: 0->2s, 1->4s, 2->6s, ... 14->30s
-        val displayDuration = ((durationSetting + 1) * AppConstants.Timing.SONG_TITLE_STEP_SECONDS) * 1000L
-
-        // Always schedule fade out after timeout
-        songTitleRunnable = Runnable {
-            hideSongTitleOverlay()
-        }
-        songTitleHandler?.postDelayed(songTitleRunnable!!, displayDuration)
-
-        android.util.Log.d("MainActivity", "Song title will auto-hide after ${displayDuration}ms")
-    }
-
-    /**
-     * Hide the song title overlay with fade out animation.
-     */
-    private fun hideSongTitleOverlay() {
-        // Cancel any pending callbacks
-        songTitleRunnable?.let { songTitleHandler?.removeCallbacks(it) }
-
-        songTitleOverlay.animate()
-            .alpha(0.0f)
-            .setDuration(AppConstants.Timing.FADE_ANIMATION_DURATION)
-            .withEndAction {
-                songTitleOverlay.visibility = View.GONE
-            }
-            .start()
-
-        android.util.Log.d("MainActivity", "Song title overlay hidden")
     }
 
     /**
      * Hide song title overlay (called when music stops).
      */
     private fun hideSongTitle() {
-        isMusicActive = false  // Music has completely stopped
         hideSongTitleOverlay()
     }
-
-    // ========== MUSIC INTEGRATION END ==========
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
@@ -4612,9 +4521,7 @@ Access this help anytime from the widget menu!
                 // Hide widgets when video plays
                 hideWidgets()
 
-                // ========== MUSIC ==========
-                musicManager?.onVideoStarted()
-                // ===========================
+                musicManager.onVideoStarted()
 
                 // Apply animation to video view
                 applyVideoAnimation()
@@ -4633,9 +4540,7 @@ Access this help anytime from the widget menu!
                     }
                 }
 
-                // ========== MUSIC ==========
-                musicManager?.onVideoEnded()
-                // ===========================
+                musicManager.onVideoEnded()
             }
         )
 

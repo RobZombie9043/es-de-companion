@@ -2,9 +2,7 @@ package com.esde.companion
 
 import android.app.Activity
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
@@ -19,7 +17,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import com.google.android.material.chip.ChipGroup
 import java.io.File
 
@@ -84,8 +81,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var screensaverBehaviorChipGroup: ChipGroup
     private lateinit var blackOverlayChipGroup: ChipGroup
 
-    // ========== MUSIC INTEGRATION START ==========
-    // DELETE THESE PROPERTIES when removing music feature
+    // Music settings
     private lateinit var musicMasterChipGroup: ChipGroup
     private lateinit var musicSettings: LinearLayout
     private lateinit var musicSystemChipGroup: ChipGroup
@@ -100,7 +96,6 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var musicSongTitleOpacityText: TextView
     private lateinit var musicPathText: TextView
     private lateinit var selectMusicPathButton: Button
-    // ========== MUSIC INTEGRATION END ==========
 
     private var initialDimming: Int = 0
     private var initialBlur: Int = 0
@@ -113,10 +108,8 @@ class SettingsActivity : AppCompatActivity() {
     private var gameLaunchBehaviorChanged: Boolean = false
     private var screensaverBehaviorChanged: Boolean = false
     private var customBackgroundChanged: Boolean = false
-    // ========== MUSIC INTEGRATION START ==========
     private var musicSettingsChanged: Boolean = false
-    private var musicMasterToggleChanged: Boolean = false // Track if master toggle specifically changed
-    // ========== MUSIC INTEGRATION END ==========
+    private var musicMasterToggleChanged: Boolean = false
 
     private var pathSelectionType = PathSelection.MEDIA
 
@@ -211,14 +204,12 @@ class SettingsActivity : AppCompatActivity() {
                     // But need to handle it for exhaustive when
                     android.util.Log.w("SettingsActivity", "directoryPicker called for CUSTOM_BACKGROUND - should use imagePicker instead")
                 }
-                // ========== MUSIC INTEGRATION START ==========
                 PathSelection.MUSIC -> {
                     prefsManager.musicPath = path
                     musicPathText.text = path
                     Toast.makeText(this, "Music path updated", Toast.LENGTH_SHORT).show()
                     android.util.Log.d("SettingsActivity", "Music path set to: $path")
                 }
-                // ========== MUSIC INTEGRATION END ==========
             }
         }
     }
@@ -472,24 +463,21 @@ class SettingsActivity : AppCompatActivity() {
         screensaverBehaviorChipGroup = findViewById(R.id.screensaverBehaviorChipGroup)
         blackOverlayChipGroup = findViewById(R.id.blackOverlayChipGroup)
         versionText = findViewById(R.id.versionText)
-        // ========== MUSIC INTEGRATION START ==========
-        if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            musicMasterChipGroup = findViewById(R.id.musicMasterChipGroup)
-            musicSettings = findViewById(R.id.musicSettings)
-            musicSystemChipGroup = findViewById(R.id.musicSystemChipGroup)
-            musicGameChipGroup = findViewById(R.id.musicGameChipGroup)
-            musicScreensaverChipGroup = findViewById(R.id.musicScreensaverChipGroup)
-            musicVideoChipGroup = findViewById(R.id.musicVideoChipGroup)
-            musicSongTitleChipGroup = findViewById(R.id.musicSongTitleChipGroup)
-            musicSongTitleDurationSection = findViewById(R.id.musicSongTitleDurationSection)
-            musicSongTitleDurationSeekBar = findViewById(R.id.musicSongTitleDurationSeekBar)
-            musicSongTitleDurationText = findViewById(R.id.musicSongTitleDurationText)
-            musicSongTitleOpacitySeekBar = findViewById(R.id.musicSongTitleOpacitySeekBar)
-            musicSongTitleOpacityText = findViewById(R.id.musicSongTitleOpacityText)
-            musicPathText = findViewById(R.id.musicPathText)
-            selectMusicPathButton = findViewById(R.id.selectMusicPathButton)
-        }
-        // ========== MUSIC INTEGRATION END ==========
+        // Music UI components
+        musicMasterChipGroup = findViewById(R.id.musicMasterChipGroup)
+        musicSettings = findViewById(R.id.musicSettings)
+        musicSystemChipGroup = findViewById(R.id.musicSystemChipGroup)
+        musicGameChipGroup = findViewById(R.id.musicGameChipGroup)
+        musicScreensaverChipGroup = findViewById(R.id.musicScreensaverChipGroup)
+        musicVideoChipGroup = findViewById(R.id.musicVideoChipGroup)
+        musicSongTitleChipGroup = findViewById(R.id.musicSongTitleChipGroup)
+        musicSongTitleDurationSection = findViewById(R.id.musicSongTitleDurationSection)
+        musicSongTitleDurationSeekBar = findViewById(R.id.musicSongTitleDurationSeekBar)
+        musicSongTitleDurationText = findViewById(R.id.musicSongTitleDurationText)
+        musicSongTitleOpacitySeekBar = findViewById(R.id.musicSongTitleOpacitySeekBar)
+        musicSongTitleOpacityText = findViewById(R.id.musicSongTitleOpacityText)
+        musicPathText = findViewById(R.id.musicPathText)
+        selectMusicPathButton = findViewById(R.id.selectMusicPathButton)
     }
 
     /**
@@ -538,12 +526,10 @@ class SettingsActivity : AppCompatActivity() {
             customBackgroundPicker.launch(intent)
         }
 
-        // ========== MUSIC INTEGRATION START ==========
         selectMusicPathButton.setOnClickListener {
             pathSelectionType = PathSelection.MUSIC
             directoryPicker.launch(null)
         }
-        // ========== MUSIC INTEGRATION END ==========
 
         clearCustomBackgroundButton.setOnClickListener {
             // Clear the custom background using the correct key
@@ -585,11 +571,7 @@ class SettingsActivity : AppCompatActivity() {
 
         android.util.Log.d("SettingsActivity", "All UI components setup complete")
 
-        // ========== MUSIC INTEGRATION START ==========
-        if (FeatureFlags.ENABLE_BACKGROUND_MUSIC) {
-            setupMusicSettings()
-        }
-        // ========== MUSIC INTEGRATION END ==========
+        setupMusicSettings()
     }
 
     /**
@@ -600,7 +582,7 @@ class SettingsActivity : AppCompatActivity() {
         updateSystemPathDisplay()
         updateScriptsPathDisplay()
         updateCustomBackgroundDisplay()
-        updateMusicPathDisplay()    // ========== MUSIC INTEGRATION
+        updateMusicPathDisplay()
     }
 
     /**
@@ -646,14 +628,12 @@ class SettingsActivity : AppCompatActivity() {
                 if (currentHiddenApps != initialHiddenApps) {
                     intent.putExtra("APPS_HIDDEN_CHANGED", true)
                 }
-                // ========== MUSIC ==========
                 if (musicSettingsChanged) {
                     intent.putExtra("MUSIC_SETTINGS_CHANGED", true)
                 }
                 if (musicMasterToggleChanged) {
                     intent.putExtra("MUSIC_MASTER_TOGGLE_CHANGED", true)
                 }
-                // ===========================
                 if (videoSettingsChanged) {
                     intent.putExtra("VIDEO_SETTINGS_CHANGED", true)
                 }
@@ -1358,9 +1338,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ========== MUSIC INTEGRATION START ==========
-    // DELETE THIS ENTIRE FUNCTION when removing music feature
-
     /**
      * Setup background music settings
      */
@@ -1538,8 +1515,6 @@ class SettingsActivity : AppCompatActivity() {
         // progress is 0-100 in 5% increments (0, 5, 10, ... 95, 100)
         musicSongTitleOpacityText.text = "$progress%"
     }
-
-    // ========== MUSIC INTEGRATION END ==========
 
     private fun setupBlackOverlay() {
         // Load saved black overlay enabled state (default: false/off)
@@ -2097,12 +2072,10 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    // ========== MUSIC INTEGRATION START ==========
     private fun updateMusicPathDisplay() {
         val path = prefsManager.musicPath
         musicPathText.text = path
     }
-    // ========== MUSIC INTEGRATION END ==========
 
     /**
      * Show dialog asking if user wants to update scripts after path change

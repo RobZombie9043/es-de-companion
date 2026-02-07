@@ -1,6 +1,4 @@
-package com.esde.companion.music
-
-import com.esde.companion.data.AppConstants
+package com.esde.companion.data
 
 /**
  * ═══════════════════════════════════════════════════════════
