@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
+import com.esde.companion.data.OverlayWidget
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.max

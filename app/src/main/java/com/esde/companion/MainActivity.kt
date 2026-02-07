@@ -50,7 +50,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.esde.companion.managers.MusicManager
 import com.esde.companion.data.AppConstants
+import com.esde.companion.data.OverlayWidget
+import com.esde.companion.managers.AppLaunchManager
 import com.esde.companion.managers.ImageManager
+import com.esde.companion.managers.MediaManager
 import com.esde.companion.managers.PreferencesManager
 import com.esde.companion.managers.ScriptManager
 import com.esde.companion.managers.VideoManager
@@ -69,8 +72,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingsButton: ImageButton
     private lateinit var androidSettingsButton: ImageButton
     private lateinit var prefsManager: PreferencesManager
-    private lateinit var appLaunchPrefs: AppLaunchPreferences
-    private lateinit var mediaFileLocator: MediaFileLocator
+    private lateinit var appLaunchPrefs: AppLaunchManager
+    private lateinit var mediaManager: MediaManager
     private lateinit var imageManager: ImageManager
     private lateinit var videoManager: VideoManager
 
@@ -508,8 +511,8 @@ class MainActivity : AppCompatActivity() {
         enableImmersiveMode()
 
         prefsManager = PreferencesManager(this)
-        appLaunchPrefs = AppLaunchPreferences(this)
-        mediaFileLocator = MediaFileLocator(prefsManager)
+        appLaunchPrefs = AppLaunchManager(this)
+        mediaManager = MediaManager(prefsManager)
         imageManager = ImageManager(this, prefsManager)
 
         // Initialize VideoManager (must be after videoView is initialized)
@@ -538,7 +541,7 @@ class MainActivity : AppCompatActivity() {
         videoView = findViewById(R.id.videoView)
         blackOverlay = findViewById(R.id.blackOverlay)
         // Initialize VideoManager now that videoView is ready
-        videoManager = VideoManager(this, prefsManager, mediaFileLocator, videoView)
+        videoManager = VideoManager(this, prefsManager, mediaManager, videoView)
         // Music UI components
         songTitleText = findViewById(R.id.songTitleText)
         songTitleOverlay = findViewById(R.id.songTitleOverlay)
@@ -3038,7 +3041,7 @@ Access this help anytime from the widget menu!
                     }
 
                     // Check if instant video will play (delay = 0)
-                    val videoPath = mediaFileLocator.findVideoFile(systemName, gameNameRaw)
+                    val videoPath = mediaManager.findVideoFile(systemName, gameNameRaw)
                     val videoDelay = getVideoDelay()
                     val instantVideoWillPlay = videoPath != null && isVideoEnabled() && widgetsLocked && videoDelay == 0L
 
@@ -3124,7 +3127,7 @@ Access this help anytime from the widget menu!
         }
 
         val preferScreenshot = (imagePref == "screenshot")
-        return mediaFileLocator.findGameBackgroundImage(systemName, fullGamePath, preferScreenshot)
+        return mediaManager.findGameBackgroundImage(systemName, fullGamePath, preferScreenshot)
     }
 
     /**
@@ -3326,7 +3329,7 @@ Access this help anytime from the widget menu!
 
         // Set initial chip state
         val currentPosition = appLaunchPrefs.getLaunchPosition(packageName)
-        if (currentPosition == AppLaunchPreferences.POSITION_TOP) {
+        if (currentPosition == AppLaunchManager.POSITION_TOP) {
             chipLaunchTop.isChecked = true
         } else {
             chipLaunchBottom.isChecked = true
@@ -3395,7 +3398,7 @@ Access this help anytime from the widget menu!
             when {
                 checkedIds.contains(R.id.chipLaunchTop) -> {
                     // Save preference
-                    appLaunchPrefs.setLaunchPosition(packageName, AppLaunchPreferences.POSITION_TOP)
+                    appLaunchPrefs.setLaunchPosition(packageName, AppLaunchManager.POSITION_TOP)
                     android.util.Log.d("MainActivity", "Set $appName to launch on THIS screen")
 
                     // Launch the app
@@ -3410,7 +3413,7 @@ Access this help anytime from the widget menu!
                 }
                 checkedIds.contains(R.id.chipLaunchBottom) -> {
                     // Save preference
-                    appLaunchPrefs.setLaunchPosition(packageName, AppLaunchPreferences.POSITION_BOTTOM)
+                    appLaunchPrefs.setLaunchPosition(packageName, AppLaunchManager.POSITION_BOTTOM)
                     android.util.Log.d("MainActivity", "Set $appName to launch on OTHER screen")
 
                     // Launch the app
@@ -5099,7 +5102,7 @@ Access this help anytime from the widget menu!
         gameFilename: String,
         folder: String
     ): File? {
-        return mediaFileLocator.findImageInFolder(systemName, gameName, gameFilename, folder)
+        return mediaManager.findImageInFolder(systemName, gameName, gameFilename, folder)
     }
 
     /**

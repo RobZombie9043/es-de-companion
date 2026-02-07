@@ -13,6 +13,7 @@ import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.esde.companion.data.OverlayWidget
 
 /**
  * Centralized image loading manager using Glide.
@@ -318,7 +319,7 @@ class ImageManager(
     fun loadWidgetImage(
         imageView: ImageView,
         imagePath: String,
-        scaleType: com.esde.companion.OverlayWidget.ScaleType,
+        scaleType: OverlayWidget.ScaleType,
         onLoaded: (() -> Unit)? = null,
         onFailed: (() -> Unit)? = null
     ) {
@@ -347,10 +348,10 @@ class ImageManager(
 
         // Apply scale type
         when (scaleType) {
-            com.esde.companion.OverlayWidget.ScaleType.FIT -> {
+            OverlayWidget.ScaleType.FIT -> {
                 imageView.scaleType = ImageView.ScaleType.FIT_CENTER
             }
-            com.esde.companion.OverlayWidget.ScaleType.CROP -> {
+            OverlayWidget.ScaleType.CROP -> {
                 imageView.scaleType = ImageView.ScaleType.CENTER_CROP
             }
         }

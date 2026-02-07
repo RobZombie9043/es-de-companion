@@ -8,13 +8,14 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.esde.companion.managers.AppLaunchManager
 
 class AppAdapter(
     private var apps: List<ResolveInfo>,
     private val packageManager: PackageManager,
     private val onAppClick: (ResolveInfo) -> Unit,
     private val onAppLongClick: (ResolveInfo, View) -> Unit,
-    private val appLaunchPrefs: AppLaunchPreferences,
+    private val appLaunchPrefs: AppLaunchManager,
     private val hiddenApps: Set<String> = setOf()  // ADD THIS PARAMETER
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 

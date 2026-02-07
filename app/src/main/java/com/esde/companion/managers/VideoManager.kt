@@ -5,7 +5,6 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import com.esde.companion.data.AppConstants
-import com.esde.companion.MediaFileLocator
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -32,7 +31,7 @@ import java.io.File
 class VideoManager(
     private val context: Context,
     private val prefsManager: PreferencesManager,
-    private val mediaFileLocator: MediaFileLocator,
+    private val mediaManager: MediaManager,
     private val videoView: PlayerView
 ) {
 
@@ -85,7 +84,7 @@ class VideoManager(
         this.onVideoEnded = onEnded
 
         // Find video file using MediaFileLocator
-        val videoPath = mediaFileLocator.findVideoFile(systemName, gameFilename)
+        val videoPath = mediaManager.findVideoFile(systemName, gameFilename)
 
         if (videoPath == null) {
             android.util.Log.d(TAG, "No video found for: $systemName / $gameFilename")

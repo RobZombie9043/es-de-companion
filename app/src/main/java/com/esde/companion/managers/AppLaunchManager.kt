@@ -1,4 +1,4 @@
-package com.esde.companion
+package com.esde.companion.managers
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -6,7 +6,7 @@ import android.content.SharedPreferences
 /**
  * Manages app launch preferences (top/bottom screen)
  */
-class AppLaunchPreferences(context: Context) {
+class AppLaunchManager(context: Context) {
 
     companion object {
         private const val PREFS_NAME = "app_launch_prefs"

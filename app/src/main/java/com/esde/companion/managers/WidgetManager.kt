@@ -3,7 +3,7 @@ package com.esde.companion.managers
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.esde.companion.OverlayWidget
+import com.esde.companion.data.OverlayWidget
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 

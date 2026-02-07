@@ -1,21 +1,21 @@
-package com.esde.companion
+package com.esde.companion.managers
 
+import android.util.Log
 import com.esde.companion.data.AppConstants
-import com.esde.companion.managers.PreferencesManager
 import java.io.File
 
 /**
  * Centralized media file location logic for ES-DE Companion.
- * 
+ *
  * Handles finding media files (images and videos) with support for:
  * - Subfolders (e.g., "subfolder/game.zip" finds "media/screenshots/subfolder/game.png")
  * - Multiple file extensions
  * - Fallback search patterns (subfolder -> root level)
  * - Different media types (fanart, screenshots, marquees, videos)
- * 
+ *
  * This class eliminates duplicate file-finding logic across MainActivity.
  */
-class MediaFileLocator(private val prefsManager: PreferencesManager) {
+class MediaManager(private val prefsManager: PreferencesManager) {
 
     companion object {
         private val IMAGE_EXTENSIONS = AppConstants.FileExtensions.IMAGE
@@ -69,7 +69,8 @@ class MediaFileLocator(private val prefsManager: PreferencesManager) {
     }
 
     fun findVideoFile(systemName: String, gameFilename: String): String? {
-        val videoDir = File(prefsManager.mediaPath, "$systemName/${AppConstants.Paths.MEDIA_VIDEOS}")
+        val videoDir =
+            File(prefsManager.mediaPath, "$systemName/${AppConstants.Paths.MEDIA_VIDEOS}")
         if (!videoDir.exists()) return null
 
         return findFileInDirectory(
@@ -163,14 +164,14 @@ class MediaFileLocator(private val prefsManager: PreferencesManager) {
         val systemIndex = segments.indexOf(systemName)
 
         if (systemIndex == -1) {
-            android.util.Log.d("MediaFileLocator", "System name '$systemName' not found in path: $fullPath")
+            Log.d("MediaFileLocator", "System name '$systemName' not found in path: $fullPath")
             return null
         }
 
         val subfolders = segments.drop(systemIndex + 1)
         val result = if (subfolders.isNotEmpty()) subfolders.joinToString("/") else null
 
-        android.util.Log.d("MediaFileLocator", "Extracted subfolder: '$result' from path: $fullPath")
+        Log.d("MediaFileLocator", "Extracted subfolder: '$result' from path: $fullPath")
         return result
     }
 }

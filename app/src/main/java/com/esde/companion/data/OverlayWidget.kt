@@ -1,4 +1,4 @@
-package com.esde.companion
+package com.esde.companion.data
 
 import java.util.UUID
 
