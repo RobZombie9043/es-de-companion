@@ -1,12 +1,39 @@
 # Changelog
 
-## [0.5.4] - TBC
+## [0.6.0] - TBC
 
 ### Added
-- Immersive mode for when Android set to 3-button mode
+- **Immersive Mode**: Enhanced fullscreen experience when Android is set to 3-button navigation mode
+
+### Changed
+- **Performance Improvements**:
+    - Significantly improved system scrolling responsiveness by reducing debounce delays
+- **Minimum SDK Requirement**: Updated from Android 10 (API 29) to Android 13 (API 33)
+    - Replaced deprecated RenderScript blur with RenderEffect (modern blur API)
+    - Updated blur implementation to use Android 13+ native RenderEffect
+- **Media3 Library**: Updated ExoPlayer (Media3) from 1.2.0 to 1.4.1
+- **Code Organization**: Major package restructure for better maintainability
+    - Created `ui` package for UI components (AppAdapter, ResizableWidgetContainer, WidgetView, GridOverlayView)
+    - Created `data` package for data models (AppState, OverlayWidget)
+    - Renamed `Constants.kt` to `AppConstants.kt` for clarity
+    - Refactored `MediaFileLocator` to `MediaManager` (better naming for manager pattern)
+    - Refactored `AppLaunchPreferences` to `AppLaunchManager` (consistent manager naming)
+
+### Refactored
+- **Manager Classes**: Comprehensive code cleanup and optimization across all managers
+    - `VideoManager.kt`: Cleaned up video playback logic, removed unused code
+    - `MusicManager.kt`: Streamlined music implementation, improved code organization
+    - `WidgetManager.kt`: Code cleanup and consistency improvements
+    - `ScriptManager.kt`: Code cleanup and removed redundant logic
+    - `PreferencesManager.kt`: Added KTX extensions for cleaner preference access
+- **Constants Management**: Extracted hardcoded values to centralized `AppConstants.kt`
+    - Timing constants (debounce delays, animation durations)
+    - UI constants (grid sizes, gesture thresholds)
+    - File path constants
+- **General Code Cleanup**: Removed unused code, imports and deprecated functions throughout codebase
 
 ### Fixed
-- Image cache invalidation for changed background images
+- **Image Cache Invalidation**: Fixed cache invalidation for changed background images
 
 ## [0.5.3] - 2026-02-06
 
