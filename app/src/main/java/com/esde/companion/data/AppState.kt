@@ -1,4 +1,4 @@
-package com.esde.companion
+package com.esde.companion.data
 
 /**
  * Represents the current state of the ES-DE Companion app.

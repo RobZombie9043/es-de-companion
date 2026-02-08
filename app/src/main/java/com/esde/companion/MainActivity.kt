@@ -44,13 +44,19 @@ import kotlin.math.abs
 import androidx.media3.ui.PlayerView
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.esde.companion.managers.MusicManager
 import com.esde.companion.data.AppConstants
-import com.esde.companion.data.OverlayWidget
+import com.esde.companion.data.AppState
+import com.esde.companion.data.Widget
+import com.esde.companion.data.SavedBrowsingState
+import com.esde.companion.data.ScreensaverGame
+import com.esde.companion.data.getCurrentGameFilename
+import com.esde.companion.data.getCurrentSystemName
 import com.esde.companion.managers.AppLaunchManager
 import com.esde.companion.managers.ImageManager
 import com.esde.companion.managers.MediaManager
@@ -58,6 +64,10 @@ import com.esde.companion.managers.PreferencesManager
 import com.esde.companion.managers.ScriptManager
 import com.esde.companion.managers.VideoManager
 import com.esde.companion.managers.WidgetManager
+import com.esde.companion.ui.AppAdapter
+import com.esde.companion.ui.GridOverlayView
+import com.esde.companion.ui.ResizableWidgetContainer
+import com.esde.companion.ui.WidgetView
 
 class MainActivity : AppCompatActivity() {
 
@@ -1060,27 +1070,27 @@ Access this help anytime from the widget menu!
         val gameMarqueeHeight = displayMetrics.heightPixels * AppConstants.UI.DEFAULT_WIDGET_HEIGHT_PERCENT
 
         // Create default system logo widget (centered)
-        val systemLogoWidget = OverlayWidget(
-            imageType = OverlayWidget.ImageType.SYSTEM_LOGO,
+        val systemLogoWidget = Widget(
+            imageType = Widget.ImageType.SYSTEM_LOGO,
             imagePath = "",
             x = centerX - (systemLogoWidth / 2),
             y = centerY - (systemLogoHeight / 2),
             width = systemLogoWidth,
             height = systemLogoHeight,
             zIndex = 0,
-            widgetContext = OverlayWidget.WidgetContext.SYSTEM
+            widgetContext = Widget.WidgetContext.SYSTEM
         )
 
         // Create default game marquee widget (centered)
-        val gameMarqueeWidget = OverlayWidget(
-            imageType = OverlayWidget.ImageType.MARQUEE,
+        val gameMarqueeWidget = Widget(
+            imageType = Widget.ImageType.MARQUEE,
             imagePath = "",
             x = centerX - (gameMarqueeWidth / 2),
             y = centerY - (gameMarqueeHeight / 2),
             width = gameMarqueeWidth,
             height = gameMarqueeHeight,
             zIndex = 0,
-            widgetContext = OverlayWidget.WidgetContext.GAME
+            widgetContext = Widget.WidgetContext.GAME
         )
 
         // Save both widgets
@@ -2024,7 +2034,8 @@ Access this help anytime from the widget menu!
                                         }
 
                                         // Update state to Screensaver
-                                        updateState(AppState.Screensaver(
+                                        updateState(
+                                            AppState.Screensaver(
                                             currentGame = null,
                                             previousState = savedState
                                         ))
@@ -3010,7 +3021,8 @@ Access this help anytime from the widget menu!
 
                 // Update state tracking (must be on main thread)
                 withContext(Dispatchers.Main) {
-                    updateState(AppState.GameBrowsing(
+                    updateState(
+                        AppState.GameBrowsing(
                         systemName = systemName,
                         gameFilename = gameNameRaw,
                         gameName = gameDisplayName
@@ -3496,7 +3508,8 @@ Access this help anytime from the widget menu!
         // Update state to GamePlaying
         if (gameInfo != null) {
             val (sysName, filename) = gameInfo
-            updateState(AppState.GamePlaying(
+            updateState(
+                AppState.GamePlaying(
                 systemName = sysName,
                 gameFilename = filename
             ))
@@ -3720,7 +3733,8 @@ Access this help anytime from the widget menu!
         // Return to browsing the game that was just playing
         if (state is AppState.GamePlaying) {
             val playingState = state as AppState.GamePlaying
-            updateState(AppState.GameBrowsing(
+            updateState(
+                AppState.GameBrowsing(
                 systemName = systemName ?: playingState.systemName,
                 gameFilename = gameFilename ?: playingState.gameFilename,
                 gameName = gameName  // Use parsed name from script
@@ -3794,7 +3808,8 @@ Access this help anytime from the widget menu!
         }
 
         // Update state to Screensaver
-        updateState(AppState.Screensaver(
+        updateState(
+            AppState.Screensaver(
             currentGame = null,  // No game selected yet
             previousState = previousState
         ))
@@ -4002,7 +4017,8 @@ Access this help anytime from the widget menu!
 
                     // Update state - transition to GameBrowsing (waiting for GamePlaying)
                     if (screensaverGame != null) {
-                        updateState(AppState.GameBrowsing(
+                        updateState(
+                            AppState.GameBrowsing(
                             systemName = screensaverGame.systemName,
                             gameFilename = screensaverGame.gameFilename,
                             gameName = screensaverGame.gameName
@@ -4022,7 +4038,8 @@ Access this help anytime from the widget menu!
 
                     // Update state - transition to GameBrowsing
                     if (screensaverGame != null) {
-                        updateState(AppState.GameBrowsing(
+                        updateState(
+                            AppState.GameBrowsing(
                             systemName = screensaverGame.systemName,
                             gameFilename = screensaverGame.gameFilename,
                             gameName = screensaverGame.gameName
@@ -4054,7 +4071,8 @@ Access this help anytime from the widget menu!
                             android.util.Log.d("MainActivity", "Returning to game view: ${previousState.gameFilename}")
 
                             // Update state first
-                            updateState(AppState.GameBrowsing(
+                            updateState(
+                                AppState.GameBrowsing(
                                 systemName = previousState.systemName,
                                 gameFilename = previousState.gameFilename,
                                 gameName = previousState.gameName
@@ -4080,7 +4098,8 @@ Access this help anytime from the widget menu!
                         is SavedBrowsingState.InGameView -> {
                             android.util.Log.d("MainActivity", "Returning to game view: ${previousState.gameFilename}")
 
-                            updateState(AppState.GameBrowsing(
+                            updateState(
+                                AppState.GameBrowsing(
                                 systemName = previousState.systemName,
                                 gameFilename = previousState.gameFilename,
                                 gameName = previousState.gameName
@@ -4237,7 +4256,7 @@ Access this help anytime from the widget menu!
             android.util.Log.d("MainActivity", "Loaded ${allWidgets.size} widgets for screensaver")
 
             // Filter for GAME context widgets only - ADDED THIS
-            val gameWidgets = allWidgets.filter { it.widgetContext == OverlayWidget.WidgetContext.GAME }
+            val gameWidgets = allWidgets.filter { it.widgetContext == Widget.WidgetContext.GAME }
             android.util.Log.d("MainActivity", "Loaded ${gameWidgets.size} game widgets for screensaver")
 
             // Sort widgets by z-index before processing
@@ -4249,32 +4268,32 @@ Access this help anytime from the widget menu!
 
                 val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
                 val imageFile = when (widget.imageType) {
-                    OverlayWidget.ImageType.MARQUEE ->
+                    Widget.ImageType.MARQUEE ->
                         findImageInFolder(systemName, gameName, gameFilename, "marquees")
-                    OverlayWidget.ImageType.BOX_2D ->
+                    Widget.ImageType.BOX_2D ->
                         findImageInFolder(systemName, gameName, gameFilename, "covers")
-                    OverlayWidget.ImageType.BOX_3D ->
+                    Widget.ImageType.BOX_3D ->
                         findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
-                    OverlayWidget.ImageType.MIX_IMAGE ->
+                    Widget.ImageType.MIX_IMAGE ->
                         findImageInFolder(systemName, gameName, gameFilename, "miximages")
-                    OverlayWidget.ImageType.BACK_COVER ->
+                    Widget.ImageType.BACK_COVER ->
                         findImageInFolder(systemName, gameName, gameFilename, "backcovers")
-                    OverlayWidget.ImageType.PHYSICAL_MEDIA ->
+                    Widget.ImageType.PHYSICAL_MEDIA ->
                         findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
-                    OverlayWidget.ImageType.SCREENSHOT ->
+                    Widget.ImageType.SCREENSHOT ->
                         findImageInFolder(systemName, gameName, gameFilename, "screenshots")
-                    OverlayWidget.ImageType.FANART ->
+                    Widget.ImageType.FANART ->
                         findImageInFolder(systemName, gameName, gameFilename, "fanart")
-                    OverlayWidget.ImageType.TITLE_SCREEN ->
+                    Widget.ImageType.TITLE_SCREEN ->
                         findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
-                    OverlayWidget.ImageType.GAME_DESCRIPTION -> null  // NEW: Text widget, handled separately
-                    OverlayWidget.ImageType.SYSTEM_LOGO -> null
+                    Widget.ImageType.GAME_DESCRIPTION -> null  // NEW: Text widget, handled separately
+                    Widget.ImageType.SYSTEM_LOGO -> null
                 }
 
                 // ALWAYS create the widget, even if image doesn't exist
                 val widgetToAdd = when {
                     // NEW: Handle description text widget for screensaver
-                    widget.imageType == OverlayWidget.ImageType.GAME_DESCRIPTION -> {
+                    widget.imageType == Widget.ImageType.GAME_DESCRIPTION -> {
                         val description = getGameDescription(systemName, gameFilename)
                         android.util.Log.d("MainActivity", "  Updating screensaver description widget: ${description?.take(50)}")
                         widget.copy(imagePath = description ?: "")
@@ -4287,7 +4306,7 @@ Access this help anytime from the widget menu!
                     // No image found
                     else -> {
                         android.util.Log.d("MainActivity", "  No screensaver image found for widget type ${widget.imageType}, using empty path")
-                        if (widget.imageType == OverlayWidget.ImageType.MARQUEE) {
+                        if (widget.imageType == Widget.ImageType.MARQUEE) {
                             widget.copy(
                                 imagePath = "",
                                 id = "widget_${gameName}"
@@ -4612,7 +4631,7 @@ Access this help anytime from the widget menu!
         }
     }
 
-    private fun addWidgetToScreen(widget: OverlayWidget) {
+    private fun addWidgetToScreen(widget: Widget) {
         val widgetView = WidgetView(
             this,
             widget,
@@ -4724,20 +4743,20 @@ Access this help anytime from the widget menu!
         // Populate widget options based on current view
         val widgetOptions = if (state is AppState.SystemBrowsing) {
             // System view - only system logo option
-            listOf("System Logo" to OverlayWidget.ImageType.SYSTEM_LOGO)
+            listOf("System Logo" to Widget.ImageType.SYSTEM_LOGO)
         } else {
             // Game view - all game image types
             listOf(
-                "Marquee" to OverlayWidget.ImageType.MARQUEE,
-                "2D Box" to OverlayWidget.ImageType.BOX_2D,
-                "3D Box" to OverlayWidget.ImageType.BOX_3D,
-                "Mix Image" to OverlayWidget.ImageType.MIX_IMAGE,
-                "Back Cover" to OverlayWidget.ImageType.BACK_COVER,
-                "Physical Media" to OverlayWidget.ImageType.PHYSICAL_MEDIA,
-                "Screenshot" to OverlayWidget.ImageType.SCREENSHOT,
-                "Fanart" to OverlayWidget.ImageType.FANART,
-                "Title Screen" to OverlayWidget.ImageType.TITLE_SCREEN,
-                "Game Description" to OverlayWidget.ImageType.GAME_DESCRIPTION
+                "Marquee" to Widget.ImageType.MARQUEE,
+                "2D Box" to Widget.ImageType.BOX_2D,
+                "3D Box" to Widget.ImageType.BOX_3D,
+                "Mix Image" to Widget.ImageType.MIX_IMAGE,
+                "Back Cover" to Widget.ImageType.BACK_COVER,
+                "Physical Media" to Widget.ImageType.PHYSICAL_MEDIA,
+                "Screenshot" to Widget.ImageType.SCREENSHOT,
+                "Fanart" to Widget.ImageType.FANART,
+                "Title Screen" to Widget.ImageType.TITLE_SCREEN,
+                "Game Description" to Widget.ImageType.GAME_DESCRIPTION
             )
         }
 
@@ -4823,11 +4842,11 @@ Access this help anytime from the widget menu!
         }
     }
 
-    private fun createWidget(imageType: OverlayWidget.ImageType) {
+    private fun createWidget(imageType: Widget.ImageType) {
         val displayMetrics = resources.displayMetrics
         val nextZIndex = (activeWidgets.maxOfOrNull { it.widget.zIndex } ?: -1) + 1
 
-        if (imageType == OverlayWidget.ImageType.SYSTEM_LOGO) {
+        if (imageType == Widget.ImageType.SYSTEM_LOGO) {
             // Creating system widget
             val systemName = state.getCurrentSystemName()
 
@@ -4843,15 +4862,15 @@ Access this help anytime from the widget menu!
             // System logos always use builtin:// prefix - WidgetView handles finding custom vs built-in
             // Normalize system name to handle auto-collections
             val normalizedName = normalizeSystemName(systemName)
-            val widget = OverlayWidget(
-                imageType = OverlayWidget.ImageType.SYSTEM_LOGO,
+            val widget = Widget(
+                imageType = Widget.ImageType.SYSTEM_LOGO,
                 imagePath = "builtin://$normalizedName",
                 x = displayMetrics.widthPixels / 2f - 150f,
                 y = displayMetrics.heightPixels / 2f - 200f,
                 width = 300f,
                 height = 400f,
                 zIndex = nextZIndex,
-                widgetContext = OverlayWidget.WidgetContext.SYSTEM
+                widgetContext = Widget.WidgetContext.SYSTEM
             )
 
             widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)
@@ -4884,41 +4903,41 @@ Access this help anytime from the widget menu!
             // Find the appropriate game image
             val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
             val imageFile = when (imageType) {
-                OverlayWidget.ImageType.MARQUEE ->
+                Widget.ImageType.MARQUEE ->
                     findImageInFolder(systemName, gameName, gameFilename, "marquees")
-                OverlayWidget.ImageType.BOX_2D ->
+                Widget.ImageType.BOX_2D ->
                     findImageInFolder(systemName, gameName, gameFilename, "covers")
-                OverlayWidget.ImageType.BOX_3D ->
+                Widget.ImageType.BOX_3D ->
                     findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
-                OverlayWidget.ImageType.MIX_IMAGE ->
+                Widget.ImageType.MIX_IMAGE ->
                     findImageInFolder(systemName, gameName, gameFilename, "miximages")
-                OverlayWidget.ImageType.BACK_COVER ->
+                Widget.ImageType.BACK_COVER ->
                     findImageInFolder(systemName, gameName, gameFilename, "backcovers")
-                OverlayWidget.ImageType.PHYSICAL_MEDIA ->
+                Widget.ImageType.PHYSICAL_MEDIA ->
                     findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
-                OverlayWidget.ImageType.SCREENSHOT ->
+                Widget.ImageType.SCREENSHOT ->
                     findImageInFolder(systemName, gameName, gameFilename, "screenshots")
-                OverlayWidget.ImageType.FANART ->
+                Widget.ImageType.FANART ->
                     findImageInFolder(systemName, gameName, gameFilename, "fanart")
-                OverlayWidget.ImageType.TITLE_SCREEN ->
+                Widget.ImageType.TITLE_SCREEN ->
                     findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
-                OverlayWidget.ImageType.GAME_DESCRIPTION -> null
+                Widget.ImageType.GAME_DESCRIPTION -> null
                 else -> null
             }
 
             // Special handling for game description (text widget)
-            if (imageType == OverlayWidget.ImageType.GAME_DESCRIPTION) {
+            if (imageType == Widget.ImageType.GAME_DESCRIPTION) {
                 val description = getGameDescription(systemName, gameFilename)
 
-                val widget = OverlayWidget(
-                    imageType = OverlayWidget.ImageType.GAME_DESCRIPTION,
+                val widget = Widget(
+                    imageType = Widget.ImageType.GAME_DESCRIPTION,
                     imagePath = description ?: "",  // Store description text in imagePath
                     x = displayMetrics.widthPixels / 2f - 300f,
                     y = displayMetrics.heightPixels / 2f - 200f,
                     width = 600f,
                     height = 400f,
                     zIndex = nextZIndex,
-                    widgetContext = OverlayWidget.WidgetContext.GAME
+                    widgetContext = Widget.WidgetContext.GAME
                 )
 
                 widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)
@@ -4941,16 +4960,16 @@ Access this help anytime from the widget menu!
             // Existing validation for image-based widgets
             if (imageFile == null || !imageFile.exists()) {
                 val typeName = when (imageType) {
-                    OverlayWidget.ImageType.MARQUEE -> "marquee"
-                    OverlayWidget.ImageType.BOX_2D -> "2D box"
-                    OverlayWidget.ImageType.BOX_3D -> "3D box"
-                    OverlayWidget.ImageType.MIX_IMAGE -> "mix image"
-                    OverlayWidget.ImageType.BACK_COVER -> "back cover"
-                    OverlayWidget.ImageType.PHYSICAL_MEDIA -> "physical media"
-                    OverlayWidget.ImageType.SCREENSHOT -> "screenshot"
-                    OverlayWidget.ImageType.FANART -> "fanart"
-                    OverlayWidget.ImageType.TITLE_SCREEN -> "title screen"
-                    OverlayWidget.ImageType.GAME_DESCRIPTION -> "game description"
+                    Widget.ImageType.MARQUEE -> "marquee"
+                    Widget.ImageType.BOX_2D -> "2D box"
+                    Widget.ImageType.BOX_3D -> "3D box"
+                    Widget.ImageType.MIX_IMAGE -> "mix image"
+                    Widget.ImageType.BACK_COVER -> "back cover"
+                    Widget.ImageType.PHYSICAL_MEDIA -> "physical media"
+                    Widget.ImageType.SCREENSHOT -> "screenshot"
+                    Widget.ImageType.FANART -> "fanart"
+                    Widget.ImageType.TITLE_SCREEN -> "title screen"
+                    Widget.ImageType.GAME_DESCRIPTION -> "game description"
                     else -> "image"
                 }
                 android.widget.Toast.makeText(
@@ -4961,7 +4980,7 @@ Access this help anytime from the widget menu!
                 return
             }
 
-            val widget = OverlayWidget(
+            val widget = Widget(
                 imageType = imageType,
                 imagePath = imageFile.absolutePath,
                 x = displayMetrics.widthPixels / 2f - 150f,
@@ -4969,7 +4988,7 @@ Access this help anytime from the widget menu!
                 width = 300f,
                 height = 400f,
                 zIndex = nextZIndex,
-                widgetContext = OverlayWidget.WidgetContext.GAME
+                widgetContext = Widget.WidgetContext.GAME
             )
 
             widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)
@@ -5049,7 +5068,7 @@ Access this help anytime from the widget menu!
             val allWidgets = widgetManager.loadWidgets()
 
             // Filter for SYSTEM context widgets only
-            val systemWidgets = allWidgets.filter { it.widgetContext == OverlayWidget.WidgetContext.SYSTEM }
+            val systemWidgets = allWidgets.filter { it.widgetContext == Widget.WidgetContext.SYSTEM }
             android.util.Log.d("MainActivity", "Loaded ${systemWidgets.size} system widgets from storage")
 
             // Clear existing widget views but preserve grid overlay
@@ -5278,32 +5297,32 @@ Access this help anytime from the widget menu!
      * Find appropriate image file for widget based on type
      */
     private fun findWidgetImageFile(
-        widget: OverlayWidget,
+        widget: Widget,
         systemName: String,
         gameName: String,
         gameFilename: String
     ): File? {
         return when (widget.imageType) {
-            OverlayWidget.ImageType.MARQUEE ->
+            Widget.ImageType.MARQUEE ->
                 findImageInFolder(systemName, gameName, gameFilename, "marquees")
-            OverlayWidget.ImageType.BOX_2D ->
+            Widget.ImageType.BOX_2D ->
                 findImageInFolder(systemName, gameName, gameFilename, "covers")
-            OverlayWidget.ImageType.BOX_3D ->
+            Widget.ImageType.BOX_3D ->
                 findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
-            OverlayWidget.ImageType.MIX_IMAGE ->
+            Widget.ImageType.MIX_IMAGE ->
                 findImageInFolder(systemName, gameName, gameFilename, "miximages")
-            OverlayWidget.ImageType.BACK_COVER ->
+            Widget.ImageType.BACK_COVER ->
                 findImageInFolder(systemName, gameName, gameFilename, "backcovers")
-            OverlayWidget.ImageType.PHYSICAL_MEDIA ->
+            Widget.ImageType.PHYSICAL_MEDIA ->
                 findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
-            OverlayWidget.ImageType.SCREENSHOT ->
+            Widget.ImageType.SCREENSHOT ->
                 findImageInFolder(systemName, gameName, gameFilename, "screenshots")
-            OverlayWidget.ImageType.FANART ->
+            Widget.ImageType.FANART ->
                 findImageInFolder(systemName, gameName, gameFilename, "fanart")
-            OverlayWidget.ImageType.TITLE_SCREEN ->
+            Widget.ImageType.TITLE_SCREEN ->
                 findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
-            OverlayWidget.ImageType.GAME_DESCRIPTION -> null  // Text widget
-            OverlayWidget.ImageType.SYSTEM_LOGO -> null
+            Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget
+            Widget.ImageType.SYSTEM_LOGO -> null
         }
     }
 
@@ -5311,11 +5330,11 @@ Access this help anytime from the widget menu!
      * Create widget instance with appropriate image path or description
      */
     private fun createWidgetForGame(
-        widget: OverlayWidget,
+        widget: Widget,
         systemName: String,
         gameName: String,
         gameFilename: String
-    ): OverlayWidget {
+    ): Widget {
         android.util.Log.d("MainActivity", "  Looking for images for: $gameName")
 
         val imageFile = findWidgetImageFile(widget, systemName, gameName, gameFilename)
@@ -5325,7 +5344,7 @@ Access this help anytime from the widget menu!
 
         return when {
             // Handle description text widget
-            widget.imageType == OverlayWidget.ImageType.GAME_DESCRIPTION -> {
+            widget.imageType == Widget.ImageType.GAME_DESCRIPTION -> {
                 val description = getGameDescription(systemName, gameFilename)
                 android.util.Log.d("MainActivity", "  Updating description widget: ${description?.take(50)}")
                 widget.copy(imagePath = description ?: "")
@@ -5339,7 +5358,7 @@ Access this help anytime from the widget menu!
             else -> {
                 android.util.Log.d("MainActivity", "  No valid image found, using empty path")
                 // Store game name in widget ID for marquee text fallback
-                if (widget.imageType == OverlayWidget.ImageType.MARQUEE) {
+                if (widget.imageType == Widget.ImageType.MARQUEE) {
                     widget.copy(
                         imagePath = "",
                         id = "widget_${gameName}"
@@ -5359,7 +5378,7 @@ Access this help anytime from the widget menu!
         val allWidgets = widgetManager.loadWidgets()
 
         // Filter for GAME context widgets only
-        val gameWidgets = allWidgets.filter { it.widgetContext == OverlayWidget.WidgetContext.GAME }
+        val gameWidgets = allWidgets.filter { it.widgetContext == Widget.WidgetContext.GAME }
         android.util.Log.d("MainActivity", "Loaded ${gameWidgets.size} game widgets from storage")
 
         // Clear existing widget views
@@ -5419,27 +5438,30 @@ Access this help anytime from the widget menu!
         }
     }
 
-    private fun addWidgetToScreenWithoutSaving(widget: OverlayWidget) {
+    private fun addWidgetToScreenWithoutSaving(widget: Widget) {
         // Create a variable to hold the widget view reference
         var widgetViewRef: WidgetView? = null
 
         val widgetView = WidgetView(
-                this,
-        widget,
-        onDelete = { view ->
-            removeWidget(view)
-        },
-        onUpdate = { updatedWidget ->
-            // Update the widget in storage
-            val allWidgets = widgetManager.loadWidgets().toMutableList()
-            val widgetIndex = allWidgets.indexOfFirst { it.id == updatedWidget.id }
-            if (widgetIndex != -1) {
-                allWidgets[widgetIndex] = updatedWidget
-                widgetManager.saveWidgets(allWidgets)
-                android.util.Log.d("MainActivity", "Widget ${updatedWidget.id} updated: pos=(${updatedWidget.x}, ${updatedWidget.y}), size=(${updatedWidget.width}, ${updatedWidget.height})")
-            }
-        },
-        imageManager = imageManager
+            this,
+            widget,
+            onDelete = { view ->
+                removeWidget(view)
+            },
+            onUpdate = { updatedWidget ->
+                // Update the widget in storage
+                val allWidgets = widgetManager.loadWidgets().toMutableList()
+                val widgetIndex = allWidgets.indexOfFirst { it.id == updatedWidget.id }
+                if (widgetIndex != -1) {
+                    allWidgets[widgetIndex] = updatedWidget
+                    widgetManager.saveWidgets(allWidgets)
+                    Log.d(
+                        "MainActivity",
+                        "Widget ${updatedWidget.id} updated: pos=(${updatedWidget.x}, ${updatedWidget.y}), size=(${updatedWidget.width}, ${updatedWidget.height})"
+                    )
+                }
+            },
+            imageManager = imageManager
         )
 
         widgetViewRef = widgetView
@@ -5492,9 +5514,9 @@ Access this help anytime from the widget menu!
 
         // Determine which context we're currently in
         val currentContext = if (state is AppState.SystemBrowsing) {
-            OverlayWidget.WidgetContext.SYSTEM
+            Widget.WidgetContext.SYSTEM
         } else {
-            OverlayWidget.WidgetContext.GAME
+            Widget.WidgetContext.GAME
         }
         android.util.Log.d("MainActivity", "Current context: $currentContext")
 
@@ -5627,9 +5649,9 @@ Access this help anytime from the widget menu!
 
         // Determine which context we're currently in
         val currentContext = if (state is AppState.SystemBrowsing) {
-            OverlayWidget.WidgetContext.SYSTEM
+            Widget.WidgetContext.SYSTEM
         } else {
-            OverlayWidget.WidgetContext.GAME
+            Widget.WidgetContext.GAME
         }
         android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex: Current context: $currentContext")
 

@@ -478,9 +478,6 @@
 
                 </LinearLayout>
 
-                <!-- ========== MUSIC SETTINGS START ========== -->
-                <!-- DELETE THIS SECTION when removing music feature -->
-
                 <!-- Master Music Toggle -->
                 <TextView
                     android:layout_width="match_parent"
@@ -928,8 +925,6 @@
                     </LinearLayout>
 
                 </LinearLayout>
-
-                <!-- ========== MUSIC SETTINGS END ========== -->
 
                 <!-- Crossfade -->
                 <TextView

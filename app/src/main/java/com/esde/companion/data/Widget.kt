@@ -2,7 +2,7 @@ package com.esde.companion.data
 
 import java.util.UUID
 
-data class OverlayWidget(
+data class Widget(
     val id: String = UUID.randomUUID().toString(),
     val imageType: ImageType,
     val imagePath: String,

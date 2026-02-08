@@ -1,4 +1,4 @@
-package com.esde.companion
+package com.esde.companion.ui
 
 import android.content.Context
 import android.graphics.Canvas

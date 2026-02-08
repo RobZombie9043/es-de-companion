@@ -3,7 +3,7 @@ package com.esde.companion.managers
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.esde.companion.data.OverlayWidget
+import com.esde.companion.data.Widget
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -12,7 +12,7 @@ class WidgetManager(private val context: Context) {
         context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
 
-    fun saveWidgets(widgets: List<OverlayWidget>) {
+    fun saveWidgets(widgets: List<Widget>) {
         // ========== START: Convert to percentages before saving ==========
         val displayMetrics = context.resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
@@ -28,10 +28,10 @@ class WidgetManager(private val context: Context) {
         prefs.edit { putString("widgets", json) }
     }
 
-    fun loadWidgets(): List<OverlayWidget> {
+    fun loadWidgets(): List<Widget> {
         val json = prefs.getString("widgets", null) ?: return emptyList()
-        val type = object : TypeToken<List<OverlayWidget>>() {}.type
-        val widgets: List<OverlayWidget> = gson.fromJson(json, type)
+        val type = object : TypeToken<List<Widget>>() {}.type
+        val widgets: List<Widget> = gson.fromJson(json, type)
 
         // ========== START: Convert from percentages after loading ==========
         val displayMetrics = context.resources.displayMetrics

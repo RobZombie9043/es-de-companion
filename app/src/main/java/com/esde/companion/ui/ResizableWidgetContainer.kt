@@ -1,9 +1,9 @@
-package com.esde.companion
+package com.esde.companion.ui
 
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
-import android.widget.RelativeLayout  // Changed from FrameLayout
+import android.widget.RelativeLayout
 
 class ResizableWidgetContainer @JvmOverloads constructor(
     context: Context,

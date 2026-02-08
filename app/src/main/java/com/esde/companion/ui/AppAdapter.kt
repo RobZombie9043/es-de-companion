@@ -1,4 +1,4 @@
-package com.esde.companion
+package com.esde.companion.ui
 
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.esde.companion.R
 import com.esde.companion.managers.AppLaunchManager
 
 class AppAdapter(

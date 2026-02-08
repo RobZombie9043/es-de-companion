@@ -40,15 +40,13 @@
         android:cropToPadding="false" />
 
     <!-- Widget Container (for overlay widgets) -->
-    <com.esde.companion.ResizableWidgetContainer
+    <com.esde.companion.ui.ResizableWidgetContainer
         android:id="@+id/widgetContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="false"
         android:focusable="false" />
 
-    <!-- ========== MUSIC INTEGRATION START ========== -->
-    <!-- DELETE THIS SECTION when removing music feature (FeatureFlags.ENABLE_BACKGROUND_MUSIC) -->
     <LinearLayout
         android:id="@+id/songTitleOverlay"
         android:layout_width="wrap_content"
@@ -115,7 +113,6 @@
                 android:padding="8dp" />
         </LinearLayout>
     </LinearLayout>
-    <!-- ========== MUSIC INTEGRATION END ========== -->
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"

@@ -5,7 +5,7 @@ import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.esde.companion.AppState
+import com.esde.companion.data.AppState
 import com.esde.companion.data.AppConstants
 import com.esde.companion.data.MusicSource
 import java.io.File
