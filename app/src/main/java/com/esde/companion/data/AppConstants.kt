@@ -108,8 +108,8 @@ object AppConstants {
 
         // System scrolling debounce
         const val SYSTEM_FAST_SCROLL_THRESHOLD = 250L  // If faster than this, it's "fast scrolling"
-        const val SYSTEM_FAST_SCROLL_DELAY = 300L      // Delay for fast scrolling
-        const val SYSTEM_SLOW_SCROLL_DELAY = 150L      // Delay for slow scrolling
+        const val SYSTEM_FAST_SCROLL_DELAY = 50L      // Delay for fast scrolling
+        const val SYSTEM_SLOW_SCROLL_DELAY = 25L      // Delay for slow scrolling
 
         // Game scrolling (no debounce for instant response)
         const val GAME_FAST_SCROLL_THRESHOLD = 250L

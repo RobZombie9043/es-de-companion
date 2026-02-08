@@ -1911,7 +1911,7 @@ Access this help anytime from the widget menu!
                             path == AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG)) {
                     // Debounce: ignore events that happen too quickly
                     val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastEventTime < 100) {
+                    if (currentTime - lastEventTime < 50) {
                         return
                     }
                     lastEventTime = currentTime
@@ -2098,7 +2098,7 @@ Access this help anytime from the widget menu!
                                     handleScreensaverGameSelect()
                                 }
                             }
-                        }, 50) // 50ms delay to ensure file is written
+                        }, 25) // 25ms delay to ensure file is written
                     }
                 }
             }
