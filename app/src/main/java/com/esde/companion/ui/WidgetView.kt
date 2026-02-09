@@ -451,20 +451,54 @@ class WidgetView(
         if (widget.imageType == Widget.ImageType.CUSTOM_IMAGE) {
             val file = File(widget.imagePath)
             if (file.exists()) {
-                val effectiveScaleType = widget.scaleType ?: Widget.ScaleType.FIT
+                val extension = file.extension.lowercase()
 
-                imageManager.loadWidgetImage(
-                    imageView = imageView,
-                    imagePath = file.absolutePath,
-                    scaleType = effectiveScaleType,
-                    onLoaded = {
-                        Log.d("WidgetView", "Custom image loaded: ${file.name}")
-                    },
-                    onFailed = {
-                        Log.w("WidgetView", "Failed to load custom image: ${file.absolutePath}")
+                // Check if it's an SVG file
+                if (extension == "svg") {
+                    // Load SVG using AndroidSVG (same as system logos)
+                    Log.d("WidgetView", "Loading SVG custom image: ${file.name}")
+
+                    val svgDrawable = try {
+                        val svg = com.caverock.androidsvg.SVG.getFromInputStream(file.inputStream())
+
+                        // Set SVG dimensions to match widget size
+                        svg.documentWidth = widget.width
+                        svg.documentHeight = widget.height
+
+                        // Create drawable from SVG
+                        android.graphics.drawable.PictureDrawable(svg.renderToPicture())
+                    } catch (e: Exception) {
+                        Log.e("WidgetView", "Failed to load SVG: ${file.absolutePath}", e)
+                        null
+                    }
+
+                    if (svgDrawable != null) {
+                        imageView.scaleType = when (widget.scaleType ?: Widget.ScaleType.FIT) {
+                            Widget.ScaleType.FIT -> ImageView.ScaleType.FIT_CENTER
+                            Widget.ScaleType.CROP -> ImageView.ScaleType.CENTER_CROP
+                        }
+                        imageView.setImageDrawable(svgDrawable)
+                        Log.d("WidgetView", "SVG custom image loaded successfully")
+                    } else {
                         imageView.setImageDrawable(null)
                     }
-                )
+                } else {
+                    // Load bitmap image via ImageManager (PNG, JPG, WEBP, GIF)
+                    val effectiveScaleType = widget.scaleType ?: Widget.ScaleType.FIT
+
+                    imageManager.loadWidgetImage(
+                        imageView = imageView,
+                        imagePath = file.absolutePath,
+                        scaleType = effectiveScaleType,
+                        onLoaded = {
+                            Log.d("WidgetView", "Custom image loaded: ${file.name}")
+                        },
+                        onFailed = {
+                            Log.w("WidgetView", "Failed to load custom image: ${file.absolutePath}")
+                            imageView.setImageDrawable(null)
+                        }
+                    )
+                }
             } else {
                 Log.e("WidgetView", "Custom image file not found: ${widget.imagePath}")
                 imageView.setImageDrawable(null)

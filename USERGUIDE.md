@@ -181,6 +181,10 @@ Widgets are customizable overlay elements that display game and system artwork o
 | Widget Type | Description |
 |------------|-------------|
 | **System Logo** | Shows current system's logo (built-in or custom) |
+| **Random Fanart** | Displays random fanart from any game in the system |
+| **Random Screenshot** | Displays random screenshot from any game in the system |
+| **Color Background** | Solid color panel with adjustable transparency |
+| **Custom Image** | User-selected image from device |
 
 #### Game View Widgets
 
@@ -196,6 +200,8 @@ Widgets are customizable overlay elements that display game and system artwork o
 | **Back Cover** | Back of game box | `backcovers/` |
 | **Physical Media** | Disc/cartridge artwork | `physicalmedia/` |
 | **Game Description** | Scrollable text description | (from gamelist.xml) |
+| **Color Background** | Solid color panel with adjustable transparency | N/A |
+| **Custom Image** | User-selected image from device | N/A |
 
 ### Widget Edit Mode
 

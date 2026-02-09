@@ -102,6 +102,8 @@ ES-DE Companion supports these widget types:
 
 **Artwork Widgets:**
 - **System Logo**: Shows the current system's logo (system view only)
+- **Random Fanart**: Random fanart from current system (system view only)
+- **Random Screenshot**: Random screenshot from current system (system view only)
 - **Marquee**: Game logo artwork
 - **2D Box**: Front cover of the game box
 - **3D Box**: 3D perspective box art
@@ -114,6 +116,8 @@ ES-DE Companion supports these widget types:
 
 **Special Widgets:**
 - **Game Description**: Scrollable text description of the game
+- **Color Background**: Solid color panel with selectable color and opacity (both views)
+- **Custom Image**: User-selected image from device storage (both views)
 
 ### How do I layer widgets (control which appears on top)?
 
