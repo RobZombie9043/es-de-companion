@@ -63,6 +63,7 @@ import com.esde.companion.managers.MediaManager
 import com.esde.companion.managers.PreferencesManager
 import com.esde.companion.managers.ScriptManager
 import com.esde.companion.managers.VideoManager
+import com.esde.companion.managers.WidgetCreationManager
 import com.esde.companion.managers.WidgetManager
 import com.esde.companion.ui.AppAdapter
 import com.esde.companion.ui.GridOverlayView
@@ -86,6 +87,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediaManager: MediaManager
     private lateinit var imageManager: ImageManager
     private lateinit var videoManager: VideoManager
+    lateinit var widgetCreationManager: WidgetCreationManager
 
     private lateinit var songTitleOverlay: LinearLayout
     private lateinit var songTitleText: TextView
@@ -524,6 +526,7 @@ class MainActivity : AppCompatActivity() {
         appLaunchPrefs = AppLaunchManager(this)
         mediaManager = MediaManager(prefsManager)
         imageManager = ImageManager(this, prefsManager)
+        widgetCreationManager = WidgetCreationManager(this, this)
 
         // Initialize VideoManager (must be after videoView is initialized)
         // Note: videoView initialization happens in findViewById calls below
@@ -4308,8 +4311,12 @@ Access this help anytime from the widget menu!
                         findImageInFolder(systemName, gameName, gameFilename, "fanart")
                     Widget.ImageType.TITLE_SCREEN ->
                         findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
-                    Widget.ImageType.GAME_DESCRIPTION -> null  // NEW: Text widget, handled separately
+                    Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget, handled separately
                     Widget.ImageType.SYSTEM_LOGO -> null
+                    Widget.ImageType.COLOR_BACKGROUND -> null  // NEW: No file needed
+                    Widget.ImageType.CUSTOM_IMAGE -> null      // NEW: Path already set
+                    Widget.ImageType.RANDOM_FANART -> null     // NEW: Path set in system widget loading
+                    Widget.ImageType.RANDOM_SCREENSHOT -> null // NEW: Path set in system widget loading
                 }
 
                 // ALWAYS create the widget, even if image doesn't exist
@@ -4658,10 +4665,20 @@ Access this help anytime from the widget menu!
             this,
             widget,
             onDelete = { view ->
-                // delete handler
+                // Remove from container and active list
+                widgetContainer.removeView(view)
+                activeWidgets.remove(view)
+
+                // Delete from persistent storage
+                widgetManager.deleteWidget(view.widget.id)
+
+                android.util.Log.d("MainActivity", "Widget deleted: ${view.widget.id}")
             },
             onUpdate = { updatedWidget ->
-                // update handler
+                // Save all widgets with the updated widget
+                saveAllWidgets()
+
+                android.util.Log.d("MainActivity", "Widget updated: ${updatedWidget.id}")
             },
             imageManager = imageManager
         )
@@ -4764,10 +4781,16 @@ Access this help anytime from the widget menu!
 
         // Populate widget options based on current view
         val widgetOptions = if (state is AppState.SystemBrowsing) {
-            // System view - only system logo option
-            listOf("System Logo" to Widget.ImageType.SYSTEM_LOGO)
+            // System view - system logo + random artwork + color/image widgets
+            listOf(
+                "System Logo" to Widget.ImageType.SYSTEM_LOGO,
+                "Random Fanart" to Widget.ImageType.RANDOM_FANART,
+                "Random Screenshot" to Widget.ImageType.RANDOM_SCREENSHOT,
+                "Color Background" to Widget.ImageType.COLOR_BACKGROUND,
+                "Custom Image" to Widget.ImageType.CUSTOM_IMAGE
+            )
         } else {
-            // Game view - all game image types
+            // Game view - all game image types + color/image widgets
             listOf(
                 "Marquee" to Widget.ImageType.MARQUEE,
                 "2D Box" to Widget.ImageType.BOX_2D,
@@ -4778,7 +4801,9 @@ Access this help anytime from the widget menu!
                 "Screenshot" to Widget.ImageType.SCREENSHOT,
                 "Fanart" to Widget.ImageType.FANART,
                 "Title Screen" to Widget.ImageType.TITLE_SCREEN,
-                "Game Description" to Widget.ImageType.GAME_DESCRIPTION
+                "Game Description" to Widget.ImageType.GAME_DESCRIPTION,
+                "Color Background" to Widget.ImageType.COLOR_BACKGROUND,
+                "Custom Image" to Widget.ImageType.CUSTOM_IMAGE
             )
         }
 
@@ -4867,6 +4892,108 @@ Access this help anytime from the widget menu!
     private fun createWidget(imageType: Widget.ImageType) {
         val displayMetrics = resources.displayMetrics
         val nextZIndex = (activeWidgets.maxOfOrNull { it.widget.zIndex } ?: -1) + 1
+
+        // Determine current context
+        val currentContext = if (state is AppState.SystemBrowsing) {
+            Widget.WidgetContext.SYSTEM
+        } else {
+            Widget.WidgetContext.GAME
+        }
+
+        // Handle Color Background widget
+        if (imageType == Widget.ImageType.COLOR_BACKGROUND) {
+            widgetCreationManager.showColorPickerDialog { selectedColor ->
+                val widget = widgetCreationManager.createColorBackgroundWidget(
+                    color = selectedColor,
+                    displayMetrics = displayMetrics,
+                    zIndex = nextZIndex,
+                    widgetContext = currentContext
+                )
+                widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)  // ADD THIS LINE
+                addWidgetToScreen(widget)
+                saveAllWidgets()
+
+                android.widget.Toast.makeText(
+                    this,
+                    "Color background widget created!",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            return
+        }
+
+        // Handle Custom Image widget
+        if (imageType == Widget.ImageType.CUSTOM_IMAGE) {
+            widgetCreationManager.launchImagePicker { imagePath ->
+                val widget = widgetCreationManager.createCustomImageWidget(
+                    imagePath = imagePath,
+                    displayMetrics = displayMetrics,
+                    zIndex = nextZIndex,
+                    widgetContext = currentContext
+                )
+                widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)  // ADD THIS LINE
+                addWidgetToScreen(widget)
+                saveAllWidgets()
+
+                android.widget.Toast.makeText(
+                    this,
+                    "Custom image widget created!",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            return
+        }
+
+        // Handle Random Fanart and Random Screenshot widgets (system view only)
+        if (imageType == Widget.ImageType.RANDOM_FANART || imageType == Widget.ImageType.RANDOM_SCREENSHOT) {
+            val systemName = state.getCurrentSystemName()
+
+            if (systemName == null) {
+                android.widget.Toast.makeText(
+                    this,
+                    "No system selected",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+
+            // Find a random image from the appropriate folder
+            val folderName = if (imageType == Widget.ImageType.RANDOM_FANART) "fanart" else "screenshots"
+            val randomImage = mediaManager.getRandomImageFromSystemFolder(systemName, folderName)
+
+            if (randomImage == null) {
+                android.widget.Toast.makeText(
+                    this,
+                    "No ${folderName} found for ${systemName}. Scrape artwork in ES-DE first.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+
+            // Create widget with special "random://" prefix to indicate it needs refresh on system change
+            val widget = Widget(
+                imageType = imageType,
+                imagePath = "random://$systemName",  // Special prefix for random selection
+                x = displayMetrics.widthPixels / 2f - 150f,
+                y = displayMetrics.heightPixels / 2f - 200f,
+                width = 300f,
+                height = 400f,
+                zIndex = nextZIndex,
+                widgetContext = Widget.WidgetContext.SYSTEM
+            )
+
+            widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)
+            addWidgetToScreen(widget)
+            saveAllWidgets()
+
+            val widgetTypeName = if (imageType == Widget.ImageType.RANDOM_FANART) "Random fanart" else "Random screenshot"
+            android.widget.Toast.makeText(
+                this,
+                "$widgetTypeName widget created!",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            return
+        }
 
         if (imageType == Widget.ImageType.SYSTEM_LOGO) {
             // Creating system widget
@@ -5073,7 +5200,7 @@ Access this help anytime from the widget menu!
         }
     }
 
-    private fun updateWidgetsForCurrentSystem() {
+    fun updateWidgetsForCurrentSystem() {
         android.util.Log.d("MainActivity", "═══ updateWidgetsForCurrentSystem START ═══")
         android.util.Log.d("MainActivity", "Current state: $state")
 
@@ -5112,12 +5239,40 @@ Access this help anytime from the widget menu!
             sortedWidgets.forEachIndexed { index, widget ->
                 android.util.Log.d("MainActivity", "Processing system widget $index: type=${widget.imageType}, zIndex=${widget.zIndex}")
 
-                // System logos always use builtin:// prefix - WidgetView handles finding custom vs built-in
-                // Normalize system name to handle auto-collections
-                val normalizedName = normalizeSystemName(systemName)
-                val widgetToAdd = widget.copy(imagePath = "builtin://$normalizedName")
-                android.util.Log.d("MainActivity", "  System logo path: builtin://$normalizedName")
-                android.util.Log.d("MainActivity", "  Creating system widget with logo")
+                val widgetToAdd = when (widget.imageType) {
+                    // Handle random artwork widgets
+                    Widget.ImageType.RANDOM_FANART -> {
+                        val folderName = "fanart"
+                        val randomImage = mediaManager.getRandomImageFromSystemFolder(systemName, folderName)
+
+                        if (randomImage != null) {
+                            widget.copy(imagePath = randomImage.absolutePath)
+                        } else {
+                            android.util.Log.w("MainActivity", "No fanart found for $systemName")
+                            widget.copy(imagePath = "")  // Will show empty widget
+                        }
+                    }
+
+                    Widget.ImageType.RANDOM_SCREENSHOT -> {
+                        val folderName = "screenshots"
+                        val randomImage = mediaManager.getRandomImageFromSystemFolder(systemName, folderName)
+
+                        if (randomImage != null) {
+                            widget.copy(imagePath = randomImage.absolutePath)
+                        } else {
+                            android.util.Log.w("MainActivity", "No screenshots found for $systemName")
+                            widget.copy(imagePath = "")
+                        }
+                    }
+
+                    Widget.ImageType.SYSTEM_LOGO -> {
+                        // System logos always use builtin:// prefix
+                        val normalizedName = normalizeSystemName(systemName)
+                        widget.copy(imagePath = "builtin://$normalizedName")
+                    }
+
+                    else -> widget  // Color background, custom image - use as-is
+                }
 
                 addWidgetToScreenWithoutSaving(widgetToAdd)
                 android.util.Log.d("MainActivity", "  System widget added to screen")
@@ -5270,7 +5425,7 @@ Access this help anytime from the widget menu!
             .replace("&#39;", "'")
     }
 
-    private fun updateWidgetsForCurrentGame() {
+    fun updateWidgetsForCurrentGame() {
         android.util.Log.d("MainActivity", "═══ updateWidgetsForCurrentGame START ═══")
         android.util.Log.d("MainActivity", "Current state: $state")
 
@@ -5345,6 +5500,10 @@ Access this help anytime from the widget menu!
                 findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
             Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget
             Widget.ImageType.SYSTEM_LOGO -> null
+            Widget.ImageType.COLOR_BACKGROUND -> null  // NEW: No file needed
+            Widget.ImageType.CUSTOM_IMAGE -> null      // NEW: Path already set
+            Widget.ImageType.RANDOM_FANART -> null     // NEW: Path set dynamically
+            Widget.ImageType.RANDOM_SCREENSHOT -> null // NEW: Path set dynamically
         }
         // If primary found, return it
         if (primaryFile != null) return primaryFile
@@ -5374,18 +5533,32 @@ Access this help anytime from the widget menu!
     ): Widget {
         android.util.Log.d("MainActivity", "  Looking for images for: $gameName")
 
+        // Handle special widget types that don't need image file lookup
+        when (widget.imageType) {
+            Widget.ImageType.GAME_DESCRIPTION -> {
+                val description = getGameDescription(systemName, gameFilename)
+                android.util.Log.d("MainActivity", "  Updating description widget: ${description?.take(50)}")
+                return widget.copy(imagePath = description ?: "")
+            }
+            Widget.ImageType.COLOR_BACKGROUND -> {
+                android.util.Log.d("MainActivity", "  Color background widget - using as-is")
+                return widget  // Use widget as-is, no file lookup needed
+            }
+            Widget.ImageType.CUSTOM_IMAGE -> {
+                android.util.Log.d("MainActivity", "  Custom image widget - using as-is")
+                return widget  // Use widget as-is, path already set
+            }
+            else -> {
+                // Continue to normal image file lookup for game artwork widgets
+            }
+        }
+
         val imageFile = findWidgetImageFile(widget, systemName, gameName, gameFilename)
 
         android.util.Log.d("MainActivity", "  Image file: ${imageFile?.absolutePath ?: "NULL"}")
         android.util.Log.d("MainActivity", "  Image exists: ${imageFile?.exists()}")
 
         return when {
-            // Handle description text widget
-            widget.imageType == Widget.ImageType.GAME_DESCRIPTION -> {
-                val description = getGameDescription(systemName, gameFilename)
-                android.util.Log.d("MainActivity", "  Updating description widget: ${description?.take(50)}")
-                widget.copy(imagePath = description ?: "")
-            }
             // Handle image widgets
             imageFile != null && imageFile.exists() -> {
                 android.util.Log.d("MainActivity", "  Creating widget with new image")

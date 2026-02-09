@@ -174,4 +174,50 @@ class MediaManager(private val prefsManager: PreferencesManager) {
         Log.d("MediaFileLocator", "Extracted subfolder: '$result' from path: $fullPath")
         return result
     }
+
+    /**
+     * Get a random image file from a system's media folder.
+     *
+     * @param systemName The ES-DE system name
+     * @param folderName Media folder (e.g., "fanart", "screenshots")
+     * @return Random image file, or null if folder is empty
+     */
+    fun getRandomImageFromSystemFolder(systemName: String, folderName: String): File? {
+        val mediaPath = prefsManager.mediaPath
+        val dir = File(mediaPath, "$systemName/$folderName")
+
+        if (!dir.exists() || !dir.isDirectory) {
+            android.util.Log.w("MediaManager", "Directory doesn't exist: ${dir.absolutePath}")
+            return null
+        }
+
+        // Recursively find all image files in directory (including subfolders)
+        val allImages = mutableListOf<File>()
+        collectImageFiles(dir, allImages)
+
+        if (allImages.isEmpty()) {
+            android.util.Log.w("MediaManager", "No images found in: ${dir.absolutePath}")
+            return null
+        }
+
+        val randomImage = allImages.random()
+        android.util.Log.d("MediaManager", "Selected random image from ${allImages.size} total: ${randomImage.name}")
+        return randomImage
+    }
+
+    /**
+     * Recursively collect all image files from a directory.
+     */
+    private fun collectImageFiles(dir: File, accumulator: MutableList<File>) {
+        if (!dir.exists() || !dir.isDirectory) return
+
+        dir.listFiles()?.forEach { file ->
+            when {
+                file.isDirectory -> collectImageFiles(file, accumulator)
+                file.isFile && file.extension.lowercase() in IMAGE_EXTENSIONS -> {
+                    accumulator.add(file)
+                }
+            }
+        }
+    }
 }

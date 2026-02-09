@@ -13,12 +13,12 @@ data class Widget(
     var zIndex: Int = 0,
     var backgroundOpacity: Float = 0.2f,
     var scaleType: ScaleType = ScaleType.FIT,
-    val widgetContext: WidgetContext = WidgetContext.GAME,  // ← ADD COMMA HERE
-    // Store positions and sizes as percentages for cross-resolution support
+    val widgetContext: WidgetContext = WidgetContext.GAME,
     var xPercent: Float? = null,
     var yPercent: Float? = null,
     var widthPercent: Float? = null,
-    var heightPercent: Float? = null
+    var heightPercent: Float? = null,
+    var solidColor: String? = null  // NEW: Store color as hex string (e.g., "#FF5733")
 ) {
     enum class ImageType {
         MARQUEE,
@@ -31,7 +31,11 @@ data class Widget(
         FANART,
         TITLE_SCREEN,
         SYSTEM_LOGO,
-        GAME_DESCRIPTION
+        GAME_DESCRIPTION,
+        COLOR_BACKGROUND,
+        CUSTOM_IMAGE,
+        RANDOM_FANART,
+        RANDOM_SCREENSHOT
     }
 
     enum class WidgetContext {

@@ -286,6 +286,17 @@ class WidgetView(
                 initialWidth = widget.width
                 initialHeight = widget.height
 
+                // If this widget is selected, user is working with it - block menu
+                if (isWidgetSelected) {
+                    val mainActivity = context as? MainActivity
+                    mainActivity?.cancelLongPress()
+                    android.util.Log.d(
+                        "WidgetView",
+                        "Selected widget touched - blocking long-press menu"
+                    )
+                }
+                // If unselected, allow long-press for menu access
+
                 // Check if touching any resize handle
                 val touchX = event.x
                 val touchY = event.y
@@ -294,20 +305,11 @@ class WidgetView(
                     if (resizeCorner != ResizeCorner.NONE) {
                         isResizing = true
                         parent.requestDisallowInterceptTouchEvent(true)
-
-                        // ========== START: Block long-press when resizing ==========
-                        // Cancel long-press immediately - resizing often involves pauses
-                        val mainActivity = context as? MainActivity
-                        mainActivity?.cancelLongPress()
-                        android.util.Log.d("WidgetView", "Resize handle touched - blocking long-press menu")
-                        // ========== END: Block long-press when resizing ==========
-
                         return true
                     }
                 }
 
-                // Not touching handle - this is a drag or selection tap
-                // Allow long-press to work normally (menu access for unselected widgets)
+                // Not touching handle - this is a drag or selection
                 isDragging = true
                 return true
             }
@@ -316,18 +318,13 @@ class WidgetView(
                 val deltaX = event.rawX - dragStartX
                 val deltaY = event.rawY - dragStartY
 
-                // ========== START: Use Android standard touch slop ==========
-                // Declare touchSlop once and use it for both checks
-                val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
-                // ========== END: Use Android standard touch slop ==========
-
-                // CHANGED: Request parent disallow immediately when resizing starts
+                // Request parent disallow immediately when resizing starts
                 if (isResizing) {
                     parent.requestDisallowInterceptTouchEvent(true)
                 }
 
-                // Use consistent touchSlop threshold for detecting movement
-                if (abs(deltaX) > touchSlop || abs(deltaY) > touchSlop) {
+                // Lower threshold for detecting movement
+                if (abs(deltaX) > 5 || abs(deltaY) > 5) {
                     if (isResizing || (isWidgetSelected && isDragging)) {
                         parent.requestDisallowInterceptTouchEvent(true)
                     }
@@ -355,8 +352,7 @@ class WidgetView(
 
                 val deltaX = event.rawX - dragStartX
                 val deltaY = event.rawY - dragStartY
-                val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
-                val wasMoved = abs(deltaX) > touchSlop || abs(deltaY) > touchSlop
+                val wasMoved = abs(deltaX) > 5 || abs(deltaY) > 5
                 val wasResized = isResizing  // Track if we were resizing
 
                 // Check for tap (to select/deselect)
@@ -429,7 +425,89 @@ class WidgetView(
     }
 
     private fun loadWidgetImage() {
-        // NEW: Handle text-based widgets (game description) FIRST, before checking if path is empty
+        // Handle Color Background Widget
+        if (widget.imageType == Widget.ImageType.COLOR_BACKGROUND) {
+            val color = try {
+                android.graphics.Color.parseColor(widget.solidColor ?: "#808080")
+            } catch (e: Exception) {
+                android.graphics.Color.GRAY  // Fallback
+            }
+
+            // Apply opacity to color
+            val alpha = (widget.backgroundOpacity * 255).toInt().coerceIn(0, 255)
+            val colorWithAlpha = android.graphics.Color.argb(
+                alpha,
+                android.graphics.Color.red(color),
+                android.graphics.Color.green(color),
+                android.graphics.Color.blue(color)
+            )
+
+            imageView.setImageDrawable(android.graphics.drawable.ColorDrawable(colorWithAlpha))
+            imageView.scaleType = ImageView.ScaleType.FIT_XY
+            Log.d("WidgetView", "Color background widget rendered: ${widget.solidColor} @ ${widget.backgroundOpacity * 100}%")
+            return
+        }
+        // Handle Custom Image Widget
+        if (widget.imageType == Widget.ImageType.CUSTOM_IMAGE) {
+            val file = File(widget.imagePath)
+            if (file.exists()) {
+                val effectiveScaleType = widget.scaleType ?: Widget.ScaleType.FIT
+
+                imageManager.loadWidgetImage(
+                    imageView = imageView,
+                    imagePath = file.absolutePath,
+                    scaleType = effectiveScaleType,
+                    onLoaded = {
+                        Log.d("WidgetView", "Custom image loaded: ${file.name}")
+                    },
+                    onFailed = {
+                        Log.w("WidgetView", "Failed to load custom image: ${file.absolutePath}")
+                        imageView.setImageDrawable(null)
+                    }
+                )
+            } else {
+                Log.e("WidgetView", "Custom image file not found: ${widget.imagePath}")
+                imageView.setImageDrawable(null)
+            }
+            return
+        }
+
+        // Handle Random Artwork Widgets
+        if (widget.imageType == Widget.ImageType.RANDOM_FANART ||
+            widget.imageType == Widget.ImageType.RANDOM_SCREENSHOT) {
+
+            // Check if we have a real file path (set by updateWidgetsForCurrentSystem)
+            if (widget.imagePath.isEmpty() || widget.imagePath.startsWith("random://")) {
+                // No image available
+                imageView.setImageDrawable(null)
+                Log.w("WidgetView", "No image available for random artwork widget")
+                return
+            }
+
+            val file = File(widget.imagePath)
+            if (file.exists()) {
+                val effectiveScaleType = widget.scaleType ?: Widget.ScaleType.FIT
+
+                imageManager.loadWidgetImage(
+                    imageView = imageView,
+                    imagePath = file.absolutePath,
+                    scaleType = effectiveScaleType,
+                    onLoaded = {
+                        Log.d("WidgetView", "Random artwork loaded: ${file.name}")
+                    },
+                    onFailed = {
+                        Log.w("WidgetView", "Failed to load random artwork: ${file.absolutePath}")
+                        imageView.setImageDrawable(null)
+                    }
+                )
+            } else {
+                Log.e("WidgetView", "Random artwork file not found: ${widget.imagePath}")
+                imageView.setImageDrawable(null)
+            }
+            return
+        }
+
+        // Handle text-based widgets (game description) FIRST, before checking if path is empty
         if (widget.imageType == Widget.ImageType.GAME_DESCRIPTION) {
             imageView.visibility = GONE
 
@@ -783,25 +861,29 @@ class WidgetView(
     fun setBackgroundOpacity(opacity: Float) {
         Log.d("WidgetView", "setBackgroundOpacity called for widget type: ${widget.imageType}, opacity: $opacity")
 
-        // Only apply to THIS widget if it's a Game Description
-        if (widget.imageType != Widget.ImageType.GAME_DESCRIPTION) {
-            Log.d("WidgetView", "Not a Game Description widget, ignoring opacity change")
-            return
-        }
-
         widget.backgroundOpacity = opacity
 
-        // Apply opacity to the text background
-        val alpha = (opacity * 255).toInt().coerceIn(0, 255)
+        when (widget.imageType) {
+            Widget.ImageType.GAME_DESCRIPTION -> {
+                // Apply opacity to text background
+                val alpha = (opacity * 255).toInt().coerceIn(0, 255)
+                scrollView.setBackgroundColor(Color.argb(alpha, 0, 0, 0))
+                textView.setBackgroundColor(Color.TRANSPARENT)
 
-        // Set background on scrollView
-        scrollView.setBackgroundColor(Color.argb(alpha, 0, 0, 0))
-        textView.setBackgroundColor(Color.TRANSPARENT)
+                if (alpha == 0) {
+                    this.setBackgroundColor(Color.TRANSPARENT)
+                }
+            }
 
-        // Also set the parent container background if needed
-        if (alpha == 0) {
-            // At 0%, make the container transparent (but only for this specific widget view)
-            this.setBackgroundColor(Color.TRANSPARENT)
+            Widget.ImageType.COLOR_BACKGROUND -> {
+                // Reload color with new opacity
+                loadWidgetImage()
+            }
+
+            else -> {
+                Log.d("WidgetView", "Widget type ${widget.imageType} doesn't support opacity")
+                return
+            }
         }
 
         Log.d("WidgetView", "About to save all widgets")
@@ -874,6 +956,10 @@ class WidgetView(
             Widget.ImageType.TITLE_SCREEN -> "Title Screen"
             Widget.ImageType.GAME_DESCRIPTION -> "Game Description"
             Widget.ImageType.SYSTEM_LOGO -> "System Logo"
+            Widget.ImageType.COLOR_BACKGROUND -> "Color Background"
+            Widget.ImageType.CUSTOM_IMAGE -> "Custom Image"
+            Widget.ImageType.RANDOM_FANART -> "Random Fanart"
+            Widget.ImageType.RANDOM_SCREENSHOT -> "Random Screenshot"
         }
 
         // Inflate the custom dialog view
@@ -905,8 +991,9 @@ class WidgetView(
         val currentZIndex = widget.zIndex
         dialogWidgetZIndex.text = "Current zIndex: $currentZIndex"
 
-        // Show scale type control for all image widgets (NOT for Game Description)
-        if (widget.imageType != Widget.ImageType.GAME_DESCRIPTION) {
+        // Show scale type control for all image widgets (NOT for Game Description or Color Background)
+        if (widget.imageType != Widget.ImageType.GAME_DESCRIPTION &&
+            widget.imageType != Widget.ImageType.COLOR_BACKGROUND) {
             scaleTypeControlSection.visibility = VISIBLE
             scaleTypeDivider.visibility = VISIBLE
 
@@ -943,8 +1030,10 @@ class WidgetView(
             scaleTypeDivider.visibility = GONE
         }
 
-        // Show opacity control only for Game Description
-        if (widget.imageType == Widget.ImageType.GAME_DESCRIPTION) {
+        // Show opacity control for Color Background AND Game Description
+        if (widget.imageType == Widget.ImageType.COLOR_BACKGROUND ||
+            widget.imageType == Widget.ImageType.GAME_DESCRIPTION) {
+
             opacityControlSection.visibility = VISIBLE
 
             // Set initial opacity value (convert from 0.0-1.0 to 0-20 steps)
@@ -956,9 +1045,9 @@ class WidgetView(
             // Opacity slider listener (5% increments)
             opacitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    val opacityPercent = progress * 5  // Convert step to percentage
+                    val opacityPercent = progress * 5
                     opacityText.text = "$opacityPercent%"
-                    val opacity = progress / 20f  // Convert step to 0.0-1.0 range
+                    val opacity = progress / 20f
                     setBackgroundOpacity(opacity)
                 }
 
@@ -974,6 +1063,74 @@ class WidgetView(
             .setView(dialogView)
             .setCancelable(true)
             .create()
+
+        // Add color change button for Color Background
+        if (widget.imageType == Widget.ImageType.COLOR_BACKGROUND) {
+            val btnChangeColor = android.widget.Button(context).apply {
+                text = "🎨 Change Color"
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, 16)
+                }
+            }
+
+            btnChangeColor.setOnClickListener {
+                dialog.dismiss()
+                val mainActivity = context as? com.esde.companion.MainActivity
+                mainActivity?.widgetCreationManager?.showColorPickerDialog { selectedColor ->
+                    val updatedWidget = widget.copy(solidColor = selectedColor)
+                    onUpdate(updatedWidget)
+                    (context as? com.esde.companion.MainActivity)?.let { activity ->
+                        if (widget.widgetContext == Widget.WidgetContext.SYSTEM) {
+                            activity.updateWidgetsForCurrentSystem()
+                        } else {
+                            activity.updateWidgetsForCurrentGame()
+                        }
+                    }
+                }
+            }
+
+            // Get the LinearLayout inside the ScrollView
+            val scrollView = dialogView as android.widget.ScrollView
+            val dialogContainer = scrollView.getChildAt(0) as android.widget.LinearLayout
+            dialogContainer.addView(btnChangeColor, 2)
+        }
+
+        // Add image change button for Custom Image
+        if (widget.imageType == Widget.ImageType.CUSTOM_IMAGE) {
+            val btnChangeImage = android.widget.Button(context).apply {
+                text = "🖼️ Change Image"
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, 16)
+                }
+            }
+
+            btnChangeImage.setOnClickListener {
+                dialog.dismiss()
+                val mainActivity = context as? com.esde.companion.MainActivity
+                mainActivity?.widgetCreationManager?.launchImagePicker { imagePath ->
+                    val updatedWidget = widget.copy(imagePath = imagePath)
+                    onUpdate(updatedWidget)
+                    (context as? com.esde.companion.MainActivity)?.let { activity ->
+                        if (widget.widgetContext == Widget.WidgetContext.SYSTEM) {
+                            activity.updateWidgetsForCurrentSystem()
+                        } else {
+                            activity.updateWidgetsForCurrentGame()
+                        }
+                    }
+                }
+            }
+
+            // Get the LinearLayout inside the ScrollView
+            val scrollView = dialogView as android.widget.ScrollView
+            val dialogContainer = scrollView.getChildAt(0) as android.widget.LinearLayout
+            dialogContainer.addView(btnChangeImage, 2)
+        }
 
         // Button click listeners
         btnMoveForward.setOnClickListener {
