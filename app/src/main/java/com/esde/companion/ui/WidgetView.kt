@@ -286,10 +286,6 @@ class WidgetView(
                 initialWidth = widget.width
                 initialHeight = widget.height
 
-                // Cancel any long press timer immediately when touching a widget
-                val mainActivity = context as? MainActivity
-                mainActivity?.cancelLongPress()
-
                 // Check if touching any resize handle
                 val touchX = event.x
                 val touchY = event.y
@@ -298,11 +294,20 @@ class WidgetView(
                     if (resizeCorner != ResizeCorner.NONE) {
                         isResizing = true
                         parent.requestDisallowInterceptTouchEvent(true)
+
+                        // ========== START: Block long-press when resizing ==========
+                        // Cancel long-press immediately - resizing often involves pauses
+                        val mainActivity = context as? MainActivity
+                        mainActivity?.cancelLongPress()
+                        android.util.Log.d("WidgetView", "Resize handle touched - blocking long-press menu")
+                        // ========== END: Block long-press when resizing ==========
+
                         return true
                     }
                 }
 
-                // Not touching handle - this is a drag
+                // Not touching handle - this is a drag or selection tap
+                // Allow long-press to work normally (menu access for unselected widgets)
                 isDragging = true
                 return true
             }
@@ -310,6 +315,15 @@ class WidgetView(
             MotionEvent.ACTION_MOVE -> {
                 val deltaX = event.rawX - dragStartX
                 val deltaY = event.rawY - dragStartY
+
+                // If user is moving the widget (dragging or resizing), cancel long-press
+                // Use touch slop threshold for natural feel
+                val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+                if (abs(deltaX) > touchSlop || abs(deltaY) > touchSlop) {
+                    val mainActivity = context as? MainActivity
+                    mainActivity?.cancelLongPress()
+                    android.util.Log.d("WidgetView", "Movement detected - cancelled long-press (deltaX: $deltaX, deltaY: $deltaY)")
+                }
 
                 // CHANGED: Request parent disallow immediately when resizing starts
                 if (isResizing) {
