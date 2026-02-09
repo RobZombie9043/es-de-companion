@@ -5324,7 +5324,7 @@ Access this help anytime from the widget menu!
         gameName: String,
         gameFilename: String
     ): File? {
-        return when (widget.imageType) {
+        val primaryFile = when (widget.imageType) {
             Widget.ImageType.MARQUEE ->
                 findImageInFolder(systemName, gameName, gameFilename, "marquees")
             Widget.ImageType.BOX_2D ->
@@ -5345,6 +5345,21 @@ Access this help anytime from the widget menu!
                 findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
             Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget
             Widget.ImageType.SYSTEM_LOGO -> null
+        }
+        // If primary found, return it
+        if (primaryFile != null) return primaryFile
+
+        // Fallback logic for FANART and SCREENSHOT only
+        return when (widget.imageType) {
+            Widget.ImageType.FANART -> {
+                android.util.Log.d("MainActivity", "  Fanart not found, trying screenshot fallback")
+                findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+            }
+            Widget.ImageType.SCREENSHOT -> {
+                android.util.Log.d("MainActivity", "  Screenshot not found, trying fanart fallback")
+                findImageInFolder(systemName, gameName, gameFilename, "fanart")
+            }
+            else -> null // No fallback for other types
         }
     }
 
