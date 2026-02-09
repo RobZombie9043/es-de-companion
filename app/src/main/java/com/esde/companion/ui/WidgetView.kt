@@ -316,22 +316,18 @@ class WidgetView(
                 val deltaX = event.rawX - dragStartX
                 val deltaY = event.rawY - dragStartY
 
-                // If user is moving the widget (dragging or resizing), cancel long-press
-                // Use touch slop threshold for natural feel
+                // ========== START: Use Android standard touch slop ==========
+                // Declare touchSlop once and use it for both checks
                 val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
-                if (abs(deltaX) > touchSlop || abs(deltaY) > touchSlop) {
-                    val mainActivity = context as? MainActivity
-                    mainActivity?.cancelLongPress()
-                    android.util.Log.d("WidgetView", "Movement detected - cancelled long-press (deltaX: $deltaX, deltaY: $deltaY)")
-                }
+                // ========== END: Use Android standard touch slop ==========
 
                 // CHANGED: Request parent disallow immediately when resizing starts
                 if (isResizing) {
                     parent.requestDisallowInterceptTouchEvent(true)
                 }
 
-                // CHANGED: Lower threshold for detecting movement
-                if (abs(deltaX) > 5 || abs(deltaY) > 5) {  // Reduced from 10 to 5
+                // Use consistent touchSlop threshold for detecting movement
+                if (abs(deltaX) > touchSlop || abs(deltaY) > touchSlop) {
                     if (isResizing || (isWidgetSelected && isDragging)) {
                         parent.requestDisallowInterceptTouchEvent(true)
                     }
@@ -359,7 +355,8 @@ class WidgetView(
 
                 val deltaX = event.rawX - dragStartX
                 val deltaY = event.rawY - dragStartY
-                val wasMoved = abs(deltaX) > 5 || abs(deltaY) > 5
+                val touchSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+                val wasMoved = abs(deltaX) > touchSlop || abs(deltaY) > touchSlop
                 val wasResized = isResizing  // Track if we were resizing
 
                 // Check for tap (to select/deselect)
