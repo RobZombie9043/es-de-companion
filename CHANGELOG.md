@@ -4,10 +4,28 @@
 
 ### Added
 - **Immersive Mode**: Enhanced fullscreen experience when Android is set to 3-button navigation mode
+- **New Widget Types**: Four new widget types available for enhanced customization
+    - **Color Background**: Solid color panels with adjustable opacity (0-100%)
+        - Choose from 12 preset colors or enter custom hex colors (#RRGGBB)
+        - Perfect for creating colored sections, backgrounds, or design accents
+        - Available in both system and game views
+    - **Custom Image**: Display any image from your device storage
+        - Select PNG, JPG, WEBP, GIF, or SVG images from your device
+        - Ideal for custom artwork, logos, or personal images
+        - Available in both system and game views
+    - **Random Fanart**: Display random fanart from current system (system view only)
+        - Shows a different random fanart each time you switch systems
+        - Automatically selects from all available fanart in the system's media folder
+        - Adds visual variety to system browsing
+    - **Random Screenshot**: Display random screenshot from current system (system view only)
+        - Shows a different random screenshot each time you switch systems
+        - Automatically selects from all available screenshots in the system's media folder
+        - Great for previewing game collections
 
 ### Changed
 - **Performance Improvements**:
     - Significantly improved system scrolling responsiveness by reducing debounce delays
+- **Widgets fallbacks**: Added fallback logic to fanart and screenshot widgets
 - **Minimum SDK Requirement**: Updated from Android 10 (API 29) to Android 13 (API 33)
     - Replaced deprecated RenderScript blur with RenderEffect (modern blur API)
     - Updated blur implementation to use Android 13+ native RenderEffect
