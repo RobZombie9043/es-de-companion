@@ -2033,16 +2033,7 @@ Access this help anytime from the widget menu!
                                             }
                                         }
 
-                                        // Update state to Screensaver
-                                        updateState(
-                                            AppState.Screensaver(
-                                            currentGame = null,
-                                            previousState = savedState
-                                        ))
-
-                                        android.util.Log.d("MainActivity", "Saved state for screensaver: $savedState")
-
-                                        // Apply screensaver behavior preferences
+                                        // Apply screensaver behavior preferences BEFORE updating state
                                         val screensaverBehavior = prefsManager.screensaverBehavior
                                         android.util.Log.d("MainActivity", "Applying screensaver behavior: $screensaverBehavior")
 
@@ -2057,10 +2048,31 @@ Access this help anytime from the widget menu!
                                             gridOverlayView?.visibility = View.GONE
                                         }
 
-                                        // Clear widgets (will be loaded by handleScreensaverGameSelect)
+                                        // Stop any videos (matches handleScreensaverStart)
+                                        releasePlayer()
+
+                                        // CRITICAL: Clear all widgets immediately
                                         widgetContainer.removeAllViews()
                                         activeWidgets.clear()
-                                        android.util.Log.d("MainActivity", "Fallback initialization complete - widgets cleared")
+                                        android.util.Log.d("MainActivity", "Fallback screensaver start - all widgets cleared")
+
+                                        // Update grid overlay for screensaver state
+                                        widgetContainer.visibility = View.VISIBLE
+                                        updateGridOverlay()
+
+                                        // CRITICAL: Reset initialization flag so first game event will initialize properly
+                                        screensaverInitialized = false
+                                        android.util.Log.d("MainActivity", "Reset screensaverInitialized flag - next game will be first")
+
+                                        // NOW update state to Screensaver
+                                        updateState(
+                                            AppState.Screensaver(
+                                                currentGame = null,  // No game selected yet
+                                                previousState = savedState
+                                            )
+                                        )
+
+                                        android.util.Log.d("MainActivity", "Fallback initialization complete - waiting for game data")
                                     }
 
                                     // Read screensaver game info and update state
@@ -2082,8 +2094,16 @@ Access this help anytime from the widget menu!
                                         systemName = systemFile.readText().trim()
                                     }
 
+                                    // DEFENSIVE: Validate game data before updating state
+                                    if (gameFilename.isNullOrBlank() || systemName.isNullOrBlank()) {
+                                        android.util.Log.w("MainActivity", "⚠️ Incomplete screensaver game data - skipping update")
+                                        android.util.Log.w("MainActivity", "  gameFilename: '${gameFilename ?: "NULL"}'")
+                                        android.util.Log.w("MainActivity", "  systemName: '${systemName ?: "NULL"}'")
+                                        return@postDelayed
+                                    }
+
                                     // Update screensaver state with current game
-                                    if (state is AppState.Screensaver && gameFilename != null && systemName != null) {
+                                    if (state is AppState.Screensaver) {
                                         val screensaverState = state as AppState.Screensaver
                                         updateState(screensaverState.copy(
                                             currentGame = ScreensaverGame(
@@ -2092,9 +2112,11 @@ Access this help anytime from the widget menu!
                                                 systemName = systemName
                                             )
                                         ))
+                                        android.util.Log.d("MainActivity", "Screensaver game updated: $gameName ($gameFilename) - $systemName")
+                                    } else {
+                                        android.util.Log.w("MainActivity", "⚠️ Not in screensaver state after fallback init - state is: $state")
                                     }
 
-                                    android.util.Log.d("MainActivity", "Screensaver game: $gameName ($gameFilename) - $systemName")
                                     handleScreensaverGameSelect()
                                 }
                             }
