@@ -570,7 +570,7 @@ class WidgetView(
         scrollView.visibility = GONE
         imageView.visibility = VISIBLE
 
-        if (widget.imagePath.isEmpty()) {
+        if (widget.imagePath.isEmpty() || widget.imagePath.startsWith("marquee://")) {
             // Only show text fallback for MARQUEE type
             if (widget.imageType == Widget.ImageType.MARQUEE) {
                 Log.d("WidgetView", "Empty marquee image path, showing text fallback")
@@ -755,14 +755,11 @@ class WidgetView(
     }
 
     private fun extractGameNameFromWidget(): String {
-        // Try to extract game name from widget ID or fallback to "Marquee"
         return when {
-            widget.id.isNotEmpty() && widget.id != "widget_${widget.imageType}" -> {
-                // Widget ID might contain game name
-                widget.id.replace("widget_", "")
-                    .replace("_", " ")
-                    .trim()
-            }
+            widget.imagePath.startsWith("marquee://") ->
+                widget.imagePath.removePrefix("marquee://")
+            widget.id.startsWith("widget_") ->
+                widget.id.removePrefix("widget_").replace("_", " ").trim()
             else -> "Marquee"
         }
     }

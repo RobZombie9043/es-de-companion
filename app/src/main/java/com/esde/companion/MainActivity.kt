@@ -4340,10 +4340,7 @@ Access this help anytime from the widget menu!
                     else -> {
                         android.util.Log.d("MainActivity", "  No screensaver image found for widget type ${widget.imageType}, using empty path")
                         if (widget.imageType == Widget.ImageType.MARQUEE) {
-                            widget.copy(
-                                imagePath = "",
-                                id = "widget_${gameName}"
-                            )
+                            widget.copy(imagePath = "marquee://$gameName")
                         } else {
                             widget.copy(imagePath = "")
                         }
@@ -4657,10 +4654,10 @@ Access this help anytime from the widget menu!
         widgetContainer.removeAllViews()
         activeWidgets.clear()
 
-        // Load saved widgets
+        // Load saved widgets - use WithoutSaving to avoid corrupting storage during load
         val widgets = widgetManager.loadWidgets()
         widgets.forEach { widget ->
-            addWidgetToScreen(widget)
+            addWidgetToScreenWithoutSaving(widget)
         }
     }
 
@@ -5546,11 +5543,11 @@ Access this help anytime from the widget menu!
             }
             Widget.ImageType.COLOR_BACKGROUND -> {
                 android.util.Log.d("MainActivity", "  Color background widget - using as-is")
-                return widget  // Use widget as-is, no file lookup needed
+                return widget
             }
             Widget.ImageType.CUSTOM_IMAGE -> {
                 android.util.Log.d("MainActivity", "  Custom image widget - using as-is")
-                return widget  // Use widget as-is, path already set
+                return widget
             }
             else -> {
                 // Continue to normal image file lookup for game artwork widgets
@@ -5563,20 +5560,14 @@ Access this help anytime from the widget menu!
         android.util.Log.d("MainActivity", "  Image exists: ${imageFile?.exists()}")
 
         return when {
-            // Handle image widgets
             imageFile != null && imageFile.exists() -> {
                 android.util.Log.d("MainActivity", "  Creating widget with new image")
                 widget.copy(imagePath = imageFile.absolutePath)
             }
-            // No image found
             else -> {
                 android.util.Log.d("MainActivity", "  No valid image found, using empty path")
-                // Store game name in widget ID for marquee text fallback
                 if (widget.imageType == Widget.ImageType.MARQUEE) {
-                    widget.copy(
-                        imagePath = "",
-                        id = "widget_${gameName}"
-                    )
+                    widget.copy(imagePath = "marquee://$gameName")
                 } else {
                     widget.copy(imagePath = "")
                 }

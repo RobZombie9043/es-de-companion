@@ -89,23 +89,19 @@ class MediaManager(private val prefsManager: PreferencesManager) {
     ): File? {
         if (!dir.exists() || !dir.isDirectory) return null
 
+        val t0 = System.currentTimeMillis()
+
         val strippedFilename = sanitizeFilename(fullPath)
         val nameWithoutExt = strippedFilename.substringBeforeLast('.')
         val rawName = strippedFilename
 
         val subfolderPath = extractSubfolderPath(fullPath, systemName)
 
-        // 1️⃣ Subfolder lookup
-        if (subfolderPath != null) {
-            val subDir = File(dir, subfolderPath)
-            if (subDir.exists()) {
-                tryFindFileWithExtensions(subDir, nameWithoutExt, rawName, extensions)
-                    ?.let { return it }
-            }
-        }
+        // Use subfolder if present, otherwise search directly in dir
+        val searchDir = if (subfolderPath != null) File(dir, subfolderPath) else dir
 
-        // 2️⃣ Root fallback
-        return tryFindFileWithExtensions(dir, nameWithoutExt, rawName, extensions)
+        val result = tryFindFileWithExtensions(searchDir, nameWithoutExt, rawName, extensions)
+        return result
     }
 
     private fun tryFindFileWithExtensions(
