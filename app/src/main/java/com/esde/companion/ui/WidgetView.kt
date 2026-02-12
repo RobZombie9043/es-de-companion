@@ -735,23 +735,6 @@ class WidgetView(
                 }
             }
         }
-
-        // At the very end of loadWidgetImage() method
-        postDelayed({
-            Log.d("WidgetView", "═══ DIAGNOSTIC INFO ═══")
-            Log.d("WidgetView", "Widget container: ${width}x${height}")
-            Log.d("WidgetView", "Widget data size: ${widget.width}x${widget.height}")
-            Log.d("WidgetView", "ImageView size: ${imageView.width}x${imageView.height}")
-            Log.d("WidgetView", "ImageView scaleType: ${imageView.scaleType}")
-            Log.d("WidgetView", "ImageView layoutParams: ${imageView.layoutParams.width}x${imageView.layoutParams.height}")
-
-            val drawable = imageView.drawable
-            if (drawable != null) {
-                Log.d("WidgetView", "Drawable intrinsic: ${drawable.intrinsicWidth}x${drawable.intrinsicHeight}")
-                Log.d("WidgetView", "Drawable bounds: ${drawable.bounds}")
-            }
-            Log.d("WidgetView", "═══ END DIAGNOSTIC ═══")
-        }, 100)
     }
 
     private fun extractGameNameFromWidget(): String {
