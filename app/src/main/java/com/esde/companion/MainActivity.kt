@@ -3027,8 +3027,12 @@ Access this help anytime from the widget menu!
                 val gameFile = File(logsDir, AppConstants.Paths.GAME_FILENAME_LOG)
                 if (!gameFile.exists()) return@launch
 
-                // Read filename (should already exist since it triggers FileObserver)
-                val gameNameRaw = gameFile.readText().trim()  // Full path from script
+                // Use retry logic for filename too - FileObserver can fire before file is fully written
+                val gameNameRaw = readNonBlankTextAsync(gameFile)
+                if (gameNameRaw.isNullOrBlank()) {
+                    android.util.Log.w("MainActivity", "Game filename empty after retries - skipping load")
+                    return@launch
+                }
                 val gameName = sanitizeGameFilename(gameNameRaw).substringBeforeLast('.')
 
                 // Read display name (may not exist yet due to race condition)
