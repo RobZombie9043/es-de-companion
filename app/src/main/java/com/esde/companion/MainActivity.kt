@@ -189,6 +189,7 @@ class MainActivity : AppCompatActivity() {
     private var imageLoadRunnable: Runnable? = null
     private var lastSystemScrollTime = 0L
     private var lastGameScrollTime = 0L
+    private var gameInfoJob: kotlinx.coroutines.Job? = null
 
     // System scrolling: Enable debouncing to reduce rapid updates
     private val SYSTEM_FAST_SCROLL_THRESHOLD = AppConstants.Timing.SYSTEM_FAST_SCROLL_THRESHOLD
@@ -3020,8 +3021,14 @@ Access this help anytime from the widget menu!
             return
         }
 
+        // Cancel any in-flight coroutine from a previous scroll event so stale
+        // results from earlier games can't overwrite the current game's assets
+        val hadActiveJob = gameInfoJob?.isActive == true
+        gameInfoJob?.cancel()
+        if (hadActiveJob) android.util.Log.d("MainActivity", "loadGameInfo - cancelled in-flight job")
+
         // Launch coroutine to handle async file reading without blocking UI
-        lifecycleScope.launch {
+        gameInfoJob = lifecycleScope.launch {
             try {
                 val logsDir = File(getLogsPath())
                 val gameFile = File(logsDir, AppConstants.Paths.GAME_FILENAME_LOG)

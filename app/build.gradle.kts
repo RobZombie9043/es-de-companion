@@ -23,7 +23,7 @@ android {
         minSdk = 33  // Android 13+ required
         targetSdk = 34
         versionCode = 24
-        versionName = "0.6.0 (pre-release 2)"
+        versionName = "0.6.0 (pre-release 3)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
