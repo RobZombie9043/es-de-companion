@@ -5726,6 +5726,13 @@ Access this help anytime from the widget menu!
             return
         }
 
+        // Do not save if activeWidgets is empty - screensaver clears widgets on start,
+        // so any save attempt before they are reloaded on exit would wipe stored widgets
+        if (activeWidgets.isEmpty()) {
+            android.util.Log.d("MainActivity", "saveAllWidgets skipped - activeWidgets is empty")
+            return
+        }
+
         // Load ALL existing widgets
         val allExistingWidgets = widgetManager.loadWidgets().toMutableList()
 
