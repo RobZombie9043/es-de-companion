@@ -587,7 +587,6 @@ class MainActivity : AppCompatActivity() {
         setupSettingsButton()
         setupAndroidSettingsButton()
         setupMusicControlButtons()
-        loadWidgets()
 
         // Apply drawer transparency
         updateDrawerTransparency()
