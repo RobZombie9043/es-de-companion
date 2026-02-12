@@ -2123,7 +2123,7 @@ Access this help anytime from the widget menu!
                                     handleScreensaverGameSelect()
                                 }
                             }
-                        }, 25) // 25ms delay to ensure file is written
+                        }, 50) // 50ms delay to ensure file is written
                     }
                 }
             }
@@ -4280,12 +4280,12 @@ Access this help anytime from the widget menu!
             val allWidgets = widgetManager.loadWidgets()
             android.util.Log.d("MainActivity", "Loaded ${allWidgets.size} widgets for screensaver")
 
-            // Filter for GAME context widgets only - ADDED THIS
+            // Filter for GAME context widgets only
             val gameWidgets = allWidgets.filter { it.widgetContext == Widget.WidgetContext.GAME }
             android.util.Log.d("MainActivity", "Loaded ${gameWidgets.size} game widgets for screensaver")
 
             // Sort widgets by z-index before processing
-            val sortedWidgets = allWidgets.sortedBy { it.zIndex }
+            val sortedWidgets = gameWidgets.sortedBy { it.zIndex }  // ✅ FIX: Use gameWidgets
             android.util.Log.d("MainActivity", "Sorted ${sortedWidgets.size} widgets by z-index")
 
             sortedWidgets.forEachIndexed { index, widget ->
