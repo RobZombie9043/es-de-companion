@@ -2944,23 +2944,16 @@ Access this help anytime from the widget menu!
             }
 
             if (imageToUse == null) {
-                val mediaBase = File(getMediaBasePath(), systemName)
-                // Use system_image_preference instead of image_preference
                 val prioritizedFolders = if (systemImagePref == "screenshot") {
                     listOf("screenshots", "fanart")
                 } else {
                     listOf("fanart", "screenshots")
                 }
                 for (folder in prioritizedFolders) {
-                    val dir = File(mediaBase, folder)
-                    if (dir.exists() && dir.isDirectory) {
-                        val images = dir.listFiles { f ->
-                            f.extension.lowercase() in listOf("jpg", "png", "webp")
-                        } ?: emptyArray()
-                        if (images.isNotEmpty()) {
-                            imageToUse = images.random()
-                            break
-                        }
+                    val randomImage = mediaManager.getRandomImageFromSystemFolder(systemName, folder)
+                    if (randomImage != null) {
+                        imageToUse = randomImage
+                        break
                     }
                 }
             }
