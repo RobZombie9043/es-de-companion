@@ -5718,13 +5718,16 @@ Access this help anytime from the widget menu!
 
     fun saveAllWidgets() {
         android.util.Log.d("MainActivity", "saveAllWidgets called, active widgets count: ${activeWidgets.size}")
-        activeWidgets.forEachIndexed { index, widgetView ->
-            android.util.Log.d("MainActivity", "Widget $index: type=${widgetView.widget.imageType}, id=${widgetView.widget.id}, context=${widgetView.widget.widgetContext}")
+
+        // Do not save during screensaver - activeWidgets reflects screensaver game widgets,
+        // not the user's configured widgets for either context
+        if (state is AppState.Screensaver) {
+            android.util.Log.d("MainActivity", "saveAllWidgets skipped - screensaver active")
+            return
         }
 
         // Load ALL existing widgets
         val allExistingWidgets = widgetManager.loadWidgets().toMutableList()
-        android.util.Log.d("MainActivity", "Loaded ${allExistingWidgets.size} existing widgets from storage")
 
         // Determine which context we're currently in
         val currentContext = if (state is AppState.SystemBrowsing) {
@@ -5732,15 +5735,12 @@ Access this help anytime from the widget menu!
         } else {
             Widget.WidgetContext.GAME
         }
-        android.util.Log.d("MainActivity", "Current context: $currentContext")
 
         // Remove widgets of the CURRENT context only
         val widgetsToKeep = allExistingWidgets.filter { it.widgetContext != currentContext }
-        android.util.Log.d("MainActivity", "Keeping ${widgetsToKeep.size} widgets from OTHER context")
 
         // Add current active widgets (they're all from the current context)
         val updatedWidgets = widgetsToKeep + activeWidgets.map { it.widget }
-        android.util.Log.d("MainActivity", "Total widgets to save: ${updatedWidgets.size}")
 
         widgetManager.saveWidgets(updatedWidgets)
         android.util.Log.d("MainActivity", "Widgets saved")
@@ -5857,6 +5857,10 @@ Access this help anytime from the widget menu!
     }
 
     private fun saveAllWidgetsWithZIndex() {
+        if (state is AppState.Screensaver) {
+            android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex skipped - screensaver active")
+            return
+        }
         // Load ALL existing widgets
         val allExistingWidgets = widgetManager.loadWidgets().toMutableList()
         android.util.Log.d("MainActivity", "saveAllWidgetsWithZIndex: Loaded ${allExistingWidgets.size} existing widgets from storage")
