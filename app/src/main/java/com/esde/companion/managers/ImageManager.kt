@@ -361,30 +361,7 @@ class ImageManager(
         val glideRequest = Glide.with(context)
             .load(imageFile)
             .signature(getFileBasedSignature(imageFile))
-            .listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(
-                    e: GlideException?,
-                    model: Any?,
-                    target: Target<Drawable>,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    android.util.Log.d("ImageManager", "TIMING widget load FAILED: ${imageFile.name}")
-                    onFailed?.invoke()
-                    return false
-                }
-
-                override fun onResourceReady(
-                    resource: Drawable,
-                    model: Any,
-                    target: Target<Drawable>,
-                    dataSource: DataSource,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    android.util.Log.d("ImageManager", "TIMING widget load source=$dataSource | file=${imageFile.name}")
-                    onLoaded?.invoke()
-                    return false
-                }
-            })
+            .listener(createSimpleListener(onLoaded, onFailed))
 
         // Use different cache strategy for animated formats
         // AnimatedImageDrawable cannot be encoded to disk cache
