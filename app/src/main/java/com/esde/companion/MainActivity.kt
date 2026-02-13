@@ -4351,7 +4351,7 @@ Access this help anytime from the widget menu!
                 val widgetToAdd = when {
                     // NEW: Handle description text widget for screensaver
                     widget.imageType == Widget.ImageType.GAME_DESCRIPTION -> {
-                        val description = getGameDescription(systemName, gameFilename)
+                        val description = mediaManager.getGameDescription(systemName, gameFilename)
                         android.util.Log.d("MainActivity", "  Updating screensaver description widget: ${description?.take(50)}")
                         widget.copy(imagePath = description ?: "")
                     }
@@ -5148,7 +5148,7 @@ Access this help anytime from the widget menu!
 
             // Special handling for game description (text widget)
             if (imageType == Widget.ImageType.GAME_DESCRIPTION) {
-                val description = getGameDescription(systemName, gameFilename)
+                val description = mediaManager.getGameDescription(systemName, gameFilename)
 
                 val widget = Widget(
                     imageType = Widget.ImageType.GAME_DESCRIPTION,
@@ -5383,170 +5383,6 @@ Access this help anytime from the widget menu!
         return mediaManager.findImageInFolder(systemName, gameFilename, folder)
     }
 
-    /**
-     * Parse game description from ES-DE gamelist.xml
-     * Returns null if not found or any error occurs
-     */
-    private fun getGameDescription(systemName: String, gameFilename: String): String? {
-        try {
-            // Get scripts path and navigate to ES-DE folder
-            val scriptsPath = prefsManager.scriptsPath
-                ?: return null
-
-            // Get ES-DE root folder (parent of scripts folder)
-            val scriptsDir = File(scriptsPath)
-            val esdeRoot = scriptsDir.parentFile ?: return null
-
-            // Build path to gamelist.xml: ~/ES-DE/gamelists/<systemname>/gamelist.xml
-            val gamelistFile = File(esdeRoot, "gamelists/$systemName/gamelist.xml")
-
-            android.util.Log.d("MainActivity", "Looking for gamelist: ${gamelistFile.absolutePath}")
-
-            if (!gamelistFile.exists()) {
-                android.util.Log.d("MainActivity", "Gamelist file not found for system: $systemName")
-                return null
-            }
-
-            // Parse XML to find the game's description
-            val xmlContent = gamelistFile.readText()
-
-            // Build the relative path as ES-DE stores it in gamelist.xml.
-            // ES-DE stores paths as "./game.zip" for root-level games and
-            // "./subfolder/game.zip" for subfolder games.
-            // gameFilename may arrive as a full absolute path (e.g.
-            // "/storage/.../ROMs/psx/sub/game.zip"), a relative subfolder path
-            // (e.g. "sub/game.zip"), or just a bare filename ("game.zip").
-            // We normalise it to the relative form ES-DE uses in <path> tags.
-            val normalizedPath = gameFilename.replace("\\", "/")
-
-            // Extract the relative portion after the system name segment so we
-            // end up with exactly what ES-DE writes after the leading "./".
-            // e.g. "/storage/.../psx/sub/game.zip" → "sub/game.zip"
-            //      "sub/game.zip"                  → "sub/game.zip"
-            //      "game.zip"                      → "game.zip"
-            val relativeGamePath: String = run {
-                val segments = normalizedPath.split("/").filter { it.isNotEmpty() }
-                val sysIndex = segments.indexOf(systemName)
-                if (sysIndex != -1 && sysIndex + 1 < segments.size) {
-                    // Absolute path: take everything after the system folder
-                    segments.drop(sysIndex + 1).joinToString("/")
-                } else if (normalizedPath.startsWith("/")) {
-                    // Absolute but system name not found – fall back to bare filename
-                    normalizedPath.substringAfterLast("/")
-                } else {
-                    // Already relative (e.g. "sub/game.zip" or "game.zip")
-                    normalizedPath
-                }
-            }
-
-            android.util.Log.d("MainActivity", "Searching for game: '$relativeGamePath'")
-
-            // ES-DE only encodes & as &amp; in <path> tags
-            val relativePathEncoded = relativeGamePath.replace("&", "&amp;")
-
-            var pathMatch: MatchResult? = null
-
-            // Strategy 1: Encoded & variant (most common for paths containing &)
-            if (relativePathEncoded != relativeGamePath) {
-                android.util.Log.d("MainActivity", "  Trying &amp; encoded: '$relativePathEncoded'")
-                val pattern1 = "<path>\\./\\Q$relativePathEncoded\\E</path>".toRegex()
-                pathMatch = pattern1.find(xmlContent)
-            }
-
-            // Strategy 2: Exact relative path match
-            if (pathMatch == null) {
-                android.util.Log.d("MainActivity", "  Trying exact: '$relativeGamePath'")
-                val pattern2 = "<path>\\./\\Q$relativeGamePath\\E</path>".toRegex()
-                pathMatch = pattern2.find(xmlContent)
-            }
-
-            // Strategy 3: Filename-only fallback (handles edge cases where the full
-            // path couldn't be reconstructed but the filename is unique in the list)
-            if (pathMatch == null) {
-                val bareFilename = relativeGamePath.substringAfterLast("/")
-                val bareEncoded = bareFilename.replace("&", "&amp;")
-                android.util.Log.d("MainActivity", "  Trying filename-only fallback: '$bareFilename'")
-                // Match any path ending with this filename (covers any subfolder depth)
-                val pattern3 = "<path>\\./(?:[^<]*/)?\\Q$bareEncoded\\E</path>".toRegex()
-                pathMatch = pattern3.find(xmlContent)
-                if (pathMatch == null && bareEncoded != bareFilename) {
-                    val pattern4 = "<path>\\./(?:[^<]*/)?\\Q$bareFilename\\E</path>".toRegex()
-                    pathMatch = pattern4.find(xmlContent)
-                }
-            }
-
-            if (pathMatch == null) {
-                android.util.Log.d("MainActivity", "Game not found in gamelist: $relativeGamePath")
-
-                // Debug: Show similar paths from the gamelist to help diagnose
-                val allPathsPattern = "<path>\\./([^<]+)</path>".toRegex()
-                val allPaths = allPathsPattern.findAll(xmlContent).map { it.groupValues[1] }.toList()
-                android.util.Log.d("MainActivity", "Total paths in gamelist: ${allPaths.size}")
-
-                // Find paths that start with the same first word (use bare filename for matching)
-                val bareFilename = relativeGamePath.substringAfterLast("/")
-                val firstWord = bareFilename.split(" ", "'", "-").firstOrNull()?.take(10) ?: ""
-                if (firstWord.isNotEmpty()) {
-                    val similarPaths = allPaths.filter { it.substringAfterLast("/").startsWith(firstWord, ignoreCase = true) }
-                    if (similarPaths.isNotEmpty()) {
-                        android.util.Log.d("MainActivity", "Found ${similarPaths.size} path(s) starting with '$firstWord':")
-                        similarPaths.take(5).forEach { path ->
-                            android.util.Log.d("MainActivity", "  - '$path'")
-                        }
-                    }
-                }
-
-                return null
-            }
-
-            android.util.Log.d("MainActivity", "Game found in gamelist!")
-
-            // Find the <desc> tag after this <path> tag
-            val gameStartIndex = pathMatch.range.first
-
-            // Search for <desc>...</desc> within this game entry (before next <game> tag)
-            val remainingXml = xmlContent.substring(gameStartIndex)
-            val nextGameIndex = remainingXml.indexOf("<game>", startIndex = 1)
-            val searchSpace = if (nextGameIndex > 0) {
-                remainingXml.substring(0, nextGameIndex)
-            } else {
-                remainingXml
-            }
-
-            // Extract description text between <desc> and </desc>
-            val descPattern = "<desc>([\\s\\S]*?)</desc>".toRegex()
-            val descMatch = descPattern.find(searchSpace)
-
-            return if (descMatch != null) {
-                // Decode XML entities in the description text (not in path)
-                val rawDescription = descMatch.groupValues[1].trim()
-                val description = decodeXmlEntities(rawDescription)
-                android.util.Log.d("MainActivity", "Found description: ${description.take(100)}...")
-                description
-            } else {
-                android.util.Log.d("MainActivity", "No <desc> tag found for game: $relativeGamePath")
-                null
-            }
-
-        } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Error parsing gamelist.xml", e)
-            return null
-        }
-    }
-
-    /**
-     * Decode XML entities to regular characters for display
-     */
-    private fun decodeXmlEntities(text: String): String {
-        return text
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&amp;", "&")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("&#39;", "'")
-    }
-
     fun updateWidgetsForCurrentGame() {
         android.util.Log.d("MainActivity", "═══ updateWidgetsForCurrentGame START ═══")
         android.util.Log.d("MainActivity", "Current state: $state")
@@ -5659,7 +5495,7 @@ Access this help anytime from the widget menu!
         // Handle special widget types that don't need image file lookup
         when (widget.imageType) {
             Widget.ImageType.GAME_DESCRIPTION -> {
-                val description = getGameDescription(systemName, gameFilename)
+                val description = mediaManager.getGameDescription(systemName, gameFilename)
                 android.util.Log.d("MainActivity", "  Updating description widget: ${description?.take(50)}")
                 return widget.copy(imagePath = description ?: "")
             }
