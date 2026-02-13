@@ -527,7 +527,7 @@ class MainActivity : AppCompatActivity() {
         appLaunchPrefs = AppLaunchManager(this)
         mediaManager = MediaManager(prefsManager)
         imageManager = ImageManager(this, prefsManager)
-        widgetCreationManager = WidgetCreationManager(this, this)
+        widgetCreationManager = WidgetCreationManager(this)
 
         // Initialize VideoManager (must be after videoView is initialized)
         // Note: videoView initialization happens in findViewById calls below

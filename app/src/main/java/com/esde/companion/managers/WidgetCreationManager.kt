@@ -1,6 +1,5 @@
 package com.esde.companion.managers
 
-import android.content.Context
 import android.net.Uri
 import android.util.DisplayMetrics
 import androidx.activity.result.ActivityResultLauncher
@@ -28,7 +27,6 @@ import com.esde.companion.data.Widget
  */
 class WidgetCreationManager(
     private val activity: AppCompatActivity,
-    private val context: Context
 ) {
 
     companion object {
@@ -47,7 +45,7 @@ class WidgetCreationManager(
                     pendingImagePickerCallback?.invoke(filePath)
                 } else {
                     android.widget.Toast.makeText(
-                        context,
+                        activity,
                         "Unable to access selected image. Please choose an image from your device storage.",
                         android.widget.Toast.LENGTH_LONG
                     ).show()
@@ -88,7 +86,7 @@ class WidgetCreationManager(
 
         val colorNames = colors.map { it.second }.toTypedArray()
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(activity)
             .setTitle("Select Widget Color")
             .setItems(colorNames) { _, which ->
                 if (which == colors.size - 1) {
@@ -108,19 +106,19 @@ class WidgetCreationManager(
      * Show custom hex color input dialog.
      */
     private fun showCustomHexDialog(onColorSelected: (String) -> Unit) {
-        val input = android.widget.EditText(context).apply {
+        val input = android.widget.EditText(activity).apply {
             hint = "Enter hex color (e.g., #FF5733)"
             inputType = android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             setText("#")
             setSelection(1) // Place cursor after the #
         }
 
-        val container = android.widget.FrameLayout(context).apply {
+        val container = android.widget.FrameLayout(activity).apply {
             setPadding(60, 20, 60, 20)
             addView(input)
         }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(activity)
             .setTitle("Custom Hex Color")
             .setView(container)
             .setPositiveButton("OK") { _, _ ->
@@ -131,7 +129,7 @@ class WidgetCreationManager(
                     onColorSelected(hexColor.uppercase())
                 } else {
                     android.widget.Toast.makeText(
-                        context,
+                        activity,
                         "Invalid hex color format. Use #RRGGBB (e.g., #FF5733)",
                         android.widget.Toast.LENGTH_LONG
                     ).show()
@@ -220,7 +218,7 @@ class WidgetCreationManager(
         // Handle content:// URIs
         if (uri.scheme == "content") {
             // Try DocumentsContract first (modern approach)
-            if (android.provider.DocumentsContract.isDocumentUri(context, uri)) {
+            if (android.provider.DocumentsContract.isDocumentUri(activity, uri)) {
                 when (uri.authority) {
                     // External storage provider
                     "com.android.externalstorage.documents" -> {
@@ -279,7 +277,7 @@ class WidgetCreationManager(
         val projection = arrayOf(column)
 
         return try {
-            context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+            activity.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
                     val columnIndex = cursor.getColumnIndexOrThrow(column)
                     cursor.getString(columnIndex)
