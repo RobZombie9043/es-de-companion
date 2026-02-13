@@ -1,5 +1,6 @@
 package com.esde.companion.ui
 
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.view.LayoutInflater
@@ -19,6 +20,10 @@ class AppAdapter(
     private val appLaunchPrefs: AppLaunchManager,
     private val hiddenApps: Set<String> = setOf()  // ADD THIS PARAMETER
 ) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
+
+    companion object {
+        const val PAYLOAD_INDICATORS = "payload_indicators"
+    }
 
     class AppViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.appIcon)
@@ -60,14 +65,25 @@ class AppAdapter(
         }
     }
 
+    override fun onBindViewHolder(holder: AppViewHolder, position: Int, payloads: List<Any>) {
+        if (payloads.contains(PAYLOAD_INDICATORS)) {
+            val packageName = apps[position].activityInfo?.packageName ?: ""
+            holder.launchIndicator.visibility =
+                if (appLaunchPrefs.shouldLaunchOnBottom(packageName)) View.VISIBLE else View.GONE
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
+    }
+
     override fun getItemCount() = apps.size
 
     // Add method to refresh indicators when preferences change
     fun refreshIndicators() {
-        notifyDataSetChanged()
+        notifyItemRangeChanged(0, itemCount, PAYLOAD_INDICATORS)
     }
 
     // Add method to update data without losing scroll position
+    @SuppressLint("NotifyDataSetChanged")
     fun updateApps(newApps: List<ResolveInfo>) {
         apps = newApps
         notifyDataSetChanged()
