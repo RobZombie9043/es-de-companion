@@ -1717,6 +1717,7 @@ Access this help anytime from the widget menu!
         val hiddenApps = prefsManager.hiddenApps
         allApps = packageManager.queryIntentActivities(mainIntent, PackageManager.MATCH_ALL)
             .filter { !hiddenApps.contains(it.activityInfo?.packageName ?: "") }
+            .distinctBy { it.activityInfo?.packageName }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
 
         // Pass hiddenApps to adapter
@@ -1821,6 +1822,7 @@ Access this help anytime from the widget menu!
                         .filter { app ->
                             app.loadLabel(packageManager).toString().lowercase().contains(query)
                         }
+                        .distinctBy { it.activityInfo?.packageName }
                         .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
                 }
 
