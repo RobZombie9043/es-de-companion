@@ -29,7 +29,19 @@ class ResizableWidgetContainer @JvmOverloads constructor(
         return super.onInterceptTouchEvent(ev)
     }
 
+    override fun performClick(): Boolean {
+        // Required override when onTouchEvent is overridden.
+        // ResizableWidgetContainer delegates all taps to child WidgetViews,
+        // so this container itself has no click action to perform.
+        super.performClick()
+        return false
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // Accessibility: call performClick() on ACTION_UP if no child handled it
+        if (event.action == MotionEvent.ACTION_UP) {
+            performClick()
+        }
         // Forward touches to children that might be in extended zones
         for (i in 0 until childCount) {
             val child = getChildAt(i)
