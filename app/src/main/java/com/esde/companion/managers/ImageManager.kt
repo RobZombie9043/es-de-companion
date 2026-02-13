@@ -11,8 +11,6 @@ import com.bumptech.glide.request.target.Target
 import java.io.File
 import android.graphics.RenderEffect
 import android.graphics.Shader
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.esde.companion.data.Widget
 
 /**
@@ -130,7 +128,7 @@ class ImageManager(
                                 dataSource: DataSource,
                                 isFirstResource: Boolean
                             ): Boolean {
-                                // Apply blur after image loads (Android 13+ only)
+                                // Apply blur after image loads
                                 if (shouldApplyBlur) {
                                     applyBlur(imageView, prefsManager.blurLevel)
                                 } else {
@@ -177,7 +175,7 @@ class ImageManager(
                                 .setDuration(duration.toLong())
                                 .setInterpolator(android.view.animation.DecelerateInterpolator())
                                 .withEndAction {
-                                    // Apply blur after animation completes (Android 13+ only)
+                                    // Apply blur after animation completes
                                     if (shouldApplyBlur) {
                                         applyBlur(imageView, prefsManager.blurLevel)
                                     } else {
@@ -216,7 +214,7 @@ class ImageManager(
                             imageView.scaleX = 1f
                             imageView.scaleY = 1f
 
-                            // Apply blur (Android 13+ only)
+                            // Apply blur
                             if (shouldApplyBlur) {
                                 applyBlur(imageView, prefsManager.blurLevel)
                             } else {
@@ -264,7 +262,7 @@ class ImageManager(
                         imageView.scaleX = 1f
                         imageView.scaleY = 1f
 
-                        // Apply blur (Android 13+ only)
+                        // Apply blur
                         if (shouldApplyBlur) {
                             applyBlur(imageView, prefsManager.blurLevel)
                         } else {
@@ -431,33 +429,12 @@ class ImageManager(
     }
 
     /**
-     * Apply blur effect using modern RenderEffect (Android 12+).
-     * This replaces the deprecated RenderScript API.
-     *
-     * On Android 10-11, blur is not available and this method does nothing.
-     * Since our min SDK is now 33 (Android 13), this will always work.
+     * Apply blur effect using RenderEffect. GPU-accelerated, no resource management needed.
      *
      * @param imageView The ImageView to apply blur to
      * @param blurRadius Blur radius (1-25)
      */
     private fun applyBlur(imageView: ImageView, blurRadius: Int) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            applyModernBlur(imageView, blurRadius)
-        } else {
-            // This branch should never execute with min SDK 33, but kept for safety
-            android.util.Log.w(TAG, "Blur requires Android 12+, but min SDK is 33")
-        }
-    }
-
-    /**
-     * Apply blur effect using RenderEffect (Android 12+ only).
-     * GPU-accelerated, no resource management needed.
-     *
-     * @param imageView The ImageView to apply blur to
-     * @param blurRadius Blur radius (1-25)
-     */
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun applyModernBlur(imageView: ImageView, blurRadius: Int) {
         val radius = blurRadius.coerceIn(1, 25).toFloat()
 
         // Create blur effect using RenderEffect
@@ -479,9 +456,7 @@ class ImageManager(
      * @param imageView The ImageView to remove blur from
      */
     private fun removeBlur(imageView: ImageView) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            imageView.setRenderEffect(null)
-        }
+        imageView.setRenderEffect(null)
     }
 
     /**
