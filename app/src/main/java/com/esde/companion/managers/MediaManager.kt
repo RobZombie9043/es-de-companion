@@ -356,21 +356,6 @@ class MediaManager(private val prefsManager: PreferencesManager) {
 
         if (pathMatch == null) {
             Log.d(TAG, "Game not found in gamelist: $relativeGamePath")
-            // Debug: show similar entries to help diagnose mismatches
-            val allPaths = "<path>\\./([^<]+)</path>".toRegex()
-                .findAll(xmlContent).map { it.groupValues[1] }.toList()
-            Log.d(TAG, "Total paths in gamelist: ${allPaths.size}")
-            val bareFilename = relativeGamePath.substringAfterLast("/")
-            val firstWord = bareFilename.split(" ", "'", "-").firstOrNull()?.take(10) ?: ""
-            if (firstWord.isNotEmpty()) {
-                val similar = allPaths.filter {
-                    it.substringAfterLast("/").startsWith(firstWord, ignoreCase = true)
-                }
-                if (similar.isNotEmpty()) {
-                    Log.d(TAG, "Found ${similar.size} path(s) starting with '$firstWord':")
-                    similar.take(5).forEach { Log.d(TAG, "  - '$it'") }
-                }
-            }
             return null
         }
 
