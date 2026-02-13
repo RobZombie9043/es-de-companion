@@ -2,6 +2,7 @@ package com.esde.companion.managers
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Manages app launch preferences (top/bottom screen)
@@ -29,9 +30,7 @@ class AppLaunchManager(context: Context) {
      * Set the launch position for a specific package
      */
     fun setLaunchPosition(packageName: String, position: String) {
-        prefs.edit()
-            .putString(KEY_PREFIX + packageName, position)
-            .apply()
+        prefs.edit { putString(KEY_PREFIX + packageName, position) }
     }
 
     /**
