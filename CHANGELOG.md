@@ -36,6 +36,7 @@
     - Renamed `Constants.kt` to `AppConstants.kt` for clarity
     - Refactored `MediaFileLocator` to `MediaManager` (better naming for manager pattern)
     - Refactored `AppLaunchPreferences` to `AppLaunchManager` (consistent manager naming)
+- Add distinctBy packageName to deduplicate multi-activity apps in drawer and search
 
 ### Refactored
 - **Manager Classes**: Comprehensive code cleanup and optimization across all managers
@@ -52,6 +53,8 @@
 
 ### Fixed
 - **Image Cache Invalidation**: Fixed cache invalidation for changed background images
+- Game description widgets loading for games in subfolders 
+- System view background images load recursively
 
 ## [0.5.3] - 2026-02-06
 
