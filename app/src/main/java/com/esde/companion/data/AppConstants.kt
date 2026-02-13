@@ -28,7 +28,6 @@ object AppConstants {
         // Directory names (relative to storage root) - these remain const
         const val SCRIPTS_DIR = "ES-DE/scripts"
         const val MEDIA_DIR = "ES-DE/downloaded_media"
-        const val MUSIC_DIR = "ES-DE Companion/music"
         const val SYSTEM_IMAGES_DIR = "ES-DE Companion/system_images"
         const val SYSTEM_LOGOS_DIR = "ES-DE Companion/system_logos"
         const val LOGS_DIR = "ES-DE Companion/logs"
@@ -43,9 +42,6 @@ object AppConstants {
 
         val DEFAULT_MEDIA_PATH: String
             get() = "$DEFAULT_STORAGE_ROOT/$MEDIA_DIR"
-
-        val DEFAULT_MUSIC_PATH: String
-            get() = "$DEFAULT_STORAGE_ROOT/$MUSIC_DIR"
 
         val DEFAULT_SYSTEM_IMAGES_PATH: String
             get() = "$DEFAULT_STORAGE_ROOT/$SYSTEM_IMAGES_DIR"

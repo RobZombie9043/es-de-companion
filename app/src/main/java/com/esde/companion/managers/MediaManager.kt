@@ -50,9 +50,9 @@ class MediaManager(private val prefsManager: PreferencesManager) {
         if (!mediaBase.exists()) return null
 
         val dirs = if (preferScreenshot)
-            listOf("screenshots", "fanart")
+            listOf(AppConstants.Paths.MEDIA_SCREENSHOTS, AppConstants.Paths.MEDIA_FANART)
         else
-            listOf("fanart", "screenshots")
+            listOf(AppConstants.Paths.MEDIA_FANART, AppConstants.Paths.MEDIA_SCREENSHOTS)
 
         for (dirName in dirs) {
             val dir = File(mediaBase, dirName)
