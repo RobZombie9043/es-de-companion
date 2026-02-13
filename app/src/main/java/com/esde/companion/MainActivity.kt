@@ -4297,23 +4297,23 @@ Access this help anytime from the widget menu!
                 val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
                 val imageFile = when (widget.imageType) {
                     Widget.ImageType.MARQUEE ->
-                        findImageInFolder(systemName, gameName, gameFilename, "marquees")
+                        findImageInFolder(systemName, gameFilename, "marquees")
                     Widget.ImageType.BOX_2D ->
-                        findImageInFolder(systemName, gameName, gameFilename, "covers")
+                        findImageInFolder(systemName, gameFilename, "covers")
                     Widget.ImageType.BOX_3D ->
-                        findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
+                        findImageInFolder(systemName, gameFilename, "3dboxes")
                     Widget.ImageType.MIX_IMAGE ->
-                        findImageInFolder(systemName, gameName, gameFilename, "miximages")
+                        findImageInFolder(systemName, gameFilename, "miximages")
                     Widget.ImageType.BACK_COVER ->
-                        findImageInFolder(systemName, gameName, gameFilename, "backcovers")
+                        findImageInFolder(systemName, gameFilename, "backcovers")
                     Widget.ImageType.PHYSICAL_MEDIA ->
-                        findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
+                        findImageInFolder(systemName, gameFilename, "physicalmedia")
                     Widget.ImageType.SCREENSHOT ->
-                        findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+                        findImageInFolder(systemName, gameFilename, "screenshots")
                     Widget.ImageType.FANART ->
-                        findImageInFolder(systemName, gameName, gameFilename, "fanart")
+                        findImageInFolder(systemName, gameFilename, "fanart")
                     Widget.ImageType.TITLE_SCREEN ->
-                        findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
+                        findImageInFolder(systemName, gameFilename, "titlescreens")
                     Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget, handled separately
                     Widget.ImageType.SYSTEM_LOGO -> null
                     Widget.ImageType.COLOR_BACKGROUND -> null  // NEW: No file needed
@@ -5053,23 +5053,23 @@ Access this help anytime from the widget menu!
             val gameName = sanitizeGameFilename(gameFilename).substringBeforeLast('.')
             val imageFile = when (imageType) {
                 Widget.ImageType.MARQUEE ->
-                    findImageInFolder(systemName, gameName, gameFilename, "marquees")
+                    findImageInFolder(systemName, gameFilename, "marquees")
                 Widget.ImageType.BOX_2D ->
-                    findImageInFolder(systemName, gameName, gameFilename, "covers")
+                    findImageInFolder(systemName, gameFilename, "covers")
                 Widget.ImageType.BOX_3D ->
-                    findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
+                    findImageInFolder(systemName, gameFilename, "3dboxes")
                 Widget.ImageType.MIX_IMAGE ->
-                    findImageInFolder(systemName, gameName, gameFilename, "miximages")
+                    findImageInFolder(systemName, gameFilename, "miximages")
                 Widget.ImageType.BACK_COVER ->
-                    findImageInFolder(systemName, gameName, gameFilename, "backcovers")
+                    findImageInFolder(systemName, gameFilename, "backcovers")
                 Widget.ImageType.PHYSICAL_MEDIA ->
-                    findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
+                    findImageInFolder(systemName, gameFilename, "physicalmedia")
                 Widget.ImageType.SCREENSHOT ->
-                    findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+                    findImageInFolder(systemName, gameFilename, "screenshots")
                 Widget.ImageType.FANART ->
-                    findImageInFolder(systemName, gameName, gameFilename, "fanart")
+                    findImageInFolder(systemName, gameFilename, "fanart")
                 Widget.ImageType.TITLE_SCREEN ->
-                    findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
+                    findImageInFolder(systemName, gameFilename, "titlescreens")
                 Widget.ImageType.GAME_DESCRIPTION -> null
                 else -> null
             }
@@ -5294,11 +5294,10 @@ Access this help anytime from the widget menu!
 
     private fun findImageInFolder(
         systemName: String,
-        gameName: String,
         gameFilename: String,
         folder: String
     ): File? {
-        return mediaManager.findImageInFolder(systemName, gameName, gameFilename, folder)
+        return mediaManager.findImageInFolder(systemName, gameFilename, folder)
     }
 
     /**
@@ -5521,23 +5520,23 @@ Access this help anytime from the widget menu!
     ): File? {
         val primaryFile = when (widget.imageType) {
             Widget.ImageType.MARQUEE ->
-                findImageInFolder(systemName, gameName, gameFilename, "marquees")
+                findImageInFolder(systemName, gameFilename, "marquees")
             Widget.ImageType.BOX_2D ->
-                findImageInFolder(systemName, gameName, gameFilename, "covers")
+                findImageInFolder(systemName, gameFilename, "covers")
             Widget.ImageType.BOX_3D ->
-                findImageInFolder(systemName, gameName, gameFilename, "3dboxes")
+                findImageInFolder(systemName, gameFilename, "3dboxes")
             Widget.ImageType.MIX_IMAGE ->
-                findImageInFolder(systemName, gameName, gameFilename, "miximages")
+                findImageInFolder(systemName, gameFilename, "miximages")
             Widget.ImageType.BACK_COVER ->
-                findImageInFolder(systemName, gameName, gameFilename, "backcovers")
+                findImageInFolder(systemName, gameFilename, "backcovers")
             Widget.ImageType.PHYSICAL_MEDIA ->
-                findImageInFolder(systemName, gameName, gameFilename, "physicalmedia")
+                findImageInFolder(systemName, gameFilename, "physicalmedia")
             Widget.ImageType.SCREENSHOT ->
-                findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+                findImageInFolder(systemName, gameFilename, "screenshots")
             Widget.ImageType.FANART ->
-                findImageInFolder(systemName, gameName, gameFilename, "fanart")
+                findImageInFolder(systemName, gameFilename, "fanart")
             Widget.ImageType.TITLE_SCREEN ->
-                findImageInFolder(systemName, gameName, gameFilename, "titlescreens")
+                findImageInFolder(systemName, gameFilename, "titlescreens")
             Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget
             Widget.ImageType.SYSTEM_LOGO -> null
             Widget.ImageType.COLOR_BACKGROUND -> null  // NEW: No file needed
@@ -5552,11 +5551,11 @@ Access this help anytime from the widget menu!
         return when (widget.imageType) {
             Widget.ImageType.FANART -> {
                 android.util.Log.d("MainActivity", "  Fanart not found, trying screenshot fallback")
-                findImageInFolder(systemName, gameName, gameFilename, "screenshots")
+                findImageInFolder(systemName, gameFilename, "screenshots")
             }
             Widget.ImageType.SCREENSHOT -> {
                 android.util.Log.d("MainActivity", "  Screenshot not found, trying fanart fallback")
-                findImageInFolder(systemName, gameName, gameFilename, "fanart")
+                findImageInFolder(systemName, gameFilename, "fanart")
             }
             else -> null // No fallback for other types
         }

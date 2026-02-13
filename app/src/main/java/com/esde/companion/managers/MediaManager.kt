@@ -18,13 +18,13 @@ import java.io.File
 class MediaManager(private val prefsManager: PreferencesManager) {
 
     companion object {
+        private const val TAG = "MediaManager"
         private val IMAGE_EXTENSIONS = AppConstants.FileExtensions.IMAGE
         private val VIDEO_EXTENSIONS = AppConstants.FileExtensions.VIDEO
     }
 
     fun findImageInFolder(
         systemName: String,
-        gameName: String,
         gameFilename: String,
         folderName: String
     ): File? {
@@ -91,14 +91,13 @@ class MediaManager(private val prefsManager: PreferencesManager) {
 
         val strippedFilename = sanitizeFilename(fullPath)
         val nameWithoutExt = strippedFilename.substringBeforeLast('.')
-        val rawName = strippedFilename
 
         val subfolderPath = extractSubfolderPath(fullPath, systemName)
 
         // Use subfolder if present, otherwise search directly in dir
         val searchDir = if (subfolderPath != null) File(dir, subfolderPath) else dir
 
-        return tryFindFileWithExtensions(searchDir, nameWithoutExt, rawName, extensions)
+        return tryFindFileWithExtensions(searchDir, nameWithoutExt, strippedFilename, extensions)
     }
 
     private fun tryFindFileWithExtensions(
@@ -157,14 +156,14 @@ class MediaManager(private val prefsManager: PreferencesManager) {
         val systemIndex = segments.indexOf(systemName)
 
         if (systemIndex == -1) {
-            Log.d("MediaFileLocator", "System name '$systemName' not found in path: $fullPath")
+            Log.d(TAG, "System name '$systemName' not found in path: $fullPath")
             return null
         }
 
         val subfolders = segments.drop(systemIndex + 1)
         val result = if (subfolders.isNotEmpty()) subfolders.joinToString("/") else null
 
-        Log.d("MediaFileLocator", "Extracted subfolder: '$result' from path: $fullPath")
+        Log.d(TAG, "Extracted subfolder: '$result' from path: $fullPath")
         return result
     }
 
@@ -180,7 +179,7 @@ class MediaManager(private val prefsManager: PreferencesManager) {
         val dir = File(mediaPath, "$systemName/$folderName")
 
         if (!dir.exists() || !dir.isDirectory) {
-            android.util.Log.w("MediaManager", "Directory doesn't exist: ${dir.absolutePath}")
+            Log.w("MediaManager", "Directory doesn't exist: ${dir.absolutePath}")
             return null
         }
 
@@ -189,12 +188,12 @@ class MediaManager(private val prefsManager: PreferencesManager) {
         collectImageFiles(dir, allImages)
 
         if (allImages.isEmpty()) {
-            android.util.Log.w("MediaManager", "No images found in: ${dir.absolutePath}")
+            Log.w("MediaManager", "No images found in: ${dir.absolutePath}")
             return null
         }
 
         val randomImage = allImages.random()
-        android.util.Log.d("MediaManager", "Selected random image from ${allImages.size} total: ${randomImage.name}")
+        Log.d("MediaManager", "Selected random image from ${allImages.size} total: ${randomImage.name}")
         return randomImage
     }
 
