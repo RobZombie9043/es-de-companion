@@ -533,7 +533,7 @@ class MainActivity : AppCompatActivity() {
         // Note: videoView initialization happens in findViewById calls below
 
         // Initialize MusicManager
-        musicManager = MusicManager(this, prefsManager)
+        musicManager = MusicManager(prefsManager)
         setupMusicCallbacks()
 
         // Check if we should show widget tutorial for updating users

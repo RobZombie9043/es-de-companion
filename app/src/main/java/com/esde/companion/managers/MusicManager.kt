@@ -1,6 +1,5 @@
 package com.esde.companion.managers
 
-import android.content.Context
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
@@ -31,7 +30,6 @@ import java.io.File
  * ═══════════════════════════════════════════════════════════
  */
 class MusicManager(
-    private val context: Context,
     private val prefsManager: PreferencesManager
 ) {
 
@@ -447,20 +445,17 @@ class MusicManager(
             Log.d(TAG, "Fading out old player independently")
 
             // Create independent fade for old player
-            var oldPlayerVolume = 1.0f
             val fadeSteps = (CROSS_FADE_DURATION / 50).toInt()
-            val volumeStep = oldPlayerVolume / fadeSteps
+            val volumeStep = 1.0f / fadeSteps
             var currentStep = 0
 
             val oldPlayerFadeRunnable = object : Runnable {
                 override fun run() {
                     if (currentStep < fadeSteps) {
-                        oldPlayerVolume -= volumeStep
-                        if (oldPlayerVolume < 0f) oldPlayerVolume = 0f
-
+                        currentStep++
+                        val stepVolume = (1.0f - (volumeStep * currentStep)).coerceAtLeast(0f)
                         try {
-                            oldPlayer.setVolume(oldPlayerVolume, oldPlayerVolume)
-                            currentStep++
+                            oldPlayer.setVolume(stepVolume, stepVolume)
                             handler.postDelayed(this, 50)
                         } catch (_: Exception) {
                             Log.d(TAG, "Old player already released")
