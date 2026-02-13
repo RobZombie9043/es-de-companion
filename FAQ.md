@@ -117,6 +117,7 @@ ES-DE Companion supports these widget types:
 **Special Widgets:**
 - **Game Description**: Scrollable text description of the game
 - **Color Background**: Solid color panel with selectable color and opacity (both views)
+- **System Image** | Shows the custom system image from the System Images Path (e.g. `snes.webp`)
 - **Custom Image**: User-selected image from device storage (both views)
 
 ### How do I layer widgets (control which appears on top)?

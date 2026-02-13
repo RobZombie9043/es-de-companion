@@ -181,6 +181,7 @@ Widgets are customizable overlay elements that display game and system artwork o
 | Widget Type | Description |
 |------------|-------------|
 | **System Logo** | Shows current system's logo (built-in or custom) |
+| **System Image** | Shows the custom system image from the System Images Path (e.g. `snes.webp`) |
 | **Random Fanart** | Displays random fanart from any game in the system |
 | **Random Screenshot** | Displays random screenshot from any game in the system |
 | **Color Background** | Solid color panel with adjustable transparency |
@@ -200,6 +201,7 @@ Widgets are customizable overlay elements that display game and system artwork o
 | **Back Cover** | Back of game box | `backcovers/` |
 | **Physical Media** | Disc/cartridge artwork | `physicalmedia/` |
 | **Game Description** | Scrollable text description | (from gamelist.xml) |
+| **System Image** | Shows the custom system image from the System Images Path (e.g. `snes.webp`) |
 | **Color Background** | Solid color panel with adjustable transparency | N/A |
 | **Custom Image** | User-selected image from device | N/A |
 

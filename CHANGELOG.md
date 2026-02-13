@@ -4,7 +4,7 @@
 
 ### Added
 - **Immersive Mode**: Enhanced fullscreen experience when Android is set to 3-button navigation mode
-- **New Widget Types**: Four new widget types available for enhanced customization
+- **New Widget Types**: Five new widget types available for enhanced customization
     - **Color Background**: Solid color panels with adjustable opacity (0-100%)
         - Choose from 12 preset colors or enter custom hex colors (#RRGGBB)
         - Perfect for creating colored sections, backgrounds, or design accents
@@ -21,6 +21,8 @@
         - Shows a different random screenshot each time you switch systems
         - Automatically selects from all available screenshots in the system's media folder
         - Great for previewing game collections
+    - **System Image**: Display a custom system image from the System Images Path (e.g. `snes.webp`)
+        - Uses the configured System Images path to show a system specific image
 
 ### Changed
 - **Performance Improvements**:

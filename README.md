@@ -58,7 +58,7 @@ _The companion screen automatically updates as you browse games in ES-DE, showin
 _Create fully customizable overlay widgets to display game artwork - marquees, box art, screenshots, fanart, and more. Position and resize each widget exactly how you want._
 
 **Widget Features:**
-- 11 widget types: Marquee, 2D/3D Box Art, Mix Image, Screenshots, Fanart, Title Screens, Back Covers, Physical Media, System Logos, and Game Descriptions
+- 12 widget types: Marquee, 2D/3D Box Art, Mix Image, Screenshots, Fanart, Title Screens, Back Covers, Physical Media, System Logos, System Images, and Game Descriptions
 - Drag-and-drop positioning with optional snap-to-grid
 - Resizable widgets with corner handles
 - Layer ordering (bring forward/send back)

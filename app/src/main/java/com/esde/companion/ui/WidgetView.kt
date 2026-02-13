@@ -541,6 +541,38 @@ class WidgetView(
             return
         }
 
+        // System Image Widget rendering
+        if (widget.imageType == Widget.ImageType.SYSTEM_IMAGE) {
+            // Image path is resolved by MainActivity.updateWidgetsForCurrentSystem()
+            // and set as a real file path. The "systemimage://" prefix means unresolved.
+            if (widget.imagePath.isEmpty() || widget.imagePath.startsWith("systemimage://")) {
+                imageView.setImageDrawable(null)
+                Log.w("WidgetView", "No system image resolved for SYSTEM_IMAGE widget")
+                return
+            }
+
+            val file = File(widget.imagePath)
+            if (file.exists()) {
+                val effectiveScaleType = widget.scaleType ?: Widget.ScaleType.FIT
+                imageManager.loadWidgetImage(
+                    imageView = imageView,
+                    imagePath = file.absolutePath,
+                    scaleType = effectiveScaleType,
+                    onLoaded = {
+                        Log.d("WidgetView", "System image loaded: ${file.name}")
+                    },
+                    onFailed = {
+                        Log.w("WidgetView", "Failed to load system image: ${file.absolutePath}")
+                        imageView.setImageDrawable(null)
+                    }
+                )
+            } else {
+                Log.w("WidgetView", "System image file not found: ${widget.imagePath}")
+                imageView.setImageDrawable(null)
+            }
+            return
+        }
+
         // Handle text-based widgets (game description) FIRST, before checking if path is empty
         if (widget.imageType == Widget.ImageType.GAME_DESCRIPTION) {
             imageView.visibility = GONE
@@ -974,6 +1006,7 @@ class WidgetView(
             Widget.ImageType.CUSTOM_IMAGE -> "Custom Image"
             Widget.ImageType.RANDOM_FANART -> "Random Fanart"
             Widget.ImageType.RANDOM_SCREENSHOT -> "Random Screenshot"
+            Widget.ImageType.SYSTEM_IMAGE -> "System Image"
         }
 
         // Inflate the custom dialog view

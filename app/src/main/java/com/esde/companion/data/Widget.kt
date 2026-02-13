@@ -35,7 +35,8 @@ data class Widget(
         COLOR_BACKGROUND,
         CUSTOM_IMAGE,
         RANDOM_FANART,
-        RANDOM_SCREENSHOT
+        RANDOM_SCREENSHOT,
+        SYSTEM_IMAGE
     }
 
     enum class WidgetContext {

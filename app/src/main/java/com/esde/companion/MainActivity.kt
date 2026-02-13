@@ -1251,6 +1251,28 @@ Access this help anytime from the widget menu!
         return path
     }
 
+    /**
+     * Resolve the system image file path for a given system name.
+     * Checks supported image extensions in priority order.
+     * @param systemName Normalized system name (e.g. "snes", "arcade")
+     * @return Absolute file path if found, null otherwise
+     */
+    private fun resolveSystemImagePath(systemName: String): String? {
+        val systemImageDir = File(getSystemImagePath())
+        if (!systemImageDir.exists() || !systemImageDir.isDirectory) return null
+
+        val extensions = listOf("webp", "png", "jpg", "jpeg", "gif")
+        for (ext in extensions) {
+            val file = File(systemImageDir, "$systemName.$ext")
+            if (file.exists()) {
+                android.util.Log.d("MainActivity", "Resolved system image: ${file.absolutePath}")
+                return file.absolutePath
+            }
+        }
+        android.util.Log.d("MainActivity", "No system image found for: $systemName")
+        return null
+    }
+
     private fun getSystemLogosPath(): String {
         val customPath = if (prefsManager.systemLogosPath.isEmpty()) null else prefsManager.systemLogosPath
         val path = customPath ?: "${Environment.getExternalStorageDirectory()}/ES-DE Companion/system_logos"
@@ -4318,10 +4340,11 @@ Access this help anytime from the widget menu!
                         findImageInFolder(systemName, gameFilename, "titlescreens")
                     Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget, handled separately
                     Widget.ImageType.SYSTEM_LOGO -> null
-                    Widget.ImageType.COLOR_BACKGROUND -> null  // NEW: No file needed
-                    Widget.ImageType.CUSTOM_IMAGE -> null      // NEW: Path already set
-                    Widget.ImageType.RANDOM_FANART -> null     // NEW: Path set in system widget loading
-                    Widget.ImageType.RANDOM_SCREENSHOT -> null // NEW: Path set in system widget loading
+                    Widget.ImageType.COLOR_BACKGROUND -> null  // No file needed
+                    Widget.ImageType.CUSTOM_IMAGE -> null      // Path already set
+                    Widget.ImageType.RANDOM_FANART -> null     // Path set in system widget loading
+                    Widget.ImageType.RANDOM_SCREENSHOT -> null // Path set in system widget loading
+                    Widget.ImageType.SYSTEM_IMAGE -> null      // Path resolved in createWidgetForGame()
                 }
 
                 // ALWAYS create the widget, even if image doesn't exist
@@ -4786,6 +4809,7 @@ Access this help anytime from the widget menu!
             // System view - system logo + random artwork + color/image widgets
             listOf(
                 "System Logo" to Widget.ImageType.SYSTEM_LOGO,
+                "System Image" to Widget.ImageType.SYSTEM_IMAGE,
                 "Random Fanart" to Widget.ImageType.RANDOM_FANART,
                 "Random Screenshot" to Widget.ImageType.RANDOM_SCREENSHOT,
                 "Color Background" to Widget.ImageType.COLOR_BACKGROUND,
@@ -4804,6 +4828,7 @@ Access this help anytime from the widget menu!
                 "Fanart" to Widget.ImageType.FANART,
                 "Title Screen" to Widget.ImageType.TITLE_SCREEN,
                 "Game Description" to Widget.ImageType.GAME_DESCRIPTION,
+                "System Image" to Widget.ImageType.SYSTEM_IMAGE,
                 "Color Background" to Widget.ImageType.COLOR_BACKGROUND,
                 "Custom Image" to Widget.ImageType.CUSTOM_IMAGE
             )
@@ -4997,6 +5022,46 @@ Access this help anytime from the widget menu!
             return
         }
 
+        if (imageType == Widget.ImageType.SYSTEM_IMAGE) {
+            val systemName = state.getCurrentSystemName()
+
+            if (systemName == null) {
+                android.widget.Toast.makeText(this, "No system selected", android.widget.Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val normalizedName = normalizeSystemName(systemName)
+
+            // Validate that a system image actually exists for this system
+            val resolvedPath = resolveSystemImagePath(normalizedName)
+            if (resolvedPath == null) {
+                android.widget.Toast.makeText(
+                    this,
+                    "No system image found for $normalizedName. Add an image to the System Images folder.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+
+            val widget = Widget(
+                imageType = Widget.ImageType.SYSTEM_IMAGE,
+                imagePath = "systemimage://$normalizedName",  // Resolved at display time
+                x = displayMetrics.widthPixels / 2f - 150f,
+                y = displayMetrics.heightPixels / 2f - 200f,
+                width = 300f,
+                height = 400f,
+                zIndex = nextZIndex,
+                widgetContext = currentContext  // Works in both SYSTEM and GAME context
+            )
+
+            widget.toPercentages(displayMetrics.widthPixels, displayMetrics.heightPixels)
+            addWidgetToScreen(widget)
+            saveAllWidgets()
+
+            android.widget.Toast.makeText(this, "System image widget created!", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+
         if (imageType == Widget.ImageType.SYSTEM_LOGO) {
             // Creating system widget
             val systemName = state.getCurrentSystemName()
@@ -5073,7 +5138,12 @@ Access this help anytime from the widget menu!
                 Widget.ImageType.TITLE_SCREEN ->
                     findImageInFolder(systemName, gameFilename, "titlescreens")
                 Widget.ImageType.GAME_DESCRIPTION -> null
-                else -> null
+                Widget.ImageType.SYSTEM_LOGO -> null
+                Widget.ImageType.COLOR_BACKGROUND -> null
+                Widget.ImageType.CUSTOM_IMAGE -> null
+                Widget.ImageType.RANDOM_FANART -> null
+                Widget.ImageType.RANDOM_SCREENSHOT -> null
+                Widget.ImageType.SYSTEM_IMAGE -> null
             }
 
             // Special handling for game description (text widget)
@@ -5264,6 +5334,17 @@ Access this help anytime from the widget menu!
                         } else {
                             android.util.Log.w("MainActivity", "No screenshots found for $systemName")
                             widget.copy(imagePath = "")
+                        }
+                    }
+
+                    Widget.ImageType.SYSTEM_IMAGE -> {
+                        val normalizedName = normalizeSystemName(systemName)
+                        val resolvedPath = resolveSystemImagePath(normalizedName)
+                        if (resolvedPath != null) {
+                            widget.copy(imagePath = resolvedPath)
+                        } else {
+                            android.util.Log.w("MainActivity", "No system image found for $systemName")
+                            widget.copy(imagePath = "")  // Shows empty widget
                         }
                     }
 
@@ -5541,10 +5622,11 @@ Access this help anytime from the widget menu!
                 findImageInFolder(systemName, gameFilename, AppConstants.Paths.MEDIA_TITLESCREENS)
             Widget.ImageType.GAME_DESCRIPTION -> null  // Text widget
             Widget.ImageType.SYSTEM_LOGO -> null
-            Widget.ImageType.COLOR_BACKGROUND -> null  // NEW: No file needed
-            Widget.ImageType.CUSTOM_IMAGE -> null      // NEW: Path already set
-            Widget.ImageType.RANDOM_FANART -> null     // NEW: Path set dynamically
-            Widget.ImageType.RANDOM_SCREENSHOT -> null // NEW: Path set dynamically
+            Widget.ImageType.COLOR_BACKGROUND -> null  // No file needed
+            Widget.ImageType.CUSTOM_IMAGE -> null      // Path already set
+            Widget.ImageType.RANDOM_FANART -> null     // Path set dynamically
+            Widget.ImageType.RANDOM_SCREENSHOT -> null // Path set dynamically
+            Widget.ImageType.SYSTEM_IMAGE -> null      // Path resolved in createWidgetForGame()
         }
         // If primary found, return it
         if (primaryFile != null) return primaryFile
@@ -5588,6 +5670,13 @@ Access this help anytime from the widget menu!
             Widget.ImageType.CUSTOM_IMAGE -> {
                 android.util.Log.d("MainActivity", "  Custom image widget - using as-is")
                 return widget
+            }
+            Widget.ImageType.SYSTEM_IMAGE -> {
+                // Resolve the system image path at display time
+                val normalizedName = normalizeSystemName(systemName)
+                val resolvedPath = resolveSystemImagePath(normalizedName)
+                android.util.Log.d("MainActivity", "  System image widget resolved: $resolvedPath")
+                return widget.copy(imagePath = resolvedPath ?: "")
             }
             else -> {
                 // Continue to normal image file lookup for game artwork widgets
