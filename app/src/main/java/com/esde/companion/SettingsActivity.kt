@@ -2777,6 +2777,7 @@ class SettingsActivity : AppCompatActivity() {
                     null
                 }
             }
+            .distinctBy { it.packageName }
             .sortedBy { it.name.lowercase() }
 
         // Load hidden apps from preferences
