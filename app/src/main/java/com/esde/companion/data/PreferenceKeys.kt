@@ -115,16 +115,6 @@ object PreferenceKeys {
     const val KEY_BLACK_OVERLAY_ENABLED = "black_overlay_enabled"
     const val DEFAULT_BLACK_OVERLAY_ENABLED = false
 
-    // ========== LOGO PREFERENCES ==========
-    const val KEY_SYSTEM_LOGO_SIZE = "system_logo_size"
-    const val DEFAULT_SYSTEM_LOGO_SIZE = 50
-
-    const val KEY_SHOW_SYSTEM_LOGO = "show_system_logo"
-    const val DEFAULT_SHOW_SYSTEM_LOGO = true
-
-    const val KEY_SHOW_GAME_LOGO = "show_game_logo"
-    const val DEFAULT_SHOW_GAME_LOGO = false
-
     // ========== ANIMATION PREFERENCES ==========
     const val KEY_ANIMATION_STYLE = "animation_style"
     const val DEFAULT_ANIMATION_STYLE = "scale_fade"

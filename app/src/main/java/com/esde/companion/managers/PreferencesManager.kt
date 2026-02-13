@@ -108,6 +108,7 @@ class PreferencesManager(context: Context) {
 
     // ========== WIDGET PROPERTIES ==========
 
+    @Suppress("KotlinConstantConditions") // Default of true is intentional — widgets start locked
     var widgetsLocked: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_WIDGETS_LOCKED,
@@ -115,6 +116,7 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_WIDGETS_LOCKED, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of true is intentional — snap to grid starts enabled
     var snapToGrid: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_SNAP_TO_GRID,
@@ -122,6 +124,7 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SNAP_TO_GRID, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — grid starts hidden
     var showGrid: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_SHOW_GRID,
@@ -131,6 +134,7 @@ class PreferencesManager(context: Context) {
 
     // ========== VIDEO PROPERTIES ==========
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — video starts disabled
     var videoEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_VIDEO_ENABLED,
@@ -145,6 +149,7 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putInt(PreferenceKeys.KEY_VIDEO_DELAY, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — video audio starts disabled
     var videoAudioEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_VIDEO_AUDIO_ENABLED,
@@ -154,6 +159,7 @@ class PreferencesManager(context: Context) {
 
     // ========== MUSIC PROPERTIES ==========
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — music starts disabled
     var musicEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_MUSIC_ENABLED,
@@ -175,6 +181,7 @@ class PreferencesManager(context: Context) {
         ) ?: PreferenceKeys.DEFAULT_MUSIC_VIDEO_BEHAVIOR
         set(value) = prefs.edit { putString(PreferenceKeys.KEY_MUSIC_VIDEO_BEHAVIOR, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of true is intentional — song title display starts enabled
     var musicSongTitleEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_MUSIC_SONG_TITLE_ENABLED,
@@ -197,6 +204,7 @@ class PreferencesManager(context: Context) {
         set(value) = prefs.edit { putInt(PreferenceKeys.KEY_MUSIC_SONG_TITLE_OPACITY, value) }
 
     // Music per-state toggles
+    @Suppress("KotlinConstantConditions") // Default of true is intentional — music plays during system browsing by default
     var musicSystemEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_MUSIC_SYSTEM_ENABLED,
@@ -204,6 +212,7 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_MUSIC_SYSTEM_ENABLED, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of true is intentional — music plays during game browsing by default
     var musicGameEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_MUSIC_GAME_ENABLED,
@@ -211,6 +220,7 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_MUSIC_GAME_ENABLED, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — music does not play during screensaver by default
     var musicScreensaverEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_MUSIC_SCREENSAVER_ENABLED,
@@ -262,35 +272,13 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putInt(PreferenceKeys.KEY_GAME_BACKGROUND_COLOR, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — black overlay starts disabled
     var blackOverlayEnabled: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_BLACK_OVERLAY_ENABLED,
             PreferenceKeys.DEFAULT_BLACK_OVERLAY_ENABLED
         )
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_BLACK_OVERLAY_ENABLED, value) }
-
-    // ========== LOGO PROPERTIES ==========
-
-    var systemLogoSize: Int
-        get() = prefs.getInt(
-            PreferenceKeys.KEY_SYSTEM_LOGO_SIZE,
-            PreferenceKeys.DEFAULT_SYSTEM_LOGO_SIZE
-        )
-        set(value) = prefs.edit { putInt(PreferenceKeys.KEY_SYSTEM_LOGO_SIZE, value) }
-
-    var showSystemLogo: Boolean
-        get() = prefs.getBoolean(
-            PreferenceKeys.KEY_SHOW_SYSTEM_LOGO,
-            PreferenceKeys.DEFAULT_SHOW_SYSTEM_LOGO
-        )
-        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SHOW_SYSTEM_LOGO, value) }
-
-    var showGameLogo: Boolean
-        get() = prefs.getBoolean(
-            PreferenceKeys.KEY_SHOW_GAME_LOGO,
-            PreferenceKeys.DEFAULT_SHOW_GAME_LOGO
-        )
-        set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_SHOW_GAME_LOGO, value) }
 
     // ========== ANIMATION PROPERTIES ==========
 
@@ -317,6 +305,7 @@ class PreferencesManager(context: Context) {
 
     // ========== SETUP/STATE PROPERTIES ==========
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — setup starts incomplete on first install
     var setupCompleted: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_SETUP_COMPLETED,
@@ -345,6 +334,7 @@ class PreferencesManager(context: Context) {
         ) ?: emptySet()
         set(value) = prefs.edit { putStringSet(PreferenceKeys.KEY_HIDDEN_APPS, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — default widgets not yet created on first install
     var defaultWidgetsCreated: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_DEFAULT_WIDGETS_CREATED,
@@ -352,6 +342,7 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_DEFAULT_WIDGETS_CREATED, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — tutorial not yet shown on first install
     var widgetTutorialShown: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_WIDGET_TUTORIAL_SHOWN,
@@ -359,6 +350,7 @@ class PreferencesManager(context: Context) {
         )
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_WIDGET_TUTORIAL_SHOWN, value) }
 
+    @Suppress("KotlinConstantConditions") // Default of false is intentional — auto-show tutorial not suppressed on first install
     var widgetTutorialDontShowAuto: Boolean
         get() = prefs.getBoolean(
             PreferenceKeys.KEY_WIDGET_TUTORIAL_DONT_SHOW_AUTO,
@@ -367,13 +359,6 @@ class PreferencesManager(context: Context) {
         set(value) = prefs.edit { putBoolean(PreferenceKeys.KEY_WIDGET_TUTORIAL_DONT_SHOW_AUTO, value) }
 
     // ========== HELPER METHODS ==========
-
-    /**
-     * Clear all preferences (useful for testing or factory reset).
-     */
-    fun clearAll() {
-        prefs.edit { clear() }
-    }
 
     /**
      * Check if a preference exists.
