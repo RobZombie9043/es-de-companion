@@ -39,6 +39,7 @@
     - Refactored `MediaFileLocator` to `MediaManager` (better naming for manager pattern)
     - Refactored `AppLaunchPreferences` to `AppLaunchManager` (consistent manager naming)
 - Add distinctBy packageName to deduplicate multi-activity apps in drawer and search
+- Add legacy gamelist path support
 
 ### Refactored
 - **Manager Classes**: Comprehensive code cleanup and optimization across all managers
