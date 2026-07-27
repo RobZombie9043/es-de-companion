@@ -1,0 +1,8 @@
+<resources>
+    <!--
+        This app is fully Compose - real theming lives in ui/theme/Theme.kt. This is
+        only the minimal manifest-required bridge theme, kept dependency-free
+        (no com.google.android.material) by extending the platform theme directly.
+    -->
+    <style name="Theme.EsdeCompanion" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
