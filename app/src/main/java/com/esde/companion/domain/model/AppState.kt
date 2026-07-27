@@ -34,9 +34,17 @@ sealed class AppState {
         val systemFullName: String,
     ) : AppState()
 
+    /**
+     * [previousState] is whatever [AppState] was active immediately before the
+     * screensaver started - ES-DE does not reliably fire a fresh system-select/game-select
+     * on screensaver-end, so the reducer restores this directly rather than falling back
+     * to [Idle]. Deliberately excludes [Screensaver] itself (see [AppStateReducer]), so
+     * this never nests.
+     */
     data class Screensaver(
         val mode: String,
         val currentGame: ScreensaverGame?,
+        val previousState: AppState,
     ) : AppState()
 }
 

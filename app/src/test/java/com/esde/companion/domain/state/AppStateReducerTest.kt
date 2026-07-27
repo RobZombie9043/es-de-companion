@@ -33,6 +33,29 @@ class AppStateReducerTest {
     }
 
     @Test
+    fun `game-select for the same rom while playing is ignored`() {
+        val playing = AppState.PlayingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
+        val event = EsdeEvent.GameSelect("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
+
+        val result = AppStateReducer.reduce(playing, event)
+
+        assertEquals(playing, result)
+    }
+
+    @Test
+    fun `game-select for a different rom while playing transitions to BrowsingGame`() {
+        val playing = AppState.PlayingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
+        val event = EsdeEvent.GameSelect("/roms/dc/other.chd", "Other", "dreamcast", "Sega Dreamcast")
+
+        val result = AppStateReducer.reduce(playing, event)
+
+        assertEquals(
+            AppState.BrowsingGame("/roms/dc/other.chd", "Other", "dreamcast", "Sega Dreamcast"),
+            result,
+        )
+    }
+
+    @Test
     fun `game-start transitions from BrowsingGame to PlayingGame`() {
         val browsing = AppState.BrowsingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
         val event = EsdeEvent.GameStart("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
@@ -59,17 +82,21 @@ class AppStateReducerTest {
     }
 
     @Test
-    fun `screensaver-start from any prior state produces Screensaver with no current game`() {
-        val previous = AppState.BrowsingSystem("dreamcast", "Sega Dreamcast", "/roms/dreamcast")
+    fun `screensaver-start captures the current state as previousState`() {
+        val previous = AppState.BrowsingSystem("gc", "Nintendo GameCube", "/roms/gc")
 
         val result = AppStateReducer.reduce(previous, EsdeEvent.ScreensaverStart("manual"))
 
-        assertEquals(AppState.Screensaver(mode = "manual", currentGame = null), result)
+        assertEquals(
+            AppState.Screensaver(mode = "manual", currentGame = null, previousState = previous),
+            result,
+        )
     }
 
     @Test
-    fun `screensaver-game-select updates the current game and preserves the existing mode`() {
-        val screensaver = AppState.Screensaver(mode = "manual", currentGame = null)
+    fun `screensaver-game-select updates the current game and preserves mode and previousState`() {
+        val previous = AppState.BrowsingSystem("gc", "Nintendo GameCube", "/roms/gc")
+        val screensaver = AppState.Screensaver(mode = "manual", currentGame = null, previousState = previous)
         val event = EsdeEvent.ScreensaverGameSelect("/roms/arcade/tapper.zip", "Tapper", "arcade", "Arcade")
 
         val result = AppStateReducer.reduce(screensaver, event)
@@ -78,13 +105,14 @@ class AppStateReducerTest {
             AppState.Screensaver(
                 mode = "manual",
                 currentGame = ScreensaverGame("/roms/arcade/tapper.zip", "Tapper", "arcade", "Arcade"),
+                previousState = previous,
             ),
             result,
         )
     }
 
     @Test
-    fun `screensaver-game-select without a prior screensaver-start falls back to an unknown mode`() {
+    fun `screensaver-game-select without a prior screensaver-start falls back to unknown mode and Idle previousState`() {
         val event = EsdeEvent.ScreensaverGameSelect("/roms/arcade/tapper.zip", "Tapper", "arcade", "Arcade")
 
         val result = AppStateReducer.reduce(AppState.Idle, event)
@@ -93,16 +121,29 @@ class AppStateReducerTest {
             AppState.Screensaver(
                 mode = "unknown",
                 currentGame = ScreensaverGame("/roms/arcade/tapper.zip", "Tapper", "arcade", "Arcade"),
+                previousState = AppState.Idle,
             ),
             result,
         )
     }
 
     @Test
-    fun `screensaver-end returns to Idle`() {
-        val screensaver = AppState.Screensaver(mode = "manual", currentGame = null)
+    fun `screensaver-end restores the state active before the screensaver started`() {
+        val previous = AppState.BrowsingSystem("gc", "Nintendo GameCube", "/roms/gc")
+        val screensaver = AppState.Screensaver(
+            mode = "manual",
+            currentGame = ScreensaverGame("/roms/arcade/xexex.zip", "Xexex", "arcade", "Arcade"),
+            previousState = previous,
+        )
 
         val result = AppStateReducer.reduce(screensaver, EsdeEvent.ScreensaverEnd("cancel"))
+
+        assertEquals(previous, result)
+    }
+
+    @Test
+    fun `screensaver-end with no prior screensaver-start falls back to Idle`() {
+        val result = AppStateReducer.reduce(AppState.Idle, EsdeEvent.ScreensaverEnd("cancel"))
 
         assertEquals(AppState.Idle, result)
     }
