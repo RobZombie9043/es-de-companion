@@ -12,4 +12,13 @@ import kotlinx.coroutines.flow.Flow
  */
 interface EsdeLogRepository {
     fun observeEvents(): Flow<EsdeEvent>
+
+    /**
+     * Whether es_log.txt currently exists at the configured path. Emits an initial value
+     * immediately, then again only when existence actually changes (e.g. ES-DE is
+     * launched for the first time after the app started, or the configured folder turns
+     * out to be wrong). Used by [ObserveConnectionStateUseCase] to distinguish "genuinely
+     * idle" from "nothing to read yet."
+     */
+    fun observeLogFileExists(): Flow<Boolean>
 }

@@ -60,7 +60,7 @@ class EsdeLogFileRepository(
         // current end-of-file regardless of how many signals coalesce into one wakeup.
         val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
 
-        val fileObserver = watchDirectoryFor(logFilePath) { checkSignal.trySend(Unit) }
+        val fileObserver = watchDirectoryFor(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
         fileObserver.startWatching()
 
         val fallbackJob = launch {
@@ -94,18 +94,50 @@ class EsdeLogFileRepository(
     }.flowOn(Dispatchers.IO)
 
     /**
-     * Watches [targetPath]'s parent directory and invokes [onChange] for any create/write/
-     * move event on an entry matching its file name. See class doc for why this watches
-     * the directory rather than the file itself.
+     * Whether es_log.txt currently exists. Runs its own independent FileObserver/poll
+     * loop rather than sharing state with [observeEvents] - the two are collected
+     * independently (see ObserveConnectionStateUseCase), and existence-tracking has no
+     * need for read position, so keeping it separate is simpler than threading existence
+     * state through the tailing loop above.
      */
-    private fun watchDirectoryFor(targetPath: String, onChange: () -> Unit): FileObserver {
+    override fun observeLogFileExists(): Flow<Boolean> = channelFlow {
+        var lastKnown = File(logFilePath).exists()
+        send(lastKnown)
+
+        val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
+        val fileObserver = watchDirectoryFor(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+        fileObserver.startWatching()
+
+        val fallbackJob = launch {
+            while (isActive) {
+                delay(fallbackPollIntervalMs)
+                checkSignal.trySend(Unit)
+            }
+        }
+
+        try {
+            for (signal in checkSignal) {
+                val exists = File(logFilePath).exists()
+                if (exists != lastKnown) {
+                    lastKnown = exists
+                    send(exists)
+                }
+            }
+        } finally {
+            fallbackJob.cancel()
+            fileObserver.stopWatching()
+        }
+    }.flowOn(Dispatchers.IO)
+
+    /**
+     * Watches [targetPath]'s parent directory and invokes [onChange] for any event in
+     * [mask] on an entry matching its file name. See class doc for why this watches the
+     * directory rather than the file itself.
+     */
+    private fun watchDirectoryFor(targetPath: String, mask: Int, onChange: () -> Unit): FileObserver {
         val targetFile = File(targetPath)
         val parentDir = targetFile.parentFile ?: File("/")
         val targetName = targetFile.name
-        val mask = FileObserver.MODIFY or
-                FileObserver.CLOSE_WRITE or
-                FileObserver.CREATE or
-                FileObserver.MOVED_TO
 
         return object : FileObserver(parentDir, mask) {
             override fun onEvent(event: Int, path: String?) {
@@ -151,5 +183,15 @@ class EsdeLogFileRepository(
         // Safety net only now, not the primary mechanism - FileObserver handles the
         // latency-sensitive path, so this can afford to be slow.
         const val DEFAULT_FALLBACK_POLL_INTERVAL_MS = 3_000L
+
+        val WRITE_EVENTS_MASK = FileObserver.MODIFY or
+                FileObserver.CLOSE_WRITE or
+                FileObserver.CREATE or
+                FileObserver.MOVED_TO
+
+        val EXISTENCE_EVENTS_MASK = FileObserver.CREATE or
+                FileObserver.DELETE or
+                FileObserver.MOVED_TO or
+                FileObserver.MOVED_FROM
     }
 }
