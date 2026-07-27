@@ -1,20 +1,17 @@
 package com.esde.companion.domain.usecase
 
 import app.cash.turbine.test
+import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.repository.EsdeLogRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * Note: uses Turbine (see CLAUDE.md tech stack) for Flow assertions. If Turbine isn't
- * yet added as a test dependency, add `testImplementation(libs.turbine)` alongside
- * kotlinx-coroutines-test in app/build.gradle.kts.
- */
 class ObserveConnectionStateUseCaseTest {
 
     private class FakeEsdeLogRepository(
@@ -41,19 +38,30 @@ class ObserveConnectionStateUseCaseTest {
 
     @Test
     fun `emits Connected wrapping the reduced AppState when the log file exists`() = runTest {
+        // A MutableSharedFlow, not flowOf, so this test controls exactly when each event
+        // arrives - combine() only guarantees the *latest* combination reaches the
+        // collector, so two synchronous upstream emissions (as flowOf would produce) can
+        // conflate into one downstream item before the collector catches up. Emitting
+        // explicitly, with an awaitItem() in between, keeps each step deterministic.
+        val events = MutableSharedFlow<EsdeEvent>()
         val repository = FakeEsdeLogRepository(
-            events = flowOf(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc")),
+            events = events,
             fileExists = flowOf(true),
         )
         val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository))
 
         useCase().test {
-            val first = awaitItem()
-            check(first is EsdeConnectionState.Connected)
-            val second = awaitItem()
-            check(second is EsdeConnectionState.Connected)
-            assertEquals("gc", (second.appState as com.esde.companion.domain.model.AppState.BrowsingSystem).systemShortName)
-            awaitComplete()
+            val initial = awaitItem()
+            check(initial is EsdeConnectionState.Connected)
+            assertEquals(AppState.Idle, initial.appState)
+
+            events.emit(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"))
+
+            val updated = awaitItem()
+            check(updated is EsdeConnectionState.Connected)
+            assertEquals("gc", (updated.appState as AppState.BrowsingSystem).systemShortName)
+
+            cancelAndIgnoreRemainingEvents()
         }
     }
 }

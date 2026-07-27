@@ -10,9 +10,9 @@ import kotlinx.coroutines.flow.Flow
  * in this app) and how folders are checked (plain File I/O) is entirely a data-layer
  * implementation detail.
  *
- * Re-enterable by design: save*/observe* are not "first run only" - a Settings screen
-* reuses these same methods to change folders later.
-*/
+ * Re-enterable by design: the save/observe methods are not "first run only" - a Settings
+ * screen reuses these same methods to change folders later.
+ */
 interface OnboardingRepository {
 
     fun defaultLogFolderPath(): String
