@@ -25,7 +25,7 @@ class EsdeEventParser {
         val eventName = payload.substring(0, nameEnd)
         val argsText = payload.substring(nameEnd + 1)
         val args = QUOTED_ARG_REGEX.findAll(argsText)
-            .map { it.groupValues[1] }
+            .map { it.groupValues[1].unescapeBackslashes() }
             .toList()
 
         return toEvent(eventName, args)
@@ -86,5 +86,9 @@ class EsdeEventParser {
     private companion object {
         const val FIRE_EVENT_MARKER = "Scripting::fireEvent():"
         val QUOTED_ARG_REGEX = Regex("\"([^\"]*)\"")
+        val BACKSLASH_ESCAPE_REGEX = Regex("""\\(.)""")
+
+        fun String.unescapeBackslashes(): String =
+            BACKSLASH_ESCAPE_REGEX.replace(this) { it.groupValues[1] }
     }
 }

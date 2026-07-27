@@ -64,6 +64,25 @@ class EsdeEventParserTest {
     }
 
     @Test
+    fun `parses game-start with shell-escaped path and unescapes it`() {
+        val line = "Jul 28 10:01:54 Debug:  Scripting::fireEvent(): game-start " +
+                "\"/storage/E2AB-E84A/ROMs/gba/Mega\\ Man\\ Battle\\ Network\\ 3\\ -\\ White\\ Version\\ \\(USA\\).zip\" " +
+                "\"Mega Man Battle Network 3 : White\" \"gba\" \"Nintendo Game Boy Advance\""
+
+        val result = parser.parseLine(line)
+
+        assertEquals(
+            EsdeEvent.GameStart(
+                romPath = "/storage/E2AB-E84A/ROMs/gba/Mega Man Battle Network 3 - White Version (USA).zip",
+                gameName = "Mega Man Battle Network 3 : White",
+                systemShortName = "gba",
+                systemFullName = "Nintendo Game Boy Advance",
+            ),
+            result,
+        )
+    }
+
+    @Test
     fun `parses game-end`() {
         val line = "Jul 28 07:01:55 Debug:  Scripting::fireEvent(): game-end " +
             "\"/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd\" " +
