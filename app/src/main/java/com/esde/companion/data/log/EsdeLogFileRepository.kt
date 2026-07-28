@@ -2,6 +2,7 @@ package com.esde.companion.data.log
 
 import android.os.FileObserver
 import com.esde.companion.domain.model.EsdeEvent
+import com.esde.companion.domain.model.isStartupAnchor
 import com.esde.companion.domain.parser.EsdeEventParser
 import com.esde.companion.domain.repository.EsdeLogRepository
 import java.io.File
@@ -51,7 +52,7 @@ class EsdeLogFileRepository(
 
         val startupFile = File(logFilePath)
         if (startupFile.exists()) {
-            findLatestEvent(startupFile)?.let { send(it) }
+            findEventsSinceLastAnchor(startupFile).forEach { send(it) }
             position = startupFile.length()
         }
 
@@ -147,20 +148,49 @@ class EsdeLogFileRepository(
     }
 
     /**
-     * Reads the file from the start purely to find the most recently fired event, without
-     * emitting every event along the way. Used only once, at startup, so the UI's initial
-     * state reflects reality immediately instead of replaying history.
+     * Finds the most recent "anchor" event (see [isStartupAnchor]) and returns it plus
+     * every event after it, in original order. Replaying just the anchor itself and
+     * relying on it being self-contained would be enough on its own, but returning the
+     * full suffix means later events (e.g. a screensaver session that has since ended)
+     * fold through AppStateReducer exactly as they would have live, restoring
+     * previousState/mode correctly instead of losing that context.
+     *
+     * Reads backward from the end of the file in growing windows for the same reason
+     * described on [EsdeLogFileRepository] generally - a full linear scan from byte 0 is
+     * slow for a log that's grown over a real session. Widens until an anchor is found or
+     * the whole file has been read; if no anchor exists anywhere in the file, returns an
+     * empty list and startup correctly falls back to [AppState.Idle].
      */
-    private fun findLatestEvent(file: File): EsdeEvent? {
-        var latest: EsdeEvent? = null
+    private fun findEventsSinceLastAnchor(file: File): List<EsdeEvent> {
+        val fileLength = file.length()
+        if (fileLength == 0L) return emptyList()
+
         RandomAccessFile(file, "r").use { raf ->
-            var line = raf.readLine()
-            while (line != null) {
-                parser.parseLine(line)?.let { latest = it }
-                line = raf.readLine()
+            var windowSize = INITIAL_TAIL_WINDOW_BYTES
+            while (true) {
+                val startPos = maxOf(0L, fileLength - windowSize)
+                val bytesToRead = (fileLength - startPos).toInt()
+
+                raf.seek(startPos)
+                val buffer = ByteArray(bytesToRead)
+                raf.readFully(buffer)
+
+                // Same encoding assumption noted on the class kdoc.
+                val text = String(buffer, Charsets.ISO_8859_1)
+
+                // startPos > 0 means the first line in this window may be a fragment cut
+                // off mid-line by the window boundary, not a real line boundary - drop it
+                // rather than risk parsing a truncated line.
+                val lines = text.lineSequence().let { if (startPos > 0) it.drop(1) else it }
+                val events = lines.mapNotNull { parser.parseLine(it) }.toList()
+
+                val anchorIndex = events.indexOfLast { it.isStartupAnchor() }
+                if (anchorIndex != -1) return events.subList(anchorIndex, events.size)
+                if (startPos == 0L) return emptyList()
+
+                windowSize *= TAIL_WINDOW_GROWTH_FACTOR
             }
         }
-        return latest
     }
 
     private suspend fun readNewLines(
@@ -183,6 +213,13 @@ class EsdeLogFileRepository(
         // Safety net only now, not the primary mechanism - FileObserver handles the
         // latency-sensitive path, so this can afford to be slow.
         const val DEFAULT_FALLBACK_POLL_INTERVAL_MS = 3_000L
+
+        // Tail-window read for findLatestEvent(): 64KB comfortably covers "last event
+        // fired a while ago" for realistic ES-DE session logs; doubles on retry and
+        // ultimately falls back to the whole file, so correctness never depends on
+        // this guess being right, only speed does.
+        const val INITIAL_TAIL_WINDOW_BYTES = 64L * 1024
+        const val TAIL_WINDOW_GROWTH_FACTOR = 4L
 
         val WRITE_EVENTS_MASK = FileObserver.MODIFY or
                 FileObserver.CLOSE_WRITE or

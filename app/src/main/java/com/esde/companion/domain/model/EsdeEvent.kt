@@ -52,3 +52,21 @@ sealed class EsdeEvent {
     /** [reason] is whatever ES-DE reports, e.g. "cancel", "game-jump", or "game-start". */
     data class ScreensaverEnd(val reason: String) : EsdeEvent()
 }
+
+/**
+ * Whether this event fully determines [AppState] on its own, independent of whatever
+ * state came before it. Used only for startup - see EsdeLogFileRepository - to decide
+ * how far back a cold-start replay needs to go: screensaver events specifically lean on
+ * previousState/mode carried over from prior events (see AppStateReducer), so they are
+ * never safe to treat as a starting point by themselves.
+ */
+fun EsdeEvent.isStartupAnchor(): Boolean = when (this) {
+    is EsdeEvent.SystemSelect,
+    is EsdeEvent.GameSelect,
+    is EsdeEvent.GameStart,
+    is EsdeEvent.GameEnd -> true
+
+    is EsdeEvent.ScreensaverStart,
+    is EsdeEvent.ScreensaverGameSelect,
+    is EsdeEvent.ScreensaverEnd -> false
+}
