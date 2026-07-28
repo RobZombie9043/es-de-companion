@@ -39,7 +39,7 @@ sealed class EsdeEvent {
         val systemFullName: String,
     ) : EsdeEvent()
 
-    /** [mode] is whatever ES-DE reports as the trigger, e.g. "manual" or "timeout". */
+    /** [mode] is whatever ES-DE reports as the trigger, e.g. "timer" or "manual". */
     data class ScreensaverStart(val mode: String) : EsdeEvent()
 
     data class ScreensaverGameSelect(
@@ -49,6 +49,6 @@ sealed class EsdeEvent {
         val systemFullName: String,
     ) : EsdeEvent()
 
-    /** [reason] is whatever ES-DE reports, e.g. "cancel" or "timeout". */
+    /** [reason] is whatever ES-DE reports, e.g. "cancel", "game-jump", or "game-start". */
     data class ScreensaverEnd(val reason: String) : EsdeEvent()
 }
