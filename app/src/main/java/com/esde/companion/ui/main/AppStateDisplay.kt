@@ -50,3 +50,19 @@ fun AppState.toDisplayText(): String = when (this) {
         }
     }
 }
+
+/**
+ * Formats the cover-art lookup for whatever game is currently in view. Returns an empty
+ * string when there's no game in view or nothing to show yet, so callers can append this
+ * unconditionally without worrying about stray blank sections.
+ */
+fun CoverImageStatus?.toDisplayText(): String {
+    val status = this ?: return ""
+    return buildString {
+        appendLine()
+        appendLine()
+        appendLine("Cover image path (example)")
+        appendLine(status.exampleFilePath)
+        append(if (status.found) "Found: yes" else "Found: no")
+    }
+}

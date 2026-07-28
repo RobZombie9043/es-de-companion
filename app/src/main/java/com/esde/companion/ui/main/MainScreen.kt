@@ -3,6 +3,8 @@ package com.esde.companion.ui.main
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -30,13 +32,19 @@ import com.esde.companion.domain.model.EsdeConnectionState
 @Composable
 fun MainScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
-    MainScreenContent(connectionState = connectionState, onOpenSettings = onOpenSettings)
+    val coverImageStatus by viewModel.coverImageStatus.collectAsStateWithLifecycle()
+    MainScreenContent(
+        connectionState = connectionState,
+        coverImageStatus = coverImageStatus,
+        onOpenSettings = onOpenSettings,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
     connectionState: EsdeConnectionState,
+    coverImageStatus: CoverImageStatus?,
     onOpenSettings: () -> Unit,
 ) {
     Scaffold(
@@ -60,11 +68,12 @@ private fun MainScreenContent(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = connectionState.toDisplayText(),
+                    text = connectionState.toDisplayText() + coverImageStatus.toDisplayText(),
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
                 )
