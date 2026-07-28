@@ -13,6 +13,6 @@ class MainViewModelFactory(
         require(modelClass.isAssignableFrom(MainViewModel::class.java)) {
             "Unknown ViewModel class: $modelClass"
         }
-        return MainViewModel(appContainer.observeAppStateUseCase) as T
+        return MainViewModel(appContainer.observeConnectionStateUseCase) as T
     }
 }
