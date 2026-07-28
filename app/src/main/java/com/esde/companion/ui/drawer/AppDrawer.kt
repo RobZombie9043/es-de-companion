@@ -1,7 +1,8 @@
 package com.esde.companion.ui.drawer
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,12 +28,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.apps.AppLauncher
+import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.domain.model.InstalledApp
 
 /**
  * Full-screen grid of launchable apps. Purely presentational - opening/closing and the
  * drag gesture that drives it live in MainScreen, this only knows how to render the app
  * list it's handed and launch whatever was tapped.
+ *
+ * Single tap launches on this screen. Double tap launches the same app on the other
+ * connected display, if one is present - see SecondaryDisplayResolver. Falls back to a
+ * normal same-screen launch when no secondary display is found, rather than no-oping,
+ * so double-tap is never a dead gesture.
  */
 @Composable
 fun AppDrawer(
@@ -59,20 +66,30 @@ fun AppDrawer(
                     AppLauncher.launch(context, app.packageName)
                     onAppLaunched()
                 },
+                onDoubleClick = {
+                    val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
+                    AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
+                    onAppLaunched()
+                },
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppDrawerItem(app: InstalledApp, onClick: () -> Unit) {
+private fun AppDrawerItem(
+    app: InstalledApp,
+    onClick: () -> Unit,
+    onDoubleClick: () -> Unit,
+) {
     val context = LocalContext.current
     val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
         value = AppIconLoader.loadIcon(context, app.packageName)
     }
 
     Column(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.combinedClickable(onClick = onClick, onDoubleClick = onDoubleClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
