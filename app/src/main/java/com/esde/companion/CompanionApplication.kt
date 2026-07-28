@@ -3,5 +3,12 @@ package com.esde.companion
 import android.app.Application
 
 class CompanionApplication : Application() {
-    val appContainer = AppContainer(this)
+
+    lateinit var appContainer: AppContainer
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        appContainer = AppContainer(this)
+    }
 }
