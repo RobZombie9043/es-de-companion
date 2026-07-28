@@ -70,7 +70,7 @@ class FileGameMediaRepositoryTest {
 
         val result = repository.resolveMedia(
             systemShortName = "psx",
-            romPath = gameDir.absolutePath,
+            romPath = gameDir.absolutePath.replace(File.separatorChar, '/'),
         )
 
         assertEquals(
