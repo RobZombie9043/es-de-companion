@@ -89,11 +89,6 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
                     )
                 }
 
-                OverlayToggle(
-                    enabled = uiState.overlayEnabled,
-                    onEnabledChange = viewModel::onOverlayEnabledChanged,
-                )
-
                 FolderSetting(
                     label = "ES-DE folder",
                     path = uiState.logFolderPath,
@@ -108,6 +103,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
                     isValidating = uiState.isValidatingMediaFolder,
                     statusText = uiState.mediaFolderValidation.toStatusText(),
                     onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked) },
+                )
+
+                OverlayToggle(
+                    enabled = uiState.overlayEnabled,
+                    onEnabledChange = viewModel::onOverlayEnabledChanged,
                 )
             }
         }
