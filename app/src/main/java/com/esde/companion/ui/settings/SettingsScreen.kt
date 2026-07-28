@@ -1,6 +1,7 @@
 package com.esde.companion.ui.settings
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +57,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+
+    BackHandler(onBack = onDone)
 
     Scaffold(
         topBar = {

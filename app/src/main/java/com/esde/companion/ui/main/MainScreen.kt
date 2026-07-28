@@ -1,5 +1,6 @@
 package com.esde.companion.ui.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -99,6 +100,20 @@ private fun MainScreenContent(
         // pixels so it stays meaningful across recomposition even if maxHeight changes
         // (e.g. rotation), unlike a remembered pixel offset which would go stale.
         val openFraction = remember { Animatable(0f) }
+
+        // System/hardware back must never exit this app - it's meant to run continuously on
+        // the second display. If the App Drawer is open, back closes it first; otherwise the
+        // event is simply consumed and does nothing.
+        BackHandler(enabled = true) {
+            if (openFraction.value > 0f) {
+                coroutineScope.launch {
+                    openFraction.animateTo(
+                        targetValue = 0f,
+                        animationSpec = DRAWER_SETTLE_SPRING,
+                    )
+                }
+            }
+        }
 
         // velocityFraction: positive = moving toward open (upward), negative = moving
         // toward closed (downward) - same sign convention as openFraction itself, so a

@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -66,26 +69,23 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable(Destinations.MAIN) {
-                            val viewModel: MainViewModel = viewModel(
-                                factory = MainViewModelFactory(appContainer),
-                            )
-                            val appDrawerViewModel: AppDrawerViewModel = viewModel(
-                                factory = AppDrawerViewModelFactory(appContainer),
-                            )
-                            MainScreen(
-                                viewModel = viewModel,
-                                appDrawerViewModel = appDrawerViewModel,
-                                onOpenSettings = { navController.navigate(Destinations.SETTINGS) },
-                            )
-                        }
-                        composable(Destinations.SETTINGS) {
-                            val viewModel: SettingsViewModel = viewModel(
-                                factory = SettingsViewModelFactory(appContainer),
-                            )
-                            SettingsScreen(
-                                viewModel = viewModel,
-                                onDone = { navController.popBackStack() },
-                            )
+                            val viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(appContainer))
+                            val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))
+                            var showSettings by rememberSaveable { mutableStateOf(false) }
+
+                            if (showSettings) {
+                                val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
+                                SettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    onDone = { showSettings = false },
+                                )
+                            } else {
+                                MainScreen(
+                                    viewModel = viewModel,
+                                    appDrawerViewModel = appDrawerViewModel,
+                                    onOpenSettings = { showSettings = true },
+                                )
+                            }
                         }
                     }
                 }
