@@ -8,6 +8,7 @@ import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 
 class MainViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
+    observeOverlayEnabled: ObserveOverlayEnabledUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val onboardingRepository: OnboardingRepository,
 ) : ViewModel() {
@@ -28,6 +30,16 @@ class MainViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = EsdeConnectionState.LogFileNotFound,
+        )
+
+    // Defaults to true so the overlay is visible immediately on first launch, before the
+    // real persisted value (also defaulting to true) has loaded - avoids a flash of
+    // "nothing" while DataStore's first emission is in flight.
+    val overlayEnabled: StateFlow<Boolean> = observeOverlayEnabled()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = true,
         )
 
     private val currentGameReference: Flow<GameReference?> = connectionState

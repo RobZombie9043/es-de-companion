@@ -11,7 +11,9 @@ import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 
@@ -45,4 +47,7 @@ class AppContainer(context: Context) {
     val validateEsdeMediaFolderUseCase = ValidateEsdeMediaFolderUseCase(onboardingRepository)
     val completeOnboardingUseCase = CompleteOnboardingUseCase(onboardingRepository)
     val observeOnboardingCompleteUseCase = ObserveOnboardingCompleteUseCase(onboardingRepository)
+
+    val observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository)
+    val setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository)
 }

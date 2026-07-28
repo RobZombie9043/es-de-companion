@@ -11,4 +11,5 @@ data class SettingsUiState(
     val mediaFolderPath: String = "",
     val mediaFolderValidation: MediaFolderValidation? = null,
     val isValidatingMediaFolder: Boolean = false,
+    val overlayEnabled: Boolean = true,
 )

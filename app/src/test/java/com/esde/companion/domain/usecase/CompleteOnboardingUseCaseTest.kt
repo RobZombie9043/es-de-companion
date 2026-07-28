@@ -15,6 +15,7 @@ class CompleteOnboardingUseCaseTest {
         val savedLogPaths = mutableListOf<String>()
         val savedMediaPaths = mutableListOf<String>()
         var markedComplete = false
+        var overlayEnabled = true
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -26,6 +27,8 @@ class CompleteOnboardingUseCaseTest {
         override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun markOnboardingComplete() { markedComplete = true }
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
+        override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
+        override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
     }
 
     @Test

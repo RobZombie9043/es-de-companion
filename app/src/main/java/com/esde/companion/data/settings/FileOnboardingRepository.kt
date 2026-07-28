@@ -71,11 +71,19 @@ class FileOnboardingRepository(
     override fun observeOnboardingComplete(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[ONBOARDING_COMPLETE_KEY] ?: false }
 
+    override suspend fun setOverlayEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[OVERLAY_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeOverlayEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[OVERLAY_ENABLED_KEY] ?: true }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
 
         val LOG_FOLDER_PATH_KEY = stringPreferencesKey("log_folder_path")
         val MEDIA_FOLDER_PATH_KEY = stringPreferencesKey("media_folder_path")
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
+        val OVERLAY_ENABLED_KEY = booleanPreferencesKey("overlay_enabled")
     }
 }

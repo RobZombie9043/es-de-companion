@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 816 96" style="enable-background:new 0 0 816 96" xml:space="preserve">
+  <style>
+    .st2{fill:#222}
+  </style>
+  <g id="Layer_2">
+    <path style="fill:#fff" d="M576 0h-78l-18 18V0h-96v18L366 0H192.1l-.1 18-17.9-18H114L96 18v42H72V24L48 0H0v96h222l18-18 18 18h300l18-18z"/>
+    <linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="720" y1="0" x2="720" y2="96">
+      <stop offset="0" style="stop-color:#f80"/>
+      <stop offset="1" style="stop-color:#f50"/>
+    </linearGradient>
+    <path style="fill:url(#SVGID_1_)" d="M816 0H624v96h192V54l-12-12 12-12z"/>
+    <path class="st2" d="M36 72V12H12v72h72V72zM372 36V24l-12-12h-60v72h24V54l30 30h18V72l-24-24h12l12-12zm-24 0h-24V24h24v12zM468 24V12h-72v72h72V72h-48V48h24V36h-24V24zM564 24V12h-60l-12 12v12l12 12h36v24h-48v12h60l12-12V48l-12-12h-36V24zM168 12h-48l-12 12v48l12 12h48l12-12V24l-12-12zm-36 60V24h24v48h-24zM252 12v35.9l-11.9-12L228 48V12h-24v72h12l24-24 24 24h12V12z"/>
+    <g>
+      <path class="st2" d="M684 12v24l-24-24h-24v72h24V48l24 24v12h24V12zM804 12h-24l-11.9 12L756 12h-24v12l18 18-18 18v24h24V65.9L768 54l12 11.9V84h24V60l-18-18 18-18z"/>
+    </g>
+  </g>
+</svg>

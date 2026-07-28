@@ -1,6 +1,7 @@
 package com.esde.companion.ui.main
 
 import com.esde.companion.domain.model.AppState
+import com.esde.companion.domain.model.EsdeConnectionState
 
 /**
  * Turns an [AppState] into human-readable text for this initial text-only display.
@@ -65,4 +66,10 @@ fun CoverImageStatus?.toDisplayText(): String {
         appendLine(status.exampleFilePath)
         append(if (status.found) "Found: yes" else "Found: no")
     }
+}
+
+/** Used by both MainScreen's fallback text and StateOverlay. */
+internal fun EsdeConnectionState.toDisplayText(): String = when (this) {
+    is EsdeConnectionState.LogFileNotFound -> "es_log.txt not found"
+    is EsdeConnectionState.Connected -> appState.toDisplayText()
 }

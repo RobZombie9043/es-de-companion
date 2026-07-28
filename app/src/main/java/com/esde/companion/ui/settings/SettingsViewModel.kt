@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +18,8 @@ class SettingsViewModel(
     private val onboardingRepository: OnboardingRepository,
     private val validateLogFolderUseCase: ValidateEsdeLogFolderUseCase,
     private val validateMediaFolderUseCase: ValidateEsdeMediaFolderUseCase,
+    private val observeOverlayEnabledUseCase: ObserveOverlayEnabledUseCase,
+    private val setOverlayEnabledUseCase: SetOverlayEnabledUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -31,7 +35,12 @@ class SettingsViewModel(
                 ?: onboardingRepository.defaultLogFolderPath()
             val mediaPath = onboardingRepository.observeMediaFolderPath().first()
                 ?: onboardingRepository.defaultMediaFolderPath()
-            _uiState.value = _uiState.value.copy(logFolderPath = logPath, mediaFolderPath = mediaPath)
+            val overlayEnabled = observeOverlayEnabledUseCase().first()
+            _uiState.value = _uiState.value.copy(
+                logFolderPath = logPath,
+                mediaFolderPath = mediaPath,
+                overlayEnabled = overlayEnabled,
+            )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
         }
@@ -55,6 +64,11 @@ class SettingsViewModel(
             validateMediaFolder(path)
             onboardingRepository.saveMediaFolderPath(path)
         }
+    }
+
+    fun onOverlayEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(overlayEnabled = enabled)
+        viewModelScope.launch { setOverlayEnabledUseCase(enabled) }
     }
 
     private suspend fun validateLogFolder(path: String) {

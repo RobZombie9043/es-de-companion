@@ -17,6 +17,8 @@ class SettingsViewModelFactory(
             onboardingRepository = appContainer.onboardingRepository,
             validateLogFolderUseCase = appContainer.validateEsdeLogFolderUseCase,
             validateMediaFolderUseCase = appContainer.validateEsdeMediaFolderUseCase,
+            observeOverlayEnabledUseCase = appContainer.observeOverlayEnabledUseCase,
+            setOverlayEnabledUseCase = appContainer.setOverlayEnabledUseCase,
         ) as T
     }
 }
