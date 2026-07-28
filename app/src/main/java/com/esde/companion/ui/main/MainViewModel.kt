@@ -87,7 +87,7 @@ class MainViewModel(
         return when (appState) {
             is AppState.BrowsingSystem -> MainScreenImageState.SystemBackdrop(
                 fanartPath = systemFanart,
-                systemLogoAssetPath = "file:///android_asset/system_logos/${appState.systemShortName}.svg",
+                systemLogoAssetPath = "file:///android_asset/system_logos/${systemLogoAssetName(appState.systemShortName)}.svg",
             )
 
             is AppState.BrowsingGame,

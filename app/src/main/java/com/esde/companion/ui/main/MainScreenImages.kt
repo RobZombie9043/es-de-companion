@@ -14,6 +14,14 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import java.io.File
 
+/**
+ * Shown for both [MainScreenImageState.SystemBackdrop] and [MainScreenImageState.GameBackdrop]
+ * when there's no real fanart/screenshot to show - a bundled asset rather than falling back
+ * to a plain themed background, so the main screen always has a backdrop behind whatever
+ * logo/marquee is overlaid on top of it.
+ */
+private const val FALLBACK_BACKGROUND_ASSET = "file:///android_asset/fallback/default_background.webp"
+
 @Composable
 fun MainScreenImages(state: MainScreenImageState, modifier: Modifier = Modifier) {
     when (state) {
@@ -23,14 +31,14 @@ fun MainScreenImages(state: MainScreenImageState, modifier: Modifier = Modifier)
         ) {}
 
         is MainScreenImageState.SystemBackdrop -> BackdropWithOverlay(
-            backdropPath = state.fanartPath,
+            backdropModel = state.fanartPath?.let { File(it) } ?: FALLBACK_BACKGROUND_ASSET,
             modifier = modifier,
         ) {
             LogoOverlay(model = state.systemLogoAssetPath)
         }
 
         is MainScreenImageState.GameBackdrop -> BackdropWithOverlay(
-            backdropPath = state.backdropPath,
+            backdropModel = state.backdropPath?.let { File(it) } ?: FALLBACK_BACKGROUND_ASSET,
             modifier = modifier,
         ) {
             state.logoPath?.let { logoPath -> LogoOverlay(model = File(logoPath)) }
@@ -53,14 +61,14 @@ private fun BoxScope.LogoOverlay(model: Any) {
 
 @Composable
 private fun BackdropWithOverlay(
-    backdropPath: String?,
+    backdropModel: Any?,
     modifier: Modifier = Modifier,
     overlay: @Composable BoxScope.() -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        if (backdropPath != null) {
+        if (backdropModel != null) {
             AsyncImage(
-                model = File(backdropPath),
+                model = backdropModel,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
