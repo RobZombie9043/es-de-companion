@@ -7,6 +7,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.EsdeConnectionState
 
@@ -16,6 +17,12 @@ import com.esde.companion.domain.model.EsdeConnectionState
  * small composable - toggling it on/off, positioning it, and animating that toggle are
  * MainScreen's job; this only knows how to render its own content given the data it's
  * handed.
+ *
+ * Text is forced white rather than following MaterialTheme's default on-surface color:
+ * this panel now sits over a full-screen backdrop image (fanart/screenshots), not a
+ * plain themed background, so the text needs to reliably contrast against arbitrary
+ * artwork rather than the current color scheme. The semi-transparent dark-leaning
+ * surface behind it (below) provides the contrast backdrop for that white text.
  */
 @Composable
 fun StateOverlay(
@@ -26,13 +33,14 @@ fun StateOverlay(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        color = Color.Black.copy(alpha = 0.6f),
         tonalElevation = 4.dp,
         shadowElevation = 6.dp,
     ) {
         Text(
             text = connectionState.toDisplayText() + coverImageStatus.toDisplayText(),
             style = MaterialTheme.typography.bodyMedium,
+            color = Color.White,
             modifier = Modifier.padding(16.dp),
         )
     }
