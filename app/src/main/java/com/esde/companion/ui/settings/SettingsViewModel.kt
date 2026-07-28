@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
@@ -11,19 +12,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/**
- * Lets the user change either folder after onboarding, without the step-by-step wizard
- * OnboardingViewModel drives - both folders are shown and editable independently, and
- * each is saved as soon as it's picked and validated, rather than requiring a final
- * "finish setup" confirmation the way first-run onboarding does.
- */
 class SettingsViewModel(
     private val onboardingRepository: OnboardingRepository,
     private val validateLogFolderUseCase: ValidateEsdeLogFolderUseCase,
     private val validateMediaFolderUseCase: ValidateEsdeMediaFolderUseCase,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
+    // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient.
+    private val _uiState = MutableStateFlow(
+        SettingsUiState(permissionGranted = AllFilesAccessPermission.isGranted()),
+    )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {

@@ -2,6 +2,7 @@ package com.esde.companion.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -21,6 +22,14 @@ import kotlinx.coroutines.launch
  * browsing (the SAF picker) are Android-framework concerns the composable/Activity layer
  * owns - this ViewModel only receives their *results* via [onPermissionResult] and
  * [onLogFolderPicked]/[onMediaFolderPicked], keeping it plain and easy to reason about.
+ *
+ * The initial [step]/[OnboardingUiState.permissionGranted] are seeded from
+ * [AllFilesAccessPermission.isGranted] directly, rather than defaulting to "not granted"
+ * and waiting for OnboardingScreen's ON_RESUME DisposableEffect to correct it. The
+ * permission is a special app-op the OS tracks against the package, not app-private data,
+ * so it can already be granted the first time this ViewModel is constructed - e.g. after
+ * "Clear storage" resets onboarding_complete without revoking the OS-level grant. Without
+ * this seeding, PermissionStep would flash "Grant access" for a frame before auto-advancing.
  */
 class OnboardingViewModel(
     private val onboardingRepository: OnboardingRepository,
@@ -30,15 +39,29 @@ class OnboardingViewModel(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        OnboardingUiState(
-            logFolderPath = onboardingRepository.defaultLogFolderPath(),
-            mediaFolderPath = onboardingRepository.defaultMediaFolderPath(),
-        ),
+        run {
+            val permissionGranted = AllFilesAccessPermission.isGranted()
+            OnboardingUiState(
+                step = if (permissionGranted) OnboardingStep.LogFolder else OnboardingStep.Permission,
+                permissionGranted = permissionGranted,
+                logFolderPath = onboardingRepository.defaultLogFolderPath(),
+                mediaFolderPath = onboardingRepository.defaultMediaFolderPath(),
+            )
+        },
     )
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     private val _onboardingComplete = Channel<Unit>(capacity = Channel.CONFLATED)
     val onboardingComplete = _onboardingComplete.receiveAsFlow()
+
+    init {
+        // If we started straight on LogFolder because permission was already granted,
+        // kick off its validation immediately - the old code path only did this inside
+        // onPermissionResult() when the transition happened live.
+        if (_uiState.value.step == OnboardingStep.LogFolder) {
+            validateLogFolder(_uiState.value.logFolderPath)
+        }
+    }
 
     fun onPermissionResult(granted: Boolean) {
         _uiState.value = _uiState.value.copy(permissionGranted = granted)
