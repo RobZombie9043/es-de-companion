@@ -1,17 +1,20 @@
 package com.esde.companion
 
 import android.content.Context
+import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
@@ -44,6 +47,9 @@ class AppContainer(context: Context) {
 
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
+
+    private val installedAppsRepository: InstalledAppsRepository = PackageManagerAppsRepository(appContext)
+    val observeInstalledAppsUseCase = ObserveInstalledAppsUseCase(installedAppsRepository)
 
     val observeAppStateUseCase = ObserveAppStateUseCase(logRepository)
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)

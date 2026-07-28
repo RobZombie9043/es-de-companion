@@ -10,6 +10,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.esde.companion.CompanionApplication
+import com.esde.companion.ui.drawer.AppDrawerViewModel
+import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
 import com.esde.companion.ui.main.MainScreen
 import com.esde.companion.ui.main.MainViewModel
 import com.esde.companion.ui.main.MainViewModelFactory
@@ -67,8 +69,12 @@ class MainActivity : ComponentActivity() {
                             val viewModel: MainViewModel = viewModel(
                                 factory = MainViewModelFactory(appContainer),
                             )
+                            val appDrawerViewModel: AppDrawerViewModel = viewModel(
+                                factory = AppDrawerViewModelFactory(appContainer),
+                            )
                             MainScreen(
                                 viewModel = viewModel,
+                                appDrawerViewModel = appDrawerViewModel,
                                 onOpenSettings = { navController.navigate(Destinations.SETTINGS) },
                             )
                         }
