@@ -133,6 +133,15 @@ private fun MainScreenContent(
             }
         }
 
+        // Unconditional close - used after an app launch, where there's no ambiguity to
+        // resolve from velocity/position (unlike a drag release). settle()'s threshold logic
+        // isn't a reliable "force closed" and shouldn't be reused for this.
+        fun closeDrawer() {
+            coroutineScope.launch {
+                openFraction.animateTo(targetValue = 0f, animationSpec = DRAWER_SETTLE_SPRING)
+            }
+        }
+
         fun onVerticalDrag(dragAmount: Float) {
             val deltaFraction = -dragAmount / drawerHeightPx
             val newValue = (openFraction.value + deltaFraction).coerceIn(0f, 1f)
@@ -213,7 +222,7 @@ private fun MainScreenContent(
             ) {
                 AppDrawer(
                     viewModel = appDrawerViewModel,
-                    onAppLaunched = { settle(0f, positionThreshold = 0f) },
+                    onAppLaunched = { closeDrawer() },
                 )
 
                 // A dedicated, always-reliable drag target for closing - doesn't compete
