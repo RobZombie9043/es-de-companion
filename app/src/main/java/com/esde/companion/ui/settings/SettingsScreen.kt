@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -52,6 +53,7 @@ import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ThemePreference
 
 /**
  * Settings entry point: shows a top-level list of [SettingsCategory] items, and drills
@@ -85,7 +87,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(selectedCategory?.title ?: "Settings") },
+                title = {
+                    Text(
+                        text = selectedCategory?.title ?: "Settings",
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -100,42 +107,37 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
                 .padding(innerPadding),
             color = MaterialTheme.colorScheme.background,
         ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                color = MaterialTheme.colorScheme.background,
-            ) {
-                AnimatedContent(
-                    targetState = selectedCategory,
-                    transitionSpec = {
-                        // Drilling into a subpage slides in from the right; returning to the
-                        // list slides in from the left - mirrors typical drill-down navigation
-                        // even though this isn't nav-compose under the hood.
-                        val enteringSubpage = targetState != null
-                        val slideDistance = { width: Int -> width / 3 }
-                        if (enteringSubpage) {
-                            (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
-                        } else {
-                            (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
-                        }
-                    },
-                    label = "settingsContent",
-                ) { category ->
-                    when (category) {
-                        null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
-                        SettingsCategory.Setup -> SetupSettingsContent(
-                            uiState = uiState,
-                            onLogFolderPicked = viewModel::onLogFolderPicked,
-                            onMediaFolderPicked = viewModel::onMediaFolderPicked,
-                        )
-                        SettingsCategory.Other -> OtherSettingsContent(
-                            overlayEnabled = uiState.overlayEnabled,
-                            onOverlayEnabledChanged = viewModel::onOverlayEnabledChanged,
-                        )
+            AnimatedContent(
+                targetState = selectedCategory,
+                transitionSpec = {
+                    // Drilling into a subpage slides in from the right; returning to the
+                    // list slides in from the left - mirrors typical drill-down navigation
+                    // even though this isn't nav-compose under the hood.
+                    val enteringSubpage = targetState != null
+                    val slideDistance = { width: Int -> width / 3 }
+                    if (enteringSubpage) {
+                        (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
+                            .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                    } else {
+                        (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
+                            .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
                     }
+                },
+                label = "settingsContent",
+            ) { category ->
+                when (category) {
+                    null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
+                    SettingsCategory.Setup -> SetupSettingsContent(
+                        uiState = uiState,
+                        onLogFolderPicked = viewModel::onLogFolderPicked,
+                        onMediaFolderPicked = viewModel::onMediaFolderPicked,
+                    )
+                    SettingsCategory.Other -> OtherSettingsContent(
+                        overlayEnabled = uiState.overlayEnabled,
+                        onOverlayEnabledChanged = viewModel::onOverlayEnabledChanged,
+                        themePreference = uiState.themePreference,
+                        onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
+                    )
                 }
             }
         }
@@ -162,7 +164,11 @@ private fun SettingsCategoryRow(category: SettingsCategory, onClick: () -> Unit)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = category.title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = category.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
             Text(text = category.description, style = MaterialTheme.typography.bodySmall)
         }
         Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = null)
@@ -211,6 +217,8 @@ private fun SetupSettingsContent(
 private fun OtherSettingsContent(
     overlayEnabled: Boolean,
     onOverlayEnabledChanged: (Boolean) -> Unit,
+    themePreference: ThemePreference,
+    onThemePreferenceChanged: (ThemePreference) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -219,6 +227,7 @@ private fun OtherSettingsContent(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
         OverlayToggle(
             enabled = overlayEnabled,
             onEnabledChange = onOverlayEnabledChanged,
@@ -227,9 +236,45 @@ private fun OtherSettingsContent(
 }
 
 @Composable
+private fun ThemePicker(selected: ThemePreference, onSelected: (ThemePreference) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Theme",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        ThemePreference.entries.forEach { theme ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelected(theme) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = theme == selected, onClick = { onSelected(theme) })
+                Text(text = theme.label, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+// Presentation-only label, kept in the UI layer rather than on the enum itself so
+// ThemePreference stays a plain domain identifier with no display-string concerns.
+private val ThemePreference.label: String
+    get() = when (this) {
+        ThemePreference.Auto -> "Auto (system)"
+        ThemePreference.Light -> "Light"
+        ThemePreference.Dark -> "Dark"
+    }
+
+@Composable
 private fun OverlayToggle(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = "Debug overlay", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Debug overlay",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -258,7 +303,11 @@ private fun FolderSetting(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text = label, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
         Text(text = path, style = MaterialTheme.typography.bodyMedium)
         if (isValidating) {
             CircularProgressIndicator()

@@ -17,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.esde.companion.CompanionApplication
+import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
 import com.esde.companion.ui.main.MainScreen
@@ -45,7 +46,10 @@ class MainActivity : ComponentActivity() {
         val appContainer = (application as CompanionApplication).appContainer
 
         setContent {
-            EsdeCompanionTheme {
+            val themePreference by produceState(initialValue = ThemePreference.Auto) {
+                appContainer.observeThemePreferenceUseCase().collect { value = it }
+            }
+            EsdeCompanionTheme(themePreference = themePreference) {
                 // Read once, not continuously observed - NavHost's start destination is
                 // fixed at first composition. Onboarding finishing later is handled by
                 // an explicit navController.navigate call, not by this value changing

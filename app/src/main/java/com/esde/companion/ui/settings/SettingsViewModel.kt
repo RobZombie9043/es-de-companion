@@ -3,9 +3,12 @@ package com.esde.companion.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
+import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +23,8 @@ class SettingsViewModel(
     private val validateMediaFolderUseCase: ValidateEsdeMediaFolderUseCase,
     private val observeOverlayEnabledUseCase: ObserveOverlayEnabledUseCase,
     private val setOverlayEnabledUseCase: SetOverlayEnabledUseCase,
+    private val observeThemePreferenceUseCase: ObserveThemePreferenceUseCase,
+    private val setThemePreferenceUseCase: SetThemePreferenceUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -36,10 +41,12 @@ class SettingsViewModel(
             val mediaPath = onboardingRepository.observeMediaFolderPath().first()
                 ?: onboardingRepository.defaultMediaFolderPath()
             val overlayEnabled = observeOverlayEnabledUseCase().first()
+            val themePreference = observeThemePreferenceUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
                 overlayEnabled = overlayEnabled,
+                themePreference = themePreference,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -69,6 +76,11 @@ class SettingsViewModel(
     fun onOverlayEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(overlayEnabled = enabled)
         viewModelScope.launch { setOverlayEnabledUseCase(enabled) }
+    }
+
+    fun onThemePreferenceChanged(preference: ThemePreference) {
+        _uiState.value = _uiState.value.copy(themePreference = preference)
+        viewModelScope.launch { setThemePreferenceUseCase(preference) }
     }
 
     private suspend fun validateLogFolder(path: String) {

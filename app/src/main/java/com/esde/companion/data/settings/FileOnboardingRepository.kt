@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +79,20 @@ class FileOnboardingRepository(
     override fun observeOverlayEnabled(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[OVERLAY_ENABLED_KEY] ?: true }
 
+    override suspend fun setThemePreference(preference: ThemePreference) {
+        context.onboardingDataStore.edit { it[THEME_PREFERENCE_KEY] = preference.name }
+    }
+
+    override fun observeThemePreference(): Flow<ThemePreference> =
+        context.onboardingDataStore.data.map { prefs ->
+            // Falls back to Auto for both the unset case and any unrecognized stored
+            // value (e.g. an old build's Ocean/Sunset/Forest/Neon entries that no longer
+            // exist), rather than throwing and crashing the whole preferences flow.
+            prefs[THEME_PREFERENCE_KEY]?.let { stored ->
+                runCatching { ThemePreference.valueOf(stored) }.getOrNull()
+            } ?: ThemePreference.Auto
+        }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
 
@@ -85,5 +100,6 @@ class FileOnboardingRepository(
         val MEDIA_FOLDER_PATH_KEY = stringPreferencesKey("media_folder_path")
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
         val OVERLAY_ENABLED_KEY = booleanPreferencesKey("overlay_enabled")
+        val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")
     }
 }

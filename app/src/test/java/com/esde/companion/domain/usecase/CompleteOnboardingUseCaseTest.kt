@@ -2,6 +2,7 @@ package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -16,6 +17,7 @@ class CompleteOnboardingUseCaseTest {
         val savedMediaPaths = mutableListOf<String>()
         var markedComplete = false
         var overlayEnabled = true
+        var themePreference = ThemePreference.Auto
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -29,6 +31,8 @@ class CompleteOnboardingUseCaseTest {
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
         override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
+        override suspend fun setThemePreference(preference: ThemePreference) { themePreference = preference }
+        override fun observeThemePreference(): Flow<ThemePreference> = flowOf(themePreference)
     }
 
     @Test

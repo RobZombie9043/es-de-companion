@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ThemePreference
 
 data class SettingsUiState(
     val permissionGranted: Boolean = false,
@@ -12,4 +13,5 @@ data class SettingsUiState(
     val mediaFolderValidation: MediaFolderValidation? = null,
     val isValidatingMediaFolder: Boolean = false,
     val overlayEnabled: Boolean = true,
+    val themePreference: ThemePreference = ThemePreference.Auto,
 )

@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+
 import com.esde.companion.AppContainer
 
 class SettingsViewModelFactory(
@@ -19,6 +20,8 @@ class SettingsViewModelFactory(
             validateMediaFolderUseCase = appContainer.validateEsdeMediaFolderUseCase,
             observeOverlayEnabledUseCase = appContainer.observeOverlayEnabledUseCase,
             setOverlayEnabledUseCase = appContainer.setOverlayEnabledUseCase,
+            observeThemePreferenceUseCase = appContainer.observeThemePreferenceUseCase,
+            setThemePreferenceUseCase = appContainer.setThemePreferenceUseCase,
         ) as T
     }
 }

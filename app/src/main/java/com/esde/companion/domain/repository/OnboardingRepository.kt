@@ -2,6 +2,7 @@ package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ThemePreference
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -38,4 +39,11 @@ interface OnboardingRepository {
      */
     suspend fun setOverlayEnabled(enabled: Boolean)
     fun observeOverlayEnabled(): Flow<Boolean>
+
+    /**
+     * The user's selected color theme. Defaults to [ThemePreference.Default] when never
+     * explicitly set.
+     */
+    suspend fun setThemePreference(preference: ThemePreference)
+    fun observeThemePreference(): Flow<ThemePreference>
 }

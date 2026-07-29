@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
@@ -28,8 +28,8 @@ fun AppDrawerHandle(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .width(40.dp)
-                .height(4.dp)
-                .background(color = Color.White.copy(alpha = 0.6f), shape = RoundedCornerShape(2.dp)),
+                .height(6.dp)
+                .background(color = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(3.dp)),
         )
     }
 }
