@@ -5,7 +5,9 @@ import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
+import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
+import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
@@ -14,12 +16,18 @@ import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemFanartUseCase
+import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -52,6 +60,20 @@ class AppContainer(context: Context) {
 
     private val installedAppsRepository: InstalledAppsRepository = PackageManagerAppsRepository(appContext)
     val observeInstalledAppsUseCase = ObserveInstalledAppsUseCase(installedAppsRepository)
+
+    // App Drawer display/visibility settings (hidden apps, opacity, grid columns) - a
+    // distinct concern from onboarding, kept in its own repository/DataStore. See
+    // AppDrawerSettingsRepository.
+    private val appDrawerSettingsRepository: AppDrawerSettingsRepository = FileAppDrawerSettingsRepository(appContext)
+
+    val observeHiddenAppsUseCase = ObserveHiddenAppsUseCase(appDrawerSettingsRepository)
+    val setHiddenAppsUseCase = SetHiddenAppsUseCase(appDrawerSettingsRepository)
+
+    val observeDrawerOpacityUseCase = ObserveDrawerOpacityUseCase(appDrawerSettingsRepository)
+    val setDrawerOpacityUseCase = SetDrawerOpacityUseCase(appDrawerSettingsRepository)
+
+    val observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository)
+    val setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository)
 
     val observeAppStateUseCase = ObserveAppStateUseCase(logRepository)
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)

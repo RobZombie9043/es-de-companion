@@ -27,6 +27,8 @@ import com.esde.companion.ui.main.MainViewModelFactory
 import com.esde.companion.ui.onboarding.OnboardingScreen
 import com.esde.companion.ui.onboarding.OnboardingViewModel
 import com.esde.companion.ui.onboarding.OnboardingViewModelFactory
+import com.esde.companion.ui.settings.ManageAppsViewModel
+import com.esde.companion.ui.settings.ManageAppsViewModelFactory
 import com.esde.companion.ui.settings.SettingsScreen
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SettingsViewModelFactory
@@ -95,8 +97,10 @@ class MainActivity : ComponentActivity() {
 
                                 if (showSettings) {
                                     val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
+                                    val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
                                     SettingsScreen(
                                         viewModel = settingsViewModel,
+                                        manageAppsViewModel = manageAppsViewModel,
                                         onDone = { showSettings = false },
                                     )
                                 } else {

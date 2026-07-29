@@ -14,4 +14,6 @@ data class SettingsUiState(
     val isValidatingMediaFolder: Boolean = false,
     val overlayEnabled: Boolean = true,
     val themePreference: ThemePreference = ThemePreference.Auto,
+    val drawerOpacityPercent: Int = 80,
+    val gridColumns: Int = 4,
 )

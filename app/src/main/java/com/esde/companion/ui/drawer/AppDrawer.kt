@@ -32,9 +32,10 @@ import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.domain.model.InstalledApp
 
 /**
- * Full-screen grid of launchable apps. Purely presentational - opening/closing and the
- * drag gesture that drives it live in MainScreen, this only knows how to render the app
- * list it's handed and launch whatever was tapped.
+ * Full-screen grid of launchable apps. Opening/closing and the drag gesture that drives
+ * it live in MainScreen; this renders the (already-filtered) app list it's handed,
+ * launches whatever was tapped, and reflects the user's opacity/column preferences from
+ * [AppDrawerViewModel] (App Drawer settings - see SettingsScreen's AppDrawer category).
  *
  * Single tap launches on this screen. Double tap launches the same app on the other
  * connected display, if one is present - see SecondaryDisplayResolver. Falls back to a
@@ -48,13 +49,16 @@ fun AppDrawer(
     modifier: Modifier = Modifier,
 ) {
     val installedApps by viewModel.installedApps.collectAsStateWithLifecycle()
+    val drawerOpacityPercent by viewModel.drawerOpacityPercent.collectAsStateWithLifecycle()
+    val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 88.dp),
+        columns = GridCells.Fixed(gridColumns),
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.92f)),
+            // Standard convention: 0% = fully transparent, 100% = fully opaque.
+            .background(Color.Black.copy(alpha = drawerOpacityPercent / 100f)),
         contentPadding = PaddingValues(24.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

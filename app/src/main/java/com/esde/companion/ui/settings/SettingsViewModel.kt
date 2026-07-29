@@ -5,8 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -25,6 +29,10 @@ class SettingsViewModel(
     private val setOverlayEnabledUseCase: SetOverlayEnabledUseCase,
     private val observeThemePreferenceUseCase: ObserveThemePreferenceUseCase,
     private val setThemePreferenceUseCase: SetThemePreferenceUseCase,
+    private val observeDrawerOpacityUseCase: ObserveDrawerOpacityUseCase,
+    private val setDrawerOpacityUseCase: SetDrawerOpacityUseCase,
+    private val observeGridColumnsUseCase: ObserveGridColumnsUseCase,
+    private val setGridColumnsUseCase: SetGridColumnsUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -42,11 +50,15 @@ class SettingsViewModel(
                 ?: onboardingRepository.defaultMediaFolderPath()
             val overlayEnabled = observeOverlayEnabledUseCase().first()
             val themePreference = observeThemePreferenceUseCase().first()
+            val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
+            val gridColumns = observeGridColumnsUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
                 overlayEnabled = overlayEnabled,
                 themePreference = themePreference,
+                drawerOpacityPercent = drawerOpacityPercent,
+                gridColumns = gridColumns,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -81,6 +93,16 @@ class SettingsViewModel(
     fun onThemePreferenceChanged(preference: ThemePreference) {
         _uiState.value = _uiState.value.copy(themePreference = preference)
         viewModelScope.launch { setThemePreferenceUseCase(preference) }
+    }
+
+    fun onDrawerOpacityChanged(percent: Int) {
+        _uiState.value = _uiState.value.copy(drawerOpacityPercent = percent)
+        viewModelScope.launch { setDrawerOpacityUseCase(percent) }
+    }
+
+    fun onGridColumnsChanged(columns: Int) {
+        _uiState.value = _uiState.value.copy(gridColumns = columns)
+        viewModelScope.launch { setGridColumnsUseCase(columns) }
     }
 
     private suspend fun validateLogFolder(path: String) {

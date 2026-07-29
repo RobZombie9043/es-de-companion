@@ -22,6 +22,10 @@ class SettingsViewModelFactory(
             setOverlayEnabledUseCase = appContainer.setOverlayEnabledUseCase,
             observeThemePreferenceUseCase = appContainer.observeThemePreferenceUseCase,
             setThemePreferenceUseCase = appContainer.setThemePreferenceUseCase,
+            observeDrawerOpacityUseCase = appContainer.observeDrawerOpacityUseCase,
+            setDrawerOpacityUseCase = appContainer.setDrawerOpacityUseCase,
+            observeGridColumnsUseCase = appContainer.observeGridColumnsUseCase,
+            setGridColumnsUseCase = appContainer.setGridColumnsUseCase,
         ) as T
     }
 }
