@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,7 +30,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -41,6 +46,13 @@ import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 
+/**
+ * Settings entry point: shows a top-level list of [SettingsCategory] items, and drills
+ * into a subpage for whichever one is selected. `selectedCategory == null` means the
+ * category list is showing; back from a subpage returns to the list, back from the list
+ * calls [onDone]. See [SettingsCategory] for why this is plain state rather than a nested
+ * NavHost.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
@@ -58,14 +70,17 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    BackHandler(onBack = onDone)
+    var selectedCategory by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
+    val onBack: () -> Unit = { if (selectedCategory != null) selectedCategory = null else onDone() }
+
+    BackHandler(onBack = onBack)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(selectedCategory?.title ?: "Settings") },
                 navigationIcon = {
-                    IconButton(onClick = onDone) {
+                    IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -78,42 +93,103 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
                 .padding(innerPadding),
             color = MaterialTheme.colorScheme.background,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
-                if (!uiState.permissionGranted) {
-                    Text(
-                        "All files access isn't currently granted - folder changes below " +
-                                "may not take effect until it's re-enabled in system Settings.",
-                    )
-                }
-
-                FolderSetting(
-                    label = "ES-DE folder",
-                    path = uiState.logFolderPath,
-                    isValidating = uiState.isValidatingLogFolder,
-                    statusText = uiState.logFolderValidation.toStatusText(),
-                    onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(viewModel::onLogFolderPicked) },
+            when (selectedCategory) {
+                null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
+                SettingsCategory.Setup -> SetupSettingsContent(
+                    uiState = uiState,
+                    onLogFolderPicked = viewModel::onLogFolderPicked,
+                    onMediaFolderPicked = viewModel::onMediaFolderPicked,
                 )
-
-                FolderSetting(
-                    label = "Media folder",
-                    path = uiState.mediaFolderPath,
-                    isValidating = uiState.isValidatingMediaFolder,
-                    statusText = uiState.mediaFolderValidation.toStatusText(),
-                    onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked) },
-                )
-
-                OverlayToggle(
-                    enabled = uiState.overlayEnabled,
-                    onEnabledChange = viewModel::onOverlayEnabledChanged,
+                SettingsCategory.Other -> OtherSettingsContent(
+                    overlayEnabled = uiState.overlayEnabled,
+                    onOverlayEnabledChanged = viewModel::onOverlayEnabledChanged,
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsCategoryList(onCategorySelected: (SettingsCategory) -> Unit) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        SettingsCategory.entries.forEach { category ->
+            SettingsCategoryRow(category = category, onClick = { onCategorySelected(category) })
+        }
+    }
+}
+
+@Composable
+private fun SettingsCategoryRow(category: SettingsCategory, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = category.title, style = MaterialTheme.typography.titleMedium)
+            Text(text = category.description, style = MaterialTheme.typography.bodySmall)
+        }
+        Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = null)
+    }
+}
+
+@Composable
+private fun SetupSettingsContent(
+    uiState: SettingsUiState,
+    onLogFolderPicked: (String) -> Unit,
+    onMediaFolderPicked: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        if (!uiState.permissionGranted) {
+            Text(
+                "All files access isn't currently granted - folder changes below " +
+                        "may not take effect until it's re-enabled in system Settings.",
+            )
+        }
+
+        FolderSetting(
+            label = "ES-DE folder",
+            path = uiState.logFolderPath,
+            isValidating = uiState.isValidatingLogFolder,
+            statusText = uiState.logFolderValidation.toStatusText(),
+            onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onLogFolderPicked) },
+        )
+
+        FolderSetting(
+            label = "Media folder",
+            path = uiState.mediaFolderPath,
+            isValidating = uiState.isValidatingMediaFolder,
+            statusText = uiState.mediaFolderValidation.toStatusText(),
+            onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onMediaFolderPicked) },
+        )
+    }
+}
+
+@Composable
+private fun OtherSettingsContent(
+    overlayEnabled: Boolean,
+    onOverlayEnabledChanged: (Boolean) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        OverlayToggle(
+            enabled = overlayEnabled,
+            onEnabledChange = onOverlayEnabledChanged,
+        )
     }
 }
 
