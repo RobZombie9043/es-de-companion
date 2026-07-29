@@ -13,11 +13,14 @@ import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemFanartUseCase
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -57,54 +60,71 @@ class MainViewModel(
                 initialValue = null,
             )
 
-    private val currentGameMedia: Flow<GameMedia?> = currentGameReference
-        .map { gameRef -> gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath) } }
-
-    // Re-rolled only when the browsed system actually changes, not on every state
-    // emission - otherwise the backdrop would flicker to a new random image on
-    // unrelated events (e.g. re-selecting the same system).
-    private val currentSystemFanart: Flow<String?> = connectionState
-        .map { (it as? EsdeConnectionState.Connected)?.appState as? AppState.BrowsingSystem }
-        .map { it?.systemShortName }
+    // What the main screen's backdrop/logo should be driven by, distilled from
+    // connectionState down to just the identity that actually matters for image
+    // resolution. distinctUntilChanged() here is what stops an unrelated AppState field
+    // changing (while still browsing the same system, or the same game) from re-running
+    // the resolution below - same intent as the old per-branch distinctUntilChanged()s,
+    // just unified across both the system and game cases.
+    private val imageSource: Flow<ImageSource> = connectionState
+        .map { connection -> toImageSource(connection) }
         .distinctUntilChanged()
-        .map { systemShortName -> systemShortName?.let { resolveRandomSystemFanart(it) } }
 
+    // Previously this was combine(connectionState, currentGameMedia, currentSystemFanart)
+    // { ... }, three independently-collected flows. combine() re-emits as soon as ANY of
+    // them ticks, using whatever stale value the other two last held - so on a
+    // connectionState change, it fired immediately with the *old* gameMedia/fanart still
+    // attached. For system<->system or game<->game that stale pairing happened to be
+    // identical to the pre-transition frame (invisible), but crossing the system<->game
+    // boundary (or entering/exiting Screensaver) it produced a real, visible
+    // MainScreenImageState.None - a flash to the fallback background - before the actual
+    // media resolved a moment later and it crossfaded again. Two crossfades instead of
+    // one is exactly the "less smooth" stutter.
+    //
+    // flatMapLatest fixes this by resolving each ImageSource fully (including the
+    // suspend gameMedia/fanart lookup) before emitting anything at all, so
+    // mainScreenImageState only ever carries fully-resolved target states - every
+    // transition is a single clean crossfade. It also cancels an in-flight resolution if
+    // the source changes again before it finishes, which avoids a slow lookup for an
+    // already-abandoned game/system landing late and clobbering a newer one.
+    @OptIn(ExperimentalCoroutinesApi::class)
     val mainScreenImageState: StateFlow<MainScreenImageState> =
-        combine(connectionState, currentGameMedia, currentSystemFanart) { connection, gameMedia, systemFanart ->
-            toImageState(connection, gameMedia, systemFanart)
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = MainScreenImageState.None,
-        )
-
-    private fun toImageState(
-        connection: EsdeConnectionState,
-        gameMedia: GameMedia?,
-        systemFanart: String?,
-    ): MainScreenImageState {
-        val appState = (connection as? EsdeConnectionState.Connected)?.appState ?: return MainScreenImageState.None
-        return when (appState) {
-            is AppState.BrowsingSystem -> MainScreenImageState.SystemBackdrop(
-                fanartPath = systemFanart,
-                systemLogoAssetPath = "file:///android_asset/system_logos/${systemLogoAssetName(appState.systemShortName)}.svg",
+        imageSource
+            .flatMapLatest { source -> flow { emit(resolveImageState(source)) } }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = MainScreenImageState.None,
             )
 
-            is AppState.BrowsingGame,
-            is AppState.PlayingGame,
-                -> gameMedia.toBackdropState()
+    private fun toImageSource(connection: EsdeConnectionState): ImageSource {
+        val appState = (connection as? EsdeConnectionState.Connected)?.appState ?: return ImageSource.None
+        return when (appState) {
+            is AppState.BrowsingSystem -> ImageSource.System(appState.systemShortName)
 
-            is AppState.Screensaver ->
-                if (appState.currentGame != null) gameMedia.toBackdropState() else MainScreenImageState.None
-
-            AppState.Idle -> MainScreenImageState.None
+            // BrowsingGame, PlayingGame, Screensaver (with a currentGame), and Idle all
+            // fall out of currentGameReference() correctly - it already encodes exactly
+            // this mapping (see its use above for coverImageStatus), including
+            // Screensaver-with-no-game and Idle both yielding null -> ImageSource.None.
+            else -> appState.currentGameReference()?.let { ImageSource.Game(it) } ?: ImageSource.None
         }
     }
 
-    private fun GameMedia?.toBackdropState(): MainScreenImageState {
-        val media = this ?: return MainScreenImageState.None
-        val backdrop = media.path(MediaType.FanArt) ?: media.path(MediaType.Screenshots)
-        return MainScreenImageState.GameBackdrop(backdropPath = backdrop, logoPath = media.path(MediaType.Marquees))
+    private suspend fun resolveImageState(source: ImageSource): MainScreenImageState = when (source) {
+        ImageSource.None -> MainScreenImageState.None
+
+        is ImageSource.System -> MainScreenImageState.SystemBackdrop(
+            fanartPath = resolveRandomSystemFanart(source.systemShortName),
+            systemLogoAssetPath = "file:///android_asset/system_logos/${systemLogoAssetName(source.systemShortName)}.svg",
+        )
+
+        is ImageSource.Game ->
+            resolveGameMedia(source.gameRef.systemShortName, source.gameRef.romPath).toBackdropState()
+    }
+
+    private fun GameMedia.toBackdropState(): MainScreenImageState {
+        val backdrop = path(MediaType.FanArt) ?: path(MediaType.Screenshots)
+        return MainScreenImageState.GameBackdrop(backdropPath = backdrop, logoPath = path(MediaType.Marquees))
     }
 
     private suspend fun resolveCoverStatus(gameRef: GameReference?, mediaFolder: String?): CoverImageStatus? {
@@ -115,5 +135,18 @@ class MainViewModel(
 
         val exampleFilePath = "$mediaFolder/${gameRef.systemShortName}/${MediaType.Covers.folderName}/$baseRelativePath.png"
         return CoverImageStatus(exampleFilePath = exampleFilePath, found = media.path(MediaType.Covers) != null)
+    }
+
+    /**
+     * The identity that drives what backdrop/logo should be shown - a distillation of
+     * AppState down to just what image resolution cares about, so [imageSource] can
+     * distinctUntilChanged() on it directly instead of on raw AppState (which changes on
+     * fields image resolution doesn't care about) or juggling separate media/fanart
+     * flows (see the comment on [mainScreenImageState] for why that was the bug).
+     */
+    private sealed class ImageSource {
+        data object None : ImageSource()
+        data class System(val systemShortName: String) : ImageSource()
+        data class Game(val gameRef: GameReference) : ImageSource()
     }
 }
