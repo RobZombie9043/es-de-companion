@@ -4,6 +4,13 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -93,17 +100,43 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
                 .padding(innerPadding),
             color = MaterialTheme.colorScheme.background,
         ) {
-            when (selectedCategory) {
-                null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
-                SettingsCategory.Setup -> SetupSettingsContent(
-                    uiState = uiState,
-                    onLogFolderPicked = viewModel::onLogFolderPicked,
-                    onMediaFolderPicked = viewModel::onMediaFolderPicked,
-                )
-                SettingsCategory.Other -> OtherSettingsContent(
-                    overlayEnabled = uiState.overlayEnabled,
-                    onOverlayEnabledChanged = viewModel::onOverlayEnabledChanged,
-                )
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                AnimatedContent(
+                    targetState = selectedCategory,
+                    transitionSpec = {
+                        // Drilling into a subpage slides in from the right; returning to the
+                        // list slides in from the left - mirrors typical drill-down navigation
+                        // even though this isn't nav-compose under the hood.
+                        val enteringSubpage = targetState != null
+                        val slideDistance = { width: Int -> width / 3 }
+                        if (enteringSubpage) {
+                            (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
+                                .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                        } else {
+                            (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
+                                .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
+                        }
+                    },
+                    label = "settingsContent",
+                ) { category ->
+                    when (category) {
+                        null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
+                        SettingsCategory.Setup -> SetupSettingsContent(
+                            uiState = uiState,
+                            onLogFolderPicked = viewModel::onLogFolderPicked,
+                            onMediaFolderPicked = viewModel::onMediaFolderPicked,
+                        )
+                        SettingsCategory.Other -> OtherSettingsContent(
+                            overlayEnabled = uiState.overlayEnabled,
+                            onOverlayEnabledChanged = viewModel::onOverlayEnabledChanged,
+                        )
+                    }
+                }
             }
         }
     }
