@@ -26,13 +26,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -387,14 +387,28 @@ private fun FolderSetting(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Text(text = path, style = MaterialTheme.typography.bodyMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = path,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { launcher.launch(null) }) {
+                    Icon(
+                        imageVector = Icons.Filled.Folder,
+                        contentDescription = "Change folder",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
             if (isValidating) {
                 CircularProgressIndicator()
             } else {
                 Text(text = statusText, style = MaterialTheme.typography.bodySmall)
-            }
-            OutlinedButton(onClick = { launcher.launch(null) }) {
-                Text("Change folder")
             }
         }
     }
