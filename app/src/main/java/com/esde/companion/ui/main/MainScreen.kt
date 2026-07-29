@@ -8,8 +8,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,7 +32,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,24 +70,25 @@ fun MainScreen(
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val coverImageStatus by viewModel.coverImageStatus.collectAsStateWithLifecycle()
     val overlayEnabled by viewModel.overlayEnabled.collectAsStateWithLifecycle()
-    val mainScreenImageState by viewModel.mainScreenImageState.collectAsStateWithLifecycle()
     MainScreenContent(
         connectionState = connectionState,
         coverImageStatus = coverImageStatus,
         overlayEnabled = overlayEnabled,
-        mainScreenImageState = mainScreenImageState,
         appDrawerViewModel = appDrawerViewModel,
         onOpenSettings = onOpenSettings,
     )
 }
 
+// mainScreenImageState (and the MainScreenImages composable it feeds) is now collected
+// and rendered in MainActivity, above the MainScreen/SettingsScreen toggle, so the
+// backdrop and its CrossfadeAsyncImage never leave composition just because Settings
+// is showing. See MainActivity's MAIN destination.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
     connectionState: EsdeConnectionState,
     coverImageStatus: CoverImageStatus?,
     overlayEnabled: Boolean,
-    mainScreenImageState: MainScreenImageState,
     appDrawerViewModel: AppDrawerViewModel,
     onOpenSettings: () -> Unit,
 ) {
@@ -177,8 +175,6 @@ private fun MainScreenContent(
                     }
                 },
         ) {
-            MainScreenImages(state = mainScreenImageState, modifier = Modifier.fillMaxSize())
-
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 containerColor = Color.Transparent,
@@ -198,11 +194,7 @@ private fun MainScreenContent(
                     visible = overlayEnabled,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(
-                            start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
-                            end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
-                            bottom = innerPadding.calculateBottomPadding(),
-                        )
+                        .padding(innerPadding)
                         .padding(16.dp),
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
