@@ -11,26 +11,32 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -54,6 +61,13 @@ import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.ThemePreference
+
+/**
+ * Shared corner radius for the background panel behind every settings item (category
+ * rows, folder settings, toggles, the theme picker) so they read as a consistent set of
+ * cards rather than each item picking its own rounding.
+ */
+private val SettingsItemShape = RoundedCornerShape(16.dp)
 
 /**
  * Settings entry point: shows a top-level list of [SettingsCategory] items, and drills
@@ -87,12 +101,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = selectedCategory?.title ?: "Settings",
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                },
+                title = { Text(selectedCategory?.title ?: "Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -132,11 +141,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
                         onLogFolderPicked = viewModel::onLogFolderPicked,
                         onMediaFolderPicked = viewModel::onMediaFolderPicked,
                     )
+                    SettingsCategory.UI -> UISettingsContent(
+                        themePreference = uiState.themePreference,
+                        onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
+                    )
                     SettingsCategory.Other -> OtherSettingsContent(
                         overlayEnabled = uiState.overlayEnabled,
                         onOverlayEnabledChanged = viewModel::onOverlayEnabledChanged,
-                        themePreference = uiState.themePreference,
-                        onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
                     )
                 }
             }
@@ -146,7 +157,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onDone: () -> Unit) {
 
 @Composable
 private fun SettingsCategoryList(onCategorySelected: (SettingsCategory) -> Unit) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         SettingsCategory.entries.forEach { category ->
             SettingsCategoryRow(category = category, onClick = { onCategorySelected(category) })
         }
@@ -155,23 +171,29 @@ private fun SettingsCategoryList(onCategorySelected: (SettingsCategory) -> Unit)
 
 @Composable
 private fun SettingsCategoryRow(category: SettingsCategory, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 20.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = category.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = category.description, style = MaterialTheme.typography.bodySmall)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = category.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(text = category.description, style = MaterialTheme.typography.bodySmall)
+            }
+            Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
         }
-        Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = null)
     }
 }
 
@@ -214,9 +236,7 @@ private fun SetupSettingsContent(
 }
 
 @Composable
-private fun OtherSettingsContent(
-    overlayEnabled: Boolean,
-    onOverlayEnabledChanged: (Boolean) -> Unit,
+private fun UISettingsContent(
     themePreference: ThemePreference,
     onThemePreferenceChanged: (ThemePreference) -> Unit,
 ) {
@@ -228,6 +248,21 @@ private fun OtherSettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
+    }
+}
+
+@Composable
+private fun OtherSettingsContent(
+    overlayEnabled: Boolean,
+    onOverlayEnabledChanged: (Boolean) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
         OverlayToggle(
             enabled = overlayEnabled,
             onEnabledChange = onOverlayEnabledChanged,
@@ -235,57 +270,93 @@ private fun OtherSettingsContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemePicker(selected: ThemePreference, onSelected: (ThemePreference) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Theme",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        ThemePreference.entries.forEach { theme ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelected(theme) }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = theme == selected, onClick = { onSelected(theme) })
-                Text(text = theme.label, style = MaterialTheme.typography.bodyMedium)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Theme",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                ThemePreference.entries.forEachIndexed { index, theme ->
+                    SegmentedButton(
+                        selected = theme == selected,
+                        onClick = { onSelected(theme) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = ThemePreference.entries.size,
+                        ),
+                        icon = {
+                            SegmentedButtonDefaults.Icon(active = theme == selected) {
+                                Icon(
+                                    imageVector = theme.icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                                )
+                            }
+                        },
+                        label = { Text(theme.label) },
+                    )
+                }
             }
         }
     }
 }
 
-// Presentation-only label, kept in the UI layer rather than on the enum itself so
-// ThemePreference stays a plain domain identifier with no display-string concerns.
+// Presentation-only icon/label, kept in the UI layer rather than on the enum itself so
+// ThemePreference stays a plain domain identifier with no display concerns.
+private val ThemePreference.icon: ImageVector
+    get() = when (this) {
+        ThemePreference.Auto -> Icons.Filled.BrightnessAuto
+        ThemePreference.Light -> Icons.Filled.LightMode
+        ThemePreference.Dark -> Icons.Filled.DarkMode
+    }
+
 private val ThemePreference.label: String
     get() = when (this) {
-        ThemePreference.Auto -> "Auto (system)"
+        ThemePreference.Auto -> "Auto"
         ThemePreference.Light -> "Light"
         ThemePreference.Dark -> "Dark"
     }
 
 @Composable
 private fun OverlayToggle(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Debug overlay",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "Show debug info overlay",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
+                text = "Debug overlay",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
             )
-            Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Show debug info overlay",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            }
         }
     }
 }
@@ -302,20 +373,29 @@ private fun FolderSetting(
         uri?.let(onPick)
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(text = path, style = MaterialTheme.typography.bodyMedium)
-        if (isValidating) {
-            CircularProgressIndicator()
-        } else {
-            Text(text = statusText, style = MaterialTheme.typography.bodySmall)
-        }
-        OutlinedButton(onClick = { launcher.launch(null) }) {
-            Text("Change folder")
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = path, style = MaterialTheme.typography.bodyMedium)
+            if (isValidating) {
+                CircularProgressIndicator()
+            } else {
+                Text(text = statusText, style = MaterialTheme.typography.bodySmall)
+            }
+            OutlinedButton(onClick = { launcher.launch(null) }) {
+                Text("Change folder")
+            }
         }
     }
 }

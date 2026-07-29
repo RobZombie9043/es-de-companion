@@ -13,6 +13,10 @@ enum class SettingsCategory(val title: String, val description: String) {
         title = "Setup",
         description = "ES-DE and media folder locations",
     ),
+    UI(
+        title = "UI Settings",
+        description = "Theme and appearance",
+    ),
     Other(
         title = "Other Settings",
         description = "Debug overlay and misc options",
