@@ -34,8 +34,6 @@ fun StateOverlay(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         color = Color.Black.copy(alpha = 0.6f),
-        tonalElevation = 4.dp,
-        shadowElevation = 6.dp,
     ) {
         Text(
             text = connectionState.toDisplayText() + coverImageStatus.toDisplayText(),
