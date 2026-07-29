@@ -1,12 +1,16 @@
 package com.esde.companion.ui.drawer
 
 import com.esde.companion.domain.model.InstalledApp
+import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
+import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
+import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
+import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,10 +36,12 @@ class AppDrawerViewModelTest {
         initialHiddenApps: Set<String> = emptySet(),
         initialOpacity: Int = 80,
         initialColumns: Int = 4,
+        initialOtherScreenLaunchApps: Set<String> = emptySet(),
     ) : AppDrawerSettingsRepository {
         val hiddenApps = MutableStateFlow(initialHiddenApps)
         val opacity = MutableStateFlow(initialOpacity)
         val columns = MutableStateFlow(initialColumns)
+        val otherScreenLaunchApps = MutableStateFlow(initialOtherScreenLaunchApps)
 
         override suspend fun setHiddenApps(packageNames: Set<String>) { hiddenApps.value = packageNames }
         override fun observeHiddenApps(): Flow<Set<String>> = hiddenApps
@@ -43,6 +49,8 @@ class AppDrawerViewModelTest {
         override fun observeDrawerOpacityPercent(): Flow<Int> = opacity
         override suspend fun setGridColumns(columns: Int) { this.columns.value = columns }
         override fun observeGridColumns(): Flow<Int> = columns
+        override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { otherScreenLaunchApps.value = packageNames }
+        override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = otherScreenLaunchApps
     }
 
     private val testDispatcher = StandardTestDispatcher()
@@ -71,6 +79,9 @@ class AppDrawerViewModelTest {
         return AppDrawerViewModel(
             observeInstalledApps = ObserveInstalledAppsUseCase(installedAppsRepository),
             observeHiddenApps = ObserveHiddenAppsUseCase(settingsRepository),
+            setHiddenApps = SetHiddenAppsUseCase(settingsRepository),
+            observeOtherScreenLaunchApps = ObserveOtherScreenLaunchAppsUseCase(settingsRepository),
+            setOtherScreenLaunchApps = SetOtherScreenLaunchAppsUseCase(settingsRepository),
             observeDrawerOpacity = ObserveDrawerOpacityUseCase(settingsRepository),
             observeGridColumns = ObserveGridColumnsUseCase(settingsRepository),
         )
@@ -81,9 +92,6 @@ class AppDrawerViewModelTest {
         val settingsRepository = FakeAppDrawerSettingsRepository(initialHiddenApps = setOf("com.example.b"))
         val viewModel = buildViewModel(settingsRepository = settingsRepository)
 
-        // WhileSubscribed sharing only starts collecting upstream once something
-        // subscribes - a no-op collector, then draining the scheduler, gets the
-        // StateFlow to its real combined value before we assert on it.
         val collectJob = launch { viewModel.installedApps.collect {} }
         advanceUntilIdle()
 
@@ -140,5 +148,52 @@ class AppDrawerViewModelTest {
 
         assertEquals(6, viewModel.gridColumns.value)
         collectJob.cancel()
+    }
+
+    @Test
+    fun `otherScreenLaunchApps reflects the repository value`() = runTest(testDispatcher) {
+        val settingsRepository = FakeAppDrawerSettingsRepository(initialOtherScreenLaunchApps = setOf("com.example.a"))
+        val viewModel = buildViewModel(settingsRepository = settingsRepository)
+
+        val collectJob = launch { viewModel.otherScreenLaunchApps.collect {} }
+        advanceUntilIdle()
+
+        assertEquals(setOf("com.example.a"), viewModel.otherScreenLaunchApps.value)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `recordLaunchLocation adds the package when set to other screen`() = runTest(testDispatcher) {
+        val settingsRepository = FakeAppDrawerSettingsRepository()
+        val viewModel = buildViewModel(settingsRepository = settingsRepository)
+
+        viewModel.recordLaunchLocation("com.example.a", LaunchLocation.OtherScreen)
+        advanceUntilIdle()
+
+        assertEquals(setOf("com.example.a"), settingsRepository.otherScreenLaunchApps.value)
+    }
+
+    @Test
+    fun `recordLaunchLocation removes the package when set back to this screen`() = runTest(testDispatcher) {
+        val settingsRepository = FakeAppDrawerSettingsRepository(
+            initialOtherScreenLaunchApps = setOf("com.example.a", "com.example.b"),
+        )
+        val viewModel = buildViewModel(settingsRepository = settingsRepository)
+
+        viewModel.recordLaunchLocation("com.example.a", LaunchLocation.ThisScreen)
+        advanceUntilIdle()
+
+        assertEquals(setOf("com.example.b"), settingsRepository.otherScreenLaunchApps.value)
+    }
+
+    @Test
+    fun `hideApp adds the package to the hidden set without disturbing others`() = runTest(testDispatcher) {
+        val settingsRepository = FakeAppDrawerSettingsRepository(initialHiddenApps = setOf("com.example.b"))
+        val viewModel = buildViewModel(settingsRepository = settingsRepository)
+
+        viewModel.hideApp("com.example.a")
+        advanceUntilIdle()
+
+        assertEquals(setOf("com.example.a", "com.example.b"), settingsRepository.hiddenApps.value)
     }
 }

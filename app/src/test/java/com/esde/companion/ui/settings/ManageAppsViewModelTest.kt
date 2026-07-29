@@ -38,6 +38,8 @@ class ManageAppsViewModelTest {
         override fun observeDrawerOpacityPercent(): Flow<Int> = MutableStateFlow(30)
         override suspend fun setGridColumns(columns: Int) { /* not under test */ }
         override fun observeGridColumns(): Flow<Int> = MutableStateFlow(4)
+        override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { /* not under test */ }
+        override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = MutableStateFlow(emptySet())
     }
 
     private val testDispatcher = StandardTestDispatcher()

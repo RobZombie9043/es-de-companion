@@ -21,6 +21,7 @@ import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
+import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
@@ -28,6 +29,7 @@ import com.esde.companion.domain.usecase.ResolveRandomSystemFanartUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
+import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -68,6 +70,9 @@ class AppContainer(context: Context) {
 
     val observeHiddenAppsUseCase = ObserveHiddenAppsUseCase(appDrawerSettingsRepository)
     val setHiddenAppsUseCase = SetHiddenAppsUseCase(appDrawerSettingsRepository)
+
+    val observeOtherScreenLaunchAppsUseCase = ObserveOtherScreenLaunchAppsUseCase(appDrawerSettingsRepository)
+    val setOtherScreenLaunchAppsUseCase = SetOtherScreenLaunchAppsUseCase(appDrawerSettingsRepository)
 
     val observeDrawerOpacityUseCase = ObserveDrawerOpacityUseCase(appDrawerSettingsRepository)
     val setDrawerOpacityUseCase = SetDrawerOpacityUseCase(appDrawerSettingsRepository)

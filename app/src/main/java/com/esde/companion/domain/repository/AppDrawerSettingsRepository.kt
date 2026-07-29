@@ -4,10 +4,10 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Persisted App Drawer display/visibility preferences: which installed apps are hidden
- * from the drawer grid, the grid's background opacity, and its column count. Kept
- * separate from [OnboardingRepository] - these are App Drawer-specific display settings,
- * not onboarding/folder-location state, and grouping them here keeps each repository's
- * scope legible as the settings surface grows.
+ * from the drawer grid, the grid's background opacity, its column count, and per-app
+ * launch location. Kept separate from [OnboardingRepository] - these are App
+ * Drawer-specific display settings, not onboarding/folder-location state, and grouping
+ * them here keeps each repository's scope legible as the settings surface grows.
  */
 interface AppDrawerSettingsRepository {
 
@@ -25,4 +25,14 @@ interface AppDrawerSettingsRepository {
     /** Number of columns in the App Drawer grid, 3-6. Defaults to 4. */
     suspend fun setGridColumns(columns: Int)
     fun observeGridColumns(): Flow<Int>
+
+    /**
+     * Package names whose last-used launch location is the *other* connected display
+     * rather than this screen. Absence from this set means "this screen" - that's the
+     * default for every app until it's explicitly launched elsewhere, so nothing needs
+     * seeding when a new app is installed. Same shape as [setHiddenApps]/[observeHiddenApps]
+     * deliberately: this is a two-state per-app flag, not worth a full map encoding.
+     */
+    suspend fun setOtherScreenLaunchApps(packageNames: Set<String>)
+    fun observeOtherScreenLaunchApps(): Flow<Set<String>>
 }

@@ -49,7 +49,7 @@ fun MainScreenImages(state: MainScreenImageState, modifier: Modifier = Modifier)
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth(0.6f)
-                .fillMaxHeight(0.25f),
+                .fillMaxHeight(0.30f),
         )
     }
 }

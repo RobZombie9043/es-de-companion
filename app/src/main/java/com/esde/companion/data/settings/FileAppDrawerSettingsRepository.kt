@@ -38,6 +38,13 @@ class FileAppDrawerSettingsRepository(
     override fun observeGridColumns(): Flow<Int> =
         context.appDrawerSettingsDataStore.data.map { it[GRID_COLUMNS_KEY] ?: DEFAULT_GRID_COLUMNS }
 
+    override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) {
+        context.appDrawerSettingsDataStore.edit { it[OTHER_SCREEN_LAUNCH_APPS_KEY] = packageNames }
+    }
+
+    override fun observeOtherScreenLaunchApps(): Flow<Set<String>> =
+        context.appDrawerSettingsDataStore.data.map { it[OTHER_SCREEN_LAUNCH_APPS_KEY] ?: emptySet() }
+
     private companion object {
         const val DEFAULT_DRAWER_OPACITY_PERCENT = 80
         const val DEFAULT_GRID_COLUMNS = 4
@@ -45,5 +52,6 @@ class FileAppDrawerSettingsRepository(
         val HIDDEN_APPS_KEY = stringSetPreferencesKey("hidden_app_packages")
         val DRAWER_OPACITY_KEY = intPreferencesKey("drawer_opacity_percent")
         val GRID_COLUMNS_KEY = intPreferencesKey("grid_columns")
+        val OTHER_SCREEN_LAUNCH_APPS_KEY = stringSetPreferencesKey("other_screen_launch_app_packages")
     }
 }

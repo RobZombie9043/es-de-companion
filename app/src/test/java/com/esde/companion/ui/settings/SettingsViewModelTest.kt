@@ -64,6 +64,8 @@ class SettingsViewModelTest {
         override fun observeDrawerOpacityPercent(): Flow<Int> = opacity
         override suspend fun setGridColumns(columns: Int) { this.columns.value = columns }
         override fun observeGridColumns(): Flow<Int> = columns
+        override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) {}
+        override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = flowOf(emptySet())
     }
 
     private val testDispatcher = StandardTestDispatcher()
