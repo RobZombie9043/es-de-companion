@@ -88,6 +88,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
     onDone: () -> Unit,
+    onEditWidgetsClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -171,6 +172,11 @@ fun SettingsScreen(
                             themePreference = uiState.themePreference,
                             onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
                         )
+                        SettingsCategory.Widgets -> WidgetsSettingsContent(
+                            widgetsLocked = uiState.widgetsLocked,
+                            onWidgetsLockedChanged = viewModel::onWidgetsLockedChanged,
+                            onEditWidgetsClick = onEditWidgetsClick,
+                        )
                         SettingsCategory.AppDrawer -> AppDrawerSettingsContent(
                             drawerOpacityPercent = uiState.drawerOpacityPercent,
                             gridColumns = uiState.gridColumns,
@@ -194,6 +200,7 @@ private fun SettingsCategoryList(onCategorySelected: (SettingsCategory) -> Unit)
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -500,6 +507,86 @@ private fun OverlayToggle(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) 
     }
 }
 
+@Composable
+private fun WidgetsSettingsContent(
+    widgetsLocked: Boolean,
+    onWidgetsLockedChanged: (Boolean) -> Unit,
+    onEditWidgetsClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        EditWidgetsEntry(onClick = onEditWidgetsClick)
+        WidgetsLockToggle(locked = widgetsLocked, onLockedChange = onWidgetsLockedChanged)
+    }
+}
+
+@Composable
+private fun EditWidgetsEntry(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Edit Widgets",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "Add, move, and resize widgets on the main screen",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
+        }
+    }
+}
+
+@Composable
+private fun WidgetsLockToggle(locked: Boolean, onLockedChange: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Lock widget editing",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Prevent long-press from opening the widget editor",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = locked, onCheckedChange = onLockedChange)
+            }
+        }
+    }
+}
 @Composable
 private fun FolderSetting(
     label: String,

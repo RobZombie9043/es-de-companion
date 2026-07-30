@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
@@ -18,13 +19,13 @@ import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
-import com.esde.companion.ui.widgets.FALLBACK_BACKGROUND_ASSET
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -51,22 +52,33 @@ class WidgetsViewModel(
         gridDimensions.value = grid
     }
 
-    private val groupedAppState: Flow<Pair<StateGroup, AppState>?> = observeConnectionState()
+    // Distilled from raw AppState down to just the identity that actually matters for
+    // widget content - same reasoning as MainViewModel's ImageSource. Without
+    // distinctUntilChanged() here, any AppState field change irrelevant to widget content
+    // (or the documented spurious game-select re-fire after game-start) still retriggers
+    // flatMapLatest below, cancelling an in-flight resolution/decode and restarting the
+    // whole chain - under a burst of same-target events that never converges quickly.
+    private val contentIdentity: Flow<ContentIdentity?> = observeConnectionState()
         .map { connection ->
             val appState = (connection as? EsdeConnectionState.Connected)?.appState ?: return@map null
-            appState.stateGroup()?.let { group -> group to appState }
+            val group = appState.stateGroup() ?: return@map null
+            ContentIdentity(
+                stateGroup = group,
+                gameRef = appState.currentGameReference(),
+                systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
+            )
         }
+        .distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val canvasState: StateFlow<WidgetCanvasState> =
-        combine(groupedAppState, gridDimensions.filterNotNull()) { grouped, grid -> grouped to grid }
-            .flatMapLatest { (grouped, grid) ->
-                if (grouped == null) {
+        combine(contentIdentity, gridDimensions.filterNotNull()) { identity, grid -> identity to grid }
+            .flatMapLatest { (identity, grid) ->
+                if (identity == null) {
                     flowOf(WidgetCanvasState.None)
                 } else {
-                    val (stateGroup, appState) = grouped
-                    observeWidgetCanvas(stateGroup, grid).map { widgets ->
-                        WidgetCanvasState.Showing(widgets, resolveContent(widgets, appState))
+                    observeWidgetCanvas(identity.stateGroup, grid).map { widgets ->
+                        WidgetCanvasState.Showing(widgets, resolveContent(widgets, identity))
                     }
                 }
             }
@@ -82,10 +94,9 @@ class WidgetsViewModel(
      * synchronous (see its kdoc), rather than each widget independently triggering a
      * suspend media lookup.
      */
-    private suspend fun resolveContent(widgets: List<PlacedWidget>, appState: AppState): Map<String, WidgetContent> {
-        val gameRef = appState.currentGameReference()
-        val gameMedia = gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath) }
-        val systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName
+    private suspend fun resolveContent(widgets: List<PlacedWidget>, identity: ContentIdentity): Map<String, WidgetContent> {
+        val gameMedia = identity.gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath) }
+        val systemShortName = identity.systemShortName
 
         val neededSystemMediaTypes = widgets
             .mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType }
@@ -97,7 +108,7 @@ class WidgetsViewModel(
         val systemLogoAssetPath = systemShortName
             ?.let { "file:///android_asset/system_logos/${systemLogoAssetName(it)}.svg" }
 
-        return widgets.associate { widget ->
+        val result = widgets.associate { widget ->
             widget.id to WidgetContentResolver.resolve(
                 widgetType = widget.widgetType,
                 systemLogoAssetPath = { systemLogoAssetPath },
@@ -106,5 +117,14 @@ class WidgetsViewModel(
                 fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET,
             )
         }
+
+        android.util.Log.d("WidgetsViewModel", "content resolved at ${System.currentTimeMillis()}: ${result.size} widgets")
+        return result
     }
+
+    private data class ContentIdentity(
+        val stateGroup: StateGroup,
+        val gameRef: GameReference?,
+        val systemShortName: String?,
+    )
 }

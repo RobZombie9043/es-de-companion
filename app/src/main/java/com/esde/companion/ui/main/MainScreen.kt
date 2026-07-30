@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -65,7 +66,9 @@ private val DRAWER_SETTLE_SPRING = spring<Float>(
 fun MainScreen(
     viewModel: MainViewModel,
     appDrawerViewModel: AppDrawerViewModel,
+    widgetsLocked: Boolean,
     onOpenSettings: () -> Unit,
+    onOpenEditWidgets: () -> Unit,
 ) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val coverImageStatus by viewModel.coverImageStatus.collectAsStateWithLifecycle()
@@ -75,7 +78,9 @@ fun MainScreen(
         coverImageStatus = coverImageStatus,
         overlayEnabled = overlayEnabled,
         appDrawerViewModel = appDrawerViewModel,
+        widgetsLocked = widgetsLocked,
         onOpenSettings = onOpenSettings,
+        onOpenEditWidgets = onOpenEditWidgets,
     )
 }
 
@@ -90,7 +95,9 @@ private fun MainScreenContent(
     coverImageStatus: CoverImageStatus?,
     overlayEnabled: Boolean,
     appDrawerViewModel: AppDrawerViewModel,
+    widgetsLocked: Boolean,
     onOpenSettings: () -> Unit,
+    onOpenEditWidgets: () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -157,8 +164,7 @@ private fun MainScreenContent(
                 // Known limitation: once open, this and the app grid's own scrolling both
                 // listen for vertical drags over the grid area - not resolved via
                 // Compose's nested-scroll protocol here. The handle below remains the
-                // reliable way to close. Revisit if a real device with a tall app list
-                // makes the grid conflict a problem.
+                // reliable way to close.
                 .pointerInput(drawerHeightPx) {
                     var velocityTracker = VelocityTracker()
                     detectVerticalDragGestures(
@@ -173,6 +179,26 @@ private fun MainScreenContent(
                         velocityTracker.addPointerInputChange(change)
                         onVerticalDrag(dragAmount)
                     }
+                }
+                // Long-press-to-edit-widgets, layered alongside the drag gesture above
+                // rather than replacing it. These coexist safely because of how Compose's
+                // gesture consumption works: detectVerticalDragGestures only consumes once
+                // real movement exceeds touch slop, so a stationary hold never gets
+                // consumed and this detector's long-press timer fires normally; a genuine
+                // swipe does get consumed by the drag detector, which cancels this
+                // detector's awaitLongPressOrCancellation. So a still finger reaches edit
+                // mode and a moving finger opens the drawer, without any manual
+                // disambiguation logic - but this is exactly the kind of gesture
+                // composition worth confirming feels right on a real device, not just
+                // reasoning about in code.
+                .pointerInput(widgetsLocked) {
+                    detectTapGestures(
+                        onLongPress = {
+                            if (!widgetsLocked && openFraction.value == 0f) {
+                                onOpenEditWidgets()
+                            }
+                        },
+                    )
                 },
         ) {
             Scaffold(

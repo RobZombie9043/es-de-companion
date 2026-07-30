@@ -9,10 +9,12 @@ import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +35,8 @@ class SettingsViewModel(
     private val setDrawerOpacityUseCase: SetDrawerOpacityUseCase,
     private val observeGridColumnsUseCase: ObserveGridColumnsUseCase,
     private val setGridColumnsUseCase: SetGridColumnsUseCase,
+    private val observeWidgetsLockedUseCase: ObserveWidgetsLockedUseCase,
+    private val setWidgetsLockedUseCase: SetWidgetsLockedUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -52,6 +56,7 @@ class SettingsViewModel(
             val themePreference = observeThemePreferenceUseCase().first()
             val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
+            val widgetsLocked = observeWidgetsLockedUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
@@ -59,6 +64,7 @@ class SettingsViewModel(
                 themePreference = themePreference,
                 drawerOpacityPercent = drawerOpacityPercent,
                 gridColumns = gridColumns,
+                widgetsLocked = widgetsLocked,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -88,6 +94,11 @@ class SettingsViewModel(
     fun onOverlayEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(overlayEnabled = enabled)
         viewModelScope.launch { setOverlayEnabledUseCase(enabled) }
+    }
+
+    fun onWidgetsLockedChanged(locked: Boolean) {
+        _uiState.value = _uiState.value.copy(widgetsLocked = locked)
+        viewModelScope.launch { setWidgetsLockedUseCase(locked) }
     }
 
     fun onThemePreferenceChanged(preference: ThemePreference) {

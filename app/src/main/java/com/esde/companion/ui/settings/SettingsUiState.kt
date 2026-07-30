@@ -16,4 +16,5 @@ data class SettingsUiState(
     val themePreference: ThemePreference = ThemePreference.Auto,
     val drawerOpacityPercent: Int = 80,
     val gridColumns: Int = 4,
+    val widgetsLocked: Boolean = false,
 )

@@ -17,6 +17,10 @@ enum class SettingsCategory(val title: String, val description: String) {
         title = "UI Settings",
         description = "Theme and appearance",
     ),
+    Widgets(
+        title = "Widgets",
+        description = "Lock editing and open the widget editor",
+    ),
     AppDrawer(
         title = "App Drawer",
         description = "Visible apps, background opacity, grid columns",

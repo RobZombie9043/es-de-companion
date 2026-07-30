@@ -3,6 +3,7 @@ package com.esde.companion
 import android.content.Context
 import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
+import com.esde.companion.data.log.SharedEsdeLogRepository
 import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
@@ -40,6 +41,9 @@ import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * Minimal hand-rolled composition root. At this project's current scale (single module,
@@ -52,12 +56,14 @@ class AppContainer(context: Context) {
 
     private val appContext = context.applicationContext
 
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     val onboardingRepository: OnboardingRepository = FileOnboardingRepository(appContext)
 
-    // Reacts to the user changing the ES-DE folder later via Settings, without requiring
-    // the process to restart - see ReactiveEsdeLogRepository.
-    private val logRepository: EsdeLogRepository =
-        ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath())
+    private val logRepository: EsdeLogRepository = SharedEsdeLogRepository(
+        inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
+        scope = applicationScope,
+    )
 
     // Same reactive-to-Settings pattern as logRepository, for the media folder.
     private val gameMediaRepository: GameMediaRepository =

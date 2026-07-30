@@ -2,17 +2,22 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +73,17 @@ class SettingsViewModelTest {
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = flowOf(emptySet())
     }
 
+    private class FakeWidgetLayoutRepository(
+        initialLocked: Boolean = false,
+    ) : WidgetLayoutRepository {
+        val locked = MutableStateFlow(initialLocked)
+
+        override fun observeCanvas(stateGroup: StateGroup): Flow<List<PlacedWidget>> = flowOf(emptyList())
+        override suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>) { /* not under test */ }
+        override fun observeWidgetsLocked(): Flow<Boolean> = locked
+        override suspend fun setWidgetsLocked(locked: Boolean) { this.locked.value = locked }
+    }
+
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -83,6 +99,7 @@ class SettingsViewModelTest {
     private fun buildViewModel(
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
+        widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
         val viewModel = SettingsViewModel(
             onboardingRepository = onboardingRepository,
@@ -96,6 +113,8 @@ class SettingsViewModelTest {
             setDrawerOpacityUseCase = SetDrawerOpacityUseCase(appDrawerSettingsRepository),
             observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository),
             setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository),
+            observeWidgetsLockedUseCase = ObserveWidgetsLockedUseCase(widgetLayoutRepository),
+            setWidgetsLockedUseCase = SetWidgetsLockedUseCase(widgetLayoutRepository),
         )
         return viewModel to appDrawerSettingsRepository
     }
@@ -137,5 +156,19 @@ class SettingsViewModelTest {
 
         advanceUntilIdle()
         assertEquals(6, appDrawerSettingsRepository.columns.value)
+    }
+
+    @Test
+    fun `onWidgetsLockedChanged updates ui state immediately and persists`() = runTest(testDispatcher) {
+        val widgetLayoutRepository = FakeWidgetLayoutRepository()
+        val (viewModel, _) = buildViewModel(widgetLayoutRepository = widgetLayoutRepository)
+        advanceUntilIdle()
+
+        viewModel.onWidgetsLockedChanged(true)
+
+        assertEquals(true, viewModel.uiState.value.widgetsLocked)
+
+        advanceUntilIdle()
+        assertEquals(true, widgetLayoutRepository.locked.value)
     }
 }

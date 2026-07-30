@@ -26,6 +26,8 @@ class SettingsViewModelFactory(
             setDrawerOpacityUseCase = appContainer.setDrawerOpacityUseCase,
             observeGridColumnsUseCase = appContainer.observeGridColumnsUseCase,
             setGridColumnsUseCase = appContainer.setGridColumnsUseCase,
+            observeWidgetsLockedUseCase = appContainer.observeWidgetsLockedUseCase,
+            setWidgetsLockedUseCase = appContainer.setWidgetsLockedUseCase,
         ) as T
     }
 }

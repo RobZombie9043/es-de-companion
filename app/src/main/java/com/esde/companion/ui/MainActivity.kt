@@ -35,6 +35,9 @@ import com.esde.companion.ui.theme.EsdeCompanionTheme
 import com.esde.companion.ui.widgets.WidgetOverlay
 import com.esde.companion.ui.widgets.WidgetsViewModel
 import com.esde.companion.ui.widgets.WidgetsViewModelFactory
+import com.esde.companion.ui.widgets.edit.EditWidgetsOverlay
+import com.esde.companion.ui.widgets.edit.EditWidgetsViewModel
+import com.esde.companion.ui.widgets.edit.EditWidgetsViewModelFactory
 import kotlinx.coroutines.flow.first
 
 private object Destinations {
@@ -85,32 +88,57 @@ class MainActivity : ComponentActivity() {
                             val viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(appContainer))
                             val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))
                             var showSettings by rememberSaveable { mutableStateOf(false) }
+                            var showEditWidgets by rememberSaveable { mutableStateOf(false) }
 
-                            // Collected here, above the settings toggle, so this call site -
-                            // and the WidgetCanvas/CrossfadeAsyncImage state inside
-                            // WidgetOverlay - never leaves composition just because Settings
-                            // is showing. Otherwise WhileSubscribed(5_000) on the ViewModel's
-                            // flow would stop and restart on a long-enough settings visit,
-                            // causing a visible reload/flash on return.
+                            val widgetsLocked by produceState(initialValue = false) {
+                                appContainer.observeWidgetsLockedUseCase().collect { value = it }
+                            }
+
+                            // Collected here, above the settings/edit-widgets toggles, so
+                            // this call site - and the WidgetCanvas/CrossfadeAsyncImage
+                            // state inside WidgetOverlay - never leaves composition just
+                            // because Settings or edit mode is showing. Otherwise
+                            // WhileSubscribed(5_000) on the ViewModel's flow would stop and
+                            // restart on a long-enough visit, causing a visible
+                            // reload/flash on return.
                             val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))
 
                             Box(modifier = Modifier.fillMaxSize()) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
-                                if (showSettings) {
-                                    val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
-                                    val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
-                                    SettingsScreen(
-                                        viewModel = settingsViewModel,
-                                        manageAppsViewModel = manageAppsViewModel,
-                                        onDone = { showSettings = false },
-                                    )
-                                } else {
-                                    MainScreen(
-                                        viewModel = viewModel,
-                                        appDrawerViewModel = appDrawerViewModel,
-                                        onOpenSettings = { showSettings = true },
-                                    )
+                                when {
+                                    showEditWidgets -> {
+                                        val editWidgetsViewModel: EditWidgetsViewModel =
+                                            viewModel(factory = EditWidgetsViewModelFactory(appContainer))
+                                        EditWidgetsOverlay(
+                                            viewModel = editWidgetsViewModel,
+                                            onDone = { showEditWidgets = false },
+                                        )
+                                    }
+
+                                    showSettings -> {
+                                        val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
+                                        val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
+                                        SettingsScreen(
+                                            viewModel = settingsViewModel,
+                                            manageAppsViewModel = manageAppsViewModel,
+                                            onDone = { showSettings = false },
+                                            onEditWidgetsClick = {
+                                                showSettings = false
+                                                showEditWidgets = true
+                                            },
+                                        )
+                                    }
+
+                                    else -> {
+                                        MainScreen(
+                                            viewModel = viewModel,
+                                            appDrawerViewModel = appDrawerViewModel,
+                                            widgetsLocked = widgetsLocked,
+                                            onOpenSettings = { showSettings = true },
+                                            onOpenEditWidgets = { showEditWidgets = true },
+                                        )
+                                    }
                                 }
                             }
                         }

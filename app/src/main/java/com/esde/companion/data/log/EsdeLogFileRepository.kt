@@ -1,6 +1,7 @@
 package com.esde.companion.data.log
 
 import android.os.FileObserver
+import android.util.Log
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.isStartupAnchor
 import com.esde.companion.domain.parser.EsdeEventParser
@@ -15,6 +16,8 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+private const val TAG = "EsdeLogFileRepo"
 
 /**
  * Tails es_log.txt using [FileObserver] for near-instant pickup of new writes, with a
@@ -61,31 +64,45 @@ class EsdeLogFileRepository(
         // current end-of-file regardless of how many signals coalesce into one wakeup.
         val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
 
-        val fileObserver = watchDirectoryFor(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+        val fileObserver = watchDirectoryFor("events", logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
         fileObserver.startWatching()
 
         val fallbackJob = launch {
             while (isActive) {
                 delay(fallbackPollIntervalMs)
+                Log.d(TAG, "[events] fallback poll tick (interval=${fallbackPollIntervalMs}ms)")
                 checkSignal.trySend(Unit)
             }
         }
 
         try {
             for (signal in checkSignal) {
+                val signalTime = System.currentTimeMillis()
                 val file = File(logFilePath)
-                if (!file.exists()) continue
+                if (!file.exists()) {
+                    Log.d(TAG, "[events] signal received but file does not exist")
+                    continue
+                }
 
                 val length = file.length()
+                Log.d(TAG, "[events] signal received at $signalTime: length=$length position=$position")
 
                 if (length < position) {
                     // Smaller than what we've already read: ES-DE restarted and wrote
                     // a fresh log. Start over from the beginning.
+                    Log.d(TAG, "[events] length < position, treating as fresh log (restart)")
                     position = 0L
                 }
 
                 if (length > position) {
-                    position = readNewLines(file, position) { event -> send(event) }
+                    val before = position
+                    position = readNewLines(file, position) { event ->
+                        Log.d(TAG, "[events] parsed event: $event")
+                        send(event)
+                    }
+                    Log.d(TAG, "[events] read from $before to $position (${position - before} bytes)")
+                } else {
+                    Log.d(TAG, "[events] no new bytes to read")
                 }
             }
         } finally {
@@ -106,7 +123,7 @@ class EsdeLogFileRepository(
         send(lastKnown)
 
         val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
-        val fileObserver = watchDirectoryFor(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+        val fileObserver = watchDirectoryFor("existence", logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
         fileObserver.startWatching()
 
         val fallbackJob = launch {
@@ -133,15 +150,17 @@ class EsdeLogFileRepository(
     /**
      * Watches [targetPath]'s parent directory and invokes [onChange] for any event in
      * [mask] on an entry matching its file name. See class doc for why this watches the
-     * directory rather than the file itself.
+     * directory rather than the file itself. [label] only distinguishes log lines
+     * between this class's two independent watchers (events vs. existence).
      */
-    private fun watchDirectoryFor(targetPath: String, mask: Int, onChange: () -> Unit): FileObserver {
+    private fun watchDirectoryFor(label: String, targetPath: String, mask: Int, onChange: () -> Unit): FileObserver {
         val targetFile = File(targetPath)
         val parentDir = targetFile.parentFile ?: File("/")
         val targetName = targetFile.name
 
         return object : FileObserver(parentDir, mask) {
             override fun onEvent(event: Int, path: String?) {
+                Log.d(TAG, "[$label] FileObserver.onEvent: event=$event path=$path (watching for $targetName)")
                 if (path == null || path == targetName) onChange()
             }
         }
