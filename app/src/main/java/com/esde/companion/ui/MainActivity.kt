@@ -21,7 +21,6 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
 import com.esde.companion.ui.main.MainScreen
-import com.esde.companion.ui.main.MainScreenImages
 import com.esde.companion.ui.main.MainViewModel
 import com.esde.companion.ui.main.MainViewModelFactory
 import com.esde.companion.ui.onboarding.OnboardingScreen
@@ -33,6 +32,9 @@ import com.esde.companion.ui.settings.SettingsScreen
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SettingsViewModelFactory
 import com.esde.companion.ui.theme.EsdeCompanionTheme
+import com.esde.companion.ui.widgets.WidgetOverlay
+import com.esde.companion.ui.widgets.WidgetsViewModel
+import com.esde.companion.ui.widgets.WidgetsViewModelFactory
 import kotlinx.coroutines.flow.first
 
 private object Destinations {
@@ -85,15 +87,15 @@ class MainActivity : ComponentActivity() {
                             var showSettings by rememberSaveable { mutableStateOf(false) }
 
                             // Collected here, above the settings toggle, so this call site -
-                            // and the CrossfadeAsyncImage state inside MainScreenImages -
-                            // never leaves composition just because Settings is showing.
-                            // Otherwise WhileSubscribed(5_000) on the ViewModel's flow would
-                            // stop and restart on a long-enough settings visit, causing a
-                            // visible reload/flash on return.
-                            val mainScreenImageState by viewModel.mainScreenImageState.collectAsStateWithLifecycle()
+                            // and the WidgetCanvas/CrossfadeAsyncImage state inside
+                            // WidgetOverlay - never leaves composition just because Settings
+                            // is showing. Otherwise WhileSubscribed(5_000) on the ViewModel's
+                            // flow would stop and restart on a long-enough settings visit,
+                            // causing a visible reload/flash on return.
+                            val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))
 
                             Box(modifier = Modifier.fillMaxSize()) {
-                                MainScreenImages(state = mainScreenImageState, modifier = Modifier.fillMaxSize())
+                                WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
                                 if (showSettings) {
                                     val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))

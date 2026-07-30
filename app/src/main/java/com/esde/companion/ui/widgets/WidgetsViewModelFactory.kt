@@ -1,24 +1,23 @@
-package com.esde.companion.ui.main
+package com.esde.companion.ui.widgets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.esde.companion.AppContainer
 
-class MainViewModelFactory(
+class WidgetsViewModelFactory(
     private val appContainer: AppContainer,
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        require(modelClass.isAssignableFrom(MainViewModel::class.java)) {
+        require(modelClass.isAssignableFrom(WidgetsViewModel::class.java)) {
             "Unknown ViewModel class: $modelClass"
         }
-        return MainViewModel(
+        return WidgetsViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
-            observeOverlayEnabled = appContainer.observeOverlayEnabledUseCase,
+            observeWidgetCanvas = appContainer.observeWidgetCanvasUseCase,
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
             resolveRandomSystemMedia = appContainer.resolveRandomSystemMediaUseCase,
-            onboardingRepository = appContainer.onboardingRepository,
         ) as T
     }
 }

@@ -7,12 +7,14 @@ import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
+import com.esde.companion.data.settings.FileWidgetLayoutRepository
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
+import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
@@ -24,14 +26,18 @@ import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
-import com.esde.companion.domain.usecase.ResolveRandomSystemFanartUseCase
+import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 
@@ -68,6 +74,13 @@ class AppContainer(context: Context) {
     // AppDrawerSettingsRepository.
     private val appDrawerSettingsRepository: AppDrawerSettingsRepository = FileAppDrawerSettingsRepository(appContext)
 
+    private val widgetLayoutRepository: WidgetLayoutRepository = FileWidgetLayoutRepository(appContext)
+
+    val observeWidgetCanvasUseCase = ObserveWidgetCanvasUseCase(widgetLayoutRepository)
+    val saveWidgetCanvasUseCase = SaveWidgetCanvasUseCase(widgetLayoutRepository)
+    val observeWidgetsLockedUseCase = ObserveWidgetsLockedUseCase(widgetLayoutRepository)
+    val setWidgetsLockedUseCase = SetWidgetsLockedUseCase(widgetLayoutRepository)
+
     val observeHiddenAppsUseCase = ObserveHiddenAppsUseCase(appDrawerSettingsRepository)
     val setHiddenAppsUseCase = SetHiddenAppsUseCase(appDrawerSettingsRepository)
 
@@ -83,7 +96,7 @@ class AppContainer(context: Context) {
     val observeAppStateUseCase = ObserveAppStateUseCase(logRepository)
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)
     val resolveGameMediaUseCase = ResolveGameMediaUseCase(gameMediaRepository)
-    val resolveRandomSystemFanartUseCase = ResolveRandomSystemFanartUseCase(systemMediaRepository)
+    val resolveRandomSystemMediaUseCase = ResolveRandomSystemMediaUseCase(systemMediaRepository)
 
     val validateEsdeLogFolderUseCase = ValidateEsdeLogFolderUseCase(onboardingRepository)
     val validateEsdeMediaFolderUseCase = ValidateEsdeMediaFolderUseCase(onboardingRepository)

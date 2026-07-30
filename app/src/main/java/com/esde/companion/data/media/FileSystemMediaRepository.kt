@@ -7,23 +7,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Picks a random fanart file from `<mediaFolderPath>/<systemShortName>/fanart/`, walked
- * recursively since games can live in subfolders (see GameMediaPathResolver - the same
- * subfolder structure is replicated under each media type folder). No attempt is made to
- * tie the chosen file back to a specific game; for this use case (a representative
- * system-browsing backdrop) any fanart image belonging to the system is equally valid.
+ * Picks a random file of [MediaType] from `<mediaFolderPath>/<systemShortName>/<type>/`,
+ * walked recursively since games can live in subfolders (see GameMediaPathResolver - the
+ * same subfolder structure is replicated under each media type folder). No attempt is
+ * made to tie the chosen file back to a specific game; for this use case (a representative
+ * system-level image) any file of that type belonging to the system is equally valid.
  */
 class FileSystemMediaRepository(
     private val mediaFolderPath: String,
 ) : SystemMediaRepository {
 
-    override suspend fun randomFanart(systemShortName: String): String? =
+    override suspend fun randomMedia(systemShortName: String, mediaType: MediaType): String? =
         withContext(Dispatchers.IO) {
-            val fanartDir = File(mediaFolderPath, "$systemShortName/${MediaType.FanArt.folderName}")
-            if (!fanartDir.isDirectory) return@withContext null
+            val typeDir = File(mediaFolderPath, "$systemShortName/${mediaType.folderName}")
+            if (!typeDir.isDirectory) return@withContext null
 
-            fanartDir.walkTopDown()
-                .filter { it.isFile && it.extension.lowercase() in MediaType.FanArt.validExtensions }
+            typeDir.walkTopDown()
+                .filter { it.isFile && it.extension.lowercase() in mediaType.validExtensions }
                 .toList()
                 .randomOrNull()
                 ?.absolutePath

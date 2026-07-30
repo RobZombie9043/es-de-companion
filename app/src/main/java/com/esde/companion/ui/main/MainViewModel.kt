@@ -12,7 +12,7 @@ import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
-import com.esde.companion.domain.usecase.ResolveRandomSystemFanartUseCase
+import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,7 +28,7 @@ class MainViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeOverlayEnabled: ObserveOverlayEnabledUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
-    private val resolveRandomSystemFanart: ResolveRandomSystemFanartUseCase,
+    private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
     private val onboardingRepository: OnboardingRepository,
 ) : ViewModel() {
 
@@ -114,7 +114,7 @@ class MainViewModel(
         ImageSource.None -> MainScreenImageState.None
 
         is ImageSource.System -> MainScreenImageState.SystemBackdrop(
-            fanartPath = resolveRandomSystemFanart(source.systemShortName),
+            fanartPath = resolveRandomSystemMedia(source.systemShortName, MediaType.FanArt),
             systemLogoAssetPath = "file:///android_asset/system_logos/${systemLogoAssetName(source.systemShortName)}.svg",
         )
 

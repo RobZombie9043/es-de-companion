@@ -1,12 +1,12 @@
 package com.esde.companion.data.media
 
+import com.esde.companion.domain.model.MediaType
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -28,7 +28,7 @@ class FileSystemMediaRepositoryTest {
     fun `returns null when the system has no fanart folder`() = runTest {
         val repository = FileSystemMediaRepository(mediaRoot.absolutePath)
 
-        assertNull(repository.randomFanart("dreamcast"))
+        assertNull(repository.randomMedia("dreamcast", MediaType.FanArt))
     }
 
     @Test
@@ -36,7 +36,7 @@ class FileSystemMediaRepositoryTest {
         val file = writeFanartFile("dreamcast/fanart/Cosmic Smash (Japan).png")
         val repository = FileSystemMediaRepository(mediaRoot.absolutePath)
 
-        assertEquals(file.absolutePath, repository.randomFanart("dreamcast"))
+        assertEquals(file.absolutePath, repository.randomMedia("dreamcast", MediaType.FanArt))
     }
 
     @Test
@@ -45,7 +45,7 @@ class FileSystemMediaRepositoryTest {
         File(mediaRoot, "psx/fanart/RPGs/readme.txt").apply { parentFile?.mkdirs(); writeText("stub") }
         val repository = FileSystemMediaRepository(mediaRoot.absolutePath)
 
-        assertEquals(nested.absolutePath, repository.randomFanart("psx"))
+        assertEquals(nested.absolutePath, repository.randomMedia("psx", MediaType.FanArt))
     }
 
     @Test
@@ -54,7 +54,17 @@ class FileSystemMediaRepositoryTest {
         val psxFile = writeFanartFile("psx/fanart/Final Fantasy IX (USA).jpg")
         val repository = FileSystemMediaRepository(mediaRoot.absolutePath)
 
-        assertEquals(psxFile.absolutePath, repository.randomFanart("psx"))
+        assertEquals(psxFile.absolutePath, repository.randomMedia("psx", MediaType.FanArt))
+    }
+
+    @Test
+    fun `resolves media types other than fanart using their own folder`() = runTest {
+        val file = File(mediaRoot, "dreamcast/screenshots/Cosmic Smash (Japan).png")
+        file.parentFile?.mkdirs()
+        file.writeText("stub")
+        val repository = FileSystemMediaRepository(mediaRoot.absolutePath)
+
+        assertEquals(file.absolutePath, repository.randomMedia("dreamcast", MediaType.Screenshots))
     }
 
     private fun writeFanartFile(relativePath: String): File {
