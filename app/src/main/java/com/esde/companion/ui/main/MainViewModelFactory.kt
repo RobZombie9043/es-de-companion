@@ -17,7 +17,6 @@ class MainViewModelFactory(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeOverlayEnabled = appContainer.observeOverlayEnabledUseCase,
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
-            resolveRandomSystemMedia = appContainer.resolveRandomSystemMediaUseCase,
             onboardingRepository = appContainer.onboardingRepository,
         ) as T
     }

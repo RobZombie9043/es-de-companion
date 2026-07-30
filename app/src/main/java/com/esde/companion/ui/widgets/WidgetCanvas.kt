@@ -1,6 +1,5 @@
 package com.esde.companion.ui.widgets
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,8 +18,6 @@ import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.ui.main.CrossfadeAsyncImage
 import java.io.File
-
-private const val TAG = "WidgetCanvas"
 
 /**
  * Renders [widgets] on a grid derived from the available space (see [gridDimensionsFor]),
@@ -46,7 +43,6 @@ fun WidgetCanvas(
             key(widget.id) {
                 val content = contentByWidgetId[widget.id] ?: WidgetContent.Empty
                 WidgetContentView(
-                    widgetId = widget.id,
                     content = content,
                     modifier = Modifier
                         .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
@@ -59,7 +55,7 @@ fun WidgetCanvas(
 }
 
 @Composable
-private fun WidgetContentView(widgetId: String, content: WidgetContent, modifier: Modifier = Modifier) {
+private fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modifier) {
     when (content) {
         WidgetContent.Empty -> Unit
 
@@ -79,8 +75,6 @@ private fun WidgetContentView(widgetId: String, content: WidgetContent, modifier
                     model = if (content.isAsset) content.path else File(content.path),
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
-                    onSuccess = { Log.d(TAG, "[$widgetId] AsyncImage (non-crossfade) success at ${System.currentTimeMillis()}: ${content.path}") },
-                    onError = { Log.d(TAG, "[$widgetId] AsyncImage (non-crossfade) FAILED at ${System.currentTimeMillis()}: ${content.path}, error=${it.result.throwable}") },
                     modifier = modifier,
                 )
             }
@@ -90,8 +84,6 @@ private fun WidgetContentView(widgetId: String, content: WidgetContent, modifier
                 model = content.assetPath,
                 contentDescription = null,
                 contentScale = content.scaleMode.toContentScale(),
-                onSuccess = { Log.d(TAG, "[$widgetId] SystemLogo AsyncImage success at ${System.currentTimeMillis()}: ${content.assetPath}") },
-                onError = { Log.d(TAG, "[$widgetId] SystemLogo AsyncImage FAILED at ${System.currentTimeMillis()}: ${content.assetPath}, error=${it.result.throwable}") },
                 modifier = modifier,
             )
     }

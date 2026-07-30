@@ -1,6 +1,5 @@
 package com.esde.companion.ui.main
 
-import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -21,8 +20,6 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
-
-private const val TAG = "CrossfadeAsyncImage"
 
 /**
  * Crossfades from whatever model was previously shown to [model], never showing a
@@ -56,37 +53,27 @@ fun CrossfadeAsyncImage(
     LaunchedEffect(model) {
         if (model == currentModel) return@LaunchedEffect
 
-        Log.d(TAG, "model changed, requested at ${System.currentTimeMillis()}: $model")
-
         if (model == null) {
             previousModel = currentModel
             currentModel = null
             alpha.snapTo(0f)
             alpha.animateTo(1f, animationSpec = tween(durationMillis))
             previousModel = null
-            Log.d(TAG, "faded to null, fully visible at ${System.currentTimeMillis()}")
             return@LaunchedEffect
         }
 
         val request = ImageRequest.Builder(context).data(model).build()
-        val decodeStart = System.currentTimeMillis()
         val result = context.imageLoader.execute(request)
-        val decodeDuration = System.currentTimeMillis() - decodeStart
 
         if (result !is SuccessResult) {
-            Log.d(TAG, "decode FAILED after ${decodeDuration}ms for model=$model result=$result")
             return@LaunchedEffect
         }
-
-        Log.d(TAG, "decode succeeded after ${decodeDuration}ms at ${System.currentTimeMillis()}, starting fade-in for model=$model")
 
         previousModel = currentModel
         currentModel = model
         alpha.snapTo(0f)
         alpha.animateTo(1f, animationSpec = tween(durationMillis))
         previousModel = null
-
-        Log.d(TAG, "fade-in complete, fully visible at ${System.currentTimeMillis()} for model=$model")
     }
 
     Box(modifier = modifier) {

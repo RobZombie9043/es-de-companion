@@ -108,7 +108,7 @@ class WidgetsViewModel(
         val systemLogoAssetPath = systemShortName
             ?.let { "file:///android_asset/system_logos/${systemLogoAssetName(it)}.svg" }
 
-        val result = widgets.associate { widget ->
+        return widgets.associate { widget ->
             widget.id to WidgetContentResolver.resolve(
                 widgetType = widget.widgetType,
                 systemLogoAssetPath = { systemLogoAssetPath },
@@ -117,9 +117,6 @@ class WidgetsViewModel(
                 fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET,
             )
         }
-
-        android.util.Log.d("WidgetsViewModel", "content resolved at ${System.currentTimeMillis()}: ${result.size} widgets")
-        return result
     }
 
     private data class ContentIdentity(
