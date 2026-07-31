@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 private val TEXT_PADDING = 8.dp
+private const val LINE_HEIGHT_RATIO = 1.25f
 private const val PAUSE_AT_EDGE_MS = 2_200L
 private const val PIXELS_PER_SECOND = 35f
 private const val MIN_SCROLL_DURATION_MS = 600
@@ -46,6 +47,7 @@ fun ScrollingText(
         Text(
             text = text,
             fontSize = fontSizeSp.sp,
+            lineHeight = (fontSizeSp * LINE_HEIGHT_RATIO).sp,
             color = Color(textColorArgb),
             modifier = Modifier
                 .fillMaxSize()
@@ -55,9 +57,15 @@ fun ScrollingText(
     }
 
     LaunchedEffect(text, scrollState.maxValue) {
+        // scrollState survives across games (ScrollingText is composed under a
+        // key(widget.id) in WidgetCanvas, so only content.text changes, not composable
+        // identity) - without this, switching games mid-scroll leaves the new
+        // description showing wherever the previous one's scroll offset happened to be,
+        // rather than starting from the top.
+        scrollState.scrollTo(0)
+
         val maxValue = scrollState.maxValue
         if (maxValue <= 0) return@LaunchedEffect
-
         val scrollDurationMs = ((maxValue / PIXELS_PER_SECOND) * 1000).toInt().coerceAtLeast(MIN_SCROLL_DURATION_MS)
         val spec = tween<Float>(durationMillis = scrollDurationMs, easing = LinearEasing)
 

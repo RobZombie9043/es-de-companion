@@ -17,7 +17,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.esde.companion.CompanionApplication
+import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
 import com.esde.companion.ui.main.MainScreen
@@ -90,6 +93,15 @@ class MainActivity : ComponentActivity() {
                             var showSettings by rememberSaveable { mutableStateOf(false) }
                             var showEditWidgets by rememberSaveable { mutableStateOf(false) }
 
+                            // Whichever StateGroup is live right now - read fresh on every
+                            // recomposition, so by the time edit mode actually opens (long
+                            // press on MainScreen, or the Settings entry point) it reflects
+                            // wherever ES-DE currently is, not whatever canvas was last left
+                            // open in the editor. Idle/no connection falls back to System.
+                            val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+                            val editWidgetsInitialCanvas = (connectionState as? EsdeConnectionState.Connected)
+                                ?.appState?.stateGroup() ?: StateGroup.System
+
                             val widgetsLocked by produceState(initialValue = false) {
                                 appContainer.observeWidgetsLockedUseCase().collect { value = it }
                             }
@@ -112,6 +124,7 @@ class MainActivity : ComponentActivity() {
                                             viewModel(factory = EditWidgetsViewModelFactory(appContainer))
                                         EditWidgetsOverlay(
                                             viewModel = editWidgetsViewModel,
+                                            initialCanvas = editWidgetsInitialCanvas,
                                             onDone = { showEditWidgets = false },
                                         )
                                     }

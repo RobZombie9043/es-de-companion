@@ -163,6 +163,7 @@ private fun StateGroup.displayLabel(): String = when (this) {
 @Composable
 fun EditWidgetsOverlay(
     viewModel: EditWidgetsViewModel,
+    initialCanvas: StateGroup,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -219,7 +220,15 @@ fun EditWidgetsOverlay(
                     },
             ) {
                 val grid = remember(maxWidth, maxHeight) { gridDimensionsFor(maxWidth, maxHeight) }
-                LaunchedEffect(grid) { viewModel.setGridDimensions(grid) }
+                // Switch to whichever canvas edit mode was entered for, before the first
+                // load - selectCanvas() no-ops if it's already the current canvas (the
+                // common case, since it defaults to System), and this runs before
+                // setGridDimensions' own reload, so there's no flash of the wrong
+                // canvas's widgets on entry.
+                LaunchedEffect(grid) {
+                    viewModel.selectCanvas(initialCanvas)
+                    viewModel.setGridDimensions(grid)
+                }
 
                 val cellWidth = maxWidth / grid.columns
                 val cellHeight = maxHeight / grid.rows
@@ -726,7 +735,7 @@ private fun ConfigureWidgetDialog(
                     .fillMaxWidth()
                     .heightIn(max = 420.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 when (widgetType) {
                     is WidgetType.SystemLogo -> {
@@ -807,22 +816,23 @@ private fun ScaleModeConfig(current: ScaleMode, onSelect: (ScaleMode) -> Unit) {
  */
 @Composable
 private fun ImageEffectsConfig(current: ImageEffects, onChange: (ImageEffects) -> Unit) {
-    Column {
-        Text(text = "Blur: ${(current.blurAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
-        Slider(
-            value = current.blurAmount,
-            onValueChange = { onChange(current.copy(blurAmount = it)) },
-            valueRange = 0f..1f,
-        )
-    }
-    Spacer(modifier = Modifier.height(16.dp))
-    Column {
-        Text(text = "Darken: ${(current.darkenAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
-        Slider(
-            value = current.darkenAmount,
-            onValueChange = { onChange(current.copy(darkenAmount = it)) },
-            valueRange = 0f..1f,
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Blur: ${(current.blurAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = current.blurAmount,
+                onValueChange = { onChange(current.copy(blurAmount = it)) },
+                valueRange = 0f..1f,
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Darken: ${(current.darkenAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = current.darkenAmount,
+                onValueChange = { onChange(current.copy(darkenAmount = it)) },
+                valueRange = 0f..1f,
+            )
+        }
     }
 }
 
@@ -845,36 +855,37 @@ private fun ColorBackgroundConfig(
     current: WidgetType.ColorBackground,
     onChange: (WidgetType.ColorBackground) -> Unit,
 ) {
-    Column {
-        Text(text = "Color", style = MaterialTheme.typography.titleSmall)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            COLOR_PRESETS.forEach { colorArgb ->
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(36.dp)
-                        .background(Color(colorArgb), CircleShape)
-                        .then(
-                            if (colorArgb == current.colorArgb) {
-                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                            } else {
-                                Modifier
-                            },
-                        )
-                        .clickable { onChange(current.copy(colorArgb = colorArgb)) },
-                )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Color", style = MaterialTheme.typography.titleSmall)
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                COLOR_PRESETS.forEach { colorArgb ->
+                    Box(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(36.dp)
+                            .background(Color(colorArgb), CircleShape)
+                            .then(
+                                if (colorArgb == current.colorArgb) {
+                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable { onChange(current.copy(colorArgb = colorArgb)) },
+                    )
+                }
             }
+            HexColorInput(current = current.colorArgb) { onChange(current.copy(colorArgb = it)) }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        HexColorInput(current = current.colorArgb) { onChange(current.copy(colorArgb = it)) }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Transparency: ${(current.alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
-        Slider(
-            value = current.alpha,
-            onValueChange = { onChange(current.copy(alpha = it)) },
-            valueRange = 0f..1f,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Transparency: ${(current.alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = current.alpha,
+                onValueChange = { onChange(current.copy(alpha = it)) },
+                valueRange = 0f..1f,
+            )
+        }
     }
 }
 
@@ -883,73 +894,70 @@ private fun GameDescriptionConfig(
     current: WidgetType.GameDescription,
     onChange: (WidgetType.GameDescription) -> Unit,
 ) {
-    Column {
-        Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
-        Slider(
-            value = current.fontSizeSp,
-            onValueChange = { onChange(current.copy(fontSizeSp = it)) },
-            valueRange = 10f..36f,
-        )
-    }
-    Spacer(modifier = Modifier.height(16.dp))
-    Column {
-        Text(text = "Text Color", style = MaterialTheme.typography.titleSmall)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            COLOR_PRESETS.forEach { colorArgb ->
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(36.dp)
-                        .background(Color(colorArgb), CircleShape)
-                        .then(
-                            if (colorArgb == current.textColorArgb) {
-                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                            } else {
-                                Modifier
-                            },
-                        )
-                        .clickable { onChange(current.copy(textColorArgb = colorArgb)) },
-                )
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = current.fontSizeSp,
+                onValueChange = { onChange(current.copy(fontSizeSp = it)) },
+                valueRange = 10f..36f,
+            )
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        HexColorInput(current = current.textColorArgb) { onChange(current.copy(textColorArgb = it)) }
-    }
-    Spacer(modifier = Modifier.height(16.dp))
-    Column {
-        Text(text = "Background Color", style = MaterialTheme.typography.titleSmall)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            COLOR_PRESETS.forEach { colorArgb ->
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(36.dp)
-                        .background(Color(colorArgb), CircleShape)
-                        .then(
-                            if (colorArgb == current.backgroundColorArgb) {
-                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                            } else {
-                                Modifier
-                            },
-                        )
-                        .clickable { onChange(current.copy(backgroundColorArgb = colorArgb)) },
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Text Color", style = MaterialTheme.typography.titleSmall)
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                COLOR_PRESETS.forEach { colorArgb ->
+                    Box(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(36.dp)
+                            .background(Color(colorArgb), CircleShape)
+                            .then(
+                                if (colorArgb == current.textColorArgb) {
+                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable { onChange(current.copy(textColorArgb = colorArgb)) },
+                    )
+                }
             }
+            HexColorInput(current = current.textColorArgb) { onChange(current.copy(textColorArgb = it)) }
         }
-        Spacer(modifier = Modifier.height(12.dp))
-        HexColorInput(current = current.backgroundColorArgb) { onChange(current.copy(backgroundColorArgb = it)) }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Background Transparency: ${(current.backgroundAlpha * 100).roundToInt()}%",
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Slider(
-            value = current.backgroundAlpha,
-            onValueChange = { onChange(current.copy(backgroundAlpha = it)) },
-            valueRange = 0f..1f,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Background Color", style = MaterialTheme.typography.titleSmall)
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                COLOR_PRESETS.forEach { colorArgb ->
+                    Box(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(36.dp)
+                            .background(Color(colorArgb), CircleShape)
+                            .then(
+                                if (colorArgb == current.backgroundColorArgb) {
+                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable { onChange(current.copy(backgroundColorArgb = colorArgb)) },
+                    )
+                }
+            }
+            HexColorInput(current = current.backgroundColorArgb) { onChange(current.copy(backgroundColorArgb = it)) }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Background Transparency: ${(current.backgroundAlpha * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Slider(
+                value = current.backgroundAlpha,
+                onValueChange = { onChange(current.copy(backgroundAlpha = it)) },
+                valueRange = 0f..1f,
+            )
+        }
     }
 }
 
