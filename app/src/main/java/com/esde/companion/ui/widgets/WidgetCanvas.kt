@@ -54,8 +54,11 @@ fun WidgetCanvas(
     }
 }
 
+/** Internal, not private - reused as-is by EditWidgetsOverlay's edit-mode preview
+ * rendering (see EditWidgetsViewModel.previewContent's kdoc), so both the live screen
+ * and edit mode render WidgetContent identically rather than duplicating this logic. */
 @Composable
-private fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modifier) {
+internal fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modifier) {
     when (content) {
         WidgetContent.Empty -> Unit
 

@@ -16,6 +16,10 @@ class EditWidgetsViewModelFactory(
         return EditWidgetsViewModel(
             observeWidgetCanvas = appContainer.observeWidgetCanvasUseCase,
             saveWidgetCanvas = appContainer.saveWidgetCanvasUseCase,
+            resolveGameMedia = appContainer.resolveGameMediaUseCase,
+            resolveRandomSystemMedia = appContainer.resolveRandomSystemMediaUseCase,
+            observeLastSystemShortName = appContainer.observeLastSystemShortNameUseCase,
+            observeLastGameReference = appContainer.observeLastGameReferenceUseCase,
         ) as T
     }
 }

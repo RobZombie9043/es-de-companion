@@ -1,31 +1,51 @@
 package com.esde.companion.ui.widgets.edit
 
 import android.graphics.Rect
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,17 +57,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
+import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.ui.widgets.WidgetContentView
 import com.esde.companion.ui.widgets.gridDimensionsFor
+import kotlin.math.roundToInt
 
 /** Options button opacity at rest - translucent so it's unobtrusive but still visible. */
 private const val OPTIONS_BUTTON_IDLE_ALPHA = 0.75f
@@ -65,6 +93,34 @@ private val HANDLE_SIZE = 32.dp
  * edge, snap straight to the grid boundary rather than requiring further delta-based
  * drag distance - see ResizeHandle's kdoc for why this is needed at all. */
 private val EDGE_SNAP_THRESHOLD = 24.dp
+
+/**
+ * The widget types available to add, filtered to what actually makes sense per canvas -
+ * System has no per-game media to show, Playing has no system-level media. Each entry
+ * carries sensible default config (scale mode, starting color/alpha) - these are exactly
+ * what gets placed on add; per-widget reconfiguration is a later slice.
+ */
+private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (stateGroup) {
+    StateGroup.System -> listOf(
+        WidgetType.SystemLogo(ScaleMode.Fit),
+        WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
+        WidgetType.SystemMedia(MediaType.Screenshots, ScaleMode.Fill),
+        WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
+    )
+
+    StateGroup.Playing -> listOf(
+        WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
+        WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit),
+        WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit),
+        WidgetType.GameMedia(MediaType.MixImages, ScaleMode.Fill),
+        WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill),
+        WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill),
+        WidgetType.GameMedia(MediaType.TitleScreens, ScaleMode.Fit),
+        WidgetType.GameMedia(MediaType.BackCovers, ScaleMode.Fit),
+        WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit),
+        WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
+    )
+}
 
 /**
  * Full-screen edit-mode overlay - not a nav destination, same pattern as the App Drawer
@@ -104,9 +160,31 @@ fun EditWidgetsOverlay(
 
         Box(modifier = Modifier.fillMaxSize()) {
             val widgets by viewModel.widgets.collectAsStateWithLifecycle()
+            val previewContent by viewModel.previewContent.collectAsStateWithLifecycle()
             val isDragging by viewModel.isDragging.collectAsStateWithLifecycle()
             val selectedWidgetId by viewModel.selectedWidgetId.collectAsStateWithLifecycle()
             val selectedCanvas by viewModel.selectedCanvas.collectAsStateWithLifecycle()
+            var showAddPicker by remember { mutableStateOf(false) }
+
+            // Without this, back falls through to the system default and exits the app -
+            // MainScreen's own BackHandler (which normally intercepts back so this kiosk
+            // app can never be exited) isn't composed while this overlay is showing,
+            // since MainActivity only renders one of MainScreen/SettingsScreen/this at a
+            // time. Step-back priority: close the add-widget dialog first if it's open,
+            // then deselect a selected widget, and only exit edit mode (same as Done)
+            // once neither applies - undoing the most local thing first, same as back
+            // behaves elsewhere in the app, rather than a single press jumping straight
+            // out of a mid-edit state.
+            BackHandler(enabled = true) {
+                when {
+                    showAddPicker -> showAddPicker = false
+                    selectedWidgetId != null -> viewModel.selectWidget(null)
+                    else -> {
+                        viewModel.selectWidget(null)
+                        onDone()
+                    }
+                }
+            }
 
             BoxWithConstraints(
                 modifier = Modifier
@@ -124,14 +202,16 @@ fun EditWidgetsOverlay(
 
                 val cellWidth = maxWidth / grid.columns
                 val cellHeight = maxHeight / grid.rows
+                val gridLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
 
                 if (widgets.isEmpty()) {
-                    Text(text = "No widgets yet - tap + to add one", modifier = Modifier.padding(24.dp))
+                    Text(text = "No widgets yet - open options to add one", modifier = Modifier.padding(24.dp))
                 }
 
                 for (widget in widgets) {
                     PlaceholderWidgetBox(
                         widget = widget,
+                        content = previewContent[widget.id] ?: WidgetContent.Empty,
                         isSelected = widget.id == selectedWidgetId,
                         grid = grid,
                         cellWidth = cellWidth,
@@ -142,7 +222,8 @@ fun EditWidgetsOverlay(
                         onDragEnd = viewModel::persistWidgets,
                         modifier = Modifier
                             .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
-                            .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan),
+                            .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
+                            .zIndex(widget.zIndex.toFloat()),
                     )
                 }
 
@@ -166,6 +247,26 @@ fun EditWidgetsOverlay(
                         ),
                     )
                 }
+
+                // Faint grid lines - purely visual/draw-only (no pointerInput), given an
+                // explicit zIndex far above any realistic widget zIndex so it always
+                // draws on top regardless of a widget's own stacking order - composition
+                // order alone isn't enough once individual zIndex values are in play (see
+                // the .zIndex() on each PlaceholderWidgetBox above), so without this a
+                // widget moved above the grid lines' zIndex would cover them.
+                Canvas(modifier = Modifier.fillMaxSize().zIndex(Float.MAX_VALUE)) {
+                    val cellWidthPx = cellWidth.toPx()
+                    val cellHeightPx = cellHeight.toPx()
+
+                    for (column in 1 until grid.columns) {
+                        val x = cellWidthPx * column
+                        drawLine(color = gridLineColor, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = 2f)
+                    }
+                    for (row in 1 until grid.rows) {
+                        val y = cellHeightPx * row
+                        drawLine(color = gridLineColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 2f)
+                    }
+                }
             }
 
             val optionsButtonAlpha by animateFloatAsState(
@@ -175,6 +276,7 @@ fun EditWidgetsOverlay(
             )
 
             var menuExpanded by remember { mutableStateOf(false) }
+            var showConfigureDialog by remember { mutableStateOf(false) }
 
             Box(
                 modifier = Modifier
@@ -186,6 +288,47 @@ fun EditWidgetsOverlay(
                     Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "Widget options")
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Add Widget") },
+                        leadingIcon = { Icon(imageVector = Icons.Filled.Add, contentDescription = null) },
+                        onClick = {
+                            menuExpanded = false
+                            showAddPicker = true
+                        },
+                    )
+                    if (selectedWidgetId != null) {
+                        DropdownMenuItem(
+                            text = { Text("Configure Widget") },
+                            leadingIcon = { Icon(imageVector = Icons.Filled.Settings, contentDescription = null) },
+                            onClick = {
+                                menuExpanded = false
+                                showConfigureDialog = true
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Move Up") },
+                            onClick = {
+                                viewModel.moveUp(selectedWidgetId!!)
+                                menuExpanded = false
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Move Down") },
+                            onClick = {
+                                viewModel.moveDown(selectedWidgetId!!)
+                                menuExpanded = false
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Remove Widget") },
+                            leadingIcon = { Icon(imageVector = Icons.Filled.Delete, contentDescription = null) },
+                            onClick = {
+                                viewModel.removeWidget(selectedWidgetId!!)
+                                menuExpanded = false
+                            },
+                        )
+                    }
+                    HorizontalDivider()
                     StateGroup.entries.forEach { group ->
                         DropdownMenuItem(
                             text = { Text(group.name) },
@@ -208,6 +351,27 @@ fun EditWidgetsOverlay(
                             menuExpanded = false
                             onDone()
                         },
+                    )
+                }
+            }
+
+            if (showAddPicker) {
+                AddWidgetDialog(
+                    catalog = widgetCatalogFor(selectedCanvas),
+                    onPick = { widgetType ->
+                        viewModel.addWidget(widgetType)
+                        showAddPicker = false
+                    },
+                    onDismiss = { showAddPicker = false },
+                )
+            }
+
+            if (showConfigureDialog) {
+                widgets.firstOrNull { it.id == selectedWidgetId }?.let { selectedWidget ->
+                    ConfigureWidgetDialog(
+                        widgetType = selectedWidget.widgetType,
+                        onChange = { updated -> viewModel.updateWidgetConfig(selectedWidget.id, updated) },
+                        onDismiss = { showConfigureDialog = false },
                     )
                 }
             }
@@ -240,6 +404,7 @@ fun EditWidgetsOverlay(
 @Composable
 private fun PlaceholderWidgetBox(
     widget: PlacedWidget,
+    content: WidgetContent,
     isSelected: Boolean,
     grid: GridDimensions,
     cellWidth: Dp,
@@ -252,17 +417,28 @@ private fun PlaceholderWidgetBox(
 ) {
     val density = LocalDensity.current
     val currentWidget by rememberUpdatedState(widget)
+    val isPlaceholder = content == WidgetContent.Empty
 
     Box(
         modifier = modifier
             .padding(2.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
             .then(
-                if (isSelected) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                if (isPlaceholder) {
+                    Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                 } else {
                     Modifier
                 },
+            )
+            .then(
+                Modifier.border(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                ),
             )
             .pointerInput(widget.id) {
                 detectTapGestures(onTap = { onSelect() })
@@ -315,11 +491,15 @@ private fun PlaceholderWidgetBox(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = widget.widgetType.label(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (isPlaceholder) {
+            Text(
+                text = widget.widgetType.label(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            WidgetContentView(content = content, modifier = Modifier.fillMaxSize())
+        }
     }
 }
 
@@ -455,4 +635,151 @@ private fun WidgetType.label(): String = when (this) {
     is WidgetType.SystemMedia -> "System: ${mediaType.name}"
     is WidgetType.GameMedia -> "Game: ${mediaType.name}"
     is WidgetType.ColorBackground -> "Color Background"
+}
+
+/**
+ * Simple list picker for widgetCatalogFor(selectedCanvas) - one dialog serves both
+ * canvases, since the catalog itself is already filtered per-canvas by the caller.
+ */
+@Composable
+private fun AddWidgetDialog(
+    catalog: List<WidgetType>,
+    onPick: (WidgetType) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Widget") },
+        text = {
+            LazyColumn {
+                items(catalog) { widgetType ->
+                    Text(
+                        text = widgetType.label(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(widgetType) }
+                            .padding(vertical = 12.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
+}
+
+/**
+ * Content shown depends entirely on [widgetType]'s variant: image-backed types
+ * (SystemLogo, SystemMedia, GameMedia) get a scale-mode choice; ColorBackground gets a
+ * preset color swatch row plus an alpha slider. Neither variant needs a Confirm step -
+ * [onChange] fires immediately on each selection/slider move (see
+ * EditWidgetsViewModel.updateWidgetConfig's kdoc for why that's fine here), so the
+ * dialog only needs a way to close, not a way to commit.
+ */
+@Composable
+private fun ConfigureWidgetDialog(
+    widgetType: WidgetType,
+    onChange: (WidgetType) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configure Widget") },
+        text = {
+            when (widgetType) {
+                is WidgetType.SystemLogo ->
+                    ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+
+                is WidgetType.SystemMedia ->
+                    ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+
+                is WidgetType.GameMedia ->
+                    ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+
+                is WidgetType.ColorBackground ->
+                    ColorBackgroundConfig(current = widgetType, onChange = onChange)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        },
+    )
+}
+
+@Composable
+private fun ScaleModeConfig(current: ScaleMode, onSelect: (ScaleMode) -> Unit) {
+    Column {
+        Text(text = "Image Scaling", style = MaterialTheme.typography.titleSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        ScaleMode.entries.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(mode) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = mode == current, onClick = { onSelect(mode) })
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = mode.name)
+            }
+        }
+    }
+}
+
+/** Fixed preset palette - a full custom color picker (hue/saturation wheel) is more
+ * than this widget type needs for a first pass; these presets cover the common cases
+ * (tint/darken behind other widgets) with a much simpler UI. */
+private val COLOR_PRESETS = listOf(
+    0xFF000000L, // black
+    0xFFFFFFFFL, // white
+    0xFF9E9E9EL, // gray
+    0xFFF44336L, // red
+    0xFF2196F3L, // blue
+    0xFF4CAF50L, // green
+    0xFFFFEB3BL, // yellow
+    0xFF9C27B0L, // purple
+)
+
+@Composable
+private fun ColorBackgroundConfig(
+    current: WidgetType.ColorBackground,
+    onChange: (WidgetType.ColorBackground) -> Unit,
+) {
+    Column {
+        Text(text = "Color", style = MaterialTheme.typography.titleSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            COLOR_PRESETS.forEach { colorArgb ->
+                Box(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(36.dp)
+                        .background(Color(colorArgb), CircleShape)
+                        .then(
+                            if (colorArgb == current.colorArgb) {
+                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .clickable { onChange(current.copy(colorArgb = colorArgb)) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = "Transparency: ${(current.alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+        Slider(
+            value = current.alpha,
+            onValueChange = { onChange(current.copy(alpha = it)) },
+            valueRange = 0f..1f,
+        )
+    }
 }
