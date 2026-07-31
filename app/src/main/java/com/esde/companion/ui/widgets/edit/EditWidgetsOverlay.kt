@@ -49,6 +49,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -860,6 +861,8 @@ private fun ColorBackgroundConfig(
                 )
             }
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        HexColorInput(current = current.colorArgb) { onChange(current.copy(colorArgb = it)) }
         Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Transparency: ${(current.alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
         Slider(
@@ -869,3 +872,44 @@ private fun ColorBackgroundConfig(
         )
     }
 }
+
+/**
+ * Free-form hex entry alongside the preset swatches. [current]'s own alpha channel is
+ * always opaque (0xFF...) - the presets are stored that way and transparency is handled
+ * separately by ColorBackground.alpha - so this only ever reads/writes the RGB portion.
+ *
+ * Local [text] is keyed on [current] rather than plain `remember { }`: this means
+ * picking a preset (or another external change) reformats the field to match, while
+ * typing an in-progress/invalid hex string is left alone across recompositions since
+ * [current] doesn't change until a full valid 6-digit value is entered. onValidHex only
+ * fires once the text parses cleanly, so partial input never produces a garbage color.
+ */
+@Composable
+private fun HexColorInput(current: Long, onValidHex: (Long) -> Unit) {
+    var text by remember(current) { mutableStateOf(current.toHexRgbString()) }
+    val isValid = parseHexColor(text) != null
+
+    OutlinedTextField(
+        value = text,
+        onValueChange = { newText ->
+            text = newText
+            parseHexColor(newText)?.let(onValidHex)
+        },
+        label = { Text("Hex code") },
+        leadingIcon = { Text(text = "#", style = MaterialTheme.typography.bodyLarge) },
+        isError = !isValid,
+        supportingText = { if (!isValid) Text("Enter a 6-digit hex code, e.g. 3A7BD5") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+private fun Long.toHexRgbString(): String = String.format("%06X", this and 0xFFFFFF)
+
+private fun parseHexColor(text: String): Long? {
+    val cleaned = text.removePrefix("#").trim()
+    if (cleaned.length != 6 || cleaned.any { it !in HEX_CHARS }) return null
+    return cleaned.toLongOrNull(16)?.let { 0xFF000000L or it }
+}
+
+private val HEX_CHARS = "0123456789abcdefABCDEF".toSet()
