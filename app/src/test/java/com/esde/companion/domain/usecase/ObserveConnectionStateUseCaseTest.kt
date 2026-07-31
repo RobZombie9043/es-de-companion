@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -23,45 +24,51 @@ class ObserveConnectionStateUseCaseTest {
     }
 
     @Test
-    fun `emits LogFileNotFound when the log file does not exist, regardless of AppState`() = runTest {
-        val repository = FakeEsdeLogRepository(
-            events = flowOf(),
-            fileExists = flowOf(false),
-        )
-        val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository, this))
+    fun `emits LogFileNotFound when the log file does not exist, regardless of AppState`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val repository = FakeEsdeLogRepository(
+                events = flowOf(),
+                fileExists = flowOf(false),
+            )
+            val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository, backgroundScope))
 
-        useCase().test {
-            assertEquals(EsdeConnectionState.LogFileNotFound, awaitItem())
-            awaitComplete()
+            useCase().test {
+                assertEquals(EsdeConnectionState.LogFileNotFound, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `emits Connected wrapping the reduced AppState when the log file exists`() = runTest {
+    fun `emits Connected wrapping the reduced AppState when the log file exists`() =
+        runTest(UnconfinedTestDispatcher()) {
         // A MutableSharedFlow, not flowOf, so this test controls exactly when each event
         // arrives - combine() only guarantees the *latest* combination reaches the
         // collector, so two synchronous upstream emissions (as flowOf would produce) can
         // conflate into one downstream item before the collector catches up. Emitting
         // explicitly, with an awaitItem() in between, keeps each step deterministic.
-        val events = MutableSharedFlow<EsdeEvent>()
-        val repository = FakeEsdeLogRepository(
-            events = events,
-            fileExists = flowOf(true),
-        )
-        val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository, this))
+            val events = MutableSharedFlow<EsdeEvent>()
+            val repository = FakeEsdeLogRepository(
+                events = events,
+                fileExists = flowOf(true),
+            )
+            val useCase = ObserveConnectionStateUseCase(
+                repository,
+                ObserveAppStateUseCase(repository, backgroundScope)
+            )
 
-        useCase().test {
-            val initial = awaitItem()
-            check(initial is EsdeConnectionState.Connected)
-            assertEquals(AppState.Idle, initial.appState)
+            useCase().test {
+                val initial = awaitItem()
+                check(initial is EsdeConnectionState.Connected)
+                assertEquals(AppState.Idle, initial.appState)
 
-            events.emit(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"))
+                events.emit(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"))
 
-            val updated = awaitItem()
-            check(updated is EsdeConnectionState.Connected)
-            assertEquals("gc", (updated.appState as AppState.BrowsingSystem).systemShortName)
+                val updated = awaitItem()
+                check(updated is EsdeConnectionState.Connected)
+                assertEquals("gc", (updated.appState as AppState.BrowsingSystem).systemShortName)
 
-            cancelAndIgnoreRemainingEvents()
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
+
 }
