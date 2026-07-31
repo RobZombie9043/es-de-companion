@@ -256,10 +256,12 @@ fun EditWidgetsOverlay(
                         onResize = viewModel::updateWidgetSize,
                         onDragStateChanged = viewModel::setDragging,
                         onDragEnd = viewModel::persistWidgets,
-                        modifier = Modifier.offset(
-                            x = cellWidth * (selectedWidget.gridColumn + selectedWidget.columnSpan) - HANDLE_SIZE / 2,
-                            y = cellHeight * (selectedWidget.gridRow + selectedWidget.rowSpan) - HANDLE_SIZE / 2,
-                        ),
+                        modifier = Modifier
+                            .offset(
+                                x = cellWidth * (selectedWidget.gridColumn + selectedWidget.columnSpan) - HANDLE_SIZE / 2,
+                                y = cellHeight * (selectedWidget.gridRow + selectedWidget.rowSpan) - HANDLE_SIZE / 2,
+                            )
+                            .zIndex(Float.MAX_VALUE - 1), // always above widgets, below grid-line overlay
                     )
                 }
 
