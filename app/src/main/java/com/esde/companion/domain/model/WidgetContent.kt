@@ -9,16 +9,23 @@ sealed class WidgetContent {
      * fixed-display logo case. [isAsset] distinguishes a real on-disk media file (wrapped
      * in File(...) before being passed to Coil) from the bundled fallback background
      * asset (an app-asset path, passed to Coil as a raw string) - see
-     * resolveMediaWidgetContent.
+     * resolveMediaWidgetContent. [effects] carries the widget's configured blur/tint
+     * through to rendering (see WidgetContentView).
      */
     data class Image(
         val path: String,
         val scaleMode: ScaleMode,
         val crossfade: Boolean,
         val isAsset: Boolean,
+        val effects: ImageEffects = ImageEffects(),
     ) : WidgetContent()
 
-    data class SystemLogoAsset(val assetPath: String, val scaleMode: ScaleMode) : WidgetContent()
+    data class SystemLogoAsset(
+        val assetPath: String,
+        val scaleMode: ScaleMode,
+        val effects: ImageEffects = ImageEffects(),
+    ) : WidgetContent()
+
     data class Color(val colorArgb: Long, val alpha: Float) : WidgetContent()
 }
 
@@ -47,21 +54,25 @@ private val BACKGROUND_FALLBACK_ELIGIBLE = setOf(MediaType.FanArt, MediaType.Scr
  * available. [lookup] is supplied by the caller (game or system media resolution) so
  * this stays pure and source-agnostic. [fallbackBackgroundAssetPath] is likewise supplied
  * by the caller (an Android asset path) rather than hardcoded here, keeping this function
- * free of platform-specific paths.
+ * free of platform-specific paths. [effects] is threaded straight through to whichever
+ * WidgetContent.Image gets returned - the fallback background image gets the same
+ * configured blur/tint as the real media would have, so switching between "real photo
+ * found" and "fallback asset" doesn't visibly change the effect the person configured.
  */
 fun resolveMediaWidgetContent(
     mediaType: MediaType,
     scaleMode: ScaleMode,
     lookup: (MediaType) -> String?,
     fallbackBackgroundAssetPath: String?,
+    effects: ImageEffects = ImageEffects(),
 ): WidgetContent {
     val path = lookup(mediaType) ?: MEDIA_FALLBACKS[mediaType]?.let(lookup)
     if (path != null) {
-        return WidgetContent.Image(path, scaleMode, crossfade = mediaType !in TRANSPARENT_MEDIA_TYPES, isAsset = false)
+        return WidgetContent.Image(path, scaleMode, crossfade = mediaType !in TRANSPARENT_MEDIA_TYPES, isAsset = false, effects = effects)
     }
 
     if (mediaType in BACKGROUND_FALLBACK_ELIGIBLE && fallbackBackgroundAssetPath != null) {
-        return WidgetContent.Image(fallbackBackgroundAssetPath, scaleMode, crossfade = true, isAsset = true)
+        return WidgetContent.Image(fallbackBackgroundAssetPath, scaleMode, crossfade = true, isAsset = true, effects = effects)
     }
 
     return WidgetContent.Empty

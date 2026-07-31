@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -75,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
@@ -714,18 +718,32 @@ private fun ConfigureWidgetDialog(
         onDismissRequest = onDismiss,
         title = { Text("Configure Widget") },
         text = {
-            when (widgetType) {
-                is WidgetType.SystemLogo ->
-                    ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                when (widgetType) {
+                    is WidgetType.SystemLogo -> {
+                        ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                    }
 
-                is WidgetType.SystemMedia ->
-                    ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                    is WidgetType.SystemMedia -> {
+                        ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                    }
 
-                is WidgetType.GameMedia ->
-                    ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                    is WidgetType.GameMedia -> {
+                        ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                    }
 
-                is WidgetType.ColorBackground ->
-                    ColorBackgroundConfig(current = widgetType, onChange = onChange)
+                    is WidgetType.ColorBackground ->
+                        ColorBackgroundConfig(current = widgetType, onChange = onChange)
+                }
             }
         },
         confirmButton = {
@@ -771,6 +789,34 @@ private fun ScaleModeConfig(current: ScaleMode, onSelect: (ScaleMode) -> Unit) {
                 )
             }
         }
+    }
+}
+
+/**
+ * Blur + darken controls for image-backed widget types (SystemLogo, SystemMedia,
+ * GameMedia). Both scale as simple 0f..1f sliders - see ImageEffects' kdoc for why, and
+ * applyBlurEffect/DarkenOverlay in WidgetCanvas.kt for how these map to rendering.
+ * Darken is a flat black overlay rather than a tint color - its main use is muting a
+ * busy background image so a logo/widget placed on top reads more clearly.
+ */
+@Composable
+private fun ImageEffectsConfig(current: ImageEffects, onChange: (ImageEffects) -> Unit) {
+    Column {
+        Text(text = "Blur: ${(current.blurAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+        Slider(
+            value = current.blurAmount,
+            onValueChange = { onChange(current.copy(blurAmount = it)) },
+            valueRange = 0f..1f,
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Column {
+        Text(text = "Darken: ${(current.darkenAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+        Slider(
+            value = current.darkenAmount,
+            onValueChange = { onChange(current.copy(darkenAmount = it)) },
+            valueRange = 0f..1f,
+        )
     }
 }
 

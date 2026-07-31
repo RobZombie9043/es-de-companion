@@ -3,16 +3,20 @@ package com.esde.companion.ui.widgets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
+import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
@@ -56,7 +60,18 @@ fun WidgetCanvas(
 
 /** Internal, not private - reused as-is by EditWidgetsOverlay's edit-mode preview
  * rendering (see EditWidgetsViewModel.previewContent's kdoc), so both the live screen
- * and edit mode render WidgetContent identically rather than duplicating this logic. */
+ * and edit mode render WidgetContent identically rather than duplicating this logic.
+ *
+ * Blur/darken (ImageEffects) are applied one layer above the actual Coil image: blur goes
+ * on the image's own modifier (it has to be on the thing being drawn), while darken is a
+ * separate translucent Box drawn on top inside the same wrapping Box. CrossfadeAsyncImage/
+ * AsyncImage themselves stay effect-agnostic.
+ *
+ * Note: Modifier.blur is RenderEffect-backed and only actually blurs on API 31+; below
+ * that it's a harmless no-op, so a configured blur simply won't be visible pre-Android
+ * 12 while darken still works everywhere. Not worth a manual BlurMaskFilter fallback for
+ * this device-controlled deployment target.
+ */
 @Composable
 internal fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modifier) {
     when (content) {
@@ -66,30 +81,52 @@ internal fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modi
             Box(modifier = modifier.background(Color(content.colorArgb).copy(alpha = content.alpha)))
 
         is WidgetContent.Image ->
-            if (content.crossfade) {
-                CrossfadeAsyncImage(
-                    model = if (content.isAsset) content.path else File(content.path),
-                    contentDescription = null,
-                    contentScale = content.scaleMode.toContentScale(),
-                    modifier = modifier,
-                )
-            } else {
-                AsyncImage(
-                    model = if (content.isAsset) content.path else File(content.path),
-                    contentDescription = null,
-                    contentScale = content.scaleMode.toContentScale(),
-                    modifier = modifier,
-                )
+            Box(modifier = modifier) {
+                if (content.crossfade) {
+                    CrossfadeAsyncImage(
+                        model = if (content.isAsset) content.path else File(content.path),
+                        contentDescription = null,
+                        contentScale = content.scaleMode.toContentScale(),
+                        modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
+                    )
+                } else {
+                    AsyncImage(
+                        model = if (content.isAsset) content.path else File(content.path),
+                        contentDescription = null,
+                        contentScale = content.scaleMode.toContentScale(),
+                        modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
+                    )
+                }
+                DarkenOverlay(effects = content.effects)
             }
 
         is WidgetContent.SystemLogoAsset ->
-            AsyncImage(
-                model = content.assetPath,
-                contentDescription = null,
-                contentScale = content.scaleMode.toContentScale(),
-                modifier = modifier,
-            )
+            Box(modifier = modifier) {
+                AsyncImage(
+                    model = content.assetPath,
+                    contentDescription = null,
+                    contentScale = content.scaleMode.toContentScale(),
+                    modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
+                )
+                DarkenOverlay(effects = content.effects)
+            }
     }
+}
+
+/** Max blur radius a fully-scaled-up (blurAmount = 1f) ImageEffects maps to. */
+private val IMAGE_EFFECTS_MAX_BLUR = 24.dp
+
+private fun Modifier.applyBlurEffect(effects: ImageEffects): Modifier =
+    if (effects.blurAmount > 0f) blur(IMAGE_EFFECTS_MAX_BLUR * effects.blurAmount) else this
+
+@Composable
+private fun DarkenOverlay(effects: ImageEffects) {
+    if (effects.darkenAmount <= 0f) return
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = effects.darkenAmount)),
+    )
 }
 
 private fun ScaleMode.toContentScale(): ContentScale = when (this) {
