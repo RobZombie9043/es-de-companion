@@ -110,6 +110,20 @@ internal fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modi
                 )
                 DarkenOverlay(effects = content.effects)
             }
+
+        is WidgetContent.Text ->
+            Box(
+                modifier = modifier.background(
+                    Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                ),
+            ) {
+                ScrollingText(
+                    text = content.text,
+                    fontSizeSp = content.fontSizeSp,
+                    textColorArgb = content.textColorArgb,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
     }
 }
 

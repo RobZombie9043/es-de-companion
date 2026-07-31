@@ -33,4 +33,15 @@ sealed class WidgetType {
     data class SystemMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
     data class GameMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
     data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetType()
+
+    /**
+     * A game's description, scrolled if it doesn't fit the widget's placed bounds. No
+     * scaleMode/ImageEffects - it isn't image-backed, same reasoning as ColorBackground.
+     */
+    data class GameDescription(
+        val fontSizeSp: Float = 16f,
+        val textColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+    ) : WidgetType()
 }

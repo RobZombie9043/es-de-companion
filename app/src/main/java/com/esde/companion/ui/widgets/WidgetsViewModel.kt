@@ -16,6 +16,7 @@ import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
@@ -44,6 +45,7 @@ class WidgetsViewModel(
     private val observeWidgetCanvas: ObserveWidgetCanvasUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
+    private val resolveGameDescription: ResolveGameDescriptionUseCase,
 ) : ViewModel() {
 
     private val gridDimensions = MutableStateFlow<GridDimensions?>(null)
@@ -96,6 +98,7 @@ class WidgetsViewModel(
      */
     private suspend fun resolveContent(widgets: List<PlacedWidget>, identity: ContentIdentity): Map<String, WidgetContent> {
         val gameMedia = identity.gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath) }
+        val gameDescription = identity.gameRef?.let { resolveGameDescription(it.systemShortName, it.romPath) }
         val systemShortName = identity.systemShortName
 
         val neededSystemMediaTypes = widgets
@@ -114,6 +117,7 @@ class WidgetsViewModel(
                 systemLogoAssetPath = { systemLogoAssetPath },
                 systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
                 gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
+                gameDescriptionLookup = { gameDescription?.text },
                 fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET,
             )
         }

@@ -7,6 +7,7 @@ object WidgetContentResolver {
         systemLogoAssetPath: () -> String?,
         systemMediaLookup: (MediaType) -> String?,
         gameMediaLookup: (MediaType) -> String?,
+        gameDescriptionLookup: () -> String?,
         fallbackBackgroundAssetPath: String?,
     ): WidgetContent = when (widgetType) {
         is WidgetType.SystemLogo ->
@@ -34,5 +35,18 @@ object WidgetContentResolver {
 
         is WidgetType.ColorBackground ->
             WidgetContent.Color(widgetType.colorArgb, widgetType.alpha)
+
+        is WidgetType.GameDescription ->
+            gameDescriptionLookup()
+                ?.let {
+                    WidgetContent.Text(
+                        text = it,
+                        fontSizeSp = widgetType.fontSizeSp,
+                        textColorArgb = widgetType.textColorArgb,
+                        backgroundColorArgb = widgetType.backgroundColorArgb,
+                        backgroundAlpha = widgetType.backgroundAlpha,
+                    )
+                }
+                ?: WidgetContent.Empty
     }
 }

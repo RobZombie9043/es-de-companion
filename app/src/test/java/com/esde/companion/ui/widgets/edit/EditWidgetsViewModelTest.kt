@@ -1,5 +1,6 @@
 package com.esde.companion.ui.widgets.edit
 
+import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
@@ -9,6 +10,7 @@ import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
@@ -16,6 +18,7 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
@@ -71,6 +74,12 @@ class EditWidgetsViewModelTest {
         private val media: GameMedia = GameMedia(baseRelativePath = null, filesByType = emptyMap()),
     ) : GameMediaRepository {
         override suspend fun resolveMedia(systemShortName: String, romPath: String): GameMedia = media
+    }
+
+    private class FakeGameDescriptionRepository(
+        private val description: GameDescription = GameDescription(text = null),
+    ) : GameDescriptionRepository {
+        override suspend fun resolveDescription(systemShortName: String, romPath: String): GameDescription = description
     }
 
     private class FakeSystemMediaRepository(
@@ -133,7 +142,8 @@ class EditWidgetsViewModelTest {
     ) = EditWidgetsViewModel(
         observeWidgetCanvas = ObserveWidgetCanvasUseCase(widgetLayoutRepository),
         saveWidgetCanvas = SaveWidgetCanvasUseCase(widgetLayoutRepository),
-        resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
+        resolveGameMedia = ResolveGameMediaUseCase(FakeGameMediaRepository()),
+        resolveGameDescription = ResolveGameDescriptionUseCase(FakeGameDescriptionRepository()),
         resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
         observeLastSystemShortName = ObserveLastSystemShortNameUseCase(lastKnownContextRepository),
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),

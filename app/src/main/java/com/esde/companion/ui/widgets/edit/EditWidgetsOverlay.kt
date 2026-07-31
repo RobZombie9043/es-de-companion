@@ -125,6 +125,7 @@ private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (s
 
     StateGroup.Playing -> listOf(
         WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
+        WidgetType.GameDescription(),
         WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit),
         WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit),
         WidgetType.GameMedia(MediaType.MixImages, ScaleMode.Fill),
@@ -663,6 +664,7 @@ private fun WidgetType.label(): String = when (this) {
     is WidgetType.SystemMedia -> "System: ${mediaType.name}"
     is WidgetType.GameMedia -> "Game: ${mediaType.name}"
     is WidgetType.ColorBackground -> "Color Background"
+    is WidgetType.GameDescription -> "Description"
 }
 
 /**
@@ -744,6 +746,9 @@ private fun ConfigureWidgetDialog(
 
                     is WidgetType.ColorBackground ->
                         ColorBackgroundConfig(current = widgetType, onChange = onChange)
+
+                    is WidgetType.GameDescription ->
+                        GameDescriptionConfig(current = widgetType, onChange = onChange)
                 }
             }
         },
@@ -868,6 +873,81 @@ private fun ColorBackgroundConfig(
         Slider(
             value = current.alpha,
             onValueChange = { onChange(current.copy(alpha = it)) },
+            valueRange = 0f..1f,
+        )
+    }
+}
+
+@Composable
+private fun GameDescriptionConfig(
+    current: WidgetType.GameDescription,
+    onChange: (WidgetType.GameDescription) -> Unit,
+) {
+    Column {
+        Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
+        Slider(
+            value = current.fontSizeSp,
+            onValueChange = { onChange(current.copy(fontSizeSp = it)) },
+            valueRange = 10f..36f,
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Column {
+        Text(text = "Text Color", style = MaterialTheme.typography.titleSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            COLOR_PRESETS.forEach { colorArgb ->
+                Box(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(36.dp)
+                        .background(Color(colorArgb), CircleShape)
+                        .then(
+                            if (colorArgb == current.textColorArgb) {
+                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .clickable { onChange(current.copy(textColorArgb = colorArgb)) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        HexColorInput(current = current.textColorArgb) { onChange(current.copy(textColorArgb = it)) }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+    Column {
+        Text(text = "Background Color", style = MaterialTheme.typography.titleSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            COLOR_PRESETS.forEach { colorArgb ->
+                Box(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(36.dp)
+                        .background(Color(colorArgb), CircleShape)
+                        .then(
+                            if (colorArgb == current.backgroundColorArgb) {
+                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .clickable { onChange(current.copy(backgroundColorArgb = colorArgb)) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        HexColorInput(current = current.backgroundColorArgb) { onChange(current.copy(backgroundColorArgb = it)) }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Background Transparency: ${(current.backgroundAlpha * 100).roundToInt()}%",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Slider(
+            value = current.backgroundAlpha,
+            onValueChange = { onChange(current.copy(backgroundAlpha = it)) },
             valueRange = 0f..1f,
         )
     }

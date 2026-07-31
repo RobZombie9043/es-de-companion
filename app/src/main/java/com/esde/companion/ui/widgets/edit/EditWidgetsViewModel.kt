@@ -12,6 +12,7 @@ import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
@@ -63,6 +64,7 @@ class EditWidgetsViewModel(
     private val saveWidgetCanvas: SaveWidgetCanvasUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
+    private val resolveGameDescription: ResolveGameDescriptionUseCase,
     private val observeLastSystemShortName: ObserveLastSystemShortNameUseCase,
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
 ) : ViewModel() {
@@ -264,6 +266,7 @@ class EditWidgetsViewModel(
         val lastSystemShortName = observeLastSystemShortName().first()
         val lastGameReference = observeLastGameReference().first()
         val gameMedia = lastGameReference?.let { resolveGameMedia(it.systemShortName, it.romPath) }
+        val gameDescription = lastGameReference?.let { resolveGameDescription(it.systemShortName, it.romPath) }
 
         val neededSystemMediaTypes = widgets
             .mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType }
@@ -281,6 +284,7 @@ class EditWidgetsViewModel(
                 systemLogoAssetPath = { systemLogoAssetPath },
                 systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
                 gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
+                gameDescriptionLookup = { gameDescription?.text },
                 fallbackBackgroundAssetPath = null,
             )
         }

@@ -18,6 +18,7 @@ class WidgetsViewModelFactory(
             observeWidgetCanvas = appContainer.observeWidgetCanvasUseCase,
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
             resolveRandomSystemMedia = appContainer.resolveRandomSystemMediaUseCase,
+            resolveGameDescription = appContainer.resolveGameDescriptionUseCase,
         ) as T
     }
 }

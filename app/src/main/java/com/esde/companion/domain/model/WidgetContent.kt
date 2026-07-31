@@ -27,6 +27,14 @@ sealed class WidgetContent {
     ) : WidgetContent()
 
     data class Color(val colorArgb: Long, val alpha: Float) : WidgetContent()
+
+    data class Text(
+        val text: String,
+        val fontSizeSp: Float,
+        val textColorArgb: Long,
+        val backgroundColorArgb: Long,
+        val backgroundAlpha: Float,
+    ) : WidgetContent()
 }
 
 /** Media types that are transparent overlay-style content rather than an opaque

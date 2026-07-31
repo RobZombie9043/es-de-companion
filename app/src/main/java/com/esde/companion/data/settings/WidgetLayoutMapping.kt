@@ -14,6 +14,7 @@ private fun WidgetType.toDto(): WidgetTypeDto = when (this) {
     is WidgetType.SystemMedia -> WidgetTypeDto.SystemMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.GameMedia -> WidgetTypeDto.GameMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha)
+    is WidgetType.GameDescription -> WidgetTypeDto.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
 }
 
 private fun WidgetTypeDto.toDomain(): WidgetType = when (this) {
@@ -24,6 +25,8 @@ private fun WidgetTypeDto.toDomain(): WidgetType = when (this) {
     is WidgetTypeDto.GameMedia ->
         WidgetType.GameMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
     is WidgetTypeDto.ColorBackground -> WidgetType.ColorBackground(colorArgb, alpha)
+    is WidgetTypeDto.GameDescription ->
+        WidgetType.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
 }
 
 private fun PlacedWidget.toDto() = PlacedWidgetDto(id, widgetType.toDto(), gridColumn, gridRow, columnSpan, rowSpan, zIndex)

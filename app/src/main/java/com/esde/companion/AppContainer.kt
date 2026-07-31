@@ -3,6 +3,7 @@ package com.esde.companion
 import android.content.Context
 import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
+import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.log.SharedEsdeLogRepository
 import com.esde.companion.data.media.ReactiveGameMediaRepository
@@ -15,6 +16,7 @@ import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
+import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
@@ -36,6 +38,7 @@ import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
@@ -78,6 +81,11 @@ class AppContainer(context: Context) {
     // Same reactive-to-Settings pattern as logRepository, for the media folder.
     private val gameMediaRepository: GameMediaRepository =
         ReactiveGameMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
+
+    // gamelists/ lives alongside logs/ under the ES-DE root, so this reacts to the log
+    // folder path, not the media folder path - see ReactiveGameDescriptionRepository.
+    private val gameDescriptionRepository: GameDescriptionRepository =
+        ReactiveGameDescriptionRepository(esdeRootPath = onboardingRepository.observeLogFolderPath())
 
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
@@ -125,6 +133,7 @@ class AppContainer(context: Context) {
     val observeAppStateUseCase = ObserveAppStateUseCase(logRepository, applicationScope)
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)
     val resolveGameMediaUseCase = ResolveGameMediaUseCase(gameMediaRepository)
+    val resolveGameDescriptionUseCase = ResolveGameDescriptionUseCase(gameDescriptionRepository)
     val resolveRandomSystemMediaUseCase = ResolveRandomSystemMediaUseCase(systemMediaRepository)
 
     val validateEsdeLogFolderUseCase = ValidateEsdeLogFolderUseCase(onboardingRepository)
