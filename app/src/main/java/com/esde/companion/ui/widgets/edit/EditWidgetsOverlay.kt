@@ -31,17 +31,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FlipToFront
+import androidx.compose.material.icons.filled.FlipToBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -94,6 +102,8 @@ private val HANDLE_SIZE = 32.dp
  * drag distance - see ResizeHandle's kdoc for why this is needed at all. */
 private val EDGE_SNAP_THRESHOLD = 24.dp
 
+private val MENU_SHAPE = RoundedCornerShape(16.dp)
+
 /**
  * The widget types available to add, filtered to what actually makes sense per canvas -
  * System has no per-game media to show, Playing has no system-level media. Each entry
@@ -120,6 +130,11 @@ private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (s
         WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit),
         WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
     )
+}
+
+private fun StateGroup.displayLabel(): String = when (this) {
+    StateGroup.System -> "System View"
+    StateGroup.Playing -> "Game View"
 }
 
 /**
@@ -287,7 +302,11 @@ fun EditWidgetsOverlay(
                 FloatingActionButton(onClick = { menuExpanded = true }) {
                     Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "Widget options")
                 }
-                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    shape = MENU_SHAPE,
+                ) {
                     DropdownMenuItem(
                         text = { Text("Add Widget") },
                         leadingIcon = { Icon(imageVector = Icons.Filled.Add, contentDescription = null) },
@@ -306,14 +325,16 @@ fun EditWidgetsOverlay(
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Move Up") },
+                            text = { Text("Move Forwards") },
+                            leadingIcon = { Icon(imageVector = Icons.Filled.FlipToFront, contentDescription = null) },
                             onClick = {
                                 viewModel.moveUp(selectedWidgetId!!)
                                 menuExpanded = false
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Move Down") },
+                            text = { Text("Move Backwards") },
+                            leadingIcon = { Icon(imageVector = Icons.Filled.FlipToBack, contentDescription = null) },
                             onClick = {
                                 viewModel.moveDown(selectedWidgetId!!)
                                 menuExpanded = false
@@ -331,7 +352,7 @@ fun EditWidgetsOverlay(
                     HorizontalDivider()
                     StateGroup.entries.forEach { group ->
                         DropdownMenuItem(
-                            text = { Text(group.name) },
+                            text = { Text(group.displayLabel()) },
                             leadingIcon = if (group == selectedCanvas) {
                                 { Icon(imageVector = Icons.Filled.Check, contentDescription = null) }
                             } else {
@@ -713,22 +734,39 @@ private fun ConfigureWidgetDialog(
     )
 }
 
+private fun ScaleMode.displayLabel(): String = when (this) {
+    ScaleMode.Fit -> "Contain"
+    ScaleMode.Fill -> "Cover"
+}
+
+private fun ScaleMode.icon(): ImageVector = when (this) {
+    ScaleMode.Fit -> Icons.Filled.CropFree   // whole image visible, letterboxed
+    ScaleMode.Fill -> Icons.Filled.Crop      // cropped to fill the frame
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScaleModeConfig(current: ScaleMode, onSelect: (ScaleMode) -> Unit) {
     Column {
         Text(text = "Image Scaling", style = MaterialTheme.typography.titleSmall)
         Spacer(modifier = Modifier.height(8.dp))
-        ScaleMode.entries.forEach { mode ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(mode) }
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = mode == current, onClick = { onSelect(mode) })
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = mode.name)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            ScaleMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = mode == current,
+                    onClick = { onSelect(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = ScaleMode.entries.size),
+                    icon = {
+                        SegmentedButtonDefaults.Icon(active = mode == current) {
+                            Icon(
+                                imageVector = mode.icon(),
+                                contentDescription = null,
+                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                            )
+                        }
+                    },
+                    label = { Text(mode.displayLabel()) },
+                )
             }
         }
     }

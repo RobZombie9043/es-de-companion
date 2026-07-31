@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
@@ -48,6 +49,8 @@ import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 
+private val MENU_SHAPE = RoundedCornerShape(16.dp)
+
 /**
  * Full-screen grid of launchable apps. Opening/closing and the drag gesture that drives
  * it live in MainScreen; this renders the (already-filtered) app list it's handed,
@@ -64,6 +67,7 @@ import com.esde.companion.domain.model.LaunchLocation
  * Long-press opens a menu with the same two launch options plus App Info and Hide App
  * - see [AppLongPressMenu].
  */
+
 @Composable
 fun AppDrawer(
     viewModel: AppDrawerViewModel,
@@ -228,7 +232,11 @@ private fun AppLongPressMenu(
     onAppInfo: () -> Unit,
     onHideApp: () -> Unit,
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = MENU_SHAPE,
+    ) {
         Text(
             text = appLabel,
             style = MaterialTheme.typography.labelMedium,
