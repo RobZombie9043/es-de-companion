@@ -122,7 +122,7 @@ class AppContainer(context: Context) {
     val observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository)
     val setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository)
 
-    val observeAppStateUseCase = ObserveAppStateUseCase(logRepository)
+    val observeAppStateUseCase = ObserveAppStateUseCase(logRepository, applicationScope)
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)
     val resolveGameMediaUseCase = ResolveGameMediaUseCase(gameMediaRepository)
     val resolveRandomSystemMediaUseCase = ResolveRandomSystemMediaUseCase(systemMediaRepository)

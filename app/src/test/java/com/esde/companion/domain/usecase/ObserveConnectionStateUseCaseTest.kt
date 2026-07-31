@@ -28,7 +28,7 @@ class ObserveConnectionStateUseCaseTest {
             events = flowOf(),
             fileExists = flowOf(false),
         )
-        val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository))
+        val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository, this))
 
         useCase().test {
             assertEquals(EsdeConnectionState.LogFileNotFound, awaitItem())
@@ -48,7 +48,7 @@ class ObserveConnectionStateUseCaseTest {
             events = events,
             fileExists = flowOf(true),
         )
-        val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository))
+        val useCase = ObserveConnectionStateUseCase(repository, ObserveAppStateUseCase(repository, this))
 
         useCase().test {
             val initial = awaitItem()
