@@ -42,6 +42,8 @@ import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.stateGroup
+import com.esde.companion.ui.dock.AppDockViewModel
+import com.esde.companion.ui.dock.AppDockViewModelFactory
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
 import com.esde.companion.ui.main.MainScreen
@@ -122,6 +124,7 @@ class MainActivity : ComponentActivity() {
                         composable(Destinations.MAIN) {
                             val viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(appContainer))
                             val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))
+                            val dockViewModel: AppDockViewModel = viewModel(factory = AppDockViewModelFactory(appContainer))
                             var showSettings by rememberSaveable { mutableStateOf(false) }
                             var showEditWidgets by rememberSaveable { mutableStateOf(false) }
 
@@ -277,6 +280,7 @@ class MainActivity : ComponentActivity() {
                                         MainScreen(
                                             viewModel = viewModel,
                                             appDrawerViewModel = appDrawerViewModel,
+                                            dockViewModel = dockViewModel,
                                             widgetsLocked = widgetsLocked,
                                             onOpenSettings = { showSettings = true },
                                             onOpenEditWidgets = { showEditWidgets = true },

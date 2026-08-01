@@ -14,6 +14,7 @@ import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
+import com.esde.companion.data.settings.FileDockSettingsRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
 import com.esde.companion.data.settings.FileWidgetLayoutRepository
 import com.esde.companion.data.video.ProcessVideoPlaybackStateRepository
@@ -25,6 +26,7 @@ import com.esde.companion.domain.repository.ActivityVisibilityRepository
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
+import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
@@ -39,6 +41,11 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -68,6 +75,11 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.SetDockAppsUseCase
+import com.esde.companion.domain.usecase.SetDockEnabledUseCase
+import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.SetDockOpacityUseCase
+import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
@@ -184,6 +196,23 @@ class AppContainer(context: Context) {
 
     val observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository)
     val setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository)
+
+    // App Dock settings (enabled, max apps, size, opacity, pinned apps) - its own
+    // repository/DataStore, though it reuses appDrawerSettingsRepository's
+    // other-screen-launch preference above so launch location is shared with the
+    // Drawer rather than tracked twice. See DockSettingsRepository.
+    private val dockSettingsRepository: DockSettingsRepository = FileDockSettingsRepository(appContext)
+
+    val observeDockEnabledUseCase = ObserveDockEnabledUseCase(dockSettingsRepository)
+    val setDockEnabledUseCase = SetDockEnabledUseCase(dockSettingsRepository)
+    val observeDockMaxAppsUseCase = ObserveDockMaxAppsUseCase(dockSettingsRepository)
+    val setDockMaxAppsUseCase = SetDockMaxAppsUseCase(dockSettingsRepository)
+    val observeDockSizeUseCase = ObserveDockSizeUseCase(dockSettingsRepository)
+    val setDockSizeUseCase = SetDockSizeUseCase(dockSettingsRepository)
+    val observeDockOpacityUseCase = ObserveDockOpacityUseCase(dockSettingsRepository)
+    val setDockOpacityUseCase = SetDockOpacityUseCase(dockSettingsRepository)
+    val observeDockAppsUseCase = ObserveDockAppsUseCase(dockSettingsRepository)
+    val setDockAppsUseCase = SetDockAppsUseCase(dockSettingsRepository)
 
     val observeAppStateUseCase = ObserveAppStateUseCase(logRepository, applicationScope)
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)

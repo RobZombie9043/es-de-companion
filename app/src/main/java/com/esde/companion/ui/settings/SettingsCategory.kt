@@ -22,8 +22,8 @@ enum class SettingsCategory(val title: String, val description: String) {
         description = "Lock editing and open the widget editor",
     ),
     AppDrawer(
-        title = "App Drawer",
-        description = "Visible apps, background opacity, grid columns",
+        title = "App Drawer and Dock",
+        description = "Visible apps, background opacity, grid columns, dock",
     ),
     Sound(
         title = "Background Music",

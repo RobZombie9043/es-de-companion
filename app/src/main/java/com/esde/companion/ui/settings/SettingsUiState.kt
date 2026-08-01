@@ -1,5 +1,6 @@
 package com.esde.companion.ui.settings
 
+import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -25,6 +26,10 @@ data class SettingsUiState(
     val themePreference: ThemePreference = ThemePreference.Auto,
     val drawerOpacityPercent: Int = 80,
     val gridColumns: Int = 4,
+    val dockEnabled: Boolean = false,
+    val dockMaxApps: Int = 5,
+    val dockSize: DockSize = DockSize.Medium,
+    val dockOpacityPercent: Int = 60,
     val widgetsLocked: Boolean = false,
     val gamePlayingBehavior: ScreenBehavior = ScreenBehavior.Nothing,
     val screensaverBehavior: ScreenBehavior = ScreenBehavior.Nothing,
