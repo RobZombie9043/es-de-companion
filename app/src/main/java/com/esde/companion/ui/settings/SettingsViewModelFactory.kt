@@ -40,6 +40,16 @@ class SettingsViewModelFactory(
             setVideoAudioEnabledUseCase = appContainer.setVideoAudioEnabledUseCase,
             observeVideoAspectRatioModeUseCase = appContainer.observeVideoAspectRatioModeUseCase,
             setVideoAspectRatioModeUseCase = appContainer.setVideoAspectRatioModeUseCase,
+            observeMusicEnabledUseCase = appContainer.observeMusicEnabledUseCase,
+            setMusicEnabledUseCase = appContainer.setMusicEnabledUseCase,
+            observeMusicPlayWhileBrowsingSystemsUseCase = appContainer.observeMusicPlayWhileBrowsingSystemsUseCase,
+            setMusicPlayWhileBrowsingSystemsUseCase = appContainer.setMusicPlayWhileBrowsingSystemsUseCase,
+            observeMusicPlayWhileBrowsingGamesUseCase = appContainer.observeMusicPlayWhileBrowsingGamesUseCase,
+            setMusicPlayWhileBrowsingGamesUseCase = appContainer.setMusicPlayWhileBrowsingGamesUseCase,
+            observeMusicPlayDuringScreensaverUseCase = appContainer.observeMusicPlayDuringScreensaverUseCase,
+            setMusicPlayDuringScreensaverUseCase = appContainer.setMusicPlayDuringScreensaverUseCase,
+            observeMusicDuckingModeUseCase = appContainer.observeMusicDuckingModeUseCase,
+            setMusicDuckingModeUseCase = appContainer.setMusicDuckingModeUseCase,
         ) as T
     }
 }

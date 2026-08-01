@@ -2,6 +2,7 @@ package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.VideoAspectRatioMode
@@ -93,4 +94,31 @@ interface OnboardingRepository {
      */
     suspend fun setVideoAspectRatioMode(mode: VideoAspectRatioMode)
     fun observeVideoAspectRatioMode(): Flow<VideoAspectRatioMode>
+
+    /** Master toggle for background music. Defaults to true. */
+    suspend fun setMusicEnabled(enabled: Boolean)
+    fun observeMusicEnabled(): Flow<Boolean>
+
+    /** Whether music plays while AppState is BrowsingSystem. Defaults to true. */
+    suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean)
+    fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean>
+
+    /** Whether music plays while AppState is BrowsingGame. Defaults to true. */
+    suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean)
+    fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean>
+
+    /** Whether music plays while AppState is Screensaver. Defaults to true. */
+    suspend fun setMusicPlayDuringScreensaver(enabled: Boolean)
+    fun observeMusicPlayDuringScreensaver(): Flow<Boolean>
+
+    /**
+     * How background music reacts while a game video is audibly playing. Defaults to
+     * [MusicDuckingMode.LowerVolume].
+     */
+    suspend fun setMusicDuckingMode(mode: MusicDuckingMode)
+    fun observeMusicDuckingMode(): Flow<MusicDuckingMode>
+
+    suspend fun saveCustomMusicFolderPath(path: String)
+    fun observeCustomMusicFolderPath(): Flow<String?>
+    suspend fun clearCustomMusicFolderPath()
 }
