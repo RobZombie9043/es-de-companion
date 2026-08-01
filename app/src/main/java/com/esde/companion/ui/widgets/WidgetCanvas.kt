@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil3.compose.AsyncImage
@@ -21,6 +22,7 @@ import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.ui.main.CrossfadeAsyncImage
+import com.esde.companion.ui.main.requestFor
 import java.io.File
 
 /**
@@ -90,8 +92,10 @@ internal fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modi
                         modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                     )
                 } else {
+                    val context = LocalContext.current
+                    val model = if (content.isAsset) content.path else File(content.path)
                     AsyncImage(
-                        model = if (content.isAsset) content.path else File(content.path),
+                        model = requestFor(context, model),
                         contentDescription = null,
                         contentScale = content.scaleMode.toContentScale(),
                         modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),

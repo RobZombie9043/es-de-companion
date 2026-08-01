@@ -20,6 +20,7 @@ import coil3.compose.rememberAsyncImagePainter
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
+import java.io.File
 
 /**
  * Crossfades from whatever model was previously shown to [model], never showing a
@@ -36,6 +37,17 @@ import coil3.request.SuccessResult
  * rememberAsyncImagePainter for that same model hits Coil's memory cache immediately -
  * the same fast path already confirmed smooth for re-navigation - so every navigation
  * behaves like a cache hit from the crossfade's point of view.
+ *
+ * [model]'s identity for both the crossfade trigger and Coil's memory cache key is
+ * derived via [identityKeyOf] rather than trusting [model] directly. A plain `File`'s
+ * equals()/hashCode() is path-only, so replacing a file's *content* at the same
+ * downloaded_media path (re-scraped box art, swapped screenshot, etc.) would otherwise
+ * be invisible both to this composable's LaunchedEffect(model)/key(model) triggers and
+ * to Coil's default memory cache key - the old bitmap would keep showing indefinitely.
+ * Folding File.lastModified() into the identity fixes both at once: a content swap now
+ * looks like a genuinely new model, so it re-triggers the crossfade and gets a fresh
+ * cache entry. Non-File models (bundled asset path strings) are never mutated at a
+ * fixed path, so they keep using their own value as-is.
  */
 @Composable
 fun CrossfadeAsyncImage(
@@ -50,8 +62,8 @@ fun CrossfadeAsyncImage(
     var currentModel by remember { mutableStateOf(model) }
     val alpha = remember { Animatable(1f) }
 
-    LaunchedEffect(model) {
-        if (model == currentModel) return@LaunchedEffect
+    LaunchedEffect(identityKeyOf(model)) {
+        if (identityKeyOf(model) == identityKeyOf(currentModel)) return@LaunchedEffect
 
         if (model == null) {
             previousModel = currentModel
@@ -62,7 +74,7 @@ fun CrossfadeAsyncImage(
             return@LaunchedEffect
         }
 
-        val request = ImageRequest.Builder(context).data(model).build()
+        val request = requestFor(context, model)
         val result = context.imageLoader.execute(request)
 
         if (result !is SuccessResult) {
@@ -78,8 +90,11 @@ fun CrossfadeAsyncImage(
 
     Box(modifier = modifier) {
         previousModel?.let { prevModel ->
-            key(prevModel) {
-                val painter = rememberAsyncImagePainter(model = prevModel, contentScale = contentScale)
+            key(identityKeyOf(prevModel)) {
+                val painter = rememberAsyncImagePainter(
+                    model = requestFor(context, prevModel),
+                    contentScale = contentScale,
+                )
                 Image(
                     painter = painter,
                     contentDescription = null,
@@ -90,8 +105,11 @@ fun CrossfadeAsyncImage(
         }
 
         currentModel?.let { curModel ->
-            key(curModel) {
-                val painter = rememberAsyncImagePainter(model = curModel, contentScale = contentScale)
+            key(identityKeyOf(curModel)) {
+                val painter = rememberAsyncImagePainter(
+                    model = requestFor(context, curModel),
+                    contentScale = contentScale,
+                )
                 Image(
                     painter = painter,
                     contentDescription = contentDescription,
