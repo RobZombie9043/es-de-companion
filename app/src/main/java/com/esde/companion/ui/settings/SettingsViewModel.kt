@@ -3,6 +3,7 @@ package com.esde.companion.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VideoAspectRatioMode
@@ -10,6 +11,11 @@ import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
+import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
@@ -21,6 +27,11 @@ import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
+import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
@@ -63,6 +74,16 @@ class SettingsViewModel(
     private val setVideoAudioEnabledUseCase: SetVideoAudioEnabledUseCase,
     private val observeVideoAspectRatioModeUseCase: ObserveVideoAspectRatioModeUseCase,
     private val setVideoAspectRatioModeUseCase: SetVideoAspectRatioModeUseCase,
+    private val observeMusicEnabledUseCase: ObserveMusicEnabledUseCase,
+    private val setMusicEnabledUseCase: SetMusicEnabledUseCase,
+    private val observeMusicPlayWhileBrowsingSystemsUseCase: ObserveMusicPlayWhileBrowsingSystemsUseCase,
+    private val setMusicPlayWhileBrowsingSystemsUseCase: SetMusicPlayWhileBrowsingSystemsUseCase,
+    private val observeMusicPlayWhileBrowsingGamesUseCase: ObserveMusicPlayWhileBrowsingGamesUseCase,
+    private val setMusicPlayWhileBrowsingGamesUseCase: SetMusicPlayWhileBrowsingGamesUseCase,
+    private val observeMusicPlayDuringScreensaverUseCase: ObserveMusicPlayDuringScreensaverUseCase,
+    private val setMusicPlayDuringScreensaverUseCase: SetMusicPlayDuringScreensaverUseCase,
+    private val observeMusicDuckingModeUseCase: ObserveMusicDuckingModeUseCase,
+    private val setMusicDuckingModeUseCase: SetMusicDuckingModeUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -80,6 +101,7 @@ class SettingsViewModel(
                 ?: onboardingRepository.defaultMediaFolderPath()
             val customSystemImagesPath = onboardingRepository.observeCustomSystemImagesFolderPath().first()
             val customLogosPath = onboardingRepository.observeCustomLogosFolderPath().first()
+            val customMusicPath = onboardingRepository.observeCustomMusicFolderPath().first()
             val overlayEnabled = observeOverlayEnabledUseCase().first()
             val gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first()
             val screensaverBehavior = observeScreensaverBehaviorUseCase().first()
@@ -91,11 +113,17 @@ class SettingsViewModel(
             val videoDelaySeconds = observeVideoDelaySecondsUseCase().first()
             val videoAudioEnabled = observeVideoAudioEnabledUseCase().first()
             val videoAspectRatioMode = observeVideoAspectRatioModeUseCase().first()
+            val musicEnabled = observeMusicEnabledUseCase().first()
+            val musicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase().first()
+            val musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first()
+            val musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first()
+            val musicDuckingMode = observeMusicDuckingModeUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
                 customSystemImagesFolderPath = customSystemImagesPath,
                 customLogosFolderPath = customLogosPath,
+                customMusicFolderPath = customMusicPath,
                 overlayEnabled = overlayEnabled,
                 gamePlayingBehavior = gamePlayingBehavior,
                 screensaverBehavior = screensaverBehavior,
@@ -107,11 +135,17 @@ class SettingsViewModel(
                 videoDelaySeconds = videoDelaySeconds,
                 videoAudioEnabled = videoAudioEnabled,
                 videoAspectRatioMode = videoAspectRatioMode,
+                musicEnabled = musicEnabled,
+                musicPlayWhileBrowsingSystems = musicPlayWhileBrowsingSystems,
+                musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
+                musicPlayDuringScreensaver = musicPlayDuringScreensaver,
+                musicDuckingMode = musicDuckingMode,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
             customSystemImagesPath?.let { validateCustomSystemImagesFolder(it) }
             customLogosPath?.let { validateCustomLogosFolder(it) }
+            customMusicPath?.let { validateCustomMusicFolder(it) }
         }
     }
 
@@ -168,6 +202,50 @@ class SettingsViewModel(
     fun onVideoAspectRatioModeChanged(mode: VideoAspectRatioMode) {
         _uiState.value = _uiState.value.copy(videoAspectRatioMode = mode)
         viewModelScope.launch { setVideoAspectRatioModeUseCase(mode) }
+    }
+
+    fun onMusicEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(musicEnabled = enabled)
+        viewModelScope.launch { setMusicEnabledUseCase(enabled) }
+    }
+
+    fun onMusicPlayWhileBrowsingSystemsChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(musicPlayWhileBrowsingSystems = enabled)
+        viewModelScope.launch { setMusicPlayWhileBrowsingSystemsUseCase(enabled) }
+    }
+
+    fun onMusicPlayWhileBrowsingGamesChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(musicPlayWhileBrowsingGames = enabled)
+        viewModelScope.launch { setMusicPlayWhileBrowsingGamesUseCase(enabled) }
+    }
+
+    fun onMusicPlayDuringScreensaverChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(musicPlayDuringScreensaver = enabled)
+        viewModelScope.launch { setMusicPlayDuringScreensaverUseCase(enabled) }
+    }
+
+    fun onMusicDuckingModeChanged(mode: MusicDuckingMode) {
+        _uiState.value = _uiState.value.copy(musicDuckingMode = mode)
+        viewModelScope.launch { setMusicDuckingModeUseCase(mode) }
+    }
+
+    fun onCustomMusicFolderPicked(path: String) {
+        _uiState.value = _uiState.value.copy(customMusicFolderPath = path)
+        viewModelScope.launch {
+            validateCustomMusicFolder(path)
+            onboardingRepository.saveCustomMusicFolderPath(path)
+        }
+    }
+
+    fun onCustomMusicFolderCleared() {
+        _uiState.value = _uiState.value.copy(customMusicFolderPath = null, customMusicFolderValidation = null)
+        viewModelScope.launch { onboardingRepository.clearCustomMusicFolderPath() }
+    }
+
+    private suspend fun validateCustomMusicFolder(path: String) {
+        _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = true)
+        val result = validateMediaFolderUseCase(path)
+        _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = false, customMusicFolderValidation = result)
     }
 
     fun onWidgetsLockedChanged(locked: Boolean) {

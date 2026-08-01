@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VideoAspectRatioMode
@@ -176,6 +177,58 @@ class FileOnboardingRepository(
             } ?: VideoAspectRatioMode.Cover
         }
 
+    override suspend fun setMusicEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[MUSIC_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeMusicEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[MUSIC_ENABLED_KEY] ?: true }
+
+    override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY] = enabled }
+    }
+
+    override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY] ?: true }
+
+    override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[MUSIC_PLAY_WHILE_BROWSING_GAMES_KEY] = enabled }
+    }
+
+    override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[MUSIC_PLAY_WHILE_BROWSING_GAMES_KEY] ?: true }
+
+    override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[MUSIC_PLAY_DURING_SCREENSAVER_KEY] = enabled }
+    }
+
+    override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[MUSIC_PLAY_DURING_SCREENSAVER_KEY] ?: true }
+
+    override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {
+        context.onboardingDataStore.edit { it[MUSIC_DUCKING_MODE_KEY] = mode.name }
+    }
+
+    override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> =
+        context.onboardingDataStore.data.map { prefs ->
+            // Falls back to LowerVolume for both the unset case and any unrecognized
+            // stored value - same reasoning as observeThemePreference.
+            prefs[MUSIC_DUCKING_MODE_KEY]?.let { stored ->
+                runCatching { MusicDuckingMode.valueOf(stored) }.getOrNull()
+            } ?: MusicDuckingMode.LowerVolume
+        }
+
+    override suspend fun saveCustomMusicFolderPath(path: String) {
+        context.onboardingDataStore.edit { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] = path }
+    }
+
+    override fun observeCustomMusicFolderPath(): Flow<String?> =
+        context.onboardingDataStore.data.map { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] }
+
+    override suspend fun clearCustomMusicFolderPath() {
+        context.onboardingDataStore.edit { it.remove(CUSTOM_MUSIC_FOLDER_PATH_KEY) }
+    }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -193,5 +246,11 @@ class FileOnboardingRepository(
         val VIDEO_DELAY_SECONDS_KEY = intPreferencesKey("video_delay_seconds")
         val VIDEO_AUDIO_ENABLED_KEY = booleanPreferencesKey("video_audio_enabled")
         val VIDEO_ASPECT_RATIO_MODE_KEY = stringPreferencesKey("video_aspect_ratio_mode")
+        val MUSIC_ENABLED_KEY = booleanPreferencesKey("music_enabled")
+        val MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY = booleanPreferencesKey("music_play_while_browsing_systems")
+        val MUSIC_PLAY_WHILE_BROWSING_GAMES_KEY = booleanPreferencesKey("music_play_while_browsing_games")
+        val MUSIC_PLAY_DURING_SCREENSAVER_KEY = booleanPreferencesKey("music_play_during_screensaver")
+        val MUSIC_DUCKING_MODE_KEY = stringPreferencesKey("music_ducking_mode")
+        val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
     }
 }

@@ -46,6 +46,7 @@ fun VideoOverlayScreen(
     audioEnabled: Boolean,
     aspectRatioMode: VideoAspectRatioMode,
     modifier: Modifier = Modifier,
+    onIsPlayingChanged: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -56,6 +57,7 @@ fun VideoOverlayScreen(
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
+                    onIsPlayingChanged(playing)
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
@@ -78,7 +80,14 @@ fun VideoOverlayScreen(
     }
 
     DisposableEffect(player) {
-        onDispose { player.release() }
+        onDispose {
+            // player.release() doesn't reliably re-fire onIsPlayingChanged, so without
+            // this explicit call a video that becomes ineligible mid-playback (context
+            // change, app backgrounded) could leave the last "true" stuck, permanently
+            // ducking background music.
+            onIsPlayingChanged(false)
+            player.release()
+        }
     }
 
     if (isPlaying) {
