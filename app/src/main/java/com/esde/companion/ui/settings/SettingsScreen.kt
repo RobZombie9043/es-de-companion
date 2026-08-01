@@ -37,6 +37,9 @@ import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.VolumeDown
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -72,6 +75,7 @@ import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VideoAspectRatioMode
@@ -184,6 +188,8 @@ fun SettingsScreen(
                             onCustomSystemImagesFolderCleared = viewModel::onCustomSystemImagesFolderCleared,
                             onCustomLogosFolderPicked = viewModel::onCustomLogosFolderPicked,
                             onCustomLogosFolderCleared = viewModel::onCustomLogosFolderCleared,
+                            onCustomMusicFolderPicked = viewModel::onCustomMusicFolderPicked,
+                            onCustomMusicFolderCleared = viewModel::onCustomMusicFolderCleared,
                         )
                         SettingsCategory.UI -> UISettingsContent(
                             themePreference = uiState.themePreference,
@@ -212,6 +218,18 @@ fun SettingsScreen(
                             onDrawerOpacityChanged = viewModel::onDrawerOpacityChanged,
                             onGridColumnsChanged = viewModel::onGridColumnsChanged,
                             onManageAppsClick = { showManageApps = true },
+                        )
+                        SettingsCategory.Sound -> SoundSettingsContent(
+                            musicEnabled = uiState.musicEnabled,
+                            onMusicEnabledChanged = viewModel::onMusicEnabledChanged,
+                            musicPlayWhileBrowsingSystems = uiState.musicPlayWhileBrowsingSystems,
+                            onMusicPlayWhileBrowsingSystemsChanged = viewModel::onMusicPlayWhileBrowsingSystemsChanged,
+                            musicPlayWhileBrowsingGames = uiState.musicPlayWhileBrowsingGames,
+                            onMusicPlayWhileBrowsingGamesChanged = viewModel::onMusicPlayWhileBrowsingGamesChanged,
+                            musicPlayDuringScreensaver = uiState.musicPlayDuringScreensaver,
+                            onMusicPlayDuringScreensaverChanged = viewModel::onMusicPlayDuringScreensaverChanged,
+                            musicDuckingMode = uiState.musicDuckingMode,
+                            onMusicDuckingModeChanged = viewModel::onMusicDuckingModeChanged,
                         )
                         SettingsCategory.Other -> OtherSettingsContent(
                             overlayEnabled = uiState.overlayEnabled,
@@ -286,6 +304,8 @@ private fun SetupSettingsContent(
     onCustomSystemImagesFolderCleared: () -> Unit,
     onCustomLogosFolderPicked: (String) -> Unit,
     onCustomLogosFolderCleared: () -> Unit,
+    onCustomMusicFolderPicked: (String) -> Unit,
+    onCustomMusicFolderCleared: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -333,6 +353,15 @@ private fun SetupSettingsContent(
             statusText = uiState.customLogosFolderValidation.toStatusText(),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomLogosFolderPicked) },
             onClear = onCustomLogosFolderCleared,
+        )
+
+        OptionalFolderSetting(
+            label = "Custom Music Folder",
+            path = uiState.customMusicFolderPath,
+            isValidating = uiState.isValidatingCustomMusicFolder,
+            statusText = uiState.customMusicFolderValidation.toStatusText(),
+            onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomMusicFolderPicked) },
+            onClear = onCustomMusicFolderCleared,
         )
     }
 }
@@ -666,6 +695,149 @@ private fun GridColumnsSetting(columns: Int, onColumnsChanged: (Int) -> Unit) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SoundSettingsContent(
+    musicEnabled: Boolean,
+    onMusicEnabledChanged: (Boolean) -> Unit,
+    musicPlayWhileBrowsingSystems: Boolean,
+    onMusicPlayWhileBrowsingSystemsChanged: (Boolean) -> Unit,
+    musicPlayWhileBrowsingGames: Boolean,
+    onMusicPlayWhileBrowsingGamesChanged: (Boolean) -> Unit,
+    musicPlayDuringScreensaver: Boolean,
+    onMusicPlayDuringScreensaverChanged: (Boolean) -> Unit,
+    musicDuckingMode: MusicDuckingMode,
+    onMusicDuckingModeChanged: (MusicDuckingMode) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = SettingsItemShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Background Music",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Enable background music",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(checked = musicEnabled, onCheckedChange = onMusicEnabledChanged)
+                }
+
+                if (musicEnabled) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Play while browsing systems",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = musicPlayWhileBrowsingSystems,
+                            onCheckedChange = onMusicPlayWhileBrowsingSystemsChanged,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Play while browsing games",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = musicPlayWhileBrowsingGames,
+                            onCheckedChange = onMusicPlayWhileBrowsingGamesChanged,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Play during screensaver",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = musicPlayDuringScreensaver,
+                            onCheckedChange = onMusicPlayDuringScreensaverChanged,
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "During video playback",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            MusicDuckingMode.entries.forEachIndexed { index, mode ->
+                                SegmentedButton(
+                                    selected = mode == musicDuckingMode,
+                                    onClick = { onMusicDuckingModeChanged(mode) },
+                                    shape = SegmentedButtonDefaults.itemShape(
+                                        index = index,
+                                        count = MusicDuckingMode.entries.size,
+                                    ),
+                                    icon = {
+                                        SegmentedButtonDefaults.Icon(active = mode == musicDuckingMode) {
+                                            Icon(
+                                                imageVector = mode.icon,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                                            )
+                                        }
+                                    },
+                                    label = { Text(mode.label) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Presentation-only icon/label, same reasoning as VideoAspectRatioMode.icon/label above.
+private val MusicDuckingMode.icon: ImageVector
+    get() = when (this) {
+        MusicDuckingMode.Unchanged -> Icons.Filled.VolumeUp
+        MusicDuckingMode.LowerVolume -> Icons.Filled.VolumeDown
+        MusicDuckingMode.Pause -> Icons.Filled.Pause
+    }
+
+private val MusicDuckingMode.label: String
+    get() = when (this) {
+        MusicDuckingMode.Unchanged -> "Unchanged"
+        MusicDuckingMode.LowerVolume -> "Lower volume"
+        MusicDuckingMode.Pause -> "Pause"
+    }
 
 @Composable
 private fun OtherSettingsContent(

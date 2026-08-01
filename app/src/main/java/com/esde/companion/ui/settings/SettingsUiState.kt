@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VideoAspectRatioMode
@@ -31,4 +32,12 @@ data class SettingsUiState(
     val videoDelaySeconds: Int = 0,
     val videoAudioEnabled: Boolean = true,
     val videoAspectRatioMode: VideoAspectRatioMode = VideoAspectRatioMode.Cover,
+    val musicEnabled: Boolean = true,
+    val musicPlayWhileBrowsingSystems: Boolean = true,
+    val musicPlayWhileBrowsingGames: Boolean = true,
+    val musicPlayDuringScreensaver: Boolean = true,
+    val musicDuckingMode: MusicDuckingMode = MusicDuckingMode.LowerVolume,
+    val customMusicFolderPath: String? = null,
+    val customMusicFolderValidation: MediaFolderValidation? = null,
+    val isValidatingCustomMusicFolder: Boolean = false,
 )

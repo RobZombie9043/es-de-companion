@@ -9,6 +9,11 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,9 +21,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -30,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.esde.companion.CompanionApplication
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.MusicPlaybackState
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
@@ -42,6 +50,9 @@ import com.esde.companion.ui.main.MainViewModelFactory
 import com.esde.companion.ui.manual.GameManualScreen
 import com.esde.companion.ui.manual.GameManualViewModel
 import com.esde.companion.ui.manual.GameManualViewModelFactory
+import com.esde.companion.ui.music.MusicControlsOverlay
+import com.esde.companion.ui.music.MusicControlsViewModel
+import com.esde.companion.ui.music.MusicControlsViewModelFactory
 import com.esde.companion.ui.onboarding.OnboardingScreen
 import com.esde.companion.ui.onboarding.OnboardingViewModel
 import com.esde.companion.ui.onboarding.OnboardingViewModelFactory
@@ -60,6 +71,7 @@ import com.esde.companion.ui.widgets.WidgetsViewModelFactory
 import com.esde.companion.ui.widgets.edit.EditWidgetsOverlay
 import com.esde.companion.ui.widgets.edit.EditWidgetsViewModel
 import com.esde.companion.ui.widgets.edit.EditWidgetsViewModelFactory
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 private object Destinations {
@@ -173,6 +185,22 @@ class MainActivity : ComponentActivity() {
                             val videoDelaySeconds by videoOverlayViewModel.delaySeconds.collectAsStateWithLifecycle()
                             val videoAudioEnabled by videoOverlayViewModel.audioEnabled.collectAsStateWithLifecycle()
                             val videoAspectRatioMode by videoOverlayViewModel.aspectRatioMode.collectAsStateWithLifecycle()
+
+                            val musicControlsViewModel: MusicControlsViewModel =
+                                viewModel(factory = MusicControlsViewModelFactory(appContainer))
+                            val musicPlaybackState by musicControlsViewModel.playbackState.collectAsStateWithLifecycle()
+
+                            // Tapping the FAB toggles this; the timer alone controls
+                            // dismissal - it must not be re-derived from musicPlaybackState,
+                            // since tapping the panel's own Pause button flips
+                            // Playing -> Paused but shouldn't close the panel.
+                            var musicControlsRevealed by remember { mutableStateOf(false) }
+                            LaunchedEffect(musicControlsRevealed) {
+                                if (musicControlsRevealed) {
+                                    delay(4_000)
+                                    musicControlsRevealed = false
+                                }
+                            }
 
                             val activeScreenBehavior = when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
                                 is AppState.PlayingGame -> gamePlayingBehavior
@@ -320,7 +348,32 @@ class MainActivity : ComponentActivity() {
                                         audioEnabled = videoAudioEnabled,
                                         aspectRatioMode = videoAspectRatioMode,
                                         modifier = Modifier.fillMaxSize(),
+                                        onIsPlayingChanged = appContainer.videoPlaybackStateRepository::setIsPlaying,
                                     )
+                                }
+
+                                // Corner FAB (not a full-screen tap gesture) so it never
+                                // clashes with MainScreen's existing long-press/double-tap
+                                // handling - same "small corner button" architecture as
+                                // EditWidgetsOverlay's options button, opposite corner.
+                                if (mainScreenActive && isActivityVisible && musicPlaybackState != MusicPlaybackState.Stopped) {
+                                    FloatingActionButton(
+                                        onClick = { musicControlsRevealed = !musicControlsRevealed },
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(16.dp),
+                                    ) {
+                                        Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
+                                    }
+
+                                    if (musicControlsRevealed) {
+                                        MusicControlsOverlay(
+                                            viewModel = musicControlsViewModel,
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .padding(end = 16.dp, bottom = 80.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
