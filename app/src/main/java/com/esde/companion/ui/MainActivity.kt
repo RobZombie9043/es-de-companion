@@ -189,6 +189,9 @@ class MainActivity : ComponentActivity() {
                             val musicControlsViewModel: MusicControlsViewModel =
                                 viewModel(factory = MusicControlsViewModelFactory(appContainer))
                             val musicPlaybackState by musicControlsViewModel.playbackState.collectAsStateWithLifecycle()
+                            val musicEnabled by produceState(initialValue = true) {
+                                appContainer.observeMusicEnabledUseCase().collect { value = it }
+                            }
 
                             // Tapping the FAB toggles this; the timer alone controls
                             // dismissal - it must not be re-derived from musicPlaybackState,
@@ -356,7 +359,7 @@ class MainActivity : ComponentActivity() {
                                 // clashes with MainScreen's existing long-press/double-tap
                                 // handling - same "small corner button" architecture as
                                 // EditWidgetsOverlay's options button, opposite corner.
-                                if (mainScreenActive && isActivityVisible && musicPlaybackState != MusicPlaybackState.Stopped) {
+                                if (mainScreenActive && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
                                     FloatingActionButton(
                                         onClick = { musicControlsRevealed = !musicControlsRevealed },
                                         modifier = Modifier
