@@ -19,16 +19,19 @@ import kotlinx.coroutines.delay
 
 private val TEXT_PADDING = 8.dp
 private const val LINE_HEIGHT_RATIO = 1.25f
-private const val PAUSE_AT_EDGE_MS = 2_200L
+private const val PAUSE_AT_TOP_MS = 4_500L
+private const val PAUSE_AT_BOTTOM_MS = 7_000L
 private const val PIXELS_PER_SECOND = 35f
 private const val MIN_SCROLL_DURATION_MS = 600
 
 /**
  * Renders [text] wrapped to the available width. If the wrapped content is taller than
  * the box (i.e. [androidx.compose.foundation.ScrollState.maxValue] > 0 once laid out), it
- * auto-scrolls top -> bottom -> top on a loop with a pause at each end, teleprompter-style
- * - this suits multi-paragraph prose (game descriptions) far better than a horizontal
- * marquee would. Short text that already fits just sits still, no scrolling triggered.
+ * auto-scrolls on a loop: hold at top -> scroll down -> hold at bottom -> instant reset
+ * to top -> hold at top -> repeat. The reset is a hard cut rather than a reverse scroll,
+ * since it happens during a "settled" (paused) state rather than mid-motion, so it reads
+ * as an intentional restart rather than a glitch. Short text that already fits just sits
+ * still, no scrolling triggered.
  *
  * Keyed on [text] so switching games resets scroll position to the top and restarts the
  * pause/scroll cycle for the new content, rather than continuing mid-scroll into
@@ -70,10 +73,10 @@ fun ScrollingText(
         val spec = tween<Float>(durationMillis = scrollDurationMs, easing = LinearEasing)
 
         while (true) {
-            delay(PAUSE_AT_EDGE_MS)
+            delay(PAUSE_AT_TOP_MS)
             scrollState.animateScrollTo(maxValue, animationSpec = spec)
-            delay(PAUSE_AT_EDGE_MS)
-            scrollState.animateScrollTo(0, animationSpec = spec)
+            delay(PAUSE_AT_BOTTOM_MS)
+            scrollState.scrollTo(0)
         }
     }
 }
