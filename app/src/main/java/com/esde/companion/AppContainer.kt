@@ -11,12 +11,16 @@ import com.esde.companion.data.media.ReactiveCustomSystemImageRepository
 import com.esde.companion.data.media.ReactiveCustomSystemLogoRepository
 import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
+import com.esde.companion.data.music.ExoMusicPlayerController
+import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
 import com.esde.companion.data.settings.FileWidgetLayoutRepository
+import com.esde.companion.data.video.ProcessVideoPlaybackStateRepository
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.currentGameReference
+import com.esde.companion.domain.music.MusicPlaybackCoordinator
 import com.esde.companion.domain.repository.ActivityVisibilityRepository
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.CustomSystemImageRepository
@@ -26,8 +30,11 @@ import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
+import com.esde.companion.domain.repository.MusicLibraryRepository
+import com.esde.companion.domain.repository.MusicPlayerController
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
+import com.esde.companion.domain.repository.VideoPlaybackStateRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
@@ -39,6 +46,11 @@ import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
+import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
+import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
@@ -62,6 +74,11 @@ import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.SetLastSystemShortNameUseCase
+import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
+import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
@@ -95,6 +112,8 @@ class AppContainer(context: Context) {
 
     val activityVisibilityRepository: ActivityVisibilityRepository = ProcessActivityVisibilityRepository()
 
+    val videoPlaybackStateRepository: VideoPlaybackStateRepository = ProcessVideoPlaybackStateRepository()
+
     private val logRepository: EsdeLogRepository = SharedEsdeLogRepository(
         inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
         scope = applicationScope,
@@ -117,6 +136,11 @@ class AppContainer(context: Context) {
 
     private val customSystemLogoRepository: CustomSystemLogoRepository =
         ReactiveCustomSystemLogoRepository(folderPath = onboardingRepository.observeCustomLogosFolderPath())
+
+    private val musicLibraryRepository: MusicLibraryRepository =
+        ReactiveMusicLibraryRepository(musicFolderPath = onboardingRepository.observeCustomMusicFolderPath())
+
+    private val musicPlayerController: MusicPlayerController = ExoMusicPlayerController(appContext)
 
     val resolveCustomSystemImageUseCase = ResolveCustomSystemImageUseCase(customSystemImageRepository)
     val resolveCustomSystemLogoUseCase = ResolveCustomSystemLogoUseCase(customSystemLogoRepository)
@@ -188,6 +212,31 @@ class AppContainer(context: Context) {
     val setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository)
     val observeVideoAspectRatioModeUseCase = ObserveVideoAspectRatioModeUseCase(onboardingRepository)
     val setVideoAspectRatioModeUseCase = SetVideoAspectRatioModeUseCase(onboardingRepository)
+
+    val observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository)
+    val setMusicEnabledUseCase = SetMusicEnabledUseCase(onboardingRepository)
+    val observeMusicPlayWhileBrowsingSystemsUseCase = ObserveMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository)
+    val setMusicPlayWhileBrowsingSystemsUseCase = SetMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository)
+    val observeMusicPlayWhileBrowsingGamesUseCase = ObserveMusicPlayWhileBrowsingGamesUseCase(onboardingRepository)
+    val setMusicPlayWhileBrowsingGamesUseCase = SetMusicPlayWhileBrowsingGamesUseCase(onboardingRepository)
+    val observeMusicPlayDuringScreensaverUseCase = ObserveMusicPlayDuringScreensaverUseCase(onboardingRepository)
+    val setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository)
+    val observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository)
+    val setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository)
+
+    val musicPlaybackCoordinator = MusicPlaybackCoordinator(
+        observeConnectionState = observeConnectionStateUseCase,
+        observeMusicEnabled = observeMusicEnabledUseCase,
+        observeMusicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase,
+        observeMusicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase,
+        observeMusicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase,
+        observeMusicDuckingMode = observeMusicDuckingModeUseCase,
+        activityVisibilityRepository = activityVisibilityRepository,
+        videoPlaybackStateRepository = videoPlaybackStateRepository,
+        musicLibraryRepository = musicLibraryRepository,
+        musicPlayerController = musicPlayerController,
+        applicationScope = applicationScope,
+    )
 
     init {
         // Always-running, independent of whether edit mode is even open - records

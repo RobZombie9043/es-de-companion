@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
@@ -13,6 +14,11 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
+import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
@@ -24,6 +30,11 @@ import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
+import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
@@ -59,6 +70,11 @@ class SettingsViewModelTest {
         var videoAspectRatioMode = VideoAspectRatioMode.Cover
         var screensaverBehavior = ScreenBehavior.Nothing
         var themePreference = ThemePreference.Auto
+        var musicEnabled = true
+        var musicPlayWhileBrowsingSystems = true
+        var musicPlayWhileBrowsingGames = true
+        var musicPlayDuringScreensaver = true
+        var musicDuckingMode = MusicDuckingMode.LowerVolume
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -92,6 +108,19 @@ class SettingsViewModelTest {
         override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(screensaverBehavior)
         override suspend fun setThemePreference(preference: ThemePreference) { themePreference = preference }
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(themePreference)
+        override suspend fun setMusicEnabled(enabled: Boolean) { musicEnabled = enabled }
+        override fun observeMusicEnabled(): Flow<Boolean> = flowOf(musicEnabled)
+        override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) { musicPlayWhileBrowsingSystems = enabled }
+        override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> = flowOf(musicPlayWhileBrowsingSystems)
+        override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) { musicPlayWhileBrowsingGames = enabled }
+        override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> = flowOf(musicPlayWhileBrowsingGames)
+        override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) { musicPlayDuringScreensaver = enabled }
+        override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(musicPlayDuringScreensaver)
+        override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) { musicDuckingMode = mode }
+        override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(musicDuckingMode)
+        override suspend fun saveCustomMusicFolderPath(path: String) {}
+        override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomMusicFolderPath() {}
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -165,6 +194,16 @@ class SettingsViewModelTest {
             setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository),
             observeWidgetsLockedUseCase = ObserveWidgetsLockedUseCase(widgetLayoutRepository),
             setWidgetsLockedUseCase = SetWidgetsLockedUseCase(widgetLayoutRepository),
+            observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository),
+            setMusicEnabledUseCase = SetMusicEnabledUseCase(onboardingRepository),
+            observeMusicPlayWhileBrowsingSystemsUseCase = ObserveMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository),
+            setMusicPlayWhileBrowsingSystemsUseCase = SetMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository),
+            observeMusicPlayWhileBrowsingGamesUseCase = ObserveMusicPlayWhileBrowsingGamesUseCase(onboardingRepository),
+            setMusicPlayWhileBrowsingGamesUseCase = SetMusicPlayWhileBrowsingGamesUseCase(onboardingRepository),
+            observeMusicPlayDuringScreensaverUseCase = ObserveMusicPlayDuringScreensaverUseCase(onboardingRepository),
+            setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository),
+            observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository),
+            setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository),
         )
         return viewModel to appDrawerSettingsRepository
     }
