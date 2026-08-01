@@ -26,7 +26,7 @@ enum class SettingsCategory(val title: String, val description: String) {
         description = "Visible apps, background opacity, grid columns",
     ),
     Sound(
-        title = "Sound Settings",
+        title = "Background Music",
         description = "Background music and video-playback ducking",
     ),
     Other(
