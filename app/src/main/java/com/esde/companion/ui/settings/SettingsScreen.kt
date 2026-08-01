@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -344,11 +345,14 @@ private fun UISettingsContent(
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
         ScreenBehaviorPicker(
             title = "Game Playing Screen Behavior",
+            options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual),
             selected = gamePlayingBehavior,
             onSelected = onGamePlayingBehaviorChanged,
         )
         ScreenBehaviorPicker(
             title = "Screensaver Screen Behavior",
+            // GameManual only makes sense while a game is actually playing - excluded here.
+            options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black),
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
         )
@@ -359,6 +363,7 @@ private fun UISettingsContent(
 @Composable
 private fun ScreenBehaviorPicker(
     title: String,
+    options: List<ScreenBehavior>,
     selected: ScreenBehavior,
     onSelected: (ScreenBehavior) -> Unit,
 ) {
@@ -377,13 +382,13 @@ private fun ScreenBehaviorPicker(
                 color = MaterialTheme.colorScheme.primary,
             )
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                ScreenBehavior.entries.forEachIndexed { index, behavior ->
+                options.forEachIndexed { index, behavior ->
                     SegmentedButton(
                         selected = behavior == selected,
                         onClick = { onSelected(behavior) },
                         shape = SegmentedButtonDefaults.itemShape(
                             index = index,
-                            count = ScreenBehavior.entries.size,
+                            count = options.size,
                         ),
                         icon = {
                             SegmentedButtonDefaults.Icon(active = behavior == selected) {
@@ -408,6 +413,7 @@ private val ScreenBehavior.icon: ImageVector
         ScreenBehavior.Nothing -> Icons.Filled.Brightness7
         ScreenBehavior.Dim -> Icons.Filled.Brightness4
         ScreenBehavior.Black -> Icons.Filled.Brightness1
+        ScreenBehavior.GameManual -> Icons.Filled.MenuBook
     }
 
 private val ScreenBehavior.label: String
@@ -415,6 +421,7 @@ private val ScreenBehavior.label: String
         ScreenBehavior.Nothing -> "On"
         ScreenBehavior.Dim -> "Dimmed"
         ScreenBehavior.Black -> "Off"
+        ScreenBehavior.GameManual -> "Game Manual"
     }
 
 @Composable

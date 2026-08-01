@@ -39,6 +39,9 @@ import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
 import com.esde.companion.ui.main.MainScreen
 import com.esde.companion.ui.main.MainViewModel
 import com.esde.companion.ui.main.MainViewModelFactory
+import com.esde.companion.ui.manual.GameManualScreen
+import com.esde.companion.ui.manual.GameManualViewModel
+import com.esde.companion.ui.manual.GameManualViewModelFactory
 import com.esde.companion.ui.onboarding.OnboardingScreen
 import com.esde.companion.ui.onboarding.OnboardingViewModel
 import com.esde.companion.ui.onboarding.OnboardingViewModelFactory
@@ -142,37 +145,42 @@ class MainActivity : ComponentActivity() {
                             val gamePlayingBehavior by viewModel.gamePlayingBehavior.collectAsStateWithLifecycle()
                             val screensaverBehavior by viewModel.screensaverBehavior.collectAsStateWithLifecycle()
 
-                            // Whichever behavior applies to the live AppState right now,
-                            // or Nothing otherwise - AppState is a single sealed value,
-                            // so PlayingGame and Screensaver can never both apply at once.
+                            val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))
+
+                            val gameManualViewModel: GameManualViewModel = viewModel(factory = GameManualViewModelFactory(appContainer))
+                            val manualPdfPath by gameManualViewModel.pdfPath.collectAsStateWithLifecycle()
+
+                            // Manual "exit" dismissal for the GameManual cover - separate
+                            // from isBlanked since it's specific to this one behavior.
+                            // Reset below whenever PlayingGame ends, so dismissing it once
+                            // doesn't suppress the manual for every future game too.
+                            var manualDismissed by rememberSaveable { mutableStateOf(false) }
+
                             val activeScreenBehavior = when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
                                 is AppState.PlayingGame -> gamePlayingBehavior
                                 is AppState.Screensaver -> screensaverBehavior
                                 else -> ScreenBehavior.Nothing
                             }
-                            val autoBlackTrigger = activeScreenBehavior == ScreenBehavior.Black
-                            val isDimmed = activeScreenBehavior == ScreenBehavior.Dim
 
-                            // Reuses the exact same isBlanked flag/gesture as the manual
-                            // double-tap: entering a Black-triggering state forces it on,
-                            // leaving one forces it off. While the trigger stays constant
-                            // this effect doesn't rerun, so a double-tap dismissal (below)
-                            // sticks until the state actually changes again.
+                            val isPlayingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
+                            LaunchedEffect(isPlayingGame) {
+                                if (!isPlayingGame) manualDismissed = false
+                            }
+
+                            // GameManual selected but no manual resolved for this game, or
+                            // the user tapped exit on it -> falls through to the plain
+                            // main screen, same as ScreenBehavior.Nothing.
+                            val showGameManual = activeScreenBehavior == ScreenBehavior.GameManual &&
+                                    manualPdfPath != null &&
+                                    !manualDismissed
+
+                            val autoBlackTrigger = activeScreenBehavior == ScreenBehavior.Black && !showGameManual
+                            val isDimmed = activeScreenBehavior == ScreenBehavior.Dim && !showGameManual
+
                             LaunchedEffect(autoBlackTrigger) {
                                 isBlanked = autoBlackTrigger
                             }
 
-                            // Collected here, above the settings/edit-widgets toggles, so
-                            // this call site - and the WidgetCanvas/CrossfadeAsyncImage
-                            // state inside WidgetOverlay - never leaves composition just
-                            // because Settings or edit mode is showing. Otherwise
-                            // WhileSubscribed(5_000) on the ViewModel's flow would stop and
-                            // restart on a long-enough visit, causing a visible
-                            // reload/flash on return.
-                            val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))
-
-                            // Dim/Black should only ever affect the plain main screen -
-                            // not Settings, not Edit Widgets, and not the App Drawer.
                             val mainScreenActive = !showSettings && !showEditWidgets && !drawerOpen
 
                             Box(modifier = Modifier.fillMaxSize()) {
@@ -258,6 +266,19 @@ class MainActivity : ComponentActivity() {
                                                     isBlanked = false
                                                 })
                                             },
+                                    )
+                                }
+
+                                // GameManual cover (Settings > UI Settings: Game Playing
+                                // Behavior) - same placement/guard as Dim/Black above, but
+                                // its own branch rather than reusing isBlanked, since it
+                                // renders interactive content (paged/zoomable PDF) rather
+                                // than a plain cover.
+                                if (showGameManual && mainScreenActive) {
+                                    GameManualScreen(
+                                        viewModel = gameManualViewModel,
+                                        onExit = { manualDismissed = true },
+                                        modifier = Modifier.fillMaxSize(),
                                     )
                                 }
                             }
