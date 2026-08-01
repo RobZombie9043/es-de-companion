@@ -2,6 +2,7 @@ package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VideoAspectRatioMode
@@ -28,6 +29,11 @@ class CompleteOnboardingUseCaseTest {
         var videoAspectRatioMode = VideoAspectRatioMode.Cover
         var screensaverBehavior = ScreenBehavior.Nothing
         var themePreference = ThemePreference.Auto
+        var musicEnabled = true
+        var musicPlayWhileBrowsingSystems = true
+        var musicPlayWhileBrowsingGames = true
+        var musicPlayDuringScreensaver = true
+        var musicDuckingMode = MusicDuckingMode.LowerVolume
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -61,6 +67,19 @@ class CompleteOnboardingUseCaseTest {
         override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(screensaverBehavior)
         override suspend fun setThemePreference(preference: ThemePreference) { themePreference = preference }
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(themePreference)
+        override suspend fun setMusicEnabled(enabled: Boolean) { musicEnabled = enabled }
+        override fun observeMusicEnabled(): Flow<Boolean> = flowOf(musicEnabled)
+        override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) { musicPlayWhileBrowsingSystems = enabled }
+        override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> = flowOf(musicPlayWhileBrowsingSystems)
+        override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) { musicPlayWhileBrowsingGames = enabled }
+        override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> = flowOf(musicPlayWhileBrowsingGames)
+        override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) { musicPlayDuringScreensaver = enabled }
+        override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(musicPlayDuringScreensaver)
+        override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) { musicDuckingMode = mode }
+        override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(musicDuckingMode)
+        override suspend fun saveCustomMusicFolderPath(path: String) {}
+        override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomMusicFolderPath() {}
     }
 
     @Test
