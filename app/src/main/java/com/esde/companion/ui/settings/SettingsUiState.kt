@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 
 data class SettingsUiState(
@@ -23,5 +24,6 @@ data class SettingsUiState(
     val drawerOpacityPercent: Int = 80,
     val gridColumns: Int = 4,
     val widgetsLocked: Boolean = false,
-    val blankScreenEnabled: Boolean = false,
+    val gamePlayingBehavior: ScreenBehavior = ScreenBehavior.Nothing,
+    val screensaverBehavior: ScreenBehavior = ScreenBehavior.Nothing,
 )

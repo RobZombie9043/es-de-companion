@@ -3,21 +3,24 @@ package com.esde.companion.ui.settings
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
-import com.esde.companion.domain.usecase.ObserveBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
-import com.esde.companion.domain.usecase.SetBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -40,7 +43,8 @@ class SettingsViewModelTest {
 
     private class FakeOnboardingRepository : OnboardingRepository {
         var overlayEnabled = true
-        var blankScreenEnabled = false
+        var gamePlayingBehavior = ScreenBehavior.Nothing
+        var screensaverBehavior = ScreenBehavior.Nothing
         var themePreference = ThemePreference.Auto
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
@@ -61,8 +65,10 @@ class SettingsViewModelTest {
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(false)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
         override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
-        override suspend fun setBlankScreenEnabled(enabled: Boolean) { blankScreenEnabled = enabled }
-        override fun observeBlankScreenEnabled(): Flow<Boolean> = flowOf(blankScreenEnabled)
+        override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) { gamePlayingBehavior = behavior }
+        override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(gamePlayingBehavior)
+        override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) { screensaverBehavior = behavior }
+        override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(screensaverBehavior)
         override suspend fun setThemePreference(preference: ThemePreference) { themePreference = preference }
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(themePreference)
     }
@@ -118,8 +124,10 @@ class SettingsViewModelTest {
             validateMediaFolderUseCase = ValidateEsdeMediaFolderUseCase(onboardingRepository),
             observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository),
             setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository),
-            observeBlankScreenEnabledUseCase = ObserveBlankScreenEnabledUseCase(onboardingRepository),
-            setBlankScreenEnabledUseCase = SetBlankScreenEnabledUseCase(onboardingRepository),
+            observeGamePlayingBehaviorUseCase = ObserveGamePlayingBehaviorUseCase(onboardingRepository),
+            setGamePlayingBehaviorUseCase = SetGamePlayingBehaviorUseCase(onboardingRepository),
+            observeScreensaverBehaviorUseCase = ObserveScreensaverBehaviorUseCase(onboardingRepository),
+            setScreensaverBehaviorUseCase = SetScreensaverBehaviorUseCase(onboardingRepository),
             observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository),
             setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository),
             observeDrawerOpacityUseCase = ObserveDrawerOpacityUseCase(appDrawerSettingsRepository),

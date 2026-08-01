@@ -29,9 +29,9 @@ import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
-import com.esde.companion.domain.usecase.ObserveBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
@@ -40,6 +40,7 @@ import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
@@ -49,14 +50,15 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
-import com.esde.companion.domain.usecase.SetBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.SetLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -160,9 +162,10 @@ class AppContainer(context: Context) {
 
     val observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository)
     val setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository)
-    val observeBlankScreenEnabledUseCase = ObserveBlankScreenEnabledUseCase(onboardingRepository)
-    val setBlankScreenEnabledUseCase = SetBlankScreenEnabledUseCase(onboardingRepository)
-
+    val observeGamePlayingBehaviorUseCase = ObserveGamePlayingBehaviorUseCase(onboardingRepository)
+    val setGamePlayingBehaviorUseCase = SetGamePlayingBehaviorUseCase(onboardingRepository)
+    val observeScreensaverBehaviorUseCase = ObserveScreensaverBehaviorUseCase(onboardingRepository)
+    val setScreensaverBehaviorUseCase = SetScreensaverBehaviorUseCase(onboardingRepository)
     val observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository)
     val setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository)
 

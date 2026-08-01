@@ -28,7 +28,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.esde.companion.CompanionApplication
+import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.stateGroup
@@ -118,24 +120,46 @@ class MainActivity : ComponentActivity() {
                                 appContainer.observeWidgetsLockedUseCase().collect { value = it }
                             }
 
-                            // Whether double-tap-to-blank is enabled at all (Settings > UI
-                            // Settings). Read via the ViewModel's exposed flow rather than
-                            // AppContainer directly, matching how MainScreen consumes it.
-                            val blankScreenEnabled by viewModel.blankScreenEnabled.collectAsStateWithLifecycle()
-
                             // Momentary "is the screen currently blanked" state - local,
-                            // not persisted, since this is a live toggle the user drives
-                            // by double-tapping, not a preference. Owned here (rather than
+                            // not persisted. Double-tap-to-blank is always available (no
+                            // longer gated by a Settings toggle), and this same flag also
+                            // drives the automatic Black behavior below - see
+                            // LaunchedEffect(autoBlackTrigger). Owned here (rather than
                             // inside MainScreen) so the black cover it drives can be drawn
                             // as a sibling of WidgetOverlay below, and therefore actually
                             // sit on top of the widgets - see the Box below for why.
                             var isBlanked by rememberSaveable { mutableStateOf(false) }
 
-                            // If the setting is switched off from Settings while the screen
-                            // happens to be blanked, don't strand the user behind a black
-                            // screen they can no longer double-tap their way out of.
-                            LaunchedEffect(blankScreenEnabled) {
-                                if (!blankScreenEnabled) isBlanked = false
+                            // Whether the App Drawer is currently open - reported by
+                            // MainScreen via onDrawerOpenChanged. Combined with
+                            // showSettings/showEditWidgets below so the automatic
+                            // Dim/Black cover never shows over anything but the plain
+                            // main screen.
+                            var drawerOpen by remember { mutableStateOf(false) }
+
+                            // Settings > UI Settings: how the main screen should react
+                            // while a game is playing / the screensaver is active.
+                            val gamePlayingBehavior by viewModel.gamePlayingBehavior.collectAsStateWithLifecycle()
+                            val screensaverBehavior by viewModel.screensaverBehavior.collectAsStateWithLifecycle()
+
+                            // Whichever behavior applies to the live AppState right now,
+                            // or Nothing otherwise - AppState is a single sealed value,
+                            // so PlayingGame and Screensaver can never both apply at once.
+                            val activeScreenBehavior = when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
+                                is AppState.PlayingGame -> gamePlayingBehavior
+                                is AppState.Screensaver -> screensaverBehavior
+                                else -> ScreenBehavior.Nothing
+                            }
+                            val autoBlackTrigger = activeScreenBehavior == ScreenBehavior.Black
+                            val isDimmed = activeScreenBehavior == ScreenBehavior.Dim
+
+                            // Reuses the exact same isBlanked flag/gesture as the manual
+                            // double-tap: entering a Black-triggering state forces it on,
+                            // leaving one forces it off. While the trigger stays constant
+                            // this effect doesn't rerun, so a double-tap dismissal (below)
+                            // sticks until the state actually changes again.
+                            LaunchedEffect(autoBlackTrigger) {
+                                isBlanked = autoBlackTrigger
                             }
 
                             // Collected here, above the settings/edit-widgets toggles, so
@@ -146,6 +170,10 @@ class MainActivity : ComponentActivity() {
                             // restart on a long-enough visit, causing a visible
                             // reload/flash on return.
                             val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))
+
+                            // Dim/Black should only ever affect the plain main screen -
+                            // not Settings, not Edit Widgets, and not the App Drawer.
+                            val mainScreenActive = !showSettings && !showEditWidgets && !drawerOpen
 
                             Box(modifier = Modifier.fillMaxSize()) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
@@ -183,11 +211,25 @@ class MainActivity : ComponentActivity() {
                                             onOpenSettings = { showSettings = true },
                                             onOpenEditWidgets = { showEditWidgets = true },
                                             onToggleBlankScreen = { isBlanked = !isBlanked },
+                                            onDrawerOpenChanged = { drawerOpen = it },
                                         )
                                     }
                                 }
 
-                                // Full-black cover for the double-tap blank-screen gesture
+                                // Automatic Dim (Settings > UI Settings: Game Playing /
+                                // Screensaver Behavior). Purely visual - no clickable or
+                                // pointerInput, so touches pass straight through to
+                                // whatever's underneath, unlike the Black cover below.
+                                if (isDimmed && mainScreenActive) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Black.copy(alpha = 0.5f)),
+                                    )
+                                }
+
+                                // Full-black cover for the always-available double-tap
+                                // blank-screen gesture, and for automatic Black behavior
                                 // (Settings > UI Settings). Deliberately the last child of
                                 // THIS Box - the same parent WidgetOverlay is a child of -
                                 // so it draws over the widget layer too, not just whatever
@@ -201,7 +243,7 @@ class MainActivity : ComponentActivity() {
                                 // MainScreen's long-press-to-edit, widget taps - receives
                                 // input while blanked. "Blanked" should mean genuinely
                                 // unreachable, not just visually covered.
-                                if (isBlanked) {
+                                if (isBlanked && mainScreenActive) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -212,7 +254,9 @@ class MainActivity : ComponentActivity() {
                                                 onClick = {},
                                             )
                                             .pointerInput(Unit) {
-                                                detectTapGestures(onDoubleTap = { isBlanked = false })
+                                                detectTapGestures(onDoubleTap = {
+                                                    isBlanked = false
+                                                })
                                             },
                                     )
                                 }

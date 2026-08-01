@@ -25,6 +25,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brightness1
+import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
@@ -66,6 +69,7 @@ import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import kotlin.math.roundToInt
 
@@ -180,9 +184,11 @@ fun SettingsScreen(
                         SettingsCategory.UI -> UISettingsContent(
                             themePreference = uiState.themePreference,
                             onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
-                            blankScreenEnabled = uiState.blankScreenEnabled,
-                            onBlankScreenEnabledChanged = viewModel::onBlankScreenEnabledChanged,
-                            )
+                            gamePlayingBehavior = uiState.gamePlayingBehavior,
+                            onGamePlayingBehaviorChanged = viewModel::onGamePlayingBehaviorChanged,
+                            screensaverBehavior = uiState.screensaverBehavior,
+                            onScreensaverBehaviorChanged = viewModel::onScreensaverBehaviorChanged,
+                        )
                         SettingsCategory.Widgets -> WidgetsSettingsContent(
                             widgetsLocked = uiState.widgetsLocked,
                             onWidgetsLockedChanged = viewModel::onWidgetsLockedChanged,
@@ -323,8 +329,10 @@ private fun SetupSettingsContent(
 private fun UISettingsContent(
     themePreference: ThemePreference,
     onThemePreferenceChanged: (ThemePreference) -> Unit,
-    blankScreenEnabled: Boolean,
-    onBlankScreenEnabledChanged: (Boolean) -> Unit,
+    gamePlayingBehavior: ScreenBehavior,
+    onGamePlayingBehaviorChanged: (ScreenBehavior) -> Unit,
+    screensaverBehavior: ScreenBehavior,
+    onScreensaverBehaviorChanged: (ScreenBehavior) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -334,12 +342,26 @@ private fun UISettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
-        BlankScreenToggle(enabled = blankScreenEnabled, onEnabledChange = onBlankScreenEnabledChanged)
+        ScreenBehaviorPicker(
+            title = "Game Playing Screen Behavior",
+            selected = gamePlayingBehavior,
+            onSelected = onGamePlayingBehaviorChanged,
+        )
+        ScreenBehaviorPicker(
+            title = "Screensaver Screen Behavior",
+            selected = screensaverBehavior,
+            onSelected = onScreensaverBehaviorChanged,
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BlankScreenToggle(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+private fun ScreenBehaviorPicker(
+    title: String,
+    selected: ScreenBehavior,
+    onSelected: (ScreenBehavior) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -347,28 +369,53 @@ private fun BlankScreenToggle(enabled: Boolean, onEnabledChange: (Boolean) -> Un
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Double tap to blank screen",
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Double tap the main screen to show a black screen; double tap again to restore",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                ScreenBehavior.entries.forEachIndexed { index, behavior ->
+                    SegmentedButton(
+                        selected = behavior == selected,
+                        onClick = { onSelected(behavior) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = ScreenBehavior.entries.size,
+                        ),
+                        icon = {
+                            SegmentedButtonDefaults.Icon(active = behavior == selected) {
+                                Icon(
+                                    imageVector = behavior.icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                                )
+                            }
+                        },
+                        label = { Text(behavior.label) },
+                    )
+                }
             }
         }
     }
 }
+
+// Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
+private val ScreenBehavior.icon: ImageVector
+    get() = when (this) {
+        ScreenBehavior.Nothing -> Icons.Filled.Brightness7
+        ScreenBehavior.Dim -> Icons.Filled.Brightness4
+        ScreenBehavior.Black -> Icons.Filled.Brightness1
+    }
+
+private val ScreenBehavior.label: String
+    get() = when (this) {
+        ScreenBehavior.Nothing -> "On"
+        ScreenBehavior.Dim -> "Dimmed"
+        ScreenBehavior.Black -> "Off"
+    }
 
 @Composable
 private fun AppDrawerSettingsContent(

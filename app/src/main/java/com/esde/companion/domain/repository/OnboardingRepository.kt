@@ -3,6 +3,7 @@ package com.esde.companion.domain.repository
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.ScreenBehavior
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -56,11 +57,16 @@ interface OnboardingRepository {
     fun observeThemePreference(): Flow<ThemePreference>
 
     /**
-     * Whether double-tapping the main screen shows a full-black overlay (to blank a
-     * secondary display on demand). Defaults to false - this is an opt-in gesture the
-     * user discovers via Settings, not a default behavior that could be triggered by
-     * an accidental double-tap.
+     * How the main screen should react while a game is actively being played
+     * (AppState.PlayingGame). Defaults to [ScreenBehavior.Nothing].
      */
-    suspend fun setBlankScreenEnabled(enabled: Boolean)
-    fun observeBlankScreenEnabled(): Flow<Boolean>
+    suspend fun setGamePlayingBehavior(behavior: ScreenBehavior)
+    fun observeGamePlayingBehavior(): Flow<ScreenBehavior>
+
+    /**
+     * How the main screen should react while the ES-DE screensaver is active
+     * (AppState.Screensaver). Defaults to [ScreenBehavior.Nothing].
+     */
+    suspend fun setScreensaverBehavior(behavior: ScreenBehavior)
+    fun observeScreensaverBehavior(): Flow<ScreenBehavior>
 }

@@ -3,18 +3,21 @@ package com.esde.companion.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
-import com.esde.companion.domain.usecase.ObserveBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
-import com.esde.companion.domain.usecase.SetBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
+import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -31,8 +34,10 @@ class SettingsViewModel(
     private val validateMediaFolderUseCase: ValidateEsdeMediaFolderUseCase,
     private val observeOverlayEnabledUseCase: ObserveOverlayEnabledUseCase,
     private val setOverlayEnabledUseCase: SetOverlayEnabledUseCase,
-    private val observeBlankScreenEnabledUseCase: ObserveBlankScreenEnabledUseCase,
-    private val setBlankScreenEnabledUseCase: SetBlankScreenEnabledUseCase,
+    private val observeGamePlayingBehaviorUseCase: ObserveGamePlayingBehaviorUseCase,
+    private val setGamePlayingBehaviorUseCase: SetGamePlayingBehaviorUseCase,
+    private val observeScreensaverBehaviorUseCase: ObserveScreensaverBehaviorUseCase,
+    private val setScreensaverBehaviorUseCase: SetScreensaverBehaviorUseCase,
     private val observeThemePreferenceUseCase: ObserveThemePreferenceUseCase,
     private val setThemePreferenceUseCase: SetThemePreferenceUseCase,
     private val observeDrawerOpacityUseCase: ObserveDrawerOpacityUseCase,
@@ -59,7 +64,8 @@ class SettingsViewModel(
             val customSystemImagesPath = onboardingRepository.observeCustomSystemImagesFolderPath().first()
             val customLogosPath = onboardingRepository.observeCustomLogosFolderPath().first()
             val overlayEnabled = observeOverlayEnabledUseCase().first()
-            val blankScreenEnabled = observeBlankScreenEnabledUseCase().first()
+            val gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first()
+            val screensaverBehavior = observeScreensaverBehaviorUseCase().first()
             val themePreference = observeThemePreferenceUseCase().first()
             val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
@@ -70,7 +76,8 @@ class SettingsViewModel(
                 customSystemImagesFolderPath = customSystemImagesPath,
                 customLogosFolderPath = customLogosPath,
                 overlayEnabled = overlayEnabled,
-                blankScreenEnabled = blankScreenEnabled,
+                gamePlayingBehavior = gamePlayingBehavior,
+                screensaverBehavior = screensaverBehavior,
                 themePreference = themePreference,
                 drawerOpacityPercent = drawerOpacityPercent,
                 gridColumns = gridColumns,
@@ -108,9 +115,14 @@ class SettingsViewModel(
         viewModelScope.launch { setOverlayEnabledUseCase(enabled) }
     }
 
-    fun onBlankScreenEnabledChanged(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(blankScreenEnabled = enabled)
-        viewModelScope.launch { setBlankScreenEnabledUseCase(enabled) }
+    fun onGamePlayingBehaviorChanged(behavior: ScreenBehavior) {
+        _uiState.value = _uiState.value.copy(gamePlayingBehavior = behavior)
+        viewModelScope.launch { setGamePlayingBehaviorUseCase(behavior) }
+    }
+
+    fun onScreensaverBehaviorChanged(behavior: ScreenBehavior) {
+        _uiState.value = _uiState.value.copy(screensaverBehavior = behavior)
+        viewModelScope.launch { setScreensaverBehaviorUseCase(behavior) }
     }
 
     fun onWidgetsLockedChanged(locked: Boolean) {

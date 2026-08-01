@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import java.io.File
@@ -115,12 +116,29 @@ class FileOnboardingRepository(
             } ?: ThemePreference.Auto
         }
 
-    override suspend fun setBlankScreenEnabled(enabled: Boolean) {
-        context.onboardingDataStore.edit { it[BLANK_SCREEN_ENABLED_KEY] = enabled }
+    override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {
+        context.onboardingDataStore.edit { it[GAME_PLAYING_BEHAVIOR_KEY] = behavior.name }
     }
 
-    override fun observeBlankScreenEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[BLANK_SCREEN_ENABLED_KEY] ?: false }
+    override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> =
+        context.onboardingDataStore.data.map { prefs ->
+            // Falls back to Nothing for both the unset case and any unrecognized stored
+            // value - same reasoning as observeThemePreference.
+            prefs[GAME_PLAYING_BEHAVIOR_KEY]?.let { stored ->
+                runCatching { ScreenBehavior.valueOf(stored) }.getOrNull()
+            } ?: ScreenBehavior.Nothing
+        }
+
+    override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {
+        context.onboardingDataStore.edit { it[SCREENSAVER_BEHAVIOR_KEY] = behavior.name }
+    }
+
+    override fun observeScreensaverBehavior(): Flow<ScreenBehavior> =
+        context.onboardingDataStore.data.map { prefs ->
+            prefs[SCREENSAVER_BEHAVIOR_KEY]?.let { stored ->
+                runCatching { ScreenBehavior.valueOf(stored) }.getOrNull()
+            } ?: ScreenBehavior.Nothing
+        }
 
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
@@ -132,6 +150,7 @@ class FileOnboardingRepository(
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
         val OVERLAY_ENABLED_KEY = booleanPreferencesKey("overlay_enabled")
         val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")
-        val BLANK_SCREEN_ENABLED_KEY = booleanPreferencesKey("blank_screen_enabled")
+        val GAME_PLAYING_BEHAVIOR_KEY = stringPreferencesKey("game_playing_behavior")
+        val SCREENSAVER_BEHAVIOR_KEY = stringPreferencesKey("screensaver_behavior")
     }
 }

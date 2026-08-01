@@ -23,6 +23,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,21 +72,21 @@ fun MainScreen(
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
+    onDrawerOpenChanged: (Boolean) -> Unit,
 ) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val coverImageStatus by viewModel.coverImageStatus.collectAsStateWithLifecycle()
     val overlayEnabled by viewModel.overlayEnabled.collectAsStateWithLifecycle()
-    val blankScreenEnabled by viewModel.blankScreenEnabled.collectAsStateWithLifecycle()
     MainScreenContent(
         connectionState = connectionState,
         coverImageStatus = coverImageStatus,
         overlayEnabled = overlayEnabled,
-        blankScreenEnabled = blankScreenEnabled,
         appDrawerViewModel = appDrawerViewModel,
         widgetsLocked = widgetsLocked,
         onOpenSettings = onOpenSettings,
         onOpenEditWidgets = onOpenEditWidgets,
         onToggleBlankScreen = onToggleBlankScreen,
+        onDrawerOpenChanged = onDrawerOpenChanged,
     )
 }
 
@@ -103,12 +105,12 @@ private fun MainScreenContent(
     connectionState: EsdeConnectionState,
     coverImageStatus: CoverImageStatus?,
     overlayEnabled: Boolean,
-    blankScreenEnabled: Boolean,
     appDrawerViewModel: AppDrawerViewModel,
     widgetsLocked: Boolean,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
+    onDrawerOpenChanged: (Boolean) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -119,6 +121,12 @@ private fun MainScreenContent(
         // pixels so it stays meaningful across recomposition even if maxHeight changes
         // (e.g. rotation), unlike a remembered pixel offset which would go stale.
         val openFraction = remember { Animatable(0f) }
+
+        // Reported up to MainActivity so the automatic Dim/Black cover (Settings > UI
+        // Settings) can suppress itself while the drawer is open - it should only ever
+        // affect the plain main screen, not the drawer, Settings, or Edit Widgets.
+        val drawerOpen by remember { derivedStateOf { openFraction.value > 0f } }
+        LaunchedEffect(drawerOpen) { onDrawerOpenChanged(drawerOpen) }
 
         // System/hardware back must never exit this app - it's meant to run continuously on
         // the second display. If the App Drawer is open, back closes it first; otherwise the
@@ -202,7 +210,10 @@ private fun MainScreenContent(
                 // the drawer, without any manual disambiguation logic - but this is
                 // exactly the kind of gesture composition worth confirming feels right
                 // on a real device, not just reasoning about in code.
-                .pointerInput(widgetsLocked, blankScreenEnabled) {
+                // Double-tap-to-blank is always available now (Settings > UI Settings
+                // no longer gates it - see MainActivity for the automatic Dim/Black
+                // behavior that now lives there instead).
+                .pointerInput(widgetsLocked) {
                     detectTapGestures(
                         onLongPress = {
                             if (!widgetsLocked && openFraction.value == 0f) {
@@ -210,7 +221,7 @@ private fun MainScreenContent(
                             }
                         },
                         onDoubleTap = {
-                            if (blankScreenEnabled && openFraction.value == 0f) {
+                            if (openFraction.value == 0f) {
                                 onToggleBlankScreen()
                             }
                         },

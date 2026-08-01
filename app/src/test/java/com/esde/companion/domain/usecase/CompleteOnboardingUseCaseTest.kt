@@ -2,6 +2,7 @@ package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +20,8 @@ class CompleteOnboardingUseCaseTest {
         val savedCustomLogosPaths = mutableListOf<String>()
         var markedComplete = false
         var overlayEnabled = true
-        var blankScreenEnabled = false
+        var gamePlayingBehavior = ScreenBehavior.Nothing
+        var screensaverBehavior = ScreenBehavior.Nothing
         var themePreference = ThemePreference.Auto
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
@@ -40,8 +42,10 @@ class CompleteOnboardingUseCaseTest {
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
         override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
-        override suspend fun setBlankScreenEnabled(enabled: Boolean) { blankScreenEnabled = enabled }
-        override fun observeBlankScreenEnabled(): Flow<Boolean> = flowOf(blankScreenEnabled)
+        override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) { gamePlayingBehavior = behavior }
+        override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(gamePlayingBehavior)
+        override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) { screensaverBehavior = behavior }
+        override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(screensaverBehavior)
         override suspend fun setThemePreference(preference: ThemePreference) { themePreference = preference }
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(themePreference)
     }
