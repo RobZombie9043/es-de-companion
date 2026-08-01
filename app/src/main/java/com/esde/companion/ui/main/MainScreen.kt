@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.ui.dock.AppDock
+import com.esde.companion.ui.dock.AppDockViewModel
+import com.esde.companion.ui.dock.dockBarHeight
 import com.esde.companion.ui.drawer.AppDrawer
 import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
@@ -68,6 +71,7 @@ private val DRAWER_SETTLE_SPRING = spring<Float>(
 fun MainScreen(
     viewModel: MainViewModel,
     appDrawerViewModel: AppDrawerViewModel,
+    dockViewModel: AppDockViewModel,
     widgetsLocked: Boolean,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
@@ -82,6 +86,7 @@ fun MainScreen(
         coverImageStatus = coverImageStatus,
         overlayEnabled = overlayEnabled,
         appDrawerViewModel = appDrawerViewModel,
+        dockViewModel = dockViewModel,
         widgetsLocked = widgetsLocked,
         onOpenSettings = onOpenSettings,
         onOpenEditWidgets = onOpenEditWidgets,
@@ -106,6 +111,7 @@ private fun MainScreenContent(
     coverImageStatus: CoverImageStatus?,
     overlayEnabled: Boolean,
     appDrawerViewModel: AppDrawerViewModel,
+    dockViewModel: AppDockViewModel,
     widgetsLocked: Boolean,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
@@ -116,6 +122,7 @@ private fun MainScreenContent(
         val density = LocalDensity.current
         val drawerHeightPx = with(density) { maxHeight.toPx() }
         val coroutineScope = rememberCoroutineScope()
+        val dockSize by dockViewModel.dockSize.collectAsStateWithLifecycle()
 
         // 0f = fully closed, 1f = fully open. Tracked as a fraction rather than raw
         // pixels so it stays meaningful across recomposition even if maxHeight changes
@@ -275,6 +282,20 @@ private fun MainScreenContent(
                 AppDrawer(
                     viewModel = appDrawerViewModel,
                     onAppLaunched = { closeDrawer() },
+                )
+
+                // Anchored to the top edge of this same offset Box (which is the App
+                // Drawer sheet's own top edge) rather than animated independently: at
+                // openFraction = 0 this Box's top sits at the bottom of the screen, so
+                // the dock (offset further up by its own height) rests pinned at the
+                // screen's bottom edge; at openFraction = 1 this Box's top sits at
+                // y = 0, pushing the dock fully off-screen above the top. Riding the
+                // same offset means no separate animation/fraction math is needed here.
+                AppDock(
+                    viewModel = dockViewModel,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = -dockBarHeight(dockSize)),
                 )
 
                 // A dedicated, always-reliable drag target for closing - doesn't compete

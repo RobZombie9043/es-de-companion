@@ -3,11 +3,16 @@ package com.esde.companion.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
+import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -24,6 +29,10 @@ import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.SetDockEnabledUseCase
+import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.SetDockOpacityUseCase
+import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
@@ -64,6 +73,14 @@ class SettingsViewModel(
     private val setDrawerOpacityUseCase: SetDrawerOpacityUseCase,
     private val observeGridColumnsUseCase: ObserveGridColumnsUseCase,
     private val setGridColumnsUseCase: SetGridColumnsUseCase,
+    private val observeDockEnabledUseCase: ObserveDockEnabledUseCase,
+    private val setDockEnabledUseCase: SetDockEnabledUseCase,
+    private val observeDockMaxAppsUseCase: ObserveDockMaxAppsUseCase,
+    private val setDockMaxAppsUseCase: SetDockMaxAppsUseCase,
+    private val observeDockSizeUseCase: ObserveDockSizeUseCase,
+    private val setDockSizeUseCase: SetDockSizeUseCase,
+    private val observeDockOpacityUseCase: ObserveDockOpacityUseCase,
+    private val setDockOpacityUseCase: SetDockOpacityUseCase,
     private val observeWidgetsLockedUseCase: ObserveWidgetsLockedUseCase,
     private val setWidgetsLockedUseCase: SetWidgetsLockedUseCase,
     private val observeVideoPlaybackEnabledUseCase: ObserveVideoPlaybackEnabledUseCase,
@@ -108,6 +125,10 @@ class SettingsViewModel(
             val themePreference = observeThemePreferenceUseCase().first()
             val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
+            val dockEnabled = observeDockEnabledUseCase().first()
+            val dockMaxApps = observeDockMaxAppsUseCase().first()
+            val dockSize = observeDockSizeUseCase().first()
+            val dockOpacityPercent = observeDockOpacityUseCase().first()
             val widgetsLocked = observeWidgetsLockedUseCase().first()
             val videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first()
             val videoDelaySeconds = observeVideoDelaySecondsUseCase().first()
@@ -130,6 +151,10 @@ class SettingsViewModel(
                 themePreference = themePreference,
                 drawerOpacityPercent = drawerOpacityPercent,
                 gridColumns = gridColumns,
+                dockEnabled = dockEnabled,
+                dockMaxApps = dockMaxApps,
+                dockSize = dockSize,
+                dockOpacityPercent = dockOpacityPercent,
                 widgetsLocked = widgetsLocked,
                 videoPlaybackEnabled = videoPlaybackEnabled,
                 videoDelaySeconds = videoDelaySeconds,
@@ -266,6 +291,26 @@ class SettingsViewModel(
     fun onGridColumnsChanged(columns: Int) {
         _uiState.value = _uiState.value.copy(gridColumns = columns)
         viewModelScope.launch { setGridColumnsUseCase(columns) }
+    }
+
+    fun onDockEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(dockEnabled = enabled)
+        viewModelScope.launch { setDockEnabledUseCase(enabled) }
+    }
+
+    fun onDockMaxAppsChanged(maxApps: Int) {
+        _uiState.value = _uiState.value.copy(dockMaxApps = maxApps)
+        viewModelScope.launch { setDockMaxAppsUseCase(maxApps) }
+    }
+
+    fun onDockSizeChanged(size: DockSize) {
+        _uiState.value = _uiState.value.copy(dockSize = size)
+        viewModelScope.launch { setDockSizeUseCase(size) }
+    }
+
+    fun onDockOpacityChanged(percent: Int) {
+        _uiState.value = _uiState.value.copy(dockOpacityPercent = percent)
+        viewModelScope.launch { setDockOpacityUseCase(percent) }
     }
 
     private suspend fun validateLogFolder(path: String) {
