@@ -12,6 +12,7 @@ import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +32,7 @@ class MainViewModel(
     observeOverlayEnabled: ObserveOverlayEnabledUseCase,
     observeGamePlayingBehavior: ObserveGamePlayingBehaviorUseCase,
     observeScreensaverBehavior: ObserveScreensaverBehaviorUseCase,
+    observeVideoPlaybackEnabled: ObserveVideoPlaybackEnabledUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val onboardingRepository: OnboardingRepository,
 ) : ViewModel() {
@@ -47,6 +49,13 @@ class MainViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = true,
+        )
+
+    val videoPlaybackEnabled: StateFlow<Boolean> = observeVideoPlaybackEnabled()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = false,
         )
 
     // Settings > UI Settings: how the main screen should react while a game is

@@ -51,6 +51,9 @@ import com.esde.companion.ui.settings.SettingsScreen
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SettingsViewModelFactory
 import com.esde.companion.ui.theme.EsdeCompanionTheme
+import com.esde.companion.ui.video.VideoOverlayScreen
+import com.esde.companion.ui.video.VideoOverlayViewModel
+import com.esde.companion.ui.video.VideoOverlayViewModelFactory
 import com.esde.companion.ui.widgets.WidgetOverlay
 import com.esde.companion.ui.widgets.WidgetsViewModel
 import com.esde.companion.ui.widgets.WidgetsViewModelFactory
@@ -140,6 +143,8 @@ class MainActivity : ComponentActivity() {
                             // main screen.
                             var drawerOpen by remember { mutableStateOf(false) }
 
+                            val mainScreenActive = !showSettings && !showEditWidgets && !drawerOpen
+
                             // Settings > UI Settings: how the main screen should react
                             // while a game is playing / the screensaver is active.
                             val gamePlayingBehavior by viewModel.gamePlayingBehavior.collectAsStateWithLifecycle()
@@ -156,6 +161,18 @@ class MainActivity : ComponentActivity() {
                             // doesn't suppress the manual for every future game too.
                             var manualDismissed by rememberSaveable { mutableStateOf(false) }
 
+                            val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
+
+                            val isActivityVisible by produceState(initialValue = true) {
+                                appContainer.activityVisibilityRepository.observeIsVisible().collect { value = it }
+                            }
+
+                            val videoOverlayViewModel: VideoOverlayViewModel =
+                                viewModel(factory = VideoOverlayViewModelFactory(appContainer))
+                            val videoPath by videoOverlayViewModel.videoPath.collectAsStateWithLifecycle()
+                            val videoDelaySeconds by videoOverlayViewModel.delaySeconds.collectAsStateWithLifecycle()
+                            val videoAudioEnabled by videoOverlayViewModel.audioEnabled.collectAsStateWithLifecycle()
+
                             val activeScreenBehavior = when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
                                 is AppState.PlayingGame -> gamePlayingBehavior
                                 is AppState.Screensaver -> screensaverBehavior
@@ -165,6 +182,21 @@ class MainActivity : ComponentActivity() {
                             val isPlayingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
                             LaunchedEffect(isPlayingGame) {
                                 if (!isPlayingGame) manualDismissed = false
+                            }
+
+                            val isBrowsingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
+                            val showVideoOverlay = videoPlaybackEnabled &&
+                                    videoPath != null &&
+                                    isBrowsingGame &&
+                                    mainScreenActive &&
+                                    isActivityVisible
+
+                            LaunchedEffect(videoPlaybackEnabled, videoPath, isBrowsingGame, mainScreenActive, isActivityVisible) {
+                                android.util.Log.d(
+                                    "VideoDebug",
+                                    "enabled=$videoPlaybackEnabled path=$videoPath browsing=$isBrowsingGame " +
+                                            "mainScreenActive=$mainScreenActive visible=$isActivityVisible -> show=$showVideoOverlay",
+                                )
                             }
 
                             // GameManual selected but no manual resolved for this game, or
@@ -180,8 +212,6 @@ class MainActivity : ComponentActivity() {
                             LaunchedEffect(autoBlackTrigger) {
                                 isBlanked = autoBlackTrigger
                             }
-
-                            val mainScreenActive = !showSettings && !showEditWidgets && !drawerOpen
 
                             Box(modifier = Modifier.fillMaxSize()) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
@@ -281,6 +311,15 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
+
+                                if (showVideoOverlay) {
+                                    VideoOverlayScreen(
+                                        videoPath = videoPath!!,
+                                        delaySeconds = videoDelaySeconds,
+                                        audioEnabled = videoAudioEnabled,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
                             }
                         }
                     }
@@ -298,6 +337,16 @@ class MainActivity : ComponentActivity() {
         if (hasFocus) {
             hideStatusBar()
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        (application as CompanionApplication).appContainer.activityVisibilityRepository.setVisible(true)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        (application as CompanionApplication).appContainer.activityVisibilityRepository.setVisible(false)
     }
 
     private fun hideStatusBar() {

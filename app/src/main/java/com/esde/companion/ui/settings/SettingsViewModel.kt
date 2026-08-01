@@ -12,6 +12,9 @@ import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
+import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
@@ -19,6 +22,9 @@ import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
+import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
+import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
@@ -46,6 +52,12 @@ class SettingsViewModel(
     private val setGridColumnsUseCase: SetGridColumnsUseCase,
     private val observeWidgetsLockedUseCase: ObserveWidgetsLockedUseCase,
     private val setWidgetsLockedUseCase: SetWidgetsLockedUseCase,
+    private val observeVideoPlaybackEnabledUseCase: ObserveVideoPlaybackEnabledUseCase,
+    private val setVideoPlaybackEnabledUseCase: SetVideoPlaybackEnabledUseCase,
+    private val observeVideoDelaySecondsUseCase: ObserveVideoDelaySecondsUseCase,
+    private val setVideoDelaySecondsUseCase: SetVideoDelaySecondsUseCase,
+    private val observeVideoAudioEnabledUseCase: ObserveVideoAudioEnabledUseCase,
+    private val setVideoAudioEnabledUseCase: SetVideoAudioEnabledUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -70,6 +82,9 @@ class SettingsViewModel(
             val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
             val widgetsLocked = observeWidgetsLockedUseCase().first()
+            val videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first()
+            val videoDelaySeconds = observeVideoDelaySecondsUseCase().first()
+            val videoAudioEnabled = observeVideoAudioEnabledUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
@@ -82,6 +97,9 @@ class SettingsViewModel(
                 drawerOpacityPercent = drawerOpacityPercent,
                 gridColumns = gridColumns,
                 widgetsLocked = widgetsLocked,
+                videoPlaybackEnabled = videoPlaybackEnabled,
+                videoDelaySeconds = videoDelaySeconds,
+                videoAudioEnabled = videoAudioEnabled,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -123,6 +141,21 @@ class SettingsViewModel(
     fun onScreensaverBehaviorChanged(behavior: ScreenBehavior) {
         _uiState.value = _uiState.value.copy(screensaverBehavior = behavior)
         viewModelScope.launch { setScreensaverBehaviorUseCase(behavior) }
+    }
+
+    fun onVideoPlaybackEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(videoPlaybackEnabled = enabled)
+        viewModelScope.launch { setVideoPlaybackEnabledUseCase(enabled) }
+    }
+
+    fun onVideoDelaySecondsChanged(seconds: Int) {
+        _uiState.value = _uiState.value.copy(videoDelaySeconds = seconds)
+        viewModelScope.launch { setVideoDelaySecondsUseCase(seconds) }
+    }
+
+    fun onVideoAudioEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(videoAudioEnabled = enabled)
+        viewModelScope.launch { setVideoAudioEnabledUseCase(enabled) }
     }
 
     fun onWidgetsLockedChanged(locked: Boolean) {

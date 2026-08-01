@@ -21,6 +21,9 @@ class CompleteOnboardingUseCaseTest {
         var markedComplete = false
         var overlayEnabled = true
         var gamePlayingBehavior = ScreenBehavior.Nothing
+        var videoPlaybackEnabled = false
+        var videoDelaySeconds = 0
+        var videoAudioEnabled = true
         var screensaverBehavior = ScreenBehavior.Nothing
         var themePreference = ThemePreference.Auto
 
@@ -42,6 +45,12 @@ class CompleteOnboardingUseCaseTest {
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
         override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
+        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) { videoPlaybackEnabled = enabled }
+        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(videoPlaybackEnabled)
+        override suspend fun setVideoDelaySeconds(seconds: Int) { videoDelaySeconds = seconds }
+        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(videoDelaySeconds)
+        override suspend fun setVideoAudioEnabled(enabled: Boolean) { videoAudioEnabled = enabled }
+        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(videoAudioEnabled)
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) { gamePlayingBehavior = behavior }
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(gamePlayingBehavior)
         override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) { screensaverBehavior = behavior }

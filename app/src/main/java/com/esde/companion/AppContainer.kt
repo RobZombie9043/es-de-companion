@@ -1,6 +1,7 @@
 package com.esde.companion
 
 import android.content.Context
+import com.esde.companion.data.activity.ProcessActivityVisibilityRepository
 import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
@@ -16,6 +17,7 @@ import com.esde.companion.data.settings.FileWidgetLayoutRepository
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.currentGameReference
+import com.esde.companion.domain.repository.ActivityVisibilityRepository
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
@@ -42,6 +44,9 @@ import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
+import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
@@ -60,6 +65,9 @@ import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
+import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
+import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
@@ -82,6 +90,8 @@ class AppContainer(context: Context) {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val onboardingRepository: OnboardingRepository = FileOnboardingRepository(appContext)
+
+    val activityVisibilityRepository: ActivityVisibilityRepository = ProcessActivityVisibilityRepository()
 
     private val logRepository: EsdeLogRepository = SharedEsdeLogRepository(
         inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
@@ -168,6 +178,12 @@ class AppContainer(context: Context) {
     val setScreensaverBehaviorUseCase = SetScreensaverBehaviorUseCase(onboardingRepository)
     val observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository)
     val setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository)
+    val observeVideoPlaybackEnabledUseCase = ObserveVideoPlaybackEnabledUseCase(onboardingRepository)
+    val setVideoPlaybackEnabledUseCase = SetVideoPlaybackEnabledUseCase(onboardingRepository)
+    val observeVideoDelaySecondsUseCase = ObserveVideoDelaySecondsUseCase(onboardingRepository)
+    val setVideoDelaySecondsUseCase = SetVideoDelaySecondsUseCase(onboardingRepository)
+    val observeVideoAudioEnabledUseCase = ObserveVideoAudioEnabledUseCase(onboardingRepository)
+    val setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository)
 
     init {
         // Always-running, independent of whether edit mode is even open - records

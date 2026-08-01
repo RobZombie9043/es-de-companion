@@ -3,6 +3,7 @@ package com.esde.companion.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -140,8 +141,30 @@ class FileOnboardingRepository(
             } ?: ScreenBehavior.Nothing
         }
 
+    override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[VIDEO_PLAYBACK_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeVideoPlaybackEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[VIDEO_PLAYBACK_ENABLED_KEY] ?: false }
+
+    override suspend fun setVideoDelaySeconds(seconds: Int) {
+        context.onboardingDataStore.edit { it[VIDEO_DELAY_SECONDS_KEY] = seconds.coerceIn(0, MAX_VIDEO_DELAY_SECONDS) }
+    }
+
+    override fun observeVideoDelaySeconds(): Flow<Int> =
+        context.onboardingDataStore.data.map { it[VIDEO_DELAY_SECONDS_KEY] ?: 0 }
+
+    override suspend fun setVideoAudioEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[VIDEO_AUDIO_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeVideoAudioEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[VIDEO_AUDIO_ENABLED_KEY] ?: true }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
+        const val MAX_VIDEO_DELAY_SECONDS = 10
 
         val LOG_FOLDER_PATH_KEY = stringPreferencesKey("log_folder_path")
         val MEDIA_FOLDER_PATH_KEY = stringPreferencesKey("media_folder_path")
@@ -152,5 +175,8 @@ class FileOnboardingRepository(
         val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")
         val GAME_PLAYING_BEHAVIOR_KEY = stringPreferencesKey("game_playing_behavior")
         val SCREENSAVER_BEHAVIOR_KEY = stringPreferencesKey("screensaver_behavior")
+        val VIDEO_PLAYBACK_ENABLED_KEY = booleanPreferencesKey("video_playback_enabled")
+        val VIDEO_DELAY_SECONDS_KEY = intPreferencesKey("video_delay_seconds")
+        val VIDEO_AUDIO_ENABLED_KEY = booleanPreferencesKey("video_audio_enabled")
     }
 }

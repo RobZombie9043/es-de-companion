@@ -32,6 +32,12 @@ class SettingsViewModelFactory(
             setGridColumnsUseCase = appContainer.setGridColumnsUseCase,
             observeWidgetsLockedUseCase = appContainer.observeWidgetsLockedUseCase,
             setWidgetsLockedUseCase = appContainer.setWidgetsLockedUseCase,
+            observeVideoPlaybackEnabledUseCase = appContainer.observeVideoPlaybackEnabledUseCase,
+            setVideoPlaybackEnabledUseCase = appContainer.setVideoPlaybackEnabledUseCase,
+            observeVideoDelaySecondsUseCase = appContainer.observeVideoDelaySecondsUseCase,
+            setVideoDelaySecondsUseCase = appContainer.setVideoDelaySecondsUseCase,
+            observeVideoAudioEnabledUseCase = appContainer.observeVideoAudioEnabledUseCase,
+            setVideoAudioEnabledUseCase = appContainer.setVideoAudioEnabledUseCase,
         ) as T
     }
 }

@@ -26,4 +26,7 @@ data class SettingsUiState(
     val widgetsLocked: Boolean = false,
     val gamePlayingBehavior: ScreenBehavior = ScreenBehavior.Nothing,
     val screensaverBehavior: ScreenBehavior = ScreenBehavior.Nothing,
+    val videoPlaybackEnabled: Boolean = false,
+    val videoDelaySeconds: Int = 0,
+    val videoAudioEnabled: Boolean = true,
 )

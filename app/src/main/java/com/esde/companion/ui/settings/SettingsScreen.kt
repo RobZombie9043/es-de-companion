@@ -189,6 +189,12 @@ fun SettingsScreen(
                             onGamePlayingBehaviorChanged = viewModel::onGamePlayingBehaviorChanged,
                             screensaverBehavior = uiState.screensaverBehavior,
                             onScreensaverBehaviorChanged = viewModel::onScreensaverBehaviorChanged,
+                            videoPlaybackEnabled = uiState.videoPlaybackEnabled,
+                            onVideoPlaybackEnabledChanged = viewModel::onVideoPlaybackEnabledChanged,
+                            videoDelaySeconds = uiState.videoDelaySeconds,
+                            onVideoDelaySecondsChanged = viewModel::onVideoDelaySecondsChanged,
+                            videoAudioEnabled = uiState.videoAudioEnabled,
+                            onVideoAudioEnabledChanged = viewModel::onVideoAudioEnabledChanged,
                         )
                         SettingsCategory.Widgets -> WidgetsSettingsContent(
                             widgetsLocked = uiState.widgetsLocked,
@@ -334,6 +340,12 @@ private fun UISettingsContent(
     onGamePlayingBehaviorChanged: (ScreenBehavior) -> Unit,
     screensaverBehavior: ScreenBehavior,
     onScreensaverBehaviorChanged: (ScreenBehavior) -> Unit,
+    videoPlaybackEnabled: Boolean,
+    onVideoPlaybackEnabledChanged: (Boolean) -> Unit,
+    videoDelaySeconds: Int,
+    onVideoDelaySecondsChanged: (Int) -> Unit,
+    videoAudioEnabled: Boolean,
+    onVideoAudioEnabledChanged: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -351,11 +363,84 @@ private fun UISettingsContent(
         )
         ScreenBehaviorPicker(
             title = "Screensaver Screen Behavior",
-            // GameManual only makes sense while a game is actually playing - excluded here.
             options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black),
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
         )
+        VideoPlaybackSetting(
+            enabled = videoPlaybackEnabled,
+            onEnabledChanged = onVideoPlaybackEnabledChanged,
+            delaySeconds = videoDelaySeconds,
+            onDelaySecondsChanged = onVideoDelaySecondsChanged,
+            audioEnabled = videoAudioEnabled,
+            onAudioEnabledChanged = onVideoAudioEnabledChanged,
+        )
+    }
+}
+
+@Composable
+private fun VideoPlaybackSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+    delaySeconds: Int,
+    onDelaySecondsChanged: (Int) -> Unit,
+    audioEnabled: Boolean,
+    onAudioEnabledChanged: (Boolean) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Video Playback",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Play game videos while browsing",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            }
+
+            if (enabled) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = if (delaySeconds == 0) "Start delay: off" else "Start delay: ${delaySeconds}s",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Slider(
+                        value = delaySeconds.toFloat(),
+                        onValueChange = { onDelaySecondsChanged(it.roundToInt()) },
+                        valueRange = 0f..10f,
+                        steps = 9,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Video audio",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(checked = audioEnabled, onCheckedChange = onAudioEnabledChanged)
+                }
+            }
+        }
     }
 }
 
