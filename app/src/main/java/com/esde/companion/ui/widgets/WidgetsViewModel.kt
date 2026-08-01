@@ -16,6 +16,8 @@ import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
@@ -46,6 +48,8 @@ class WidgetsViewModel(
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
+    private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
+    private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
 ) : ViewModel() {
 
     private val gridDimensions = MutableStateFlow<GridDimensions?>(null)
@@ -101,9 +105,11 @@ class WidgetsViewModel(
         val gameDescription = identity.gameRef?.let { resolveGameDescription(it.systemShortName, it.romPath) }
         val systemShortName = identity.systemShortName
 
-        val neededSystemMediaTypes = widgets
-            .mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType }
-            .distinct()
+        val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
+        val neededSystemMediaTypes = (
+                widgets.mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType } +
+                        if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
+                ).distinct()
         val systemMediaByType: Map<MediaType, String?> = systemShortName?.let { shortName ->
             neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMedia(shortName, mediaType) }
         } ?: emptyMap()
@@ -111,14 +117,21 @@ class WidgetsViewModel(
         val systemLogoAssetPath = systemShortName
             ?.let { "file:///android_asset/system_logos/${systemLogoAssetName(it)}.svg" }
 
+        val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
+        val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
+        val customSystemLogoPath = if (needsCustomLogo) systemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null
+        val customSystemImagePath = if (needsCustomImage) systemShortName?.let { resolveCustomSystemImage(systemLogoAssetName(it)) } else null
+
         return widgets.associate { widget ->
             widget.id to WidgetContentResolver.resolve(
                 widgetType = widget.widgetType,
                 systemLogoAssetPath = { systemLogoAssetPath },
+                customSystemLogoLookup = { customSystemLogoPath },
+                customSystemImageLookup = { customSystemImagePath },
                 systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
                 gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
                 gameDescriptionLookup = { gameDescription?.text },
-                fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET,
+                fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET, // null in EditWidgetsViewModel, as today
             )
         }
     }

@@ -51,6 +51,12 @@ class SettingsViewModelTest {
         override suspend fun saveMediaFolderPath(path: String) {}
         override fun observeLogFolderPath(): Flow<String?> = flowOf(null)
         override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun saveCustomSystemImagesFolderPath(path: String) {}
+        override fun observeCustomSystemImagesFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomSystemImagesFolderPath() {}
+        override suspend fun saveCustomLogosFolderPath(path: String) {}
+        override fun observeCustomLogosFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomLogosFolderPath() {}
         override suspend fun markOnboardingComplete() {}
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(false)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }

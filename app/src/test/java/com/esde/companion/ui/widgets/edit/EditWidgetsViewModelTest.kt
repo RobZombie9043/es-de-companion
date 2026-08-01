@@ -10,6 +10,8 @@ import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.repository.CustomSystemImageRepository
+import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
@@ -18,6 +20,8 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
@@ -88,6 +92,18 @@ class EditWidgetsViewModelTest {
         override suspend fun randomMedia(systemShortName: String, mediaType: MediaType): String? = filesByType[mediaType]
     }
 
+    private class FakeCustomSystemImageRepository(
+        private val imagesByShortName: Map<String, String> = emptyMap(),
+    ) : CustomSystemImageRepository {
+        override suspend fun findImage(systemShortName: String): String? = imagesByShortName[systemShortName]
+    }
+
+    private class FakeCustomSystemLogoRepository(
+        private val logosByShortName: Map<String, String> = emptyMap(),
+    ) : CustomSystemLogoRepository {
+        override suspend fun findLogo(systemShortName: String): String? = logosByShortName[systemShortName]
+    }
+
     private class FakeLastKnownContextRepository(
         initialSystemShortName: String? = null,
         initialGameReference: GameReference? = null,
@@ -138,6 +154,8 @@ class EditWidgetsViewModelTest {
         widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
         gameMediaRepository: FakeGameMediaRepository = FakeGameMediaRepository(),
         systemMediaRepository: FakeSystemMediaRepository = FakeSystemMediaRepository(),
+        customSystemImageRepository: FakeCustomSystemImageRepository = FakeCustomSystemImageRepository(),
+        customSystemLogoRepository: FakeCustomSystemLogoRepository = FakeCustomSystemLogoRepository(),
         lastKnownContextRepository: FakeLastKnownContextRepository = FakeLastKnownContextRepository(),
     ) = EditWidgetsViewModel(
         observeWidgetCanvas = ObserveWidgetCanvasUseCase(widgetLayoutRepository),
@@ -145,6 +163,8 @@ class EditWidgetsViewModelTest {
         resolveGameMedia = ResolveGameMediaUseCase(FakeGameMediaRepository()),
         resolveGameDescription = ResolveGameDescriptionUseCase(FakeGameDescriptionRepository()),
         resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
+        resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
+        resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),
         observeLastSystemShortName = ObserveLastSystemShortNameUseCase(lastKnownContextRepository),
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),
     )

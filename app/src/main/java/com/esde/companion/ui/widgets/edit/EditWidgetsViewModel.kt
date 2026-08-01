@@ -12,6 +12,8 @@ import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
@@ -65,6 +67,8 @@ class EditWidgetsViewModel(
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
+    private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
+    private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val observeLastSystemShortName: ObserveLastSystemShortNameUseCase,
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
 ) : ViewModel() {
@@ -268,9 +272,11 @@ class EditWidgetsViewModel(
         val gameMedia = lastGameReference?.let { resolveGameMedia(it.systemShortName, it.romPath) }
         val gameDescription = lastGameReference?.let { resolveGameDescription(it.systemShortName, it.romPath) }
 
-        val neededSystemMediaTypes = widgets
-            .mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType }
-            .distinct()
+        val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
+        val neededSystemMediaTypes = (
+                widgets.mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType } +
+                        if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
+                ).distinct()
         val systemMediaByType: Map<MediaType, String?> = lastSystemShortName?.let { shortName ->
             neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMedia(shortName, mediaType) }
         } ?: emptyMap()
@@ -278,10 +284,17 @@ class EditWidgetsViewModel(
         val systemLogoAssetPath = lastSystemShortName
             ?.let { "file:///android_asset/system_logos/${systemLogoAssetName(it)}.svg" }
 
+        val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
+        val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
+        val customSystemLogoPath = if (needsCustomLogo) lastSystemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null
+        val customSystemImagePath = if (needsCustomImage) lastSystemShortName?.let { resolveCustomSystemImage(systemLogoAssetName(it)) } else null
+
         return widgets.associate { widget ->
             widget.id to WidgetContentResolver.resolve(
                 widgetType = widget.widgetType,
                 systemLogoAssetPath = { systemLogoAssetPath },
+                customSystemLogoLookup = { customSystemLogoPath },
+                customSystemImageLookup = { customSystemImagePath },
                 systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
                 gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
                 gameDescriptionLookup = { gameDescription?.text },

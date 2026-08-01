@@ -56,6 +56,8 @@ class SettingsViewModel(
                 ?: onboardingRepository.defaultLogFolderPath()
             val mediaPath = onboardingRepository.observeMediaFolderPath().first()
                 ?: onboardingRepository.defaultMediaFolderPath()
+            val customSystemImagesPath = onboardingRepository.observeCustomSystemImagesFolderPath().first()
+            val customLogosPath = onboardingRepository.observeCustomLogosFolderPath().first()
             val overlayEnabled = observeOverlayEnabledUseCase().first()
             val blankScreenEnabled = observeBlankScreenEnabledUseCase().first()
             val themePreference = observeThemePreferenceUseCase().first()
@@ -65,6 +67,8 @@ class SettingsViewModel(
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
+                customSystemImagesFolderPath = customSystemImagesPath,
+                customLogosFolderPath = customLogosPath,
                 overlayEnabled = overlayEnabled,
                 blankScreenEnabled = blankScreenEnabled,
                 themePreference = themePreference,
@@ -74,6 +78,8 @@ class SettingsViewModel(
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
+            customSystemImagesPath?.let { validateCustomSystemImagesFolder(it) }
+            customLogosPath?.let { validateCustomLogosFolder(it) }
         }
     }
 
@@ -137,5 +143,49 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(isValidatingMediaFolder = true)
         val result = validateMediaFolderUseCase(path)
         _uiState.value = _uiState.value.copy(isValidatingMediaFolder = false, mediaFolderValidation = result)
+    }
+
+    fun onCustomSystemImagesFolderPicked(path: String) {
+        _uiState.value = _uiState.value.copy(customSystemImagesFolderPath = path)
+        viewModelScope.launch {
+            validateCustomSystemImagesFolder(path)
+            onboardingRepository.saveCustomSystemImagesFolderPath(path)
+        }
+    }
+
+    fun onCustomSystemImagesFolderCleared() {
+        _uiState.value = _uiState.value.copy(
+            customSystemImagesFolderPath = null,
+            customSystemImagesFolderValidation = null,
+        )
+        viewModelScope.launch { onboardingRepository.clearCustomSystemImagesFolderPath() }
+    }
+
+    fun onCustomLogosFolderPicked(path: String) {
+        _uiState.value = _uiState.value.copy(customLogosFolderPath = path)
+        viewModelScope.launch {
+            validateCustomLogosFolder(path)
+            onboardingRepository.saveCustomLogosFolderPath(path)
+        }
+    }
+
+    fun onCustomLogosFolderCleared() {
+        _uiState.value = _uiState.value.copy(customLogosFolderPath = null, customLogosFolderValidation = null)
+        viewModelScope.launch { onboardingRepository.clearCustomLogosFolderPath() }
+    }
+
+    private suspend fun validateCustomSystemImagesFolder(path: String) {
+        _uiState.value = _uiState.value.copy(isValidatingCustomSystemImagesFolder = true)
+        val result = validateMediaFolderUseCase(path)
+        _uiState.value = _uiState.value.copy(
+            isValidatingCustomSystemImagesFolder = false,
+            customSystemImagesFolderValidation = result,
+        )
+    }
+
+    private suspend fun validateCustomLogosFolder(path: String) {
+        _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = true)
+        val result = validateMediaFolderUseCase(path)
+        _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = false, customLogosFolderValidation = result)
     }
 }

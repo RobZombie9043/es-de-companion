@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
@@ -171,6 +172,10 @@ fun SettingsScreen(
                             uiState = uiState,
                             onLogFolderPicked = viewModel::onLogFolderPicked,
                             onMediaFolderPicked = viewModel::onMediaFolderPicked,
+                            onCustomSystemImagesFolderPicked = viewModel::onCustomSystemImagesFolderPicked,
+                            onCustomSystemImagesFolderCleared = viewModel::onCustomSystemImagesFolderCleared,
+                            onCustomLogosFolderPicked = viewModel::onCustomLogosFolderPicked,
+                            onCustomLogosFolderCleared = viewModel::onCustomLogosFolderCleared,
                         )
                         SettingsCategory.UI -> UISettingsContent(
                             themePreference = uiState.themePreference,
@@ -259,6 +264,10 @@ private fun SetupSettingsContent(
     uiState: SettingsUiState,
     onLogFolderPicked: (String) -> Unit,
     onMediaFolderPicked: (String) -> Unit,
+    onCustomSystemImagesFolderPicked: (String) -> Unit,
+    onCustomSystemImagesFolderCleared: () -> Unit,
+    onCustomLogosFolderPicked: (String) -> Unit,
+    onCustomLogosFolderCleared: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -288,6 +297,24 @@ private fun SetupSettingsContent(
             isValidating = uiState.isValidatingMediaFolder,
             statusText = uiState.mediaFolderValidation.toStatusText(),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onMediaFolderPicked) },
+        )
+
+        OptionalFolderSetting(
+            label = "Custom System Images Folder",
+            path = uiState.customSystemImagesFolderPath,
+            isValidating = uiState.isValidatingCustomSystemImagesFolder,
+            statusText = uiState.customSystemImagesFolderValidation.toStatusText(),
+            onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomSystemImagesFolderPicked) },
+            onClear = onCustomSystemImagesFolderCleared,
+        )
+
+        OptionalFolderSetting(
+            label = "Custom Logos Folder",
+            path = uiState.customLogosFolderPath,
+            isValidating = uiState.isValidatingCustomLogosFolder,
+            statusText = uiState.customLogosFolderValidation.toStatusText(),
+            onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomLogosFolderPicked) },
+            onClear = onCustomLogosFolderCleared,
         )
     }
 }
@@ -686,6 +713,71 @@ private fun FolderSetting(
                 CircularProgressIndicator()
             } else {
                 Text(text = statusText, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptionalFolderSetting(
+    label: String,
+    path: String?,
+    isValidating: Boolean,
+    statusText: String,
+    onPick: (Uri) -> Unit,
+    onClear: () -> Unit,
+) {
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let(onPick)
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = path ?: "Not set",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (path != null) {
+                    IconButton(onClick = onClear) {
+                        Icon(
+                            imageVector = Icons.Filled.Clear,
+                            contentDescription = "Clear folder",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                IconButton(onClick = { launcher.launch(null) }) {
+                    Icon(
+                        imageVector = Icons.Filled.Folder,
+                        contentDescription = "Choose folder",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            if (path != null) {
+                if (isValidating) {
+                    CircularProgressIndicator()
+                } else {
+                    Text(text = statusText, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }

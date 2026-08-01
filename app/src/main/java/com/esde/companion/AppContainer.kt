@@ -6,6 +6,8 @@ import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.log.SharedEsdeLogRepository
+import com.esde.companion.data.media.ReactiveCustomSystemImageRepository
+import com.esde.companion.data.media.ReactiveCustomSystemLogoRepository
 import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
@@ -15,6 +17,8 @@ import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
+import com.esde.companion.domain.repository.CustomSystemImageRepository
+import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
@@ -39,6 +43,8 @@ import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
+import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
@@ -91,6 +97,15 @@ class AppContainer(context: Context) {
 
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
+
+    private val customSystemImageRepository: CustomSystemImageRepository =
+        ReactiveCustomSystemImageRepository(folderPath = onboardingRepository.observeCustomSystemImagesFolderPath())
+
+    private val customSystemLogoRepository: CustomSystemLogoRepository =
+        ReactiveCustomSystemLogoRepository(folderPath = onboardingRepository.observeCustomLogosFolderPath())
+
+    val resolveCustomSystemImageUseCase = ResolveCustomSystemImageUseCase(customSystemImageRepository)
+    val resolveCustomSystemLogoUseCase = ResolveCustomSystemLogoUseCase(customSystemLogoRepository)
 
     private val installedAppsRepository: InstalledAppsRepository = PackageManagerAppsRepository(appContext)
     val observeInstalledAppsUseCase = ObserveInstalledAppsUseCase(installedAppsRepository)

@@ -19,6 +19,8 @@ class WidgetsViewModelFactory(
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
             resolveRandomSystemMedia = appContainer.resolveRandomSystemMediaUseCase,
             resolveGameDescription = appContainer.resolveGameDescriptionUseCase,
+            resolveCustomSystemImage = appContainer.resolveCustomSystemImageUseCase,
+            resolveCustomSystemLogo = appContainer.resolveCustomSystemLogoUseCase,
         ) as T
     }
 }

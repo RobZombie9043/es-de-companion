@@ -29,6 +29,13 @@ internal sealed class WidgetTypeDto {
     ) : WidgetTypeDto()
 
     @Serializable
+    data class SystemImage(
+        val scaleMode: String,
+        val blurAmount: Float = 0f,
+        val darkenAmount: Float = 0f,
+    ) : WidgetTypeDto()
+
+    @Serializable
     data class SystemMedia(
         val mediaType: String,
         val scaleMode: String,

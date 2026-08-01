@@ -15,6 +15,8 @@ class CompleteOnboardingUseCaseTest {
     private class FakeOnboardingRepository : OnboardingRepository {
         val savedLogPaths = mutableListOf<String>()
         val savedMediaPaths = mutableListOf<String>()
+        val savedCustomSystemImagesPaths = mutableListOf<String>()
+        val savedCustomLogosPaths = mutableListOf<String>()
         var markedComplete = false
         var overlayEnabled = true
         var blankScreenEnabled = false
@@ -28,6 +30,12 @@ class CompleteOnboardingUseCaseTest {
         override suspend fun saveMediaFolderPath(path: String) { savedMediaPaths += path }
         override fun observeLogFolderPath(): Flow<String?> = flowOf(null)
         override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun saveCustomSystemImagesFolderPath(path: String) { savedCustomSystemImagesPaths += path }
+        override fun observeCustomSystemImagesFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomSystemImagesFolderPath() {}
+        override suspend fun saveCustomLogosFolderPath(path: String) { savedCustomLogosPaths += path }
+        override fun observeCustomLogosFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomLogosFolderPath() {}
         override suspend fun markOnboardingComplete() { markedComplete = true }
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }

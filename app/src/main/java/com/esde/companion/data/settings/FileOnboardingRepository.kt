@@ -65,6 +65,28 @@ class FileOnboardingRepository(
     override fun observeMediaFolderPath(): Flow<String?> =
         context.onboardingDataStore.data.map { it[MEDIA_FOLDER_PATH_KEY] }
 
+    override suspend fun saveCustomSystemImagesFolderPath(path: String) {
+        context.onboardingDataStore.edit { it[CUSTOM_SYSTEM_IMAGES_FOLDER_PATH_KEY] = path }
+    }
+
+    override fun observeCustomSystemImagesFolderPath(): Flow<String?> =
+        context.onboardingDataStore.data.map { it[CUSTOM_SYSTEM_IMAGES_FOLDER_PATH_KEY] }
+
+    override suspend fun clearCustomSystemImagesFolderPath() {
+        context.onboardingDataStore.edit { it.remove(CUSTOM_SYSTEM_IMAGES_FOLDER_PATH_KEY) }
+    }
+
+    override suspend fun saveCustomLogosFolderPath(path: String) {
+        context.onboardingDataStore.edit { it[CUSTOM_LOGOS_FOLDER_PATH_KEY] = path }
+    }
+
+    override fun observeCustomLogosFolderPath(): Flow<String?> =
+        context.onboardingDataStore.data.map { it[CUSTOM_LOGOS_FOLDER_PATH_KEY] }
+
+    override suspend fun clearCustomLogosFolderPath() {
+        context.onboardingDataStore.edit { it.remove(CUSTOM_LOGOS_FOLDER_PATH_KEY) }
+    }
+
     override suspend fun markOnboardingComplete() {
         context.onboardingDataStore.edit { it[ONBOARDING_COMPLETE_KEY] = true }
     }
@@ -105,6 +127,8 @@ class FileOnboardingRepository(
 
         val LOG_FOLDER_PATH_KEY = stringPreferencesKey("log_folder_path")
         val MEDIA_FOLDER_PATH_KEY = stringPreferencesKey("media_folder_path")
+        val CUSTOM_SYSTEM_IMAGES_FOLDER_PATH_KEY = stringPreferencesKey("custom_system_images_folder_path")
+        val CUSTOM_LOGOS_FOLDER_PATH_KEY = stringPreferencesKey("custom_logos_folder_path")
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
         val OVERLAY_ENABLED_KEY = booleanPreferencesKey("overlay_enabled")
         val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")

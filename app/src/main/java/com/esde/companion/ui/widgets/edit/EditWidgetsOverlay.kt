@@ -118,6 +118,7 @@ private val MENU_SHAPE = RoundedCornerShape(16.dp)
 private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (stateGroup) {
     StateGroup.System -> listOf(
         WidgetType.SystemLogo(ScaleMode.Fit),
+        WidgetType.SystemImage(ScaleMode.Fill),
         WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
         WidgetType.SystemMedia(MediaType.Screenshots, ScaleMode.Fill),
         WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
@@ -670,6 +671,7 @@ private fun ResizeHandle(
 
 private fun WidgetType.label(): String = when (this) {
     is WidgetType.SystemLogo -> "System Logo"
+    is WidgetType.SystemImage -> "System Image"
     is WidgetType.SystemMedia -> "System: ${mediaType.name}"
     is WidgetType.GameMedia -> "Game: ${mediaType.name}"
     is WidgetType.ColorBackground -> "Color Background"
@@ -739,6 +741,11 @@ private fun ConfigureWidgetDialog(
             ) {
                 when (widgetType) {
                     is WidgetType.SystemLogo -> {
+                        ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                    }
+
+                    is WidgetType.SystemImage -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }

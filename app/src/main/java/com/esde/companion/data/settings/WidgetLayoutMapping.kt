@@ -11,6 +11,7 @@ private fun String.toScaleMode() = ScaleMode.valueOf(this)
 
 private fun WidgetType.toDto(): WidgetTypeDto = when (this) {
     is WidgetType.SystemLogo -> WidgetTypeDto.SystemLogo(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
+    is WidgetType.SystemImage -> WidgetTypeDto.SystemImage(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.SystemMedia -> WidgetTypeDto.SystemMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.GameMedia -> WidgetTypeDto.GameMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha)
@@ -20,6 +21,8 @@ private fun WidgetType.toDto(): WidgetTypeDto = when (this) {
 private fun WidgetTypeDto.toDomain(): WidgetType = when (this) {
     is WidgetTypeDto.SystemLogo ->
         WidgetType.SystemLogo(scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
+    is WidgetTypeDto.SystemImage ->
+        WidgetType.SystemImage(scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
     is WidgetTypeDto.SystemMedia ->
         WidgetType.SystemMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
     is WidgetTypeDto.GameMedia ->

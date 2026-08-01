@@ -19,6 +19,8 @@ class EditWidgetsViewModelFactory(
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
             resolveRandomSystemMedia = appContainer.resolveRandomSystemMediaUseCase,
             resolveGameDescription = appContainer.resolveGameDescriptionUseCase,
+            resolveCustomSystemImage = appContainer.resolveCustomSystemImageUseCase,
+            resolveCustomSystemLogo = appContainer.resolveCustomSystemLogoUseCase,
             observeLastSystemShortName = appContainer.observeLastSystemShortNameUseCase,
             observeLastGameReference = appContainer.observeLastGameReferenceUseCase,
         ) as T

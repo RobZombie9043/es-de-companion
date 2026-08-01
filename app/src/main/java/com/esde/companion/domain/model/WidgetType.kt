@@ -30,6 +30,13 @@ data class ImageEffects(
  */
 sealed class WidgetType {
     data class SystemLogo(val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
+    /**
+     * A whole-system image sourced from the Custom System Images folder (Settings >
+     * Setup): a literal `<systemShortName>.<ext>` file. Falls back to a random FanArt,
+     * then a random Screenshot, from ES-DE's own media if no custom file is found - see
+     * WidgetContentResolver.
+     */
+    data class SystemImage(val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
     data class SystemMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
     data class GameMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
     data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetType()

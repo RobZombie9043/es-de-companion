@@ -28,6 +28,14 @@ interface OnboardingRepository {
     fun observeLogFolderPath(): Flow<String?>
     fun observeMediaFolderPath(): Flow<String?>
 
+    suspend fun saveCustomSystemImagesFolderPath(path: String)
+    fun observeCustomSystemImagesFolderPath(): Flow<String?>
+    suspend fun clearCustomSystemImagesFolderPath()
+
+    suspend fun saveCustomLogosFolderPath(path: String)
+    fun observeCustomLogosFolderPath(): Flow<String?>
+    suspend fun clearCustomLogosFolderPath()
+
     suspend fun markOnboardingComplete()
     fun observeOnboardingComplete(): Flow<Boolean>
 
