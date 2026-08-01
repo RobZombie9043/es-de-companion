@@ -160,7 +160,7 @@ class EditWidgetsViewModelTest {
     ) = EditWidgetsViewModel(
         observeWidgetCanvas = ObserveWidgetCanvasUseCase(widgetLayoutRepository),
         saveWidgetCanvas = SaveWidgetCanvasUseCase(widgetLayoutRepository),
-        resolveGameMedia = ResolveGameMediaUseCase(FakeGameMediaRepository()),
+        resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
         resolveGameDescription = ResolveGameDescriptionUseCase(FakeGameDescriptionRepository()),
         resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
         resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
