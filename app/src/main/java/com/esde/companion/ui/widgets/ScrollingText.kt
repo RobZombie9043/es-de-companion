@@ -36,6 +36,13 @@ private const val MIN_SCROLL_DURATION_MS = 600
  * Keyed on [text] so switching games resets scroll position to the top and restarts the
  * pause/scroll cycle for the new content, rather than continuing mid-scroll into
  * unrelated text.
+ *
+ * [userScrollEnabled] gates only touch-driven scrolling - the automatic pause/scroll
+ * loop below always keeps running regardless. EditWidgetsOverlay passes false: a
+ * GameDescription widget's own scrollable text otherwise consumes the drag gesture
+ * meant for PlaceholderWidgetBox's move-to-reposition handling (the descendant
+ * scrollable claims the gesture before the ancestor's drag detector sees it), and
+ * manual scrolling serves no purpose in edit mode anyway.
  */
 @Composable
 fun ScrollingText(
@@ -43,6 +50,7 @@ fun ScrollingText(
     fontSizeSp: Float,
     textColorArgb: Long,
     modifier: Modifier = Modifier,
+    userScrollEnabled: Boolean = true,
 ) {
     val scrollState = rememberScrollState()
 
@@ -54,7 +62,7 @@ fun ScrollingText(
             color = Color(textColorArgb),
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .verticalScroll(scrollState, enabled = userScrollEnabled)
                 .padding(TEXT_PADDING),
         )
     }
