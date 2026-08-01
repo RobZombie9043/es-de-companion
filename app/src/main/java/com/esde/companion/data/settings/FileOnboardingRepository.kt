@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.repository.OnboardingRepository
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -162,6 +163,19 @@ class FileOnboardingRepository(
     override fun observeVideoAudioEnabled(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[VIDEO_AUDIO_ENABLED_KEY] ?: true }
 
+    override suspend fun setVideoAspectRatioMode(mode: VideoAspectRatioMode) {
+        context.onboardingDataStore.edit { it[VIDEO_ASPECT_RATIO_MODE_KEY] = mode.name }
+    }
+
+    override fun observeVideoAspectRatioMode(): Flow<VideoAspectRatioMode> =
+        context.onboardingDataStore.data.map { prefs ->
+            // Falls back to Cover for both the unset case and any unrecognized stored
+            // value - same reasoning as observeThemePreference.
+            prefs[VIDEO_ASPECT_RATIO_MODE_KEY]?.let { stored ->
+                runCatching { VideoAspectRatioMode.valueOf(stored) }.getOrNull()
+            } ?: VideoAspectRatioMode.Cover
+        }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -178,5 +192,6 @@ class FileOnboardingRepository(
         val VIDEO_PLAYBACK_ENABLED_KEY = booleanPreferencesKey("video_playback_enabled")
         val VIDEO_DELAY_SECONDS_KEY = intPreferencesKey("video_delay_seconds")
         val VIDEO_AUDIO_ENABLED_KEY = booleanPreferencesKey("video_audio_enabled")
+        val VIDEO_ASPECT_RATIO_MODE_KEY = stringPreferencesKey("video_aspect_ratio_mode")
     }
 }

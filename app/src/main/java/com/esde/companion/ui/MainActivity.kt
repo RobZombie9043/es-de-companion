@@ -172,6 +172,7 @@ class MainActivity : ComponentActivity() {
                             val videoPath by videoOverlayViewModel.videoPath.collectAsStateWithLifecycle()
                             val videoDelaySeconds by videoOverlayViewModel.delaySeconds.collectAsStateWithLifecycle()
                             val videoAudioEnabled by videoOverlayViewModel.audioEnabled.collectAsStateWithLifecycle()
+                            val videoAspectRatioMode by videoOverlayViewModel.aspectRatioMode.collectAsStateWithLifecycle()
 
                             val activeScreenBehavior = when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
                                 is AppState.PlayingGame -> gamePlayingBehavior
@@ -317,6 +318,7 @@ class MainActivity : ComponentActivity() {
                                         videoPath = videoPath!!,
                                         delaySeconds = videoDelaySeconds,
                                         audioEnabled = videoAudioEnabled,
+                                        aspectRatioMode = videoAspectRatioMode,
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }

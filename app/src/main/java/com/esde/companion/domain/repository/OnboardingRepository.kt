@@ -4,6 +4,7 @@ import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.ScreenBehavior
+import com.esde.companion.domain.model.VideoAspectRatioMode
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -85,4 +86,11 @@ interface OnboardingRepository {
     /** Whether video audio is audible; false mutes playback entirely. Defaults to true. */
     suspend fun setVideoAudioEnabled(enabled: Boolean)
     fun observeVideoAudioEnabled(): Flow<Boolean>
+
+    /**
+     * How video playback fills the screen. Defaults to [VideoAspectRatioMode.Cover],
+     * matching the pre-existing fixed behavior before this setting was introduced.
+     */
+    suspend fun setVideoAspectRatioMode(mode: VideoAspectRatioMode)
+    fun observeVideoAspectRatioMode(): Flow<VideoAspectRatioMode>
 }

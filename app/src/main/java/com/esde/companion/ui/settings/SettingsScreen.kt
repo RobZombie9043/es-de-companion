@@ -31,7 +31,9 @@ import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MenuBook
@@ -72,6 +74,7 @@ import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VideoAspectRatioMode
 import kotlin.math.roundToInt
 
 /**
@@ -195,6 +198,8 @@ fun SettingsScreen(
                             onVideoDelaySecondsChanged = viewModel::onVideoDelaySecondsChanged,
                             videoAudioEnabled = uiState.videoAudioEnabled,
                             onVideoAudioEnabledChanged = viewModel::onVideoAudioEnabledChanged,
+                            videoAspectRatioMode = uiState.videoAspectRatioMode,
+                            onVideoAspectRatioModeChanged = viewModel::onVideoAspectRatioModeChanged,
                         )
                         SettingsCategory.Widgets -> WidgetsSettingsContent(
                             widgetsLocked = uiState.widgetsLocked,
@@ -346,6 +351,8 @@ private fun UISettingsContent(
     onVideoDelaySecondsChanged: (Int) -> Unit,
     videoAudioEnabled: Boolean,
     onVideoAudioEnabledChanged: (Boolean) -> Unit,
+    videoAspectRatioMode: VideoAspectRatioMode,
+    onVideoAspectRatioModeChanged: (VideoAspectRatioMode) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -374,10 +381,13 @@ private fun UISettingsContent(
             onDelaySecondsChanged = onVideoDelaySecondsChanged,
             audioEnabled = videoAudioEnabled,
             onAudioEnabledChanged = onVideoAudioEnabledChanged,
+            aspectRatioMode = videoAspectRatioMode,
+            onAspectRatioModeChanged = onVideoAspectRatioModeChanged,
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VideoPlaybackSetting(
     enabled: Boolean,
@@ -386,6 +396,8 @@ private fun VideoPlaybackSetting(
     onDelaySecondsChanged: (Int) -> Unit,
     audioEnabled: Boolean,
     onAudioEnabledChanged: (Boolean) -> Unit,
+    aspectRatioMode: VideoAspectRatioMode,
+    onAspectRatioModeChanged: (VideoAspectRatioMode) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -439,10 +451,51 @@ private fun VideoPlaybackSetting(
                     )
                     Switch(checked = audioEnabled, onCheckedChange = onAudioEnabledChanged)
                 }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Scaling",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        VideoAspectRatioMode.entries.forEachIndexed { index, mode ->
+                            SegmentedButton(
+                                selected = mode == aspectRatioMode,
+                                onClick = { onAspectRatioModeChanged(mode) },
+                                shape = SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = VideoAspectRatioMode.entries.size,
+                                ),
+                                icon = {
+                                    SegmentedButtonDefaults.Icon(active = mode == aspectRatioMode) {
+                                        Icon(
+                                            imageVector = mode.icon,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                                        )
+                                    }
+                                },
+                                label = { Text(mode.label) },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
+
+// Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
+private val VideoAspectRatioMode.icon: ImageVector
+    get() = when (this) {
+        VideoAspectRatioMode.Contain -> Icons.Filled.FitScreen
+        VideoAspectRatioMode.Cover -> Icons.Filled.Crop
+    }
+
+private val VideoAspectRatioMode.label: String
+    get() = when (this) {
+        VideoAspectRatioMode.Contain -> "Contain"
+        VideoAspectRatioMode.Cover -> "Cover"
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

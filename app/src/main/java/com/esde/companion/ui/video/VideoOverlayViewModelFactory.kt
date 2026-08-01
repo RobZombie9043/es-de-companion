@@ -18,6 +18,7 @@ class VideoOverlayViewModelFactory(
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
             observeVideoDelaySeconds = appContainer.observeVideoDelaySecondsUseCase,
             observeVideoAudioEnabled = appContainer.observeVideoAudioEnabledUseCase,
+            observeVideoAspectRatioMode = appContainer.observeVideoAspectRatioModeUseCase,
         ) as T
     }
 }

@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
@@ -15,6 +16,7 @@ import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -25,6 +27,7 @@ import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
@@ -53,6 +56,7 @@ class SettingsViewModelTest {
         var videoPlaybackEnabled = false
         var videoDelaySeconds = 0
         var videoAudioEnabled = true
+        var videoAspectRatioMode = VideoAspectRatioMode.Cover
         var screensaverBehavior = ScreenBehavior.Nothing
         var themePreference = ThemePreference.Auto
 
@@ -80,6 +84,8 @@ class SettingsViewModelTest {
         override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(videoDelaySeconds)
         override suspend fun setVideoAudioEnabled(enabled: Boolean) { videoAudioEnabled = enabled }
         override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(videoAudioEnabled)
+        override suspend fun setVideoAspectRatioMode(mode: VideoAspectRatioMode) { videoAspectRatioMode = mode }
+        override fun observeVideoAspectRatioMode(): Flow<VideoAspectRatioMode> = flowOf(videoAspectRatioMode)
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) { gamePlayingBehavior = behavior }
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(gamePlayingBehavior)
         override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) { screensaverBehavior = behavior }
@@ -146,6 +152,8 @@ class SettingsViewModelTest {
             setVideoDelaySecondsUseCase = SetVideoDelaySecondsUseCase(onboardingRepository),
             observeVideoAudioEnabledUseCase = ObserveVideoAudioEnabledUseCase(onboardingRepository),
             setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository),
+            observeVideoAspectRatioModeUseCase = ObserveVideoAspectRatioModeUseCase(onboardingRepository),
+            setVideoAspectRatioModeUseCase = SetVideoAspectRatioModeUseCase(onboardingRepository),
             setGamePlayingBehaviorUseCase = SetGamePlayingBehaviorUseCase(onboardingRepository),
             observeScreensaverBehaviorUseCase = ObserveScreensaverBehaviorUseCase(onboardingRepository),
             setScreensaverBehaviorUseCase = SetScreensaverBehaviorUseCase(onboardingRepository),
