@@ -506,7 +506,7 @@ private val ScreenBehavior.label: String
         ScreenBehavior.Nothing -> "On"
         ScreenBehavior.Dim -> "Dimmed"
         ScreenBehavior.Black -> "Off"
-        ScreenBehavior.GameManual -> "Game Manual"
+        ScreenBehavior.GameManual -> "Manual"
     }
 
 @Composable
