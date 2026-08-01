@@ -46,4 +46,13 @@ interface OnboardingRepository {
      */
     suspend fun setThemePreference(preference: ThemePreference)
     fun observeThemePreference(): Flow<ThemePreference>
+
+    /**
+     * Whether double-tapping the main screen shows a full-black overlay (to blank a
+     * secondary display on demand). Defaults to false - this is an opt-in gesture the
+     * user discovers via Settings, not a default behavior that could be triggered by
+     * an accidental double-tap.
+     */
+    suspend fun setBlankScreenEnabled(enabled: Boolean)
+    fun observeBlankScreenEnabled(): Flow<Boolean>
 }

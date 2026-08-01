@@ -17,4 +17,5 @@ data class SettingsUiState(
     val drawerOpacityPercent: Int = 80,
     val gridColumns: Int = 4,
     val widgetsLocked: Boolean = false,
+    val blankScreenEnabled: Boolean = false,
 )

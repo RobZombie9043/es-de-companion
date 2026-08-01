@@ -175,7 +175,9 @@ fun SettingsScreen(
                         SettingsCategory.UI -> UISettingsContent(
                             themePreference = uiState.themePreference,
                             onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
-                        )
+                            blankScreenEnabled = uiState.blankScreenEnabled,
+                            onBlankScreenEnabledChanged = viewModel::onBlankScreenEnabledChanged,
+                            )
                         SettingsCategory.Widgets -> WidgetsSettingsContent(
                             widgetsLocked = uiState.widgetsLocked,
                             onWidgetsLockedChanged = viewModel::onWidgetsLockedChanged,
@@ -294,6 +296,8 @@ private fun SetupSettingsContent(
 private fun UISettingsContent(
     themePreference: ThemePreference,
     onThemePreferenceChanged: (ThemePreference) -> Unit,
+    blankScreenEnabled: Boolean,
+    onBlankScreenEnabledChanged: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -303,6 +307,39 @@ private fun UISettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
+        BlankScreenToggle(enabled = blankScreenEnabled, onEnabledChange = onBlankScreenEnabledChanged)
+    }
+}
+
+@Composable
+private fun BlankScreenToggle(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Double tap to blank screen",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Double tap the main screen to show a black screen; double tap again to restore",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            }
+        }
     }
 }
 

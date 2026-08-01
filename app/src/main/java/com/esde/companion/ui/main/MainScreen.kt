@@ -69,18 +69,22 @@ fun MainScreen(
     widgetsLocked: Boolean,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
+    onToggleBlankScreen: () -> Unit,
 ) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val coverImageStatus by viewModel.coverImageStatus.collectAsStateWithLifecycle()
     val overlayEnabled by viewModel.overlayEnabled.collectAsStateWithLifecycle()
+    val blankScreenEnabled by viewModel.blankScreenEnabled.collectAsStateWithLifecycle()
     MainScreenContent(
         connectionState = connectionState,
         coverImageStatus = coverImageStatus,
         overlayEnabled = overlayEnabled,
+        blankScreenEnabled = blankScreenEnabled,
         appDrawerViewModel = appDrawerViewModel,
         widgetsLocked = widgetsLocked,
         onOpenSettings = onOpenSettings,
         onOpenEditWidgets = onOpenEditWidgets,
+        onToggleBlankScreen = onToggleBlankScreen,
     )
 }
 
@@ -88,16 +92,23 @@ fun MainScreen(
 // and rendered in MainActivity, above the MainScreen/SettingsScreen toggle, so the
 // backdrop and its CrossfadeAsyncImage never leave composition just because Settings
 // is showing. See MainActivity's MAIN destination.
+//
+// The double-tap-to-blank-screen overlay itself is ALSO rendered in MainActivity, not
+// here - see MainActivity's MAIN destination for why (it needs to sit above the widget
+// layer, which is a sibling of this whole screen, not a descendant of it). This
+// composable only owns the gesture that toggles it, via onToggleBlankScreen.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
     connectionState: EsdeConnectionState,
     coverImageStatus: CoverImageStatus?,
     overlayEnabled: Boolean,
+    blankScreenEnabled: Boolean,
     appDrawerViewModel: AppDrawerViewModel,
     widgetsLocked: Boolean,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
+    onToggleBlankScreen: () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -180,22 +191,27 @@ private fun MainScreenContent(
                         onVerticalDrag(dragAmount)
                     }
                 }
-                // Long-press-to-edit-widgets, layered alongside the drag gesture above
-                // rather than replacing it. These coexist safely because of how Compose's
-                // gesture consumption works: detectVerticalDragGestures only consumes once
-                // real movement exceeds touch slop, so a stationary hold never gets
-                // consumed and this detector's long-press timer fires normally; a genuine
-                // swipe does get consumed by the drag detector, which cancels this
-                // detector's awaitLongPressOrCancellation. So a still finger reaches edit
-                // mode and a moving finger opens the drawer, without any manual
-                // disambiguation logic - but this is exactly the kind of gesture
-                // composition worth confirming feels right on a real device, not just
-                // reasoning about in code.
-                .pointerInput(widgetsLocked) {
+                // Long-press-to-edit-widgets and double-tap-to-blank, layered alongside
+                // the drag gesture above rather than replacing it. These coexist safely
+                // because of how Compose's gesture consumption works:
+                // detectVerticalDragGestures only consumes once real movement exceeds
+                // touch slop, so a stationary hold/tap never gets consumed and this
+                // detector's gestures fire normally; a genuine swipe does get consumed
+                // by the drag detector, which cancels this detector's recognition. So a
+                // still finger reaches edit mode/blank-toggle and a moving finger opens
+                // the drawer, without any manual disambiguation logic - but this is
+                // exactly the kind of gesture composition worth confirming feels right
+                // on a real device, not just reasoning about in code.
+                .pointerInput(widgetsLocked, blankScreenEnabled) {
                     detectTapGestures(
                         onLongPress = {
                             if (!widgetsLocked && openFraction.value == 0f) {
                                 onOpenEditWidgets()
+                            }
+                        },
+                        onDoubleTap = {
+                            if (blankScreenEnabled && openFraction.value == 0f) {
+                                onToggleBlankScreen()
                             }
                         },
                     )

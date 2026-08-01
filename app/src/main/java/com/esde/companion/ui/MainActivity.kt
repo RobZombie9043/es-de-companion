@@ -3,14 +3,22 @@ package com.esde.companion.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -110,6 +118,26 @@ class MainActivity : ComponentActivity() {
                                 appContainer.observeWidgetsLockedUseCase().collect { value = it }
                             }
 
+                            // Whether double-tap-to-blank is enabled at all (Settings > UI
+                            // Settings). Read via the ViewModel's exposed flow rather than
+                            // AppContainer directly, matching how MainScreen consumes it.
+                            val blankScreenEnabled by viewModel.blankScreenEnabled.collectAsStateWithLifecycle()
+
+                            // Momentary "is the screen currently blanked" state - local,
+                            // not persisted, since this is a live toggle the user drives
+                            // by double-tapping, not a preference. Owned here (rather than
+                            // inside MainScreen) so the black cover it drives can be drawn
+                            // as a sibling of WidgetOverlay below, and therefore actually
+                            // sit on top of the widgets - see the Box below for why.
+                            var isBlanked by rememberSaveable { mutableStateOf(false) }
+
+                            // If the setting is switched off from Settings while the screen
+                            // happens to be blanked, don't strand the user behind a black
+                            // screen they can no longer double-tap their way out of.
+                            LaunchedEffect(blankScreenEnabled) {
+                                if (!blankScreenEnabled) isBlanked = false
+                            }
+
                             // Collected here, above the settings/edit-widgets toggles, so
                             // this call site - and the WidgetCanvas/CrossfadeAsyncImage
                             // state inside WidgetOverlay - never leaves composition just
@@ -154,8 +182,39 @@ class MainActivity : ComponentActivity() {
                                             widgetsLocked = widgetsLocked,
                                             onOpenSettings = { showSettings = true },
                                             onOpenEditWidgets = { showEditWidgets = true },
+                                            onToggleBlankScreen = { isBlanked = !isBlanked },
                                         )
                                     }
+                                }
+
+                                // Full-black cover for the double-tap blank-screen gesture
+                                // (Settings > UI Settings). Deliberately the last child of
+                                // THIS Box - the same parent WidgetOverlay is a child of -
+                                // so it draws over the widget layer too, not just whatever
+                                // screen (MainScreen/EditWidgets/Settings) happens to be
+                                // showing underneath at the moment. The gesture that flips
+                                // isBlanked lives in MainScreen; this is purely the cover
+                                // plus the matching double-tap-to-dismiss.
+                                //
+                                // The no-op clickable (indication = null) claims every
+                                // tap/press so nothing underneath - the drawer's drag zone,
+                                // MainScreen's long-press-to-edit, widget taps - receives
+                                // input while blanked. "Blanked" should mean genuinely
+                                // unreachable, not just visually covered.
+                                if (isBlanked) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Black)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                                onClick = {},
+                                            )
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(onDoubleTap = { isBlanked = false })
+                                            },
+                                    )
                                 }
                             }
                         }
@@ -164,6 +223,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     // System UI can reappear on its own - a swipe-down gesture, or a transient system
     // dialog taking focus - and Android doesn't re-hide it automatically once dismissed.
     // Re-applying on every focus regain is the standard way to keep it suppressed for a

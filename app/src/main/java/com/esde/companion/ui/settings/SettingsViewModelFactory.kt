@@ -20,6 +20,8 @@ class SettingsViewModelFactory(
             validateMediaFolderUseCase = appContainer.validateEsdeMediaFolderUseCase,
             observeOverlayEnabledUseCase = appContainer.observeOverlayEnabledUseCase,
             setOverlayEnabledUseCase = appContainer.setOverlayEnabledUseCase,
+            observeBlankScreenEnabledUseCase = appContainer.observeBlankScreenEnabledUseCase,
+            setBlankScreenEnabledUseCase = appContainer.setBlankScreenEnabledUseCase,
             observeThemePreferenceUseCase = appContainer.observeThemePreferenceUseCase,
             setThemePreferenceUseCase = appContainer.setThemePreferenceUseCase,
             observeDrawerOpacityUseCase = appContainer.observeDrawerOpacityUseCase,

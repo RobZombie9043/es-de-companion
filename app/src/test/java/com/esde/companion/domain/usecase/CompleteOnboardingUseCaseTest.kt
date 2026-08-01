@@ -17,6 +17,7 @@ class CompleteOnboardingUseCaseTest {
         val savedMediaPaths = mutableListOf<String>()
         var markedComplete = false
         var overlayEnabled = true
+        var blankScreenEnabled = false
         var themePreference = ThemePreference.Auto
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
@@ -31,6 +32,8 @@ class CompleteOnboardingUseCaseTest {
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
         override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
+        override suspend fun setBlankScreenEnabled(enabled: Boolean) { blankScreenEnabled = enabled }
+        override fun observeBlankScreenEnabled(): Flow<Boolean> = flowOf(blankScreenEnabled)
         override suspend fun setThemePreference(preference: ThemePreference) { themePreference = preference }
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(themePreference)
     }

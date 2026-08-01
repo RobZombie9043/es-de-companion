@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ObserveBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.SetBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
@@ -29,6 +31,8 @@ class SettingsViewModel(
     private val validateMediaFolderUseCase: ValidateEsdeMediaFolderUseCase,
     private val observeOverlayEnabledUseCase: ObserveOverlayEnabledUseCase,
     private val setOverlayEnabledUseCase: SetOverlayEnabledUseCase,
+    private val observeBlankScreenEnabledUseCase: ObserveBlankScreenEnabledUseCase,
+    private val setBlankScreenEnabledUseCase: SetBlankScreenEnabledUseCase,
     private val observeThemePreferenceUseCase: ObserveThemePreferenceUseCase,
     private val setThemePreferenceUseCase: SetThemePreferenceUseCase,
     private val observeDrawerOpacityUseCase: ObserveDrawerOpacityUseCase,
@@ -53,6 +57,7 @@ class SettingsViewModel(
             val mediaPath = onboardingRepository.observeMediaFolderPath().first()
                 ?: onboardingRepository.defaultMediaFolderPath()
             val overlayEnabled = observeOverlayEnabledUseCase().first()
+            val blankScreenEnabled = observeBlankScreenEnabledUseCase().first()
             val themePreference = observeThemePreferenceUseCase().first()
             val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
@@ -61,6 +66,7 @@ class SettingsViewModel(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
                 overlayEnabled = overlayEnabled,
+                blankScreenEnabled = blankScreenEnabled,
                 themePreference = themePreference,
                 drawerOpacityPercent = drawerOpacityPercent,
                 gridColumns = gridColumns,
@@ -94,6 +100,11 @@ class SettingsViewModel(
     fun onOverlayEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(overlayEnabled = enabled)
         viewModelScope.launch { setOverlayEnabledUseCase(enabled) }
+    }
+
+    fun onBlankScreenEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(blankScreenEnabled = enabled)
+        viewModelScope.launch { setBlankScreenEnabledUseCase(enabled) }
     }
 
     fun onWidgetsLockedChanged(locked: Boolean) {

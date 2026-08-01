@@ -8,11 +8,13 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
+import com.esde.companion.domain.usecase.ObserveBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.SetBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
@@ -38,6 +40,7 @@ class SettingsViewModelTest {
 
     private class FakeOnboardingRepository : OnboardingRepository {
         var overlayEnabled = true
+        var blankScreenEnabled = false
         var themePreference = ThemePreference.Auto
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
@@ -52,6 +55,8 @@ class SettingsViewModelTest {
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(false)
         override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
         override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
+        override suspend fun setBlankScreenEnabled(enabled: Boolean) { blankScreenEnabled = enabled }
+        override fun observeBlankScreenEnabled(): Flow<Boolean> = flowOf(blankScreenEnabled)
         override suspend fun setThemePreference(preference: ThemePreference) { themePreference = preference }
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(themePreference)
     }
@@ -107,6 +112,8 @@ class SettingsViewModelTest {
             validateMediaFolderUseCase = ValidateEsdeMediaFolderUseCase(onboardingRepository),
             observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository),
             setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository),
+            observeBlankScreenEnabledUseCase = ObserveBlankScreenEnabledUseCase(onboardingRepository),
+            setBlankScreenEnabledUseCase = SetBlankScreenEnabledUseCase(onboardingRepository),
             observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository),
             setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository),
             observeDrawerOpacityUseCase = ObserveDrawerOpacityUseCase(appDrawerSettingsRepository),

@@ -25,6 +25,7 @@ import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
+import com.esde.companion.domain.usecase.ObserveBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -42,6 +43,7 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.SetBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
@@ -143,6 +145,8 @@ class AppContainer(context: Context) {
 
     val observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository)
     val setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository)
+    val observeBlankScreenEnabledUseCase = ObserveBlankScreenEnabledUseCase(onboardingRepository)
+    val setBlankScreenEnabledUseCase = SetBlankScreenEnabledUseCase(onboardingRepository)
 
     val observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository)
     val setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository)

@@ -7,6 +7,7 @@ import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ObserveBlankScreenEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.stateIn
 class MainViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeOverlayEnabled: ObserveOverlayEnabledUseCase,
+    observeBlankScreenEnabled: ObserveBlankScreenEnabledUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val onboardingRepository: OnboardingRepository,
 ) : ViewModel() {
@@ -42,6 +44,13 @@ class MainViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = true,
+        )
+
+    val blankScreenEnabled: StateFlow<Boolean> = observeBlankScreenEnabled()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = false,
         )
 
     private val currentGameReference: Flow<GameReference?> = connectionState

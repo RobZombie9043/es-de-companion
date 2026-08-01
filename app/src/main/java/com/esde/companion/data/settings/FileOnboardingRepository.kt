@@ -93,6 +93,13 @@ class FileOnboardingRepository(
             } ?: ThemePreference.Auto
         }
 
+    override suspend fun setBlankScreenEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[BLANK_SCREEN_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeBlankScreenEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[BLANK_SCREEN_ENABLED_KEY] ?: false }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
 
@@ -101,5 +108,6 @@ class FileOnboardingRepository(
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
         val OVERLAY_ENABLED_KEY = booleanPreferencesKey("overlay_enabled")
         val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")
+        val BLANK_SCREEN_ENABLED_KEY = booleanPreferencesKey("blank_screen_enabled")
     }
 }
