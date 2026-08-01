@@ -38,6 +38,8 @@ class SettingsViewModelFactory(
             setVideoDelaySecondsUseCase = appContainer.setVideoDelaySecondsUseCase,
             observeVideoAudioEnabledUseCase = appContainer.observeVideoAudioEnabledUseCase,
             setVideoAudioEnabledUseCase = appContainer.setVideoAudioEnabledUseCase,
+            observeVideoAspectRatioModeUseCase = appContainer.observeVideoAspectRatioModeUseCase,
+            setVideoAspectRatioModeUseCase = appContainer.setVideoAspectRatioModeUseCase,
         ) as T
     }
 }

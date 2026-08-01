@@ -6,7 +6,9 @@ import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
@@ -37,6 +39,7 @@ class VideoOverlayViewModel(
     private val resolveGameMedia: ResolveGameMediaUseCase,
     observeVideoDelaySeconds: ObserveVideoDelaySecondsUseCase,
     observeVideoAudioEnabled: ObserveVideoAudioEnabledUseCase,
+    observeVideoAspectRatioMode: ObserveVideoAspectRatioModeUseCase,
 ) : ViewModel() {
 
     private val browsingGameReference: Flow<GameReference?> = observeConnectionState()
@@ -67,5 +70,12 @@ class VideoOverlayViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = true,
+        )
+
+    val aspectRatioMode: StateFlow<VideoAspectRatioMode> = observeVideoAspectRatioMode()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = VideoAspectRatioMode.Cover,
         )
 }
