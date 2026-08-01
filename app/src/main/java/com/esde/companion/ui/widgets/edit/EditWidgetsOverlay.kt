@@ -497,8 +497,12 @@ private fun PlaceholderWidgetBox(
                         val liveWidget = currentWidget
                         currentColumn = liveWidget.gridColumn
                         currentRow = liveWidget.gridRow
-                        maxColumn = grid.columns - liveWidget.columnSpan
-                        maxRow = grid.rows - liveWidget.rowSpan
+                        // A saved widget's span can exceed the live-measured grid (e.g.
+                        // it was placed on a differently-sized canvas) - coerceAtLeast(0)
+                        // keeps the coerceIn below from throwing on an empty range in
+                        // that case, pinning the widget to the origin instead of crashing.
+                        maxColumn = (grid.columns - liveWidget.columnSpan).coerceAtLeast(0)
+                        maxRow = (grid.rows - liveWidget.rowSpan).coerceAtLeast(0)
                         accumX = 0f
                         accumY = 0f
                         onDragStateChanged(true)
@@ -537,7 +541,7 @@ private fun PlaceholderWidgetBox(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            WidgetContentView(content = content, modifier = Modifier.fillMaxSize())
+            WidgetContentView(content = content, modifier = Modifier.fillMaxSize(), textUserScrollEnabled = false)
         }
     }
 }
@@ -603,8 +607,13 @@ private fun ResizeHandle(
                 detectDragGestures(
                     onDragStart = {
                         val liveWidget = currentWidget
-                        maxColumnSpan = grid.columns - liveWidget.gridColumn
-                        maxRowSpan = grid.rows - liveWidget.gridRow
+                        // Same reasoning as PlaceholderWidgetBox's onDragStart: a saved
+                        // widget's position can leave less room than MIN_SPAN on a
+                        // live-measured grid smaller than the one it was placed on -
+                        // coerceAtLeast(MIN_SPAN) keeps the coerceIn calls below from
+                        // throwing on an empty range in that case.
+                        maxColumnSpan = (grid.columns - liveWidget.gridColumn).coerceAtLeast(MIN_SPAN)
+                        maxRowSpan = (grid.rows - liveWidget.gridRow).coerceAtLeast(MIN_SPAN)
                         startCornerXPx = (liveWidget.gridColumn + liveWidget.columnSpan) * cellWidthPx
                         startCornerYPx = (liveWidget.gridRow + liveWidget.rowSpan) * cellHeightPx
                         currentColumnSpan = liveWidget.columnSpan

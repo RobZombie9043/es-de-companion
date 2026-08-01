@@ -73,9 +73,16 @@ fun WidgetCanvas(
  * that it's a harmless no-op, so a configured blur simply won't be visible pre-Android
  * 12 while darken still works everywhere. Not worth a manual BlurMaskFilter fallback for
  * this device-controlled deployment target.
+ *
+ * [textUserScrollEnabled] only affects [WidgetContent.Text] (GameDescription) - see
+ * [ScrollingText]'s kdoc for why EditWidgetsOverlay passes false.
  */
 @Composable
-internal fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modifier) {
+internal fun WidgetContentView(
+    content: WidgetContent,
+    modifier: Modifier = Modifier,
+    textUserScrollEnabled: Boolean = true,
+) {
     when (content) {
         WidgetContent.Empty -> Unit
 
@@ -126,6 +133,7 @@ internal fun WidgetContentView(content: WidgetContent, modifier: Modifier = Modi
                     fontSizeSp = content.fontSizeSp,
                     textColorArgb = content.textColorArgb,
                     modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = textUserScrollEnabled,
                 )
             }
     }

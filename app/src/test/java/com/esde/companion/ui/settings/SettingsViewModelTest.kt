@@ -1,5 +1,6 @@
 package com.esde.companion.ui.settings
 
+import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -9,8 +10,13 @@ import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
+import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
+import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -27,6 +33,10 @@ import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.SetDockEnabledUseCase
+import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.SetDockOpacityUseCase
+import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
@@ -140,6 +150,29 @@ class SettingsViewModelTest {
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = flowOf(emptySet())
     }
 
+    private class FakeDockSettingsRepository(
+        initialEnabled: Boolean = false,
+        initialMaxApps: Int = 5,
+        initialSize: DockSize = DockSize.Medium,
+        initialOpacity: Int = 60,
+    ) : DockSettingsRepository {
+        val enabled = MutableStateFlow(initialEnabled)
+        val maxApps = MutableStateFlow(initialMaxApps)
+        val size = MutableStateFlow(initialSize)
+        val opacity = MutableStateFlow(initialOpacity)
+
+        override suspend fun setDockEnabled(enabled: Boolean) { this.enabled.value = enabled }
+        override fun observeDockEnabled(): Flow<Boolean> = enabled
+        override suspend fun setDockMaxApps(maxApps: Int) { this.maxApps.value = maxApps }
+        override fun observeDockMaxApps(): Flow<Int> = maxApps
+        override suspend fun setDockSize(size: DockSize) { this.size.value = size }
+        override fun observeDockSize(): Flow<DockSize> = size
+        override suspend fun setDockOpacityPercent(percent: Int) { opacity.value = percent }
+        override fun observeDockOpacityPercent(): Flow<Int> = opacity
+        override suspend fun setDockApps(packageNames: List<String>) {}
+        override fun observeDockApps(): Flow<List<String>> = flowOf(emptyList())
+    }
+
     private class FakeWidgetLayoutRepository(
         initialLocked: Boolean = false,
     ) : WidgetLayoutRepository {
@@ -166,6 +199,7 @@ class SettingsViewModelTest {
     private fun buildViewModel(
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
+        dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
         widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
         val viewModel = SettingsViewModel(
@@ -192,6 +226,14 @@ class SettingsViewModelTest {
             setDrawerOpacityUseCase = SetDrawerOpacityUseCase(appDrawerSettingsRepository),
             observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository),
             setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository),
+            observeDockEnabledUseCase = ObserveDockEnabledUseCase(dockSettingsRepository),
+            setDockEnabledUseCase = SetDockEnabledUseCase(dockSettingsRepository),
+            observeDockMaxAppsUseCase = ObserveDockMaxAppsUseCase(dockSettingsRepository),
+            setDockMaxAppsUseCase = SetDockMaxAppsUseCase(dockSettingsRepository),
+            observeDockSizeUseCase = ObserveDockSizeUseCase(dockSettingsRepository),
+            setDockSizeUseCase = SetDockSizeUseCase(dockSettingsRepository),
+            observeDockOpacityUseCase = ObserveDockOpacityUseCase(dockSettingsRepository),
+            setDockOpacityUseCase = SetDockOpacityUseCase(dockSettingsRepository),
             observeWidgetsLockedUseCase = ObserveWidgetsLockedUseCase(widgetLayoutRepository),
             setWidgetsLockedUseCase = SetWidgetsLockedUseCase(widgetLayoutRepository),
             observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository),

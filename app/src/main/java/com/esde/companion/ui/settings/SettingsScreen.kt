@@ -73,6 +73,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.BuildConfig
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.storage.SafPathResolver
+import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -218,6 +219,14 @@ fun SettingsScreen(
                             onDrawerOpacityChanged = viewModel::onDrawerOpacityChanged,
                             onGridColumnsChanged = viewModel::onGridColumnsChanged,
                             onManageAppsClick = { showManageApps = true },
+                            dockEnabled = uiState.dockEnabled,
+                            onDockEnabledChanged = viewModel::onDockEnabledChanged,
+                            dockMaxApps = uiState.dockMaxApps,
+                            onDockMaxAppsChanged = viewModel::onDockMaxAppsChanged,
+                            dockSize = uiState.dockSize,
+                            onDockSizeChanged = viewModel::onDockSizeChanged,
+                            dockOpacityPercent = uiState.dockOpacityPercent,
+                            onDockOpacityChanged = viewModel::onDockOpacityChanged,
                         )
                         SettingsCategory.Sound -> SoundSettingsContent(
                             musicEnabled = uiState.musicEnabled,
@@ -598,6 +607,14 @@ private fun AppDrawerSettingsContent(
     onDrawerOpacityChanged: (Int) -> Unit,
     onGridColumnsChanged: (Int) -> Unit,
     onManageAppsClick: () -> Unit,
+    dockEnabled: Boolean,
+    onDockEnabledChanged: (Boolean) -> Unit,
+    dockMaxApps: Int,
+    onDockMaxAppsChanged: (Int) -> Unit,
+    dockSize: DockSize,
+    onDockSizeChanged: (DockSize) -> Unit,
+    dockOpacityPercent: Int,
+    onDockOpacityChanged: (Int) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -609,6 +626,134 @@ private fun AppDrawerSettingsContent(
         ManageAppsEntry(onClick = onManageAppsClick)
         DrawerOpacitySetting(percent = drawerOpacityPercent, onPercentChanged = onDrawerOpacityChanged)
         GridColumnsSetting(columns = gridColumns, onColumnsChanged = onGridColumnsChanged)
+        DockEnabledSetting(enabled = dockEnabled, onEnabledChanged = onDockEnabledChanged)
+        if (dockEnabled) {
+            DockMaxAppsSetting(maxApps = dockMaxApps, onMaxAppsChanged = onDockMaxAppsChanged)
+            DockSizeSetting(size = dockSize, onSizeChanged = onDockSizeChanged)
+            DockOpacitySetting(percent = dockOpacityPercent, onPercentChanged = onDockOpacityChanged)
+        }
+    }
+}
+
+@Composable
+private fun DockEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Enable Dock",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "A row of pinned apps at the bottom of the main screen",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+        }
+    }
+}
+
+@Composable
+private fun DockMaxAppsSetting(maxApps: Int, onMaxAppsChanged: (Int) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Maximum dock apps",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = "$maxApps apps", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = maxApps.toFloat(),
+                onValueChange = { onMaxAppsChanged(it.roundToInt()) },
+                valueRange = 2f..5f,
+                steps = 2,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DockSizeSetting(size: DockSize, onSizeChanged: (DockSize) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Dock size",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                DockSize.entries.forEachIndexed { index, entry ->
+                    SegmentedButton(
+                        selected = entry == size,
+                        onClick = { onSizeChanged(entry) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = DockSize.entries.size),
+                        label = { Text(entry.label) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Presentation-only label, same reasoning as ThemePreference.label above.
+private val DockSize.label: String
+    get() = when (this) {
+        DockSize.Small -> "Small"
+        DockSize.Medium -> "Medium"
+        DockSize.Large -> "Large"
+    }
+
+@Composable
+private fun DockOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Dock opacity",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = "$percent%", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = percent.toFloat(),
+                onValueChange = { onPercentChanged(it.roundToInt()) },
+                valueRange = 0f..100f,
+            )
+        }
     }
 }
 
