@@ -39,10 +39,10 @@ private const val SCALE_FROM = 0.95f
  * a hard content swap, animated only via offset/scale transforms on the new layer.
  *
  * [direction] is which way the user just navigated (see NavigationDirectionTracker) - Slide
- * enters from the *same* side as travel (pressed Right -> enters from the Right, etc.),
- * falling back to entering from the right when the direction isn't known (no preceding
- * directional press, a non-directional button, or edit-mode preview, which has no live
- * AppState to derive a direction from at all).
+ * enters from the *same* side as travel (pressed Right -> enters from the Right, etc.).
+ * When it isn't known (no preceding directional press, a non-directional button, or
+ * edit-mode preview, which has no live AppState to derive a direction from at all), Slide
+ * falls back to a scale-in instead of guessing a side to slide from.
  *
  * Like CrossfadeAsyncImage, [model] is pre-decoded via imageLoader.execute() before being
  * swapped in, so even [LogoTransitionMode.None] avoids a blank-frame flash on cache
@@ -83,13 +83,21 @@ fun AnimatedLogoImage(
             }
 
             LogoTransitionMode.Slide -> {
-                val (startX, startY) = slideStartOffset(direction, boxSize)
-                offsetX.snapTo(startX)
-                offsetY.snapTo(startY)
-                scale.snapTo(1f)
-                coroutineScope {
-                    launch { offsetX.animateTo(0f, animationSpec = tween(durationMillis)) }
-                    launch { offsetY.animateTo(0f, animationSpec = tween(durationMillis)) }
+                if (direction == null) {
+                    // No direction to slide from - scale-in instead of guessing a side.
+                    offsetX.snapTo(0f)
+                    offsetY.snapTo(0f)
+                    scale.snapTo(SCALE_FROM)
+                    scale.animateTo(1f, animationSpec = tween(durationMillis))
+                } else {
+                    val (startX, startY) = slideStartOffset(direction, boxSize)
+                    offsetX.snapTo(startX)
+                    offsetY.snapTo(startY)
+                    scale.snapTo(1f)
+                    coroutineScope {
+                        launch { offsetX.animateTo(0f, animationSpec = tween(durationMillis)) }
+                        launch { offsetY.animateTo(0f, animationSpec = tween(durationMillis)) }
+                    }
                 }
             }
 
@@ -132,15 +140,14 @@ fun AnimatedLogoImage(
 }
 
 /** Where a Slide-in should start from, in (x, y) pixels relative to its resting position
- * (0, 0) - the same side as [direction] (travel Right -> enters from the Right, etc.),
- * falling back to the pre-existing "from the right" default when [direction] is unknown.
- * Extracted as a plain function (no Composable/Compose types beyond IntSize) so it's
- * unit-testable without a Compose test environment. */
-internal fun slideStartOffset(direction: NavigationDirection?, boxSize: IntSize): Pair<Float, Float> =
+ * (0, 0) - the same side as [direction] (travel Right -> enters from the Right, etc.).
+ * Only called once [direction] is known to be non-null - see the null fallback to a
+ * scale-in in the caller above. Extracted as a plain function (no Composable/Compose
+ * types beyond IntSize) so it's unit-testable without a Compose test environment. */
+internal fun slideStartOffset(direction: NavigationDirection, boxSize: IntSize): Pair<Float, Float> =
     when (direction) {
         NavigationDirection.Left -> -boxSize.width.toFloat() to 0f
         NavigationDirection.Right -> boxSize.width.toFloat() to 0f
         NavigationDirection.Up -> 0f to -boxSize.height.toFloat()
         NavigationDirection.Down -> 0f to boxSize.height.toFloat()
-        null -> boxSize.width.toFloat() to 0f
     }

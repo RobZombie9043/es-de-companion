@@ -4,5 +4,13 @@
         only the minimal manifest-required bridge theme, kept dependency-free
         (no com.google.android.material) by extending the platform theme directly.
     -->
-    <style name="Theme.EsdeCompanion" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.EsdeCompanion" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Nothing in the Compose tree (MainActivity's root Box, WidgetOverlay,
+             WidgetCanvas, CrossfadeAsyncImage) paints an opaque background of its own -
+             they're deliberately transparent so widgets/overlays can stack freely. This
+             window background is what actually shows through any gap (e.g. a shrunken
+             edge mid-scale during a Fade+Scale crossfade), so it needs to be black, not
+             the platform light theme's default white. -->
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>
