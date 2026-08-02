@@ -11,8 +11,11 @@ package com.esde.companion.domain.model
 sealed class LogFolderValidation {
     data object FolderNotFound : LogFolderValidation()
 
-    /** The folder itself exists; [logFileFound] reflects whether logs/es_log.txt was found inside it. */
-    data class FolderFound(val logFileFound: Boolean) : LogFolderValidation()
+    /** The folder itself exists; [settingsFileFound] reflects whether
+     * settings/es_settings.xml was found inside it - the strongest cheap signal that this
+     * is genuinely an ES-DE root folder (the log pipeline's actual liveness is proven
+     * separately, by onboarding's final live-check step, not by this one-shot check). */
+    data class FolderFound(val settingsFileFound: Boolean) : LogFolderValidation()
 }
 
 sealed class MediaFolderValidation {

@@ -43,8 +43,8 @@ class FileOnboardingRepository(
             if (!folder.isDirectory) {
                 LogFolderValidation.FolderNotFound
             } else {
-                val logFile = File(folder, "logs/es_log.txt")
-                LogFolderValidation.FolderFound(logFileFound = logFile.isFile)
+                val settingsFile = File(folder, "settings/es_settings.xml")
+                LogFolderValidation.FolderFound(settingsFileFound = settingsFile.isFile)
             }
         }
 

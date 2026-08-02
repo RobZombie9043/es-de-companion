@@ -18,6 +18,11 @@ class OnboardingViewModelFactory(
             validateLogFolderUseCase = appContainer.validateEsdeLogFolderUseCase,
             validateMediaFolderUseCase = appContainer.validateEsdeMediaFolderUseCase,
             completeOnboardingUseCase = appContainer.completeOnboardingUseCase,
+            readEsdeMediaDirectoryUseCase = appContainer.readEsdeMediaDirectoryUseCase,
+            readEsdeEventScriptSettingsUseCase = appContainer.readEsdeEventScriptSettingsUseCase,
+            findLegacyScriptFilesUseCase = appContainer.findLegacyScriptFilesUseCase,
+            deleteLegacyScriptFilesUseCase = appContainer.deleteLegacyScriptFilesUseCase,
+            observeConnectionStateUseCase = appContainer.observeConnectionStateUseCase,
         ) as T
     }
 }

@@ -15,6 +15,7 @@ import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileDockSettingsRepository
+import com.esde.companion.data.settings.FileEsdeInstallationRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
 import com.esde.companion.data.settings.FileWidgetLayoutRepository
 import com.esde.companion.data.video.ProcessVideoPlaybackStateRepository
@@ -27,6 +28,7 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.EsdeInstallationRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
@@ -39,6 +41,8 @@ import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.VideoPlaybackStateRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
+import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
+import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
@@ -71,6 +75,8 @@ import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
+import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
@@ -125,6 +131,8 @@ class AppContainer(context: Context) {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val onboardingRepository: OnboardingRepository = FileOnboardingRepository(appContext)
+
+    val esdeInstallationRepository: EsdeInstallationRepository = FileEsdeInstallationRepository()
 
     val activityVisibilityRepository: ActivityVisibilityRepository = ProcessActivityVisibilityRepository()
 
@@ -228,6 +236,10 @@ class AppContainer(context: Context) {
     val validateEsdeMediaFolderUseCase = ValidateEsdeMediaFolderUseCase(onboardingRepository)
     val completeOnboardingUseCase = CompleteOnboardingUseCase(onboardingRepository)
     val observeOnboardingCompleteUseCase = ObserveOnboardingCompleteUseCase(onboardingRepository)
+    val readEsdeMediaDirectoryUseCase = ReadEsdeMediaDirectoryUseCase(esdeInstallationRepository)
+    val readEsdeEventScriptSettingsUseCase = ReadEsdeEventScriptSettingsUseCase(esdeInstallationRepository)
+    val findLegacyScriptFilesUseCase = FindLegacyScriptFilesUseCase(esdeInstallationRepository)
+    val deleteLegacyScriptFilesUseCase = DeleteLegacyScriptFilesUseCase(esdeInstallationRepository)
 
     val observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository)
     val setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository)
