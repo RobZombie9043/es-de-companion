@@ -4,7 +4,7 @@ package com.esde.companion.domain.model
  * Direction of the controller navigation press that triggered a system/game selection -
  * see NavigationDirectionTracker for how this is derived from the raw log, and
  * AnimatedLogoImage for how the widget UI uses it (slides the incoming logo in from the
- * opposite side of travel).
+ * same side as travel).
  */
 enum class NavigationDirection {
     Up,
