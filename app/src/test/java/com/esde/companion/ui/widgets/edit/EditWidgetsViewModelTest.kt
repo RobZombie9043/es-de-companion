@@ -1,10 +1,12 @@
 package com.esde.companion.ui.widgets.edit
 
+import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -20,13 +22,21 @@ import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
+import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
+import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
+import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
@@ -183,6 +193,37 @@ class EditWidgetsViewModelTest {
         override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
     }
 
+    private class FakeDockSettingsRepository(
+        initialEnabled: Boolean = false,
+        initialMaxApps: Int = 5,
+        initialSize: DockSize = DockSize.Medium,
+        initialOpacity: Int = 60,
+        initialApps: List<String> = emptyList(),
+    ) : DockSettingsRepository {
+        val enabled = MutableStateFlow(initialEnabled)
+        val maxApps = MutableStateFlow(initialMaxApps)
+        val size = MutableStateFlow(initialSize)
+        val opacity = MutableStateFlow(initialOpacity)
+        val apps = MutableStateFlow(initialApps)
+
+        override suspend fun setDockEnabled(enabled: Boolean) { this.enabled.value = enabled }
+        override fun observeDockEnabled(): Flow<Boolean> = enabled
+        override suspend fun setDockMaxApps(maxApps: Int) { this.maxApps.value = maxApps }
+        override fun observeDockMaxApps(): Flow<Int> = maxApps
+        override suspend fun setDockSize(size: DockSize) { this.size.value = size }
+        override fun observeDockSize(): Flow<DockSize> = size
+        override suspend fun setDockOpacityPercent(percent: Int) { opacity.value = percent }
+        override fun observeDockOpacityPercent(): Flow<Int> = opacity
+        override suspend fun setDockApps(packageNames: List<String>) { apps.value = packageNames }
+        override fun observeDockApps(): Flow<List<String>> = apps
+    }
+
+    private class FakeInstalledAppsRepository(
+        private val apps: List<InstalledApp> = emptyList(),
+    ) : InstalledAppsRepository {
+        override fun observeInstalledApps(): Flow<List<InstalledApp>> = flowOf(apps)
+    }
+
     // --- Setup ---------------------------------------------------------------------------
 
     private val testDispatcher = StandardTestDispatcher()
@@ -224,6 +265,8 @@ class EditWidgetsViewModelTest {
         customSystemLogoRepository: FakeCustomSystemLogoRepository = FakeCustomSystemLogoRepository(),
         lastKnownContextRepository: FakeLastKnownContextRepository = FakeLastKnownContextRepository(),
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
+        dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
+        installedAppsRepository: FakeInstalledAppsRepository = FakeInstalledAppsRepository(),
     ) = EditWidgetsViewModel(
         observeWidgetCanvas = ObserveWidgetCanvasUseCase(widgetLayoutRepository),
         saveWidgetCanvas = SaveWidgetCanvasUseCase(widgetLayoutRepository),
@@ -236,6 +279,12 @@ class EditWidgetsViewModelTest {
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),
         observeImageTransitionMode = ObserveImageTransitionModeUseCase(onboardingRepository),
         observeLogoTransitionMode = ObserveLogoTransitionModeUseCase(onboardingRepository),
+        observeDockEnabled = ObserveDockEnabledUseCase(dockSettingsRepository),
+        observeDockSize = ObserveDockSizeUseCase(dockSettingsRepository),
+        observeDockOpacity = ObserveDockOpacityUseCase(dockSettingsRepository),
+        observeDockMaxApps = ObserveDockMaxAppsUseCase(dockSettingsRepository),
+        observeDockApps = ObserveDockAppsUseCase(dockSettingsRepository),
+        observeInstalledApps = ObserveInstalledAppsUseCase(installedAppsRepository),
     )
 
     // --- addWidget -------------------------------------------------------------------------

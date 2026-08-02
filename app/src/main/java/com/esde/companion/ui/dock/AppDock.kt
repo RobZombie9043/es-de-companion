@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +62,11 @@ private val DOCK_SHAPE = RoundedCornerShape(28.dp)
 private val VERTICAL_PADDING = 16.dp
 private val HORIZONTAL_PADDING = 20.dp
 private val SLOT_SPACING = 16.dp
+
+/** Dims DockPreview just enough to read as non-interactive at a glance, without
+ * desaturating/hiding it so much that it stops being useful for judging real visual
+ * collisions (e.g. a bright icon over bright widget art) - see DockPreview's kdoc. */
+private const val DOCK_PREVIEW_ALPHA = 0.65f
 
 private fun DockSize.iconDp(): Dp = when (this) {
     DockSize.Small -> 40.dp
@@ -181,6 +187,78 @@ fun AppDock(viewModel: AppDockViewModel, modifier: Modifier = Modifier) {
                 showAddAppDialog = false
             },
             onDismiss = { showAddAppDialog = false },
+        )
+    }
+}
+
+/**
+ * Read-only rendering of the dock's current appearance - no `clickable`/
+ * `combinedClickable`/`pointerInput` anywhere in this composable or its slot helpers, so
+ * every pixel is purely decorative and touches fall straight through to whatever's
+ * beneath it regardless of z-order (same "no gesture modifier = pass-through" idiom as
+ * MainActivity's Dim overlay and EditWidgetsOverlay's grid-line Canvas). Used by
+ * EditWidgetsOverlay to preview where the live dock will actually sit/overlap while
+ * editing widgets. Shares AppDock's own background/icon-sizing constants so the preview
+ * can never visually drift from what the live dock looks like.
+ *
+ * Dimmed to [DOCK_PREVIEW_ALPHA] as the one deliberate difference from the live dock -
+ * a quick, glanceable signal that it's non-interactive, without going as far as
+ * grayscale/desaturation, which would make it harder to judge real visual collisions
+ * (e.g. a bright icon sitting over bright widget art) - the actual point of showing it.
+ */
+@Composable
+fun DockPreview(
+    dockSize: DockSize,
+    dockOpacityPercent: Int,
+    maxApps: Int,
+    dockItems: List<InstalledApp>,
+    modifier: Modifier = Modifier,
+) {
+    val iconDp = dockSize.iconDp()
+
+    Box(
+        modifier = modifier
+            .alpha(DOCK_PREVIEW_ALPHA)
+            .background(color = Color.Black.copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = HORIZONTAL_PADDING, vertical = VERTICAL_PADDING),
+            horizontalArrangement = Arrangement.spacedBy(SLOT_SPACING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(maxApps) { index ->
+                val app = dockItems.getOrNull(index)
+                if (app == null) {
+                    EmptyDockSlotPreview(iconDp = iconDp)
+                } else {
+                    FilledDockSlotPreview(app = app, iconDp = iconDp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilledDockSlotPreview(app: InstalledApp, iconDp: Dp) {
+    val context = LocalContext.current
+    val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
+        value = AppIconLoader.loadIcon(context, app.packageName)
+    }
+    AsyncImage(model = icon, contentDescription = app.label, modifier = Modifier.size(iconDp))
+}
+
+@Composable
+private fun EmptyDockSlotPreview(iconDp: Dp) {
+    Box(
+        modifier = Modifier
+            .size(iconDp)
+            .border(width = 1.dp, color = Color.White.copy(alpha = 0.3f), shape = CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.3f),
         )
     }
 }

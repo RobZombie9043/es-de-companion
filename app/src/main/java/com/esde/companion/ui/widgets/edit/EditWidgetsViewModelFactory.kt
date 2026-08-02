@@ -25,6 +25,12 @@ class EditWidgetsViewModelFactory(
             observeLastGameReference = appContainer.observeLastGameReferenceUseCase,
             observeImageTransitionMode = appContainer.observeImageTransitionModeUseCase,
             observeLogoTransitionMode = appContainer.observeLogoTransitionModeUseCase,
+            observeDockEnabled = appContainer.observeDockEnabledUseCase,
+            observeDockSize = appContainer.observeDockSizeUseCase,
+            observeDockOpacity = appContainer.observeDockOpacityUseCase,
+            observeDockMaxApps = appContainer.observeDockMaxAppsUseCase,
+            observeDockApps = appContainer.observeDockAppsUseCase,
+            observeInstalledApps = appContainer.observeInstalledAppsUseCase,
         ) as T
     }
 }
