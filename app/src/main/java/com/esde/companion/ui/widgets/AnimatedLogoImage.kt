@@ -68,12 +68,22 @@ fun AnimatedLogoImage(
     LaunchedEffect(identityKeyOf(model)) {
         if (identityKeyOf(model) == identityKeyOf(currentModel)) return@LaunchedEffect
 
-        if (model != null) {
-            val result = context.imageLoader.execute(requestFor(context, model))
-            if (result !is SuccessResult) return@LaunchedEffect
+        // A model that fails to load (e.g. a system with no bundled logo asset) resolves
+        // to null here, same as a genuinely absent model - so a missing logo clears to
+        // blank instead of leaving the previous system/game's logo stuck on screen.
+        val resolvedModel = model?.takeIf {
+            val result = context.imageLoader.execute(requestFor(context, it))
+            result is SuccessResult
         }
 
-        currentModel = model
+        currentModel = resolvedModel
+
+        if (resolvedModel == null) {
+            offsetX.snapTo(0f)
+            offsetY.snapTo(0f)
+            scale.snapTo(1f)
+            return@LaunchedEffect
+        }
 
         when (mode) {
             LogoTransitionMode.None -> {

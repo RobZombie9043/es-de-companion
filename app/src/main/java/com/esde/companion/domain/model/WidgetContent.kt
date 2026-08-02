@@ -47,6 +47,23 @@ sealed class WidgetContent {
 private val TRANSPARENT_MEDIA_TYPES = setOf(MediaType.Marquees)
 
 /**
+ * Whether widgets of this type always render through AnimatedLogoImage/LogoTransitionMode,
+ * even when nothing currently resolves for them (missing system logo asset, a game with
+ * no marquee, etc). WidgetContentView routes these through a single AnimatedLogoImage call
+ * site regardless of [WidgetContent.Empty] vs a real path, so that composable's identity -
+ * and therefore any in-flight transition state - survives toggling between "found" and
+ * "not found" as the browsed system/game changes. Without this, a widget going from blank
+ * to a real logo would remount AnimatedLogoImage fresh and skip its enter animation.
+ */
+val WidgetType.isLogoStyle: Boolean
+    get() = when (this) {
+        is WidgetType.SystemLogo -> true
+        is WidgetType.GameMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
+        is WidgetType.SystemMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
+        is WidgetType.SystemImage, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+    }
+
+/**
  * FanArt and Screenshots fall back to each other when the primary type is missing - the
  * only two MediaTypes that do. Every other type is exact-or-empty; see widget system
  * design notes for why a general fallback chain per type was deliberately not built.

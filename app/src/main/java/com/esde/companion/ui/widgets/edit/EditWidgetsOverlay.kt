@@ -579,6 +579,7 @@ private fun PlaceholderWidgetBox(
         } else {
             WidgetContentView(
                 content = content,
+                widgetType = widget.widgetType,
                 imageTransitionMode = imageTransitionMode,
                 logoTransitionMode = logoTransitionMode,
                 modifier = Modifier.fillMaxSize(),
