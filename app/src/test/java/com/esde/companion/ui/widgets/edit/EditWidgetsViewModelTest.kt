@@ -157,8 +157,6 @@ class EditWidgetsViewModelTest {
         override suspend fun clearCustomLogosFolderPath() {}
         override suspend fun markOnboardingComplete() {}
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(false)
-        override suspend fun setOverlayEnabled(enabled: Boolean) {}
-        override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(true)
         override suspend fun setThemePreference(preference: ThemePreference) {}
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(ThemePreference.Auto)
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}

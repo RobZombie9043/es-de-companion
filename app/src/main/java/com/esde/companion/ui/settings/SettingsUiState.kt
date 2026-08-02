@@ -23,7 +23,6 @@ data class SettingsUiState(
     val customLogosFolderPath: String? = null,
     val customLogosFolderValidation: MediaFolderValidation? = null,
     val isValidatingCustomLogosFolder: Boolean = false,
-    val overlayEnabled: Boolean = true,
     val themePreference: ThemePreference = ThemePreference.Auto,
     val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
     val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,

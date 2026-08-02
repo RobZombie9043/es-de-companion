@@ -30,8 +30,8 @@ The app is feature-complete across all layers for a first real-world install. Wh
   live preview sourced from the last browsed system/game (`LastKnownContextRepository`)
   rather than the fixed `AppState`, falling back to a labeled placeholder per-widget when
   nothing resolves.
-- **UI**: a toggleable debug `StateOverlay` and a scrollable, categorized Settings
-  screen (including widget lock and edit entry point).
+- **UI**: a scrollable, categorized Settings screen (including widget lock and edit
+  entry point).
 - **App Drawer**: a full-screen overlay (not a nav destination) with spring-physics
   gesture handling, a lazy grid of installed apps with async icons, and double-tap launch
   to a secondary display.
@@ -77,8 +77,7 @@ app/src/main/java/com/esde/companion/
 │   └── storage/                 AllFilesAccessPermission
 ├── ui/
 │   ├── MainActivity.kt          HOME launcher entrypoint
-│   ├── main/                    MainViewModel, MainScreen, StateOverlay, CrossfadeAsyncImage,
-│   │                             display formatting
+│   ├── main/                    MainViewModel, MainScreen, CrossfadeAsyncImage
 │   ├── widgets/                 WidgetOverlay, WidgetsViewModel, WidgetCanvas — live widget
 │   │                             rendering, replacing the old fixed backdrop/logo display
 │   ├── widgets/edit/             EditWidgetsOverlay, EditWidgetsViewModel — the widget editor
