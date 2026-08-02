@@ -6,6 +6,8 @@ import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.StateGroup
@@ -15,6 +17,8 @@ import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
+import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
@@ -50,6 +54,8 @@ class WidgetsViewModel(
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
+    observeImageTransitionMode: ObserveImageTransitionModeUseCase,
+    observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
 ) : ViewModel() {
 
     private val gridDimensions = MutableStateFlow<GridDimensions?>(null)
@@ -57,6 +63,12 @@ class WidgetsViewModel(
     fun setGridDimensions(grid: GridDimensions) {
         gridDimensions.value = grid
     }
+
+    val imageTransitionMode: StateFlow<ImageTransitionMode> = observeImageTransitionMode()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), ImageTransitionMode.None)
+
+    val logoTransitionMode: StateFlow<LogoTransitionMode> = observeLogoTransitionMode()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), LogoTransitionMode.None)
 
     // Distilled from raw AppState down to just the identity that actually matters for
     // widget content - same reasoning as MainViewModel's ImageSource. Without

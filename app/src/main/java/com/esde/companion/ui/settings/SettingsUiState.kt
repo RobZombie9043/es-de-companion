@@ -1,7 +1,9 @@
 package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogFolderValidation
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
@@ -24,6 +26,8 @@ data class SettingsUiState(
     val isValidatingCustomLogosFolder: Boolean = false,
     val overlayEnabled: Boolean = true,
     val themePreference: ThemePreference = ThemePreference.Auto,
+    val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+    val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
     val drawerOpacityPercent: Int = 80,
     val gridColumns: Int = 4,
     val dockEnabled: Boolean = false,

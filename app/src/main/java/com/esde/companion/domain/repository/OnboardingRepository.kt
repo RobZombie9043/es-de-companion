@@ -1,6 +1,8 @@
 package com.esde.companion.domain.repository
 
+import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogFolderValidation
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ThemePreference
@@ -121,4 +123,20 @@ interface OnboardingRepository {
     suspend fun saveCustomMusicFolderPath(path: String)
     fun observeCustomMusicFolderPath(): Flow<String?>
     suspend fun clearCustomMusicFolderPath()
+
+    /**
+     * Settings > UI Settings > Image Transition: how general/opaque image widgets
+     * (fanart, screenshots, custom system images) animate on content change.
+     * Defaults to [ImageTransitionMode.None].
+     */
+    suspend fun setImageTransitionMode(mode: ImageTransitionMode)
+    fun observeImageTransitionMode(): Flow<ImageTransitionMode>
+
+    /**
+     * Settings > UI Settings > Logo Transition: how logo-style/transparent overlay
+     * widgets (system logos, game marquees) animate on content change. Defaults to
+     * [LogoTransitionMode.None].
+     */
+    suspend fun setLogoTransitionMode(mode: LogoTransitionMode)
+    fun observeLogoTransitionMode(): Flow<LogoTransitionMode>
 }

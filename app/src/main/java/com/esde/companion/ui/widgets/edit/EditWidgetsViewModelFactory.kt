@@ -23,6 +23,8 @@ class EditWidgetsViewModelFactory(
             resolveCustomSystemLogo = appContainer.resolveCustomSystemLogoUseCase,
             observeLastSystemShortName = appContainer.observeLastSystemShortNameUseCase,
             observeLastGameReference = appContainer.observeLastGameReferenceUseCase,
+            observeImageTransitionMode = appContainer.observeImageTransitionModeUseCase,
+            observeLogoTransitionMode = appContainer.observeLogoTransitionModeUseCase,
         ) as T
     }
 }
