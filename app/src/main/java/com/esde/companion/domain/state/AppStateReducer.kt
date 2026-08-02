@@ -20,6 +20,7 @@ object AppStateReducer {
             systemShortName = event.systemShortName,
             systemFullName = event.systemFullName,
             systemPath = event.systemPath,
+            navigationDirection = event.direction,
         )
 
         is EsdeEvent.GameSelect -> {
@@ -36,6 +37,7 @@ object AppStateReducer {
                     gameName = event.gameName,
                     systemShortName = event.systemShortName,
                     systemFullName = event.systemFullName,
+                    navigationDirection = event.direction,
                 )
             }
         }

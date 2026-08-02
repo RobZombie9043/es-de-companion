@@ -3,7 +3,9 @@ package com.esde.companion.data.log
 import android.os.FileObserver
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.isStartupAnchor
+import com.esde.companion.domain.model.withDirection
 import com.esde.companion.domain.parser.EsdeEventParser
+import com.esde.companion.domain.parser.NavigationDirectionTracker
 import com.esde.companion.domain.repository.EsdeLogRepository
 import java.io.File
 import java.io.RandomAccessFile
@@ -49,10 +51,11 @@ class EsdeLogFileRepository(
 
     override fun observeEvents(): Flow<EsdeEvent> = channelFlow {
         var position = 0L
+        val directionTracker = NavigationDirectionTracker()
 
         val startupFile = File(logFilePath)
         if (startupFile.exists()) {
-            findEventsSinceLastAnchor(startupFile).forEach { send(it) }
+            findEventsSinceLastAnchor(startupFile, directionTracker).forEach { send(it) }
             position = startupFile.length()
         }
 
@@ -85,7 +88,7 @@ class EsdeLogFileRepository(
                 }
 
                 if (length > position) {
-                    position = readNewLines(file, position) { event -> send(event) }
+                    position = readNewLines(file, position, directionTracker) { event -> send(event) }
                 }
             }
         } finally {
@@ -161,7 +164,7 @@ class EsdeLogFileRepository(
      * the whole file has been read; if no anchor exists anywhere in the file, returns an
      * empty list and startup correctly falls back to [AppState.Idle].
      */
-    private fun findEventsSinceLastAnchor(file: File): List<EsdeEvent> {
+    private fun findEventsSinceLastAnchor(file: File, directionTracker: NavigationDirectionTracker): List<EsdeEvent> {
         val fileLength = file.length()
         if (fileLength == 0L) return emptyList()
 
@@ -182,7 +185,10 @@ class EsdeLogFileRepository(
                 // off mid-line by the window boundary, not a real line boundary - drop it
                 // rather than risk parsing a truncated line.
                 val lines = text.lineSequence().let { if (startPos > 0) it.drop(1) else it }
-                val events = lines.mapNotNull { parser.parseLine(it) }.toList()
+                val events = lines.mapNotNull { line ->
+                    directionTracker.observeLine(line)
+                    parser.parseLine(line)?.withDirection(directionTracker.direction)
+                }.toList()
 
                 val anchorIndex = events.indexOfLast { it.isStartupAnchor() }
                 if (anchorIndex != -1) return events.subList(anchorIndex, events.size)
@@ -196,13 +202,15 @@ class EsdeLogFileRepository(
     private suspend fun readNewLines(
         file: File,
         fromPosition: Long,
+        directionTracker: NavigationDirectionTracker,
         onEvent: suspend (EsdeEvent) -> Unit,
     ): Long {
         RandomAccessFile(file, "r").use { raf ->
             raf.seek(fromPosition)
             var line = raf.readLine()
             while (line != null) {
-                parser.parseLine(line)?.let { onEvent(it) }
+                directionTracker.observeLine(line)
+                parser.parseLine(line)?.withDirection(directionTracker.direction)?.let { onEvent(it) }
                 line = raf.readLine()
             }
             return raf.filePointer

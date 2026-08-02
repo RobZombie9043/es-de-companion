@@ -9,12 +9,14 @@ import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetContentResolver
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.model.currentGameReference
+import com.esde.companion.domain.model.navigationDirection
 import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
@@ -84,6 +86,7 @@ class WidgetsViewModel(
                 stateGroup = group,
                 gameRef = appState.currentGameReference(),
                 systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
+                navigationDirection = appState.navigationDirection(),
             )
         }
         .distinctUntilChanged()
@@ -96,7 +99,7 @@ class WidgetsViewModel(
                     flowOf(WidgetCanvasState.None)
                 } else {
                     observeWidgetCanvas(identity.stateGroup, grid).map { widgets ->
-                        WidgetCanvasState.Showing(widgets, resolveContent(widgets, identity))
+                        WidgetCanvasState.Showing(widgets, resolveContent(widgets, identity), identity.navigationDirection)
                     }
                 }
             }
@@ -152,5 +155,6 @@ class WidgetsViewModel(
         val stateGroup: StateGroup,
         val gameRef: GameReference?,
         val systemShortName: String?,
+        val navigationDirection: NavigationDirection?,
     )
 }

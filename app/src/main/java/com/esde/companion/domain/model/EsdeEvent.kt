@@ -16,6 +16,7 @@ sealed class EsdeEvent {
         val systemShortName: String,
         val systemFullName: String,
         val systemPath: String,
+        val direction: NavigationDirection? = null,
     ) : EsdeEvent()
 
     data class GameSelect(
@@ -23,6 +24,7 @@ sealed class EsdeEvent {
         val gameName: String,
         val systemShortName: String,
         val systemFullName: String,
+        val direction: NavigationDirection? = null,
     ) : EsdeEvent()
 
     data class GameStart(
@@ -69,4 +71,19 @@ fun EsdeEvent.isStartupAnchor(): Boolean = when (this) {
     is EsdeEvent.ScreensaverStart,
     is EsdeEvent.ScreensaverGameSelect,
     is EsdeEvent.ScreensaverEnd -> false
+}
+
+/**
+ * Attaches [direction] to whichever event variants render a directional logo slide -
+ * SystemSelect/GameSelect - a no-op for every other variant. See NavigationDirectionTracker
+ * for how [direction] is derived from the raw log.
+ */
+fun EsdeEvent.withDirection(direction: NavigationDirection?): EsdeEvent = when (this) {
+    is EsdeEvent.SystemSelect -> copy(direction = direction)
+    is EsdeEvent.GameSelect -> copy(direction = direction)
+    is EsdeEvent.GameStart,
+    is EsdeEvent.GameEnd,
+    is EsdeEvent.ScreensaverStart,
+    is EsdeEvent.ScreensaverGameSelect,
+    is EsdeEvent.ScreensaverEnd -> this
 }
