@@ -6,7 +6,9 @@ import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
@@ -184,8 +186,9 @@ class SettingsViewModelTest {
     ) : WidgetLayoutRepository {
         val locked = MutableStateFlow(initialLocked)
 
-        override fun observeCanvas(stateGroup: StateGroup): Flow<List<PlacedWidget>> = flowOf(emptyList())
-        override suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>) { /* not under test */ }
+        override fun observeCanvas(stateGroup: StateGroup): Flow<SavedWidgetCanvas> =
+            flowOf(SavedWidgetCanvas(grid = null, widgets = emptyList()))
+        override suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions) { /* not under test */ }
         override fun observeWidgetsLocked(): Flow<Boolean> = locked
         override suspend fun setWidgetsLocked(locked: Boolean) { this.locked.value = locked }
     }
