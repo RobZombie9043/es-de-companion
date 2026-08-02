@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
@@ -16,6 +18,8 @@ import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
+import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -36,6 +40,8 @@ import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
+import com.esde.companion.domain.usecase.SetLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -69,6 +75,10 @@ class SettingsViewModel(
     private val setScreensaverBehaviorUseCase: SetScreensaverBehaviorUseCase,
     private val observeThemePreferenceUseCase: ObserveThemePreferenceUseCase,
     private val setThemePreferenceUseCase: SetThemePreferenceUseCase,
+    private val observeImageTransitionModeUseCase: ObserveImageTransitionModeUseCase,
+    private val setImageTransitionModeUseCase: SetImageTransitionModeUseCase,
+    private val observeLogoTransitionModeUseCase: ObserveLogoTransitionModeUseCase,
+    private val setLogoTransitionModeUseCase: SetLogoTransitionModeUseCase,
     private val observeDrawerOpacityUseCase: ObserveDrawerOpacityUseCase,
     private val setDrawerOpacityUseCase: SetDrawerOpacityUseCase,
     private val observeGridColumnsUseCase: ObserveGridColumnsUseCase,
@@ -123,6 +133,8 @@ class SettingsViewModel(
             val gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first()
             val screensaverBehavior = observeScreensaverBehaviorUseCase().first()
             val themePreference = observeThemePreferenceUseCase().first()
+            val imageTransitionMode = observeImageTransitionModeUseCase().first()
+            val logoTransitionMode = observeLogoTransitionModeUseCase().first()
             val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
             val dockEnabled = observeDockEnabledUseCase().first()
@@ -149,6 +161,8 @@ class SettingsViewModel(
                 gamePlayingBehavior = gamePlayingBehavior,
                 screensaverBehavior = screensaverBehavior,
                 themePreference = themePreference,
+                imageTransitionMode = imageTransitionMode,
+                logoTransitionMode = logoTransitionMode,
                 drawerOpacityPercent = drawerOpacityPercent,
                 gridColumns = gridColumns,
                 dockEnabled = dockEnabled,
@@ -281,6 +295,16 @@ class SettingsViewModel(
     fun onThemePreferenceChanged(preference: ThemePreference) {
         _uiState.value = _uiState.value.copy(themePreference = preference)
         viewModelScope.launch { setThemePreferenceUseCase(preference) }
+    }
+
+    fun onImageTransitionModeChanged(mode: ImageTransitionMode) {
+        _uiState.value = _uiState.value.copy(imageTransitionMode = mode)
+        viewModelScope.launch { setImageTransitionModeUseCase(mode) }
+    }
+
+    fun onLogoTransitionModeChanged(mode: LogoTransitionMode) {
+        _uiState.value = _uiState.value.copy(logoTransitionMode = mode)
+        viewModelScope.launch { setLogoTransitionModeUseCase(mode) }
     }
 
     fun onDrawerOpacityChanged(percent: Int) {

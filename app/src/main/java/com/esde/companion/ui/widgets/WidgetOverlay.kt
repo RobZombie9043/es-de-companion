@@ -24,6 +24,8 @@ fun WidgetOverlay(viewModel: WidgetsViewModel, modifier: Modifier = Modifier) {
         LaunchedEffect(grid) { viewModel.setGridDimensions(grid) }
 
         val canvasState by viewModel.canvasState.collectAsStateWithLifecycle()
+        val imageTransitionMode by viewModel.imageTransitionMode.collectAsStateWithLifecycle()
+        val logoTransitionMode by viewModel.logoTransitionMode.collectAsStateWithLifecycle()
 
         when (val state = canvasState) {
             WidgetCanvasState.None ->
@@ -38,6 +40,8 @@ fun WidgetOverlay(viewModel: WidgetsViewModel, modifier: Modifier = Modifier) {
                 WidgetCanvas(
                     widgets = state.widgets,
                     contentByWidgetId = state.contentByWidgetId,
+                    imageTransitionMode = imageTransitionMode,
+                    logoTransitionMode = logoTransitionMode,
                     modifier = Modifier.fillMaxSize(),
                 )
         }

@@ -14,18 +14,19 @@ object WidgetContentResolver {
     ): WidgetContent = when (widgetType) {
         is WidgetType.SystemLogo ->
             customSystemLogoLookup()
-                // crossfade = false, isAsset = false: same "transparent overlay" treatment
-                // as the built-in SVG (see WidgetContent.Image's kdoc / CLAUDE.md) - a
-                // custom logo is expected to be a similarly transparent-background image,
-                // and crossfading briefly double-exposes outgoing/incoming logos.
-                ?.let { WidgetContent.Image(it, widgetType.scaleMode, crossfade = false, isAsset = false, effects = widgetType.effects) }
+                // isTransparentOverlay = true, isAsset = false: same "transparent
+                // overlay" treatment as the built-in SVG (see WidgetContent.Image's
+                // kdoc / CLAUDE.md) - a custom logo is expected to be a similarly
+                // transparent-background image, so it uses LogoTransitionMode at
+                // render time rather than a fade.
+                ?.let { WidgetContent.Image(it, widgetType.scaleMode, isTransparentOverlay = true, isAsset = false, effects = widgetType.effects) }
                 ?: systemLogoAssetPath()
                     ?.let { WidgetContent.SystemLogoAsset(it, widgetType.scaleMode, widgetType.effects) }
                 ?: WidgetContent.Empty
 
         is WidgetType.SystemImage ->
             customSystemImageLookup()
-                ?.let { WidgetContent.Image(it, widgetType.scaleMode, crossfade = true, isAsset = false, effects = widgetType.effects) }
+                ?.let { WidgetContent.Image(it, widgetType.scaleMode, isTransparentOverlay = false, isAsset = false, effects = widgetType.effects) }
                 ?: resolveMediaWidgetContent(
                     mediaType = MediaType.FanArt,
                     scaleMode = widgetType.scaleMode,

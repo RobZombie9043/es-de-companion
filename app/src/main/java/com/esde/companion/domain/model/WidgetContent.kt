@@ -4,18 +4,22 @@ sealed class WidgetContent {
     data object Empty : WidgetContent()
 
     /**
-     * [crossfade] is false for transparent overlay-style media (currently just
-     * Marquees) - see CrossfadeAsyncImage's kdoc and CLAUDE.md's note on the equivalent
-     * fixed-display logo case. [isAsset] distinguishes a real on-disk media file (wrapped
-     * in File(...) before being passed to Coil) from the bundled fallback background
-     * asset (an app-asset path, passed to Coil as a raw string) - see
-     * resolveMediaWidgetContent. [effects] carries the widget's configured blur/tint
-     * through to rendering (see WidgetContentView).
+     * [isTransparentOverlay] is true for transparent overlay-style media (currently
+     * just Marquees, and custom system logos) - see CrossfadeAsyncImage's kdoc and
+     * CLAUDE.md's note on the equivalent fixed-display logo case. This is purely a
+     * content-classification fact (what kind of image this is), decided once at resolve
+     * time; it decides which of ImageTransitionMode/LogoTransitionMode applies at
+     * render time (see WidgetContentView), not whether/how it animates - that's a
+     * separate, user-configurable Settings decision. [isAsset] distinguishes a real
+     * on-disk media file (wrapped in File(...) before being passed to Coil) from the
+     * bundled fallback background asset (an app-asset path, passed to Coil as a raw
+     * string) - see resolveMediaWidgetContent. [effects] carries the widget's
+     * configured blur/tint through to rendering (see WidgetContentView).
      */
     data class Image(
         val path: String,
         val scaleMode: ScaleMode,
-        val crossfade: Boolean,
+        val isTransparentOverlay: Boolean,
         val isAsset: Boolean,
         val effects: ImageEffects = ImageEffects(),
     ) : WidgetContent()
@@ -38,7 +42,8 @@ sealed class WidgetContent {
 }
 
 /** Media types that are transparent overlay-style content rather than an opaque
- * backdrop-style image - these must not be crossfaded (see WidgetContent.Image). */
+ * backdrop-style image - these use LogoTransitionMode, not ImageTransitionMode,
+ * at render time (see WidgetContent.Image.isTransparentOverlay). */
 private val TRANSPARENT_MEDIA_TYPES = setOf(MediaType.Marquees)
 
 /**
@@ -76,11 +81,11 @@ fun resolveMediaWidgetContent(
 ): WidgetContent {
     val path = lookup(mediaType) ?: MEDIA_FALLBACKS[mediaType]?.let(lookup)
     if (path != null) {
-        return WidgetContent.Image(path, scaleMode, crossfade = mediaType !in TRANSPARENT_MEDIA_TYPES, isAsset = false, effects = effects)
+        return WidgetContent.Image(path, scaleMode, isTransparentOverlay = mediaType in TRANSPARENT_MEDIA_TYPES, isAsset = false, effects = effects)
     }
 
     if (mediaType in BACKGROUND_FALLBACK_ELIGIBLE && fallbackBackgroundAssetPath != null) {
-        return WidgetContent.Image(fallbackBackgroundAssetPath, scaleMode, crossfade = true, isAsset = true, effects = effects)
+        return WidgetContent.Image(fallbackBackgroundAssetPath, scaleMode, isTransparentOverlay = false, isAsset = true, effects = effects)
     }
 
     return WidgetContent.Empty

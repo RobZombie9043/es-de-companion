@@ -3,14 +3,18 @@ package com.esde.companion.ui.widgets.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetContentResolver
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
+import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
@@ -22,9 +26,11 @@ import com.esde.companion.ui.main.systemLogoAssetName
 import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** New widgets default to a 4x4 cell footprint (clamped to the grid's actual size on
@@ -71,7 +77,15 @@ class EditWidgetsViewModel(
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val observeLastSystemShortName: ObserveLastSystemShortNameUseCase,
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
+    observeImageTransitionMode: ObserveImageTransitionModeUseCase,
+    observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
 ) : ViewModel() {
+
+    val imageTransitionMode: StateFlow<ImageTransitionMode> = observeImageTransitionMode()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), ImageTransitionMode.None)
+
+    val logoTransitionMode: StateFlow<LogoTransitionMode> = observeLogoTransitionMode()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), LogoTransitionMode.None)
 
     private var gridDimensions: GridDimensions? = null
     private var loadJob: Job? = null

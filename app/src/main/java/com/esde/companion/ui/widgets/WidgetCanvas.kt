@@ -13,16 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import coil3.compose.AsyncImage
 import com.esde.companion.domain.model.ImageEffects
+import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.ui.main.CrossfadeAsyncImage
-import com.esde.companion.ui.main.requestFor
 import java.io.File
 
 /**
@@ -38,6 +37,8 @@ import java.io.File
 fun WidgetCanvas(
     widgets: List<PlacedWidget>,
     contentByWidgetId: Map<String, WidgetContent>,
+    imageTransitionMode: ImageTransitionMode,
+    logoTransitionMode: LogoTransitionMode,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -50,6 +51,8 @@ fun WidgetCanvas(
                 val content = contentByWidgetId[widget.id] ?: WidgetContent.Empty
                 WidgetContentView(
                     content = content,
+                    imageTransitionMode = imageTransitionMode,
+                    logoTransitionMode = logoTransitionMode,
                     modifier = Modifier
                         .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
                         .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
@@ -76,10 +79,19 @@ fun WidgetCanvas(
  *
  * [textUserScrollEnabled] only affects [WidgetContent.Text] (GameDescription) - see
  * [ScrollingText]'s kdoc for why EditWidgetsOverlay passes false.
+ *
+ * [imageTransitionMode]/[logoTransitionMode] are the two global Settings > UI Settings
+ * transition styles - which one applies is decided purely by content shape:
+ * [WidgetContent.Image.isTransparentOverlay] (custom logos, marquees) and
+ * [WidgetContent.SystemLogoAsset] both always use [logoTransitionMode]; opaque
+ * [WidgetContent.Image] uses [imageTransitionMode]. See AnimatedLogoImage's kdoc for why
+ * logo-style content never gets a fade option.
  */
 @Composable
 internal fun WidgetContentView(
     content: WidgetContent,
+    imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+    logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
     modifier: Modifier = Modifier,
     textUserScrollEnabled: Boolean = true,
 ) {
@@ -91,20 +103,23 @@ internal fun WidgetContentView(
 
         is WidgetContent.Image ->
             Box(modifier = modifier) {
-                if (content.crossfade) {
-                    CrossfadeAsyncImage(
-                        model = if (content.isAsset) content.path else File(content.path),
+                val model = if (content.isAsset) content.path else File(content.path)
+                if (content.isTransparentOverlay) {
+                    AnimatedLogoImage(
+                        model = model,
                         contentDescription = null,
                         contentScale = content.scaleMode.toContentScale(),
+                        mode = logoTransitionMode,
                         modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                     )
                 } else {
-                    val context = LocalContext.current
-                    val model = if (content.isAsset) content.path else File(content.path)
-                    AsyncImage(
-                        model = requestFor(context, model),
+                    val (durationMillis, scaleFrom) = imageTransitionMode.toDurationAndScale()
+                    CrossfadeAsyncImage(
+                        model = model,
                         contentDescription = null,
                         contentScale = content.scaleMode.toContentScale(),
+                        durationMillis = durationMillis,
+                        scaleFrom = scaleFrom,
                         modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                     )
                 }
@@ -113,10 +128,11 @@ internal fun WidgetContentView(
 
         is WidgetContent.SystemLogoAsset ->
             Box(modifier = modifier) {
-                AsyncImage(
+                AnimatedLogoImage(
                     model = content.assetPath,
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
+                    mode = logoTransitionMode,
                     modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                 )
                 DarkenOverlay(effects = content.effects)
@@ -159,3 +175,16 @@ private fun ScaleMode.toContentScale(): ContentScale = when (this) {
     ScaleMode.Fit -> ContentScale.Fit
     ScaleMode.Fill -> ContentScale.Crop
 }
+
+/** Fade duration + scale-start fraction CrossfadeAsyncImage should use for this mode.
+ * durationMillis of 0 makes it snap instead of animate (see its kdoc), which is how
+ * ImageTransitionMode.None avoids a visible transition without losing the flash-safe
+ * pre-decode. Not yet user-customizable - see ImageTransitionMode's kdoc. */
+private fun ImageTransitionMode.toDurationAndScale(): Pair<Int, Float?> = when (this) {
+    ImageTransitionMode.None -> 0 to null
+    ImageTransitionMode.Fade -> IMAGE_TRANSITION_DURATION_MILLIS to null
+    ImageTransitionMode.FadeScale -> IMAGE_TRANSITION_DURATION_MILLIS to IMAGE_TRANSITION_SCALE_FROM
+}
+
+private const val IMAGE_TRANSITION_DURATION_MILLIS = 500
+private const val IMAGE_TRANSITION_SCALE_FROM = 0.95f

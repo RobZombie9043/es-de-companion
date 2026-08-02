@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.rememberAsyncImagePainter
@@ -21,6 +22,8 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import java.io.File
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Crossfades from whatever model was previously shown to [model], never showing a
@@ -48,6 +51,13 @@ import java.io.File
  * looks like a genuinely new model, so it re-triggers the crossfade and gets a fresh
  * cache entry. Non-File models (bundled asset path strings) are never mutated at a
  * fixed path, so they keep using their own value as-is.
+ *
+ * [scaleFrom], when non-null (ImageTransitionMode.FadeScale), animates the incoming
+ * image's scale from that fraction up to 1f in lockstep with the alpha fade. When
+ * [durationMillis] is 0 or less (ImageTransitionMode.None), both alpha and scale snap
+ * straight to their end values instead of animating - this still goes through the
+ * pre-decode-then-swap path above, so "no visible transition" doesn't reopen the
+ * blank-frame flash the whole mechanism exists to prevent.
  */
 @Composable
 fun CrossfadeAsyncImage(
@@ -56,20 +66,39 @@ fun CrossfadeAsyncImage(
     contentScale: ContentScale,
     modifier: Modifier = Modifier,
     durationMillis: Int = 250,
+    scaleFrom: Float? = null,
 ) {
     val context = LocalContext.current
     var previousModel by remember { mutableStateOf<Any?>(null) }
     var currentModel by remember { mutableStateOf(model) }
     val alpha = remember { Animatable(1f) }
+    val scale = remember { Animatable(1f) }
 
     LaunchedEffect(identityKeyOf(model)) {
         if (identityKeyOf(model) == identityKeyOf(currentModel)) return@LaunchedEffect
 
+        suspend fun animateIn() {
+            if (durationMillis <= 0) {
+                alpha.snapTo(1f)
+                scale.snapTo(1f)
+                return
+            }
+            alpha.snapTo(0f)
+            scale.snapTo(scaleFrom ?: 1f)
+            // alpha and scale must animate concurrently, not one after the other -
+            // coroutineScope + two launches so neither animateTo blocks the other.
+            coroutineScope {
+                launch { alpha.animateTo(1f, animationSpec = tween(durationMillis)) }
+                if (scaleFrom != null) {
+                    launch { scale.animateTo(1f, animationSpec = tween(durationMillis)) }
+                }
+            }
+        }
+
         if (model == null) {
             previousModel = currentModel
             currentModel = null
-            alpha.snapTo(0f)
-            alpha.animateTo(1f, animationSpec = tween(durationMillis))
+            animateIn()
             previousModel = null
             return@LaunchedEffect
         }
@@ -83,8 +112,7 @@ fun CrossfadeAsyncImage(
 
         previousModel = currentModel
         currentModel = model
-        alpha.snapTo(0f)
-        alpha.animateTo(1f, animationSpec = tween(durationMillis))
+        animateIn()
         previousModel = null
     }
 
@@ -116,7 +144,8 @@ fun CrossfadeAsyncImage(
                     contentScale = contentScale,
                     modifier = Modifier
                         .fillMaxSize()
-                        .alpha(alpha.value),
+                        .alpha(alpha.value)
+                        .graphicsLayer(scaleX = scale.value, scaleY = scale.value),
                 )
             }
         }

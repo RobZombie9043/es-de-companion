@@ -4,10 +4,18 @@ import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.LogFolderValidation
+import com.esde.companion.domain.model.LogoTransitionMode
+import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
+import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.repository.CustomSystemImageRepository
@@ -15,10 +23,13 @@ import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
+import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
+import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
+import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
@@ -29,6 +40,7 @@ import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -117,6 +129,60 @@ class EditWidgetsViewModelTest {
         override suspend fun setLastGameReference(gameReference: GameReference) { this.gameReference.value = gameReference }
     }
 
+    /** Only imageTransitionMode/logoTransitionMode are exercised by this ViewModel -
+     * everything else here is a fixed default, not under test. */
+    private class FakeOnboardingRepository : OnboardingRepository {
+        override fun defaultLogFolderPath() = ""
+        override fun defaultMediaFolderPath() = ""
+        override suspend fun validateLogFolder(path: String) = LogFolderValidation.FolderNotFound
+        override suspend fun validateMediaFolder(path: String) = MediaFolderValidation.FolderNotFound
+        override suspend fun saveLogFolderPath(path: String) {}
+        override suspend fun saveMediaFolderPath(path: String) {}
+        override fun observeLogFolderPath(): Flow<String?> = flowOf(null)
+        override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun saveCustomSystemImagesFolderPath(path: String) {}
+        override fun observeCustomSystemImagesFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomSystemImagesFolderPath() {}
+        override suspend fun saveCustomLogosFolderPath(path: String) {}
+        override fun observeCustomLogosFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomLogosFolderPath() {}
+        override suspend fun markOnboardingComplete() {}
+        override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(false)
+        override suspend fun setOverlayEnabled(enabled: Boolean) {}
+        override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(true)
+        override suspend fun setThemePreference(preference: ThemePreference) {}
+        override fun observeThemePreference(): Flow<ThemePreference> = flowOf(ThemePreference.Auto)
+        override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
+        override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+        override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {}
+        override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
+        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
+        override suspend fun setVideoDelaySeconds(seconds: Int) {}
+        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
+        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
+        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
+        override suspend fun setVideoAspectRatioMode(mode: VideoAspectRatioMode) {}
+        override fun observeVideoAspectRatioMode(): Flow<VideoAspectRatioMode> = flowOf(VideoAspectRatioMode.Cover)
+        override suspend fun setMusicEnabled(enabled: Boolean) {}
+        override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {}
+        override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) {}
+        override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) {}
+        override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {}
+        override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(MusicDuckingMode.LowerVolume)
+        override suspend fun saveCustomMusicFolderPath(path: String) {}
+        override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomMusicFolderPath() {}
+        override suspend fun setImageTransitionMode(mode: ImageTransitionMode) {}
+        override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(ImageTransitionMode.None)
+        override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {}
+        override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
+    }
+
     // --- Setup ---------------------------------------------------------------------------
 
     private val testDispatcher = StandardTestDispatcher()
@@ -157,6 +223,7 @@ class EditWidgetsViewModelTest {
         customSystemImageRepository: FakeCustomSystemImageRepository = FakeCustomSystemImageRepository(),
         customSystemLogoRepository: FakeCustomSystemLogoRepository = FakeCustomSystemLogoRepository(),
         lastKnownContextRepository: FakeLastKnownContextRepository = FakeLastKnownContextRepository(),
+        onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
     ) = EditWidgetsViewModel(
         observeWidgetCanvas = ObserveWidgetCanvasUseCase(widgetLayoutRepository),
         saveWidgetCanvas = SaveWidgetCanvasUseCase(widgetLayoutRepository),
@@ -167,6 +234,8 @@ class EditWidgetsViewModelTest {
         resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),
         observeLastSystemShortName = ObserveLastSystemShortNameUseCase(lastKnownContextRepository),
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),
+        observeImageTransitionMode = ObserveImageTransitionModeUseCase(onboardingRepository),
+        observeLogoTransitionMode = ObserveLogoTransitionModeUseCase(onboardingRepository),
     )
 
     // --- addWidget -------------------------------------------------------------------------

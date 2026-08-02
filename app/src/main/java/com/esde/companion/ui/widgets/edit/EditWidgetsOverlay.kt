@@ -80,6 +80,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
+import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
@@ -187,6 +189,8 @@ fun EditWidgetsOverlay(
             val isDragging by viewModel.isDragging.collectAsStateWithLifecycle()
             val selectedWidgetId by viewModel.selectedWidgetId.collectAsStateWithLifecycle()
             val selectedCanvas by viewModel.selectedCanvas.collectAsStateWithLifecycle()
+            val imageTransitionMode by viewModel.imageTransitionMode.collectAsStateWithLifecycle()
+            val logoTransitionMode by viewModel.logoTransitionMode.collectAsStateWithLifecycle()
             var showAddPicker by remember { mutableStateOf(false) }
 
             // Without this, back falls through to the system default and exits the app -
@@ -243,6 +247,8 @@ fun EditWidgetsOverlay(
                     PlaceholderWidgetBox(
                         widget = widget,
                         content = previewContent[widget.id] ?: WidgetContent.Empty,
+                        imageTransitionMode = imageTransitionMode,
+                        logoTransitionMode = logoTransitionMode,
                         isSelected = widget.id == selectedWidgetId,
                         grid = grid,
                         cellWidth = cellWidth,
@@ -444,6 +450,8 @@ fun EditWidgetsOverlay(
 private fun PlaceholderWidgetBox(
     widget: PlacedWidget,
     content: WidgetContent,
+    imageTransitionMode: ImageTransitionMode,
+    logoTransitionMode: LogoTransitionMode,
     isSelected: Boolean,
     grid: GridDimensions,
     cellWidth: Dp,
@@ -541,7 +549,13 @@ private fun PlaceholderWidgetBox(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            WidgetContentView(content = content, modifier = Modifier.fillMaxSize(), textUserScrollEnabled = false)
+            WidgetContentView(
+                content = content,
+                imageTransitionMode = imageTransitionMode,
+                logoTransitionMode = logoTransitionMode,
+                modifier = Modifier.fillMaxSize(),
+                textUserScrollEnabled = false,
+            )
         }
     }
 }
