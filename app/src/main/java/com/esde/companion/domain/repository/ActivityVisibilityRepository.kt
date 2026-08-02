@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
  * A game launched via SecondaryDisplayResolver genuinely covers this Activity on its
  * display; onStart/onStop are the lifecycle-contract-guaranteed signal for that, unlike
  * onWindowFocusChanged (which has proven unreliable for this exact "something else is
- * now on top" case in the past). This is the seam Settings > UI Settings > Video
- * Playback uses to make sure video/audio never plays while something else is actually
+ * now on top" case in the past). This is the seam Settings > Video Playback uses to
+ * make sure video/audio never plays while something else is actually
  * on top, regardless of what AppState currently claims - see VideoOverlayViewModel's
  * kdoc for the full reasoning.
  */

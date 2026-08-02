@@ -7,7 +7,6 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.ScreenBehavior
-import com.esde.companion.domain.model.VideoAspectRatioMode
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -75,9 +74,9 @@ interface OnboardingRepository {
     fun observeScreensaverBehavior(): Flow<ScreenBehavior>
 
     /**
-     * Settings > UI Settings > Video Playback: whether game videos auto-play while
-     * AppState is BrowsingGame. Defaults to false - opt-in, same as other non-default
-     * display behaviors.
+     * Settings > Video Playback: whether game videos auto-play while AppState is
+     * BrowsingGame. Defaults to false - opt-in, same as other non-default display
+     * behaviors.
      */
     suspend fun setVideoPlaybackEnabled(enabled: Boolean)
     fun observeVideoPlaybackEnabled(): Flow<Boolean>
@@ -89,13 +88,6 @@ interface OnboardingRepository {
     /** Whether video audio is audible; false mutes playback entirely. Defaults to true. */
     suspend fun setVideoAudioEnabled(enabled: Boolean)
     fun observeVideoAudioEnabled(): Flow<Boolean>
-
-    /**
-     * How video playback fills the screen. Defaults to [VideoAspectRatioMode.Cover],
-     * matching the pre-existing fixed behavior before this setting was introduced.
-     */
-    suspend fun setVideoAspectRatioMode(mode: VideoAspectRatioMode)
-    fun observeVideoAspectRatioMode(): Flow<VideoAspectRatioMode>
 
     /** Master toggle for background music. Defaults to true. */
     suspend fun setMusicEnabled(enabled: Boolean)

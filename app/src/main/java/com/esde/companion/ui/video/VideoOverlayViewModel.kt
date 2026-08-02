@@ -6,9 +6,7 @@ import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
-import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
@@ -29,7 +27,7 @@ import kotlinx.coroutines.flow.stateIn
  * separately (see ActivityVisibilityRepository) - AppState alone is not trustworthy here,
  * since ES-DE can fire a spurious game-select while scrolling during real gameplay.
  *
- * Whether the feature is enabled at all (Settings > UI Settings > Video Playback) is
+ * Whether the feature is enabled at all (Settings > Video Playback) is
  * deliberately NOT checked here, same reasoning as GameManualViewModel not knowing about
  * gamePlayingBehavior - that decision belongs to MainActivity, alongside
  * mainScreenActive/isActivityVisible, not to the content resolver.
@@ -39,7 +37,6 @@ class VideoOverlayViewModel(
     private val resolveGameMedia: ResolveGameMediaUseCase,
     observeVideoDelaySeconds: ObserveVideoDelaySecondsUseCase,
     observeVideoAudioEnabled: ObserveVideoAudioEnabledUseCase,
-    observeVideoAspectRatioMode: ObserveVideoAspectRatioModeUseCase,
 ) : ViewModel() {
 
     private val browsingGameReference: Flow<GameReference?> = observeConnectionState()
@@ -70,12 +67,5 @@ class VideoOverlayViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = true,
-        )
-
-    val aspectRatioMode: StateFlow<VideoAspectRatioMode> = observeVideoAspectRatioMode()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = VideoAspectRatioMode.Cover,
         )
 }

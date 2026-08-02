@@ -70,7 +70,6 @@ import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -107,7 +106,6 @@ import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
-import com.esde.companion.domain.usecase.SetVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
@@ -261,8 +259,6 @@ class AppContainer(context: Context) {
     val setVideoDelaySecondsUseCase = SetVideoDelaySecondsUseCase(onboardingRepository)
     val observeVideoAudioEnabledUseCase = ObserveVideoAudioEnabledUseCase(onboardingRepository)
     val setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository)
-    val observeVideoAspectRatioModeUseCase = ObserveVideoAspectRatioModeUseCase(onboardingRepository)
-    val setVideoAspectRatioModeUseCase = SetVideoAspectRatioModeUseCase(onboardingRepository)
 
     val observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository)
     val setMusicEnabledUseCase = SetMusicEnabledUseCase(onboardingRepository)

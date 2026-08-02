@@ -8,7 +8,6 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
-import com.esde.companion.domain.model.VideoAspectRatioMode
 
 data class SettingsUiState(
     val permissionGranted: Boolean = false,
@@ -40,7 +39,6 @@ data class SettingsUiState(
     val videoPlaybackEnabled: Boolean = false,
     val videoDelaySeconds: Int = 0,
     val videoAudioEnabled: Boolean = true,
-    val videoAspectRatioMode: VideoAspectRatioMode = VideoAspectRatioMode.Cover,
     val musicEnabled: Boolean = true,
     val musicPlayWhileBrowsingSystems: Boolean = true,
     val musicPlayWhileBrowsingGames: Boolean = true,

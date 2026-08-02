@@ -50,8 +50,6 @@ class SettingsViewModelFactory(
             setVideoDelaySecondsUseCase = appContainer.setVideoDelaySecondsUseCase,
             observeVideoAudioEnabledUseCase = appContainer.observeVideoAudioEnabledUseCase,
             setVideoAudioEnabledUseCase = appContainer.setVideoAudioEnabledUseCase,
-            observeVideoAspectRatioModeUseCase = appContainer.observeVideoAspectRatioModeUseCase,
-            setVideoAspectRatioModeUseCase = appContainer.setVideoAspectRatioModeUseCase,
             observeMusicEnabledUseCase = appContainer.observeMusicEnabledUseCase,
             setMusicEnabledUseCase = appContainer.setMusicEnabledUseCase,
             observeMusicPlayWhileBrowsingSystemsUseCase = appContainer.observeMusicPlayWhileBrowsingSystemsUseCase,
