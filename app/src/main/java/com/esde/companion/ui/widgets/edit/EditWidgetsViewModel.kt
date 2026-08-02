@@ -127,6 +127,14 @@ class EditWidgetsViewModel(
     private var gridDimensions: GridDimensions? = null
     private var loadJob: Job? = null
 
+    /** Caches each (system, media type) random pick for the life of this ViewModel, so
+     * repeatedly resolving preview content (e.g. after every Configure Widget tweak, which
+     * calls [refreshPreviewContent] on every change) keeps showing the same picture rather
+     * than rerolling ResolveRandomSystemMediaUseCase's random pick each time. A cache miss
+     * naturally occurs when [resolvePreviewContent] is asked about a system it hasn't seen
+     * yet, so browsing to a different system still gets its own fresh random pick. */
+    private val randomSystemMediaCache = mutableMapOf<Pair<String, MediaType>, String?>()
+
     private val _selectedCanvas = MutableStateFlow(StateGroup.System)
     val selectedCanvas: StateFlow<StateGroup> = _selectedCanvas.asStateFlow()
 
@@ -329,7 +337,9 @@ class EditWidgetsViewModel(
                         if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
                 ).distinct()
         val systemMediaByType: Map<MediaType, String?> = lastSystemShortName?.let { shortName ->
-            neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMedia(shortName, mediaType) }
+            neededSystemMediaTypes.associateWith { mediaType ->
+                randomSystemMediaCache.getOrPut(shortName to mediaType) { resolveRandomSystemMedia(shortName, mediaType) }
+            }
         } ?: emptyMap()
 
         val systemLogoAssetPath = lastSystemShortName

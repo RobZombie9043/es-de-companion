@@ -113,6 +113,19 @@ class EditWidgetsViewModelTest {
         override suspend fun randomMedia(systemShortName: String, mediaType: MediaType): String? = filesByType[mediaType]
     }
 
+    /** Returns a distinct value every call, unlike [FakeSystemMediaRepository]'s fixed
+     * mapping - used to prove EditWidgetsViewModel's own caching (not the repository's)
+     * is what keeps repeated previewContent resolutions stable within one edit session. */
+    private class CountingSystemMediaRepository : SystemMediaRepository {
+        var callCount = 0
+            private set
+
+        override suspend fun randomMedia(systemShortName: String, mediaType: MediaType): String? {
+            callCount++
+            return "/media/$systemShortName/$mediaType/pick-$callCount.png"
+        }
+    }
+
     private class FakeCustomSystemImageRepository(
         private val imagesByShortName: Map<String, String> = emptyMap(),
     ) : CustomSystemImageRepository {
@@ -257,7 +270,7 @@ class EditWidgetsViewModelTest {
     private fun buildViewModel(
         widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
         gameMediaRepository: FakeGameMediaRepository = FakeGameMediaRepository(),
-        systemMediaRepository: FakeSystemMediaRepository = FakeSystemMediaRepository(),
+        systemMediaRepository: SystemMediaRepository = FakeSystemMediaRepository(),
         customSystemImageRepository: FakeCustomSystemImageRepository = FakeCustomSystemImageRepository(),
         customSystemLogoRepository: FakeCustomSystemLogoRepository = FakeCustomSystemLogoRepository(),
         lastKnownContextRepository: FakeLastKnownContextRepository = FakeLastKnownContextRepository(),
@@ -559,5 +572,33 @@ class EditWidgetsViewModelTest {
         val content = viewModel.previewContent.value["widget-a"]
         assertTrue(content is WidgetContent.Image)
         assertEquals("/media/snes/fanart/game.png", (content as WidgetContent.Image).path)
+    }
+
+    @Test
+    fun `previewContent reuses the same random system media pick across repeated resolutions in one edit session`() = runTest(testDispatcher) {
+        val repository = FakeWidgetLayoutRepository().apply {
+            seed(
+                StateGroup.System,
+                listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill))),
+            )
+        }
+        val systemMediaRepository = CountingSystemMediaRepository()
+        val viewModel = buildViewModel(
+            widgetLayoutRepository = repository,
+            systemMediaRepository = systemMediaRepository,
+            lastKnownContextRepository = FakeLastKnownContextRepository(initialSystemShortName = "snes"),
+        )
+        viewModel.setGridDimensions(grid)
+        advanceUntilIdle()
+        val firstPick = (viewModel.previewContent.value["widget-a"] as WidgetContent.Image).path
+
+        // A Configure Widget tweak recomputes previewContent (see updateWidgetConfig's
+        // kdoc) but must not reroll which random image was already chosen this session.
+        viewModel.updateWidgetConfig("widget-a", WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fit))
+        advanceUntilIdle()
+        val secondPick = (viewModel.previewContent.value["widget-a"] as WidgetContent.Image).path
+
+        assertEquals(firstPick, secondPick)
+        assertEquals(1, systemMediaRepository.callCount)
     }
 }
