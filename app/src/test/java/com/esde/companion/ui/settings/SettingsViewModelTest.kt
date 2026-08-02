@@ -26,6 +26,7 @@ import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
@@ -48,6 +49,7 @@ import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
+import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
@@ -91,6 +93,7 @@ class SettingsViewModelTest {
         var musicPlayWhileBrowsingGames = true
         var musicPlayDuringScreensaver = true
         var musicDuckingMode = MusicDuckingMode.LowerVolume
+        var musicOverlayOpacityPercent = 100
         var imageTransitionMode = ImageTransitionMode.None
         var logoTransitionMode = LogoTransitionMode.None
 
@@ -136,6 +139,8 @@ class SettingsViewModelTest {
         override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(musicPlayDuringScreensaver)
         override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) { musicDuckingMode = mode }
         override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(musicDuckingMode)
+        override suspend fun setMusicOverlayOpacityPercent(percent: Int) { musicOverlayOpacityPercent = percent }
+        override fun observeMusicOverlayOpacityPercent(): Flow<Int> = flowOf(musicOverlayOpacityPercent)
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
@@ -262,6 +267,8 @@ class SettingsViewModelTest {
             setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository),
             observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository),
             setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository),
+            observeMusicOverlayOpacityUseCase = ObserveMusicOverlayOpacityUseCase(onboardingRepository),
+            setMusicOverlayOpacityUseCase = SetMusicOverlayOpacityUseCase(onboardingRepository),
         )
         return viewModel to appDrawerSettingsRepository
     }

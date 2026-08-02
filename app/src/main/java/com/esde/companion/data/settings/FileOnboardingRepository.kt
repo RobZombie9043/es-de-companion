@@ -220,6 +220,13 @@ class FileOnboardingRepository(
             } ?: MusicDuckingMode.LowerVolume
         }
 
+    override suspend fun setMusicOverlayOpacityPercent(percent: Int) {
+        context.onboardingDataStore.edit { it[MUSIC_OVERLAY_OPACITY_KEY] = percent.coerceIn(0, 100) }
+    }
+
+    override fun observeMusicOverlayOpacityPercent(): Flow<Int> =
+        context.onboardingDataStore.data.map { it[MUSIC_OVERLAY_OPACITY_KEY] ?: DEFAULT_MUSIC_OVERLAY_OPACITY_PERCENT }
+
     override suspend fun saveCustomMusicFolderPath(path: String) {
         context.onboardingDataStore.edit { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] = path }
     }
@@ -258,6 +265,7 @@ class FileOnboardingRepository(
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
+        const val DEFAULT_MUSIC_OVERLAY_OPACITY_PERCENT = 100
 
         val LOG_FOLDER_PATH_KEY = stringPreferencesKey("log_folder_path")
         val MEDIA_FOLDER_PATH_KEY = stringPreferencesKey("media_folder_path")
@@ -277,6 +285,7 @@ class FileOnboardingRepository(
         val MUSIC_PLAY_WHILE_BROWSING_GAMES_KEY = booleanPreferencesKey("music_play_while_browsing_games")
         val MUSIC_PLAY_DURING_SCREENSAVER_KEY = booleanPreferencesKey("music_play_during_screensaver")
         val MUSIC_DUCKING_MODE_KEY = stringPreferencesKey("music_ducking_mode")
+        val MUSIC_OVERLAY_OPACITY_KEY = intPreferencesKey("music_overlay_opacity_percent")
         val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
         val IMAGE_TRANSITION_MODE_KEY = stringPreferencesKey("image_transition_mode")
         val LOGO_TRANSITION_MODE_KEY = stringPreferencesKey("logo_transition_mode")

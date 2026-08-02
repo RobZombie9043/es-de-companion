@@ -250,6 +250,8 @@ fun SettingsScreen(
                             onMusicPlayDuringScreensaverChanged = viewModel::onMusicPlayDuringScreensaverChanged,
                             musicDuckingMode = uiState.musicDuckingMode,
                             onMusicDuckingModeChanged = viewModel::onMusicDuckingModeChanged,
+                            musicOverlayOpacityPercent = uiState.musicOverlayOpacityPercent,
+                            onMusicOverlayOpacityChanged = viewModel::onMusicOverlayOpacityChanged,
                         )
                         SettingsCategory.Other -> OtherSettingsContent(
                             overlayEnabled = uiState.overlayEnabled,
@@ -871,6 +873,8 @@ private fun SoundSettingsContent(
     onMusicPlayDuringScreensaverChanged: (Boolean) -> Unit,
     musicDuckingMode: MusicDuckingMode,
     onMusicDuckingModeChanged: (MusicDuckingMode) -> Unit,
+    musicOverlayOpacityPercent: Int,
+    onMusicOverlayOpacityChanged: (Int) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -979,6 +983,18 @@ private fun SoundSettingsContent(
                                 )
                             }
                         }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Music overlay opacity",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(text = "$musicOverlayOpacityPercent%", style = MaterialTheme.typography.bodySmall)
+                        Slider(
+                            value = musicOverlayOpacityPercent.toFloat(),
+                            onValueChange = { onMusicOverlayOpacityChanged(it.roundToInt()) },
+                            valueRange = 0f..100f,
+                        )
                     }
                 }
             }

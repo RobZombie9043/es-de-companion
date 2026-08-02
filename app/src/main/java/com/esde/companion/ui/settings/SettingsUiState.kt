@@ -46,6 +46,7 @@ data class SettingsUiState(
     val musicPlayWhileBrowsingGames: Boolean = true,
     val musicPlayDuringScreensaver: Boolean = true,
     val musicDuckingMode: MusicDuckingMode = MusicDuckingMode.LowerVolume,
+    val musicOverlayOpacityPercent: Int = 100,
     val customMusicFolderPath: String? = null,
     val customMusicFolderValidation: MediaFolderValidation? = null,
     val isValidatingCustomMusicFolder: Boolean = false,

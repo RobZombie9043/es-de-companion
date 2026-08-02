@@ -22,6 +22,7 @@ import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
@@ -44,6 +45,7 @@ import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
+import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
@@ -111,6 +113,8 @@ class SettingsViewModel(
     private val setMusicPlayDuringScreensaverUseCase: SetMusicPlayDuringScreensaverUseCase,
     private val observeMusicDuckingModeUseCase: ObserveMusicDuckingModeUseCase,
     private val setMusicDuckingModeUseCase: SetMusicDuckingModeUseCase,
+    private val observeMusicOverlayOpacityUseCase: ObserveMusicOverlayOpacityUseCase,
+    private val setMusicOverlayOpacityUseCase: SetMusicOverlayOpacityUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -151,6 +155,7 @@ class SettingsViewModel(
             val musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first()
             val musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first()
             val musicDuckingMode = observeMusicDuckingModeUseCase().first()
+            val musicOverlayOpacityPercent = observeMusicOverlayOpacityUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
@@ -179,6 +184,7 @@ class SettingsViewModel(
                 musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
                 musicPlayDuringScreensaver = musicPlayDuringScreensaver,
                 musicDuckingMode = musicDuckingMode,
+                musicOverlayOpacityPercent = musicOverlayOpacityPercent,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -266,6 +272,11 @@ class SettingsViewModel(
     fun onMusicDuckingModeChanged(mode: MusicDuckingMode) {
         _uiState.value = _uiState.value.copy(musicDuckingMode = mode)
         viewModelScope.launch { setMusicDuckingModeUseCase(mode) }
+    }
+
+    fun onMusicOverlayOpacityChanged(percent: Int) {
+        _uiState.value = _uiState.value.copy(musicOverlayOpacityPercent = percent)
+        viewModelScope.launch { setMusicOverlayOpacityUseCase(percent) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -67,6 +68,18 @@ private val SLOT_SPACING = 16.dp
  * desaturating/hiding it so much that it stops being useful for judging real visual
  * collisions (e.g. a bright icon over bright widget art) - see DockPreview's kdoc. */
 private const val DOCK_PREVIEW_ALPHA = 0.65f
+
+/** Dock background base color: black in dark mode, white in light mode - same
+ * theme-detection approach as MusicControlsOverlay's content/background colors. */
+@Composable
+private fun dockBackgroundColor(): Color =
+    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+
+/** Empty-slot border/icon color: the inverse of [dockBackgroundColor], so the "add app"
+ * placeholder stays visible against the dock's background in either theme. */
+@Composable
+private fun dockContentColor(): Color =
+    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.3f)
 
 private fun DockSize.iconDp(): Dp = when (this) {
     DockSize.Small -> 40.dp
@@ -111,7 +124,7 @@ fun AppDock(viewModel: AppDockViewModel, modifier: Modifier = Modifier) {
 
     Box(
         modifier = modifier
-            .background(color = Color.Black.copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE)
+            .background(color = dockBackgroundColor().copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE)
             // Claims every tap/press landing anywhere within the dock's bounds -
             // including gaps between slots and empty placeholder slots - so
             // MainScreen's whole-screen double-tap-to-blank / long-press-to-edit
@@ -219,7 +232,7 @@ fun DockPreview(
     Box(
         modifier = modifier
             .alpha(DOCK_PREVIEW_ALPHA)
-            .background(color = Color.Black.copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE),
+            .background(color = dockBackgroundColor().copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = HORIZONTAL_PADDING, vertical = VERTICAL_PADDING),
@@ -249,16 +262,17 @@ private fun FilledDockSlotPreview(app: InstalledApp, iconDp: Dp) {
 
 @Composable
 private fun EmptyDockSlotPreview(iconDp: Dp) {
+    val tint = dockContentColor()
     Box(
         modifier = Modifier
             .size(iconDp)
-            .border(width = 1.dp, color = Color.White.copy(alpha = 0.3f), shape = CircleShape),
+            .border(width = 1.dp, color = tint, shape = CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.Filled.Add,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.3f),
+            tint = tint,
         )
     }
 }
@@ -331,17 +345,18 @@ private fun FilledDockSlot(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun EmptyDockSlot(iconDp: Dp, onAddApp: () -> Unit) {
+    val tint = dockContentColor()
     Box(
         modifier = Modifier
             .size(iconDp)
-            .border(width = 1.dp, color = Color.White.copy(alpha = 0.3f), shape = CircleShape)
+            .border(width = 1.dp, color = tint, shape = CircleShape)
             .combinedClickable(onClick = {}, onLongClick = onAddApp),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.Filled.Add,
             contentDescription = "Add app to dock",
-            tint = Color.White.copy(alpha = 0.3f),
+            tint = tint,
         )
     }
 }

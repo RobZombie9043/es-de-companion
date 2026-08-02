@@ -184,6 +184,8 @@ class EditWidgetsViewModelTest {
         override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(true)
         override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {}
         override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(MusicDuckingMode.LowerVolume)
+        override suspend fun setMusicOverlayOpacityPercent(percent: Int) {}
+        override fun observeMusicOverlayOpacityPercent(): Flow<Int> = flowOf(100)
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
