@@ -120,6 +120,11 @@ interface OnboardingRepository {
     suspend fun setMusicDuckingMode(mode: MusicDuckingMode)
     fun observeMusicDuckingMode(): Flow<MusicDuckingMode>
 
+    /** Background opacity of the music FAB's expanded track/controls panel, 0-100,
+     * standard convention: 0 = fully transparent, 100 = fully opaque. Defaults to 100. */
+    suspend fun setMusicOverlayOpacityPercent(percent: Int)
+    fun observeMusicOverlayOpacityPercent(): Flow<Int>
+
     suspend fun saveCustomMusicFolderPath(path: String)
     fun observeCustomMusicFolderPath(): Flow<String?>
     suspend fun clearCustomMusicFolderPath()

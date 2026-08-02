@@ -195,6 +195,9 @@ class MainActivity : ComponentActivity() {
                             val musicEnabled by produceState(initialValue = true) {
                                 appContainer.observeMusicEnabledUseCase().collect { value = it }
                             }
+                            val musicOverlayOpacityPercent by produceState(initialValue = 100) {
+                                appContainer.observeMusicOverlayOpacityUseCase().collect { value = it }
+                            }
 
                             // Tapping the FAB toggles this; the timer alone controls
                             // dismissal - it must not be re-derived from musicPlaybackState,
@@ -206,6 +209,15 @@ class MainActivity : ComponentActivity() {
                                     delay(4_000)
                                     musicControlsRevealed = false
                                 }
+                            }
+
+                            val musicTrack = when (val state = musicPlaybackState) {
+                                is MusicPlaybackState.Playing -> state.track
+                                is MusicPlaybackState.Paused -> state.track
+                                MusicPlaybackState.Stopped -> null
+                            }
+                            LaunchedEffect(musicTrack?.filePath) {
+                                if (musicTrack != null) musicControlsRevealed = true
                             }
 
                             val activeScreenBehavior = when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
@@ -363,11 +375,11 @@ class MainActivity : ComponentActivity() {
                                 // clashes with MainScreen's existing long-press/double-tap
                                 // handling - same "small corner button" architecture as
                                 // EditWidgetsOverlay's options button, opposite corner.
-                                if (mainScreenActive && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
+                                if (mainScreenActive && !isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
                                     FloatingActionButton(
                                         onClick = { musicControlsRevealed = !musicControlsRevealed },
                                         modifier = Modifier
-                                            .align(Alignment.BottomEnd)
+                                            .align(Alignment.TopStart)
                                             .padding(16.dp),
                                     ) {
                                         Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
@@ -376,9 +388,10 @@ class MainActivity : ComponentActivity() {
                                     if (musicControlsRevealed) {
                                         MusicControlsOverlay(
                                             viewModel = musicControlsViewModel,
+                                            opacityPercent = musicOverlayOpacityPercent,
                                             modifier = Modifier
-                                                .align(Alignment.BottomEnd)
-                                                .padding(end = 16.dp, bottom = 80.dp),
+                                                .align(Alignment.TopStart)
+                                                .padding(start = 16.dp, top = 80.dp),
                                         )
                                     }
                                 }

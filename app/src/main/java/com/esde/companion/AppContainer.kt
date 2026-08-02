@@ -63,6 +63,7 @@ import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
@@ -100,6 +101,7 @@ import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
+import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
@@ -272,6 +274,8 @@ class AppContainer(context: Context) {
     val setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository)
     val observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository)
     val setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository)
+    val observeMusicOverlayOpacityUseCase = ObserveMusicOverlayOpacityUseCase(onboardingRepository)
+    val setMusicOverlayOpacityUseCase = SetMusicOverlayOpacityUseCase(onboardingRepository)
 
     val musicPlaybackCoordinator = MusicPlaybackCoordinator(
         observeConnectionState = observeConnectionStateUseCase,
