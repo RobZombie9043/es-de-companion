@@ -250,10 +250,6 @@ fun SettingsScreen(
                             musicOverlayOpacityPercent = uiState.musicOverlayOpacityPercent,
                             onMusicOverlayOpacityChanged = viewModel::onMusicOverlayOpacityChanged,
                         )
-                        SettingsCategory.Other -> OtherSettingsContent(
-                            overlayEnabled = uiState.overlayEnabled,
-                            onOverlayEnabledChanged = viewModel::onOverlayEnabledChanged,
-                        )
                     }
                 }
             }
@@ -1081,25 +1077,6 @@ private val MusicDuckingMode.label: String
         MusicDuckingMode.Pause -> "Pause"
     }
 
-@Composable
-private fun OtherSettingsContent(
-    overlayEnabled: Boolean,
-    onOverlayEnabledChanged: (Boolean) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        OverlayToggle(
-            enabled = overlayEnabled,
-            onEnabledChange = onOverlayEnabledChanged,
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemePicker(selected: ThemePreference, onSelected: (ThemePreference) -> Unit) {
@@ -1279,38 +1256,6 @@ private val LogoTransitionMode.label: String
         LogoTransitionMode.Slide -> "Slide"
         LogoTransitionMode.Scale -> "Scale"
     }
-
-@Composable
-private fun OverlayToggle(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Debug overlay",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Show debug info overlay",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(checked = enabled, onCheckedChange = onEnabledChange)
-            }
-        }
-    }
-}
 
 @Composable
 private fun WidgetsSettingsContent(

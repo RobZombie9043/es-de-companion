@@ -15,12 +15,9 @@ class MainViewModelFactory(
         }
         return MainViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
-            observeOverlayEnabled = appContainer.observeOverlayEnabledUseCase,
             observeGamePlayingBehavior = appContainer.observeGamePlayingBehaviorUseCase,
             observeScreensaverBehavior = appContainer.observeScreensaverBehaviorUseCase,
             observeVideoPlaybackEnabled = appContainer.observeVideoPlaybackEnabledUseCase,
-            resolveGameMedia = appContainer.resolveGameMediaUseCase,
-            onboardingRepository = appContainer.onboardingRepository,
         ) as T
     }
 }

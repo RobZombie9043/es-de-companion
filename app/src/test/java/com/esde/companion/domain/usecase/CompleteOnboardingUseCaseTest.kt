@@ -22,7 +22,6 @@ class CompleteOnboardingUseCaseTest {
         val savedCustomSystemImagesPaths = mutableListOf<String>()
         val savedCustomLogosPaths = mutableListOf<String>()
         var markedComplete = false
-        var overlayEnabled = true
         var gamePlayingBehavior = ScreenBehavior.Nothing
         var videoPlaybackEnabled = false
         var videoDelaySeconds = 0
@@ -51,8 +50,6 @@ class CompleteOnboardingUseCaseTest {
         override suspend fun clearCustomLogosFolderPath() {}
         override suspend fun markOnboardingComplete() { markedComplete = true }
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
-        override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
-        override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
         override suspend fun setVideoPlaybackEnabled(enabled: Boolean) { videoPlaybackEnabled = enabled }
         override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(videoPlaybackEnabled)
         override suspend fun setVideoDelaySeconds(seconds: Int) { videoDelaySeconds = seconds }

@@ -29,7 +29,6 @@ import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
-import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -51,7 +50,6 @@ import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
-import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -77,7 +75,6 @@ import org.junit.Test
 class SettingsViewModelTest {
 
     private class FakeOnboardingRepository : OnboardingRepository {
-        var overlayEnabled = true
         var gamePlayingBehavior = ScreenBehavior.Nothing
         var videoPlaybackEnabled = false
         var videoDelaySeconds = 0
@@ -109,8 +106,6 @@ class SettingsViewModelTest {
         override suspend fun clearCustomLogosFolderPath() {}
         override suspend fun markOnboardingComplete() {}
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(false)
-        override suspend fun setOverlayEnabled(enabled: Boolean) { overlayEnabled = enabled }
-        override fun observeOverlayEnabled(): Flow<Boolean> = flowOf(overlayEnabled)
         override suspend fun setVideoPlaybackEnabled(enabled: Boolean) { videoPlaybackEnabled = enabled }
         override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(videoPlaybackEnabled)
         override suspend fun setVideoDelaySeconds(seconds: Int) { videoDelaySeconds = seconds }
@@ -217,8 +212,6 @@ class SettingsViewModelTest {
             onboardingRepository = onboardingRepository,
             validateLogFolderUseCase = ValidateEsdeLogFolderUseCase(onboardingRepository),
             validateMediaFolderUseCase = ValidateEsdeMediaFolderUseCase(onboardingRepository),
-            observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository),
-            setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository),
             observeGamePlayingBehaviorUseCase = ObserveGamePlayingBehaviorUseCase(onboardingRepository),
             observeVideoPlaybackEnabledUseCase = ObserveVideoPlaybackEnabledUseCase(onboardingRepository),
             setVideoPlaybackEnabledUseCase = SetVideoPlaybackEnabledUseCase(onboardingRepository),

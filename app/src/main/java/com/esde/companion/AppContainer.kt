@@ -67,7 +67,6 @@ import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
-import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -103,7 +102,6 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
-import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -241,8 +239,6 @@ class AppContainer(context: Context) {
     val findLegacyScriptFilesUseCase = FindLegacyScriptFilesUseCase(esdeInstallationRepository)
     val deleteLegacyScriptFilesUseCase = DeleteLegacyScriptFilesUseCase(esdeInstallationRepository)
 
-    val observeOverlayEnabledUseCase = ObserveOverlayEnabledUseCase(onboardingRepository)
-    val setOverlayEnabledUseCase = SetOverlayEnabledUseCase(onboardingRepository)
     val observeGamePlayingBehaviorUseCase = ObserveGamePlayingBehaviorUseCase(onboardingRepository)
     val setGamePlayingBehaviorUseCase = SetGamePlayingBehaviorUseCase(onboardingRepository)
     val observeScreensaverBehaviorUseCase = ObserveScreensaverBehaviorUseCase(onboardingRepository)

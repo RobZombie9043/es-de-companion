@@ -99,13 +99,6 @@ class FileOnboardingRepository(
     override fun observeOnboardingComplete(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[ONBOARDING_COMPLETE_KEY] ?: false }
 
-    override suspend fun setOverlayEnabled(enabled: Boolean) {
-        context.onboardingDataStore.edit { it[OVERLAY_ENABLED_KEY] = enabled }
-    }
-
-    override fun observeOverlayEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[OVERLAY_ENABLED_KEY] ?: true }
-
     override suspend fun setThemePreference(preference: ThemePreference) {
         context.onboardingDataStore.edit { it[THEME_PREFERENCE_KEY] = preference.name }
     }
@@ -258,7 +251,6 @@ class FileOnboardingRepository(
         val CUSTOM_SYSTEM_IMAGES_FOLDER_PATH_KEY = stringPreferencesKey("custom_system_images_folder_path")
         val CUSTOM_LOGOS_FOLDER_PATH_KEY = stringPreferencesKey("custom_logos_folder_path")
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
-        val OVERLAY_ENABLED_KEY = booleanPreferencesKey("overlay_enabled")
         val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")
         val GAME_PLAYING_BEHAVIOR_KEY = stringPreferencesKey("game_playing_behavior")
         val SCREENSAVER_BEHAVIOR_KEY = stringPreferencesKey("screensaver_behavior")

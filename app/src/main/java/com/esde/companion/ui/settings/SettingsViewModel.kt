@@ -25,7 +25,6 @@ import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
-import com.esde.companion.domain.usecase.ObserveOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -47,7 +46,6 @@ import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
-import com.esde.companion.domain.usecase.SetOverlayEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -66,8 +64,6 @@ class SettingsViewModel(
     private val onboardingRepository: OnboardingRepository,
     private val validateLogFolderUseCase: ValidateEsdeLogFolderUseCase,
     private val validateMediaFolderUseCase: ValidateEsdeMediaFolderUseCase,
-    private val observeOverlayEnabledUseCase: ObserveOverlayEnabledUseCase,
-    private val setOverlayEnabledUseCase: SetOverlayEnabledUseCase,
     private val observeGamePlayingBehaviorUseCase: ObserveGamePlayingBehaviorUseCase,
     private val setGamePlayingBehaviorUseCase: SetGamePlayingBehaviorUseCase,
     private val observeScreensaverBehaviorUseCase: ObserveScreensaverBehaviorUseCase,
@@ -128,7 +124,6 @@ class SettingsViewModel(
             val customSystemImagesPath = onboardingRepository.observeCustomSystemImagesFolderPath().first()
             val customLogosPath = onboardingRepository.observeCustomLogosFolderPath().first()
             val customMusicPath = onboardingRepository.observeCustomMusicFolderPath().first()
-            val overlayEnabled = observeOverlayEnabledUseCase().first()
             val gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first()
             val screensaverBehavior = observeScreensaverBehaviorUseCase().first()
             val themePreference = observeThemePreferenceUseCase().first()
@@ -156,7 +151,6 @@ class SettingsViewModel(
                 customSystemImagesFolderPath = customSystemImagesPath,
                 customLogosFolderPath = customLogosPath,
                 customMusicFolderPath = customMusicPath,
-                overlayEnabled = overlayEnabled,
                 gamePlayingBehavior = gamePlayingBehavior,
                 screensaverBehavior = screensaverBehavior,
                 themePreference = themePreference,
@@ -205,11 +199,6 @@ class SettingsViewModel(
             validateMediaFolder(path)
             onboardingRepository.saveMediaFolderPath(path)
         }
-    }
-
-    fun onOverlayEnabledChanged(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(overlayEnabled = enabled)
-        viewModelScope.launch { setOverlayEnabledUseCase(enabled) }
     }
 
     fun onGamePlayingBehaviorChanged(behavior: ScreenBehavior) {

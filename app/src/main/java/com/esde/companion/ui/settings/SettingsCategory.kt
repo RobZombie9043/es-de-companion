@@ -9,17 +9,9 @@ package com.esde.companion.ui.settings
  * SETTINGS out of the main graph.
  */
 enum class SettingsCategory(val title: String, val description: String) {
-    Setup(
-        title = "Setup",
-        description = "ES-DE and media folder locations",
-    ),
     UI(
         title = "UI Settings",
         description = "Appearance and screen behavior",
-    ),
-    VideoPlayback(
-        title = "Video Playback",
-        description = "Game video playback while browsing",
     ),
     Widgets(
         title = "Widgets",
@@ -29,12 +21,16 @@ enum class SettingsCategory(val title: String, val description: String) {
         title = "App Drawer and Dock",
         description = "Visible apps, background opacity, grid columns, dock",
     ),
+    VideoPlayback(
+        title = "Video Playback",
+        description = "Game video playback while browsing",
+    ),
     Sound(
         title = "Background Music",
         description = "Background music and video-playback ducking",
     ),
-    Other(
-        title = "Other Settings",
-        description = "Debug overlay and misc options",
+    Setup(
+        title = "Setup",
+        description = "ES-DE and media folder locations",
     ),
 }

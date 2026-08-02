@@ -18,8 +18,6 @@ class SettingsViewModelFactory(
             onboardingRepository = appContainer.onboardingRepository,
             validateLogFolderUseCase = appContainer.validateEsdeLogFolderUseCase,
             validateMediaFolderUseCase = appContainer.validateEsdeMediaFolderUseCase,
-            observeOverlayEnabledUseCase = appContainer.observeOverlayEnabledUseCase,
-            setOverlayEnabledUseCase = appContainer.setOverlayEnabledUseCase,
             observeGamePlayingBehaviorUseCase = appContainer.observeGamePlayingBehaviorUseCase,
             setGamePlayingBehaviorUseCase = appContainer.setGamePlayingBehaviorUseCase,
             observeScreensaverBehaviorUseCase = appContainer.observeScreensaverBehaviorUseCase,

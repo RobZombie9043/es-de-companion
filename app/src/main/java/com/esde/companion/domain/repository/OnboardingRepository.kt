@@ -44,15 +44,6 @@ interface OnboardingRepository {
     fun observeOnboardingComplete(): Flow<Boolean>
 
     /**
-     * Whether the on-screen state overlay (AppState/args/cover-image info drawn on top
-     * of the main screen) is shown. Defaults to true when never explicitly set - this is
-     * currently the only content the main screen has, so it should be visible out of the
-     * box. Purely a display preference; has no bearing on the state pipeline itself.
-     */
-    suspend fun setOverlayEnabled(enabled: Boolean)
-    fun observeOverlayEnabled(): Flow<Boolean>
-
-    /**
      * The user's selected color theme. Defaults to [ThemePreference.Default] when never
      * explicitly set.
      */

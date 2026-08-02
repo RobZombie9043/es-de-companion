@@ -1,7 +1,6 @@
 package com.esde.companion.ui.main
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -38,7 +37,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.ui.dock.AppDock
 import com.esde.companion.ui.dock.AppDockViewModel
 import com.esde.companion.ui.dock.dockBarHeight
@@ -78,13 +76,7 @@ fun MainScreen(
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
 ) {
-    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
-    val coverImageStatus by viewModel.coverImageStatus.collectAsStateWithLifecycle()
-    val overlayEnabled by viewModel.overlayEnabled.collectAsStateWithLifecycle()
     MainScreenContent(
-        connectionState = connectionState,
-        coverImageStatus = coverImageStatus,
-        overlayEnabled = overlayEnabled,
         appDrawerViewModel = appDrawerViewModel,
         dockViewModel = dockViewModel,
         widgetsLocked = widgetsLocked,
@@ -107,9 +99,6 @@ fun MainScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
-    connectionState: EsdeConnectionState,
-    coverImageStatus: CoverImageStatus?,
-    overlayEnabled: Boolean,
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
     widgetsLocked: Boolean,
@@ -249,23 +238,7 @@ private fun MainScreenContent(
                         },
                     )
                 },
-            ) { innerPadding ->
-                AnimatedVisibility(
-                    visible = overlayEnabled,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(16.dp),
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        StateOverlay(
-                            connectionState = connectionState,
-                            coverImageStatus = coverImageStatus,
-                            modifier = Modifier.align(Alignment.TopStart),
-                        )
-                    }
-                }
-            }
+            ) { }
 
             // Slides up from below the bottom edge as openFraction goes 0 -> 1. At
             // openFraction = 0 this sits entirely below the visible screen (offset =
