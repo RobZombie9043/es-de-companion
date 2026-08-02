@@ -22,6 +22,8 @@ import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
+import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.model.isLogoStyle
 import com.esde.companion.ui.main.CrossfadeAsyncImage
 import java.io.File
 
@@ -53,6 +55,7 @@ fun WidgetCanvas(
                 val content = contentByWidgetId[widget.id] ?: WidgetContent.Empty
                 WidgetContentView(
                     content = content,
+                    widgetType = widget.widgetType,
                     imageTransitionMode = imageTransitionMode,
                     logoTransitionMode = logoTransitionMode,
                     navigationDirection = navigationDirection,
@@ -94,16 +97,59 @@ fun WidgetCanvas(
  * NavigationDirectionTracker), used only by [LogoTransitionMode.Slide] to enter from the
  * same side. Defaults to null - EditWidgetsOverlay's edit-mode preview has no live
  * AppState to derive it from, so it falls back to AnimatedLogoImage's default direction.
+ *
+ * [widgetType] decides *how* [content] is rendered, not just what content means -
+ * specifically, [WidgetType.isLogoStyle] widgets (system logo, game/system marquees)
+ * always route through a single AnimatedLogoImage call site below, regardless of whether
+ * [content] currently resolves to [WidgetContent.Empty] or a real path. Branching on
+ * `content`'s own type instead (as this used to) put the "nothing found" and "found" cases
+ * in different `when` branches, which are different composition groups - Compose would
+ * discard and recreate AnimatedLogoImage on every found/not-found flip, silently losing
+ * its in-flight transition state and skipping the enter animation the next time a logo
+ * did resolve. Keying the branch on the stable [widgetType] instead of the content that
+ * changes as you browse keeps one composable instance alive across that flip.
  */
 @Composable
 internal fun WidgetContentView(
     content: WidgetContent,
+    widgetType: WidgetType,
     imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
     logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
     navigationDirection: NavigationDirection? = null,
     modifier: Modifier = Modifier,
     textUserScrollEnabled: Boolean = true,
 ) {
+    if (widgetType.isLogoStyle) {
+        val model: Any? = when (content) {
+            is WidgetContent.Image -> if (content.isAsset) content.path else File(content.path)
+            is WidgetContent.SystemLogoAsset -> content.assetPath
+            else -> null
+        }
+        val scaleMode = when (content) {
+            is WidgetContent.Image -> content.scaleMode
+            is WidgetContent.SystemLogoAsset -> content.scaleMode
+            else -> ScaleMode.Fit
+        }
+        val effects = when (content) {
+            is WidgetContent.Image -> content.effects
+            is WidgetContent.SystemLogoAsset -> content.effects
+            else -> ImageEffects()
+        }
+
+        Box(modifier = modifier) {
+            AnimatedLogoImage(
+                model = model,
+                contentDescription = null,
+                contentScale = scaleMode.toContentScale(),
+                mode = logoTransitionMode,
+                direction = navigationDirection,
+                modifier = Modifier.fillMaxSize().applyBlurEffect(effects),
+            )
+            DarkenOverlay(effects = effects)
+        }
+        return
+    }
+
     when (content) {
         WidgetContent.Empty -> Unit
 
@@ -113,41 +159,19 @@ internal fun WidgetContentView(
         is WidgetContent.Image ->
             Box(modifier = modifier) {
                 val model = if (content.isAsset) content.path else File(content.path)
-                if (content.isTransparentOverlay) {
-                    AnimatedLogoImage(
-                        model = model,
-                        contentDescription = null,
-                        contentScale = content.scaleMode.toContentScale(),
-                        mode = logoTransitionMode,
-                        direction = navigationDirection,
-                        modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
-                    )
-                } else {
-                    val (durationMillis, scaleFrom) = imageTransitionMode.toDurationAndScale()
-                    CrossfadeAsyncImage(
-                        model = model,
-                        contentDescription = null,
-                        contentScale = content.scaleMode.toContentScale(),
-                        durationMillis = durationMillis,
-                        scaleFrom = scaleFrom,
-                        modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
-                    )
-                }
-                DarkenOverlay(effects = content.effects)
-            }
-
-        is WidgetContent.SystemLogoAsset ->
-            Box(modifier = modifier) {
-                AnimatedLogoImage(
-                    model = content.assetPath,
+                val (durationMillis, scaleFrom) = imageTransitionMode.toDurationAndScale()
+                CrossfadeAsyncImage(
+                    model = model,
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
-                    mode = logoTransitionMode,
-                    direction = navigationDirection,
+                    durationMillis = durationMillis,
+                    scaleFrom = scaleFrom,
                     modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                 )
                 DarkenOverlay(effects = content.effects)
             }
+
+        is WidgetContent.SystemLogoAsset -> Unit // unreachable: SystemLogoAsset only occurs for SystemLogo widgetType, which isLogoStyle handles above
 
         is WidgetContent.Text ->
             Box(
