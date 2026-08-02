@@ -42,6 +42,7 @@ fun WidgetOverlay(viewModel: WidgetsViewModel, modifier: Modifier = Modifier) {
                     contentByWidgetId = state.contentByWidgetId,
                     imageTransitionMode = imageTransitionMode,
                     logoTransitionMode = logoTransitionMode,
+                    navigationDirection = state.navigationDirection,
                     modifier = Modifier.fillMaxSize(),
                 )
         }

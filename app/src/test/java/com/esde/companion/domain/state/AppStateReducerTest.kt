@@ -2,8 +2,10 @@ package com.esde.companion.domain.state
 
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeEvent
+import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.ScreensaverGame
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AppStateReducerTest {
@@ -30,6 +32,49 @@ class AppStateReducerTest {
             AppState.BrowsingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast"),
             result,
         )
+    }
+
+    @Test
+    fun `system-select carries the event's navigation direction into BrowsingSystem`() {
+        val event = EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast", direction = NavigationDirection.Right)
+
+        val result = AppStateReducer.reduce(AppState.Idle, event)
+
+        assertEquals(
+            AppState.BrowsingSystem("dreamcast", "Sega Dreamcast", "/roms/dreamcast", navigationDirection = NavigationDirection.Right),
+            result,
+        )
+    }
+
+    @Test
+    fun `game-select carries the event's navigation direction into BrowsingGame`() {
+        val event = EsdeEvent.GameSelect("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", direction = NavigationDirection.Up)
+
+        val result = AppStateReducer.reduce(AppState.Idle, event)
+
+        assertEquals(
+            AppState.BrowsingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", navigationDirection = NavigationDirection.Up),
+            result,
+        )
+    }
+
+    @Test
+    fun `system-select with no known direction produces a null navigationDirection`() {
+        val event = EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast")
+
+        val result = AppStateReducer.reduce(AppState.Idle, event) as AppState.BrowsingSystem
+
+        assertNull(result.navigationDirection)
+    }
+
+    @Test
+    fun `game-end produces a null navigationDirection - no controller press precedes quitting a game`() {
+        val playing = AppState.PlayingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
+        val event = EsdeEvent.GameEnd("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
+
+        val result = AppStateReducer.reduce(playing, event) as AppState.BrowsingGame
+
+        assertNull(result.navigationDirection)
     }
 
     @Test

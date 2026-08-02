@@ -18,6 +18,7 @@ import androidx.compose.ui.zIndex
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
+import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
@@ -39,6 +40,7 @@ fun WidgetCanvas(
     contentByWidgetId: Map<String, WidgetContent>,
     imageTransitionMode: ImageTransitionMode,
     logoTransitionMode: LogoTransitionMode,
+    navigationDirection: NavigationDirection? = null,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -53,6 +55,7 @@ fun WidgetCanvas(
                     content = content,
                     imageTransitionMode = imageTransitionMode,
                     logoTransitionMode = logoTransitionMode,
+                    navigationDirection = navigationDirection,
                     modifier = Modifier
                         .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
                         .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
@@ -86,12 +89,18 @@ fun WidgetCanvas(
  * [WidgetContent.SystemLogoAsset] both always use [logoTransitionMode]; opaque
  * [WidgetContent.Image] uses [imageTransitionMode]. See AnimatedLogoImage's kdoc for why
  * logo-style content never gets a fade option.
+ *
+ * [navigationDirection] is which way the user just navigated (if known - see
+ * NavigationDirectionTracker), used only by [LogoTransitionMode.Slide] to enter from the
+ * opposite side. Defaults to null - EditWidgetsOverlay's edit-mode preview has no live
+ * AppState to derive it from, so it falls back to AnimatedLogoImage's default direction.
  */
 @Composable
 internal fun WidgetContentView(
     content: WidgetContent,
     imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
     logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
+    navigationDirection: NavigationDirection? = null,
     modifier: Modifier = Modifier,
     textUserScrollEnabled: Boolean = true,
 ) {
@@ -110,6 +119,7 @@ internal fun WidgetContentView(
                         contentDescription = null,
                         contentScale = content.scaleMode.toContentScale(),
                         mode = logoTransitionMode,
+                        direction = navigationDirection,
                         modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                     )
                 } else {
@@ -133,6 +143,7 @@ internal fun WidgetContentView(
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
                     mode = logoTransitionMode,
+                    direction = navigationDirection,
                     modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                 )
                 DarkenOverlay(effects = content.effects)

@@ -18,6 +18,7 @@ sealed class AppState {
         val systemShortName: String,
         val systemFullName: String,
         val systemPath: String,
+        val navigationDirection: NavigationDirection? = null,
     ) : AppState()
 
     data class BrowsingGame(
@@ -25,6 +26,7 @@ sealed class AppState {
         val gameName: String,
         val systemShortName: String,
         val systemFullName: String,
+        val navigationDirection: NavigationDirection? = null,
     ) : AppState()
 
     data class PlayingGame(

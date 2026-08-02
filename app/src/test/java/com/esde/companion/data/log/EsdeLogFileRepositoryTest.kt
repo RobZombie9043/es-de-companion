@@ -3,6 +3,7 @@ package com.esde.companion.data.log
 import app.cash.turbine.test
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeEvent
+import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.state.AppStateReducer
 import java.io.File
 import kotlinx.coroutines.test.runTest
@@ -56,6 +57,64 @@ class EsdeLogFileRepositoryTest {
 
         repository.observeEvents().test {
             expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `the replayed navigation event carries the direction of its preceding controller press`() = runTest {
+        val logFile = tempFolder.newFile("es_log.txt")
+        logFile.writeText(
+            """
+            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 14, isMappedTo=right, value=1
+            Aug 02 13:31:34 Debug:  Scripting::fireEvent(): game-select "/storage/E2AB-E84A/ROMs/mastersystem/Dragon Crystal (Europe, Brazil) (En).zip" "Dragon Crystal" "mastersystem" "Sega Master System"
+            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 14, isMappedTo=right, value=0
+            """.trimIndent(),
+        )
+
+        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+
+        repository.observeEvents().test {
+            assertEquals(
+                EsdeEvent.GameSelect(
+                    romPath = "/storage/E2AB-E84A/ROMs/mastersystem/Dragon Crystal (Europe, Brazil) (En).zip",
+                    gameName = "Dragon Crystal",
+                    systemShortName = "mastersystem",
+                    systemFullName = "Sega Master System",
+                    direction = NavigationDirection.Right,
+                ),
+                awaitItem(),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `a non-directional button press clears a prior direction, reproducing the real log excerpt's b-triggered system-select`() = runTest {
+        val logFile = tempFolder.newFile("es_log.txt")
+        logFile.writeText(
+            """
+            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=1
+            Aug 02 13:31:34 Debug:  Scripting::fireEvent(): game-select "/storage/E2AB-E84A/ROMs/mastersystem/Buggy Run (Europe, Brazil) (En).zip" "Buggy Run" "mastersystem" "Sega Master System"
+            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=0
+            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 1, isMappedTo=b, value=1
+            Aug 02 13:31:34 Debug:  Scripting::fireEvent(): system-select "mastersystem" "Sega Master System" "/storage/E2AB-E84A/ROMs/mastersystem" ""
+            Aug 02 13:31:35 Debug:  Window::logInput(Xbox Wireless Controller): Button 1, isMappedTo=b, value=0
+            """.trimIndent(),
+        )
+
+        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+
+        repository.observeEvents().test {
+            assertEquals(
+                EsdeEvent.SystemSelect(
+                    systemShortName = "mastersystem",
+                    systemFullName = "Sega Master System",
+                    systemPath = "/storage/E2AB-E84A/ROMs/mastersystem",
+                    direction = null,
+                ),
+                awaitItem(),
+            )
             cancelAndIgnoreRemainingEvents()
         }
     }
