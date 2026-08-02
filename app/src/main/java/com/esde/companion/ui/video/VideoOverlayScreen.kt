@@ -21,7 +21,6 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import com.esde.companion.domain.model.VideoAspectRatioMode
 import java.io.File
 import kotlinx.coroutines.delay
 
@@ -44,7 +43,6 @@ fun VideoOverlayScreen(
     videoPath: String,
     delaySeconds: Int,
     audioEnabled: Boolean,
-    aspectRatioMode: VideoAspectRatioMode,
     modifier: Modifier = Modifier,
     onIsPlayingChanged: (Boolean) -> Unit = {},
 ) {
@@ -102,14 +100,9 @@ fun VideoOverlayScreen(
                 // rebinds this PlayerView to a new ExoPlayer instance when videoPath
                 // changes - factory alone only fires once, on first mount, and would
                 // otherwise leave this View pointed at a since-released player forever.
-                // Also re-applies resizeMode so a live Settings change to aspectRatioMode
-                // takes effect on the PlayerView already on screen, not just new ones.
                 update = { playerView ->
                     playerView.player = player
-                    playerView.resizeMode = when (aspectRatioMode) {
-                        VideoAspectRatioMode.Contain -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        VideoAspectRatioMode.Cover -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                    }
+                    playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                 },
                 modifier = Modifier.fillMaxSize(),
             )

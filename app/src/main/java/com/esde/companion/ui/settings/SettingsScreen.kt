@@ -34,9 +34,7 @@ import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MenuBook
@@ -86,7 +84,6 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
-import com.esde.companion.domain.model.VideoAspectRatioMode
 import kotlin.math.roundToInt
 
 /**
@@ -210,14 +207,14 @@ fun SettingsScreen(
                             onGamePlayingBehaviorChanged = viewModel::onGamePlayingBehaviorChanged,
                             screensaverBehavior = uiState.screensaverBehavior,
                             onScreensaverBehaviorChanged = viewModel::onScreensaverBehaviorChanged,
+                        )
+                        SettingsCategory.VideoPlayback -> VideoPlaybackSettingsContent(
                             videoPlaybackEnabled = uiState.videoPlaybackEnabled,
                             onVideoPlaybackEnabledChanged = viewModel::onVideoPlaybackEnabledChanged,
                             videoDelaySeconds = uiState.videoDelaySeconds,
                             onVideoDelaySecondsChanged = viewModel::onVideoDelaySecondsChanged,
                             videoAudioEnabled = uiState.videoAudioEnabled,
                             onVideoAudioEnabledChanged = viewModel::onVideoAudioEnabledChanged,
-                            videoAspectRatioMode = uiState.videoAspectRatioMode,
-                            onVideoAspectRatioModeChanged = viewModel::onVideoAspectRatioModeChanged,
                         )
                         SettingsCategory.Widgets -> WidgetsSettingsContent(
                             widgetsLocked = uiState.widgetsLocked,
@@ -400,14 +397,6 @@ private fun UISettingsContent(
     onGamePlayingBehaviorChanged: (ScreenBehavior) -> Unit,
     screensaverBehavior: ScreenBehavior,
     onScreensaverBehaviorChanged: (ScreenBehavior) -> Unit,
-    videoPlaybackEnabled: Boolean,
-    onVideoPlaybackEnabledChanged: (Boolean) -> Unit,
-    videoDelaySeconds: Int,
-    onVideoDelaySecondsChanged: (Int) -> Unit,
-    videoAudioEnabled: Boolean,
-    onVideoAudioEnabledChanged: (Boolean) -> Unit,
-    videoAspectRatioMode: VideoAspectRatioMode,
-    onVideoAspectRatioModeChanged: (VideoAspectRatioMode) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -431,31 +420,35 @@ private fun UISettingsContent(
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
         )
-        VideoPlaybackSetting(
-            enabled = videoPlaybackEnabled,
-            onEnabledChanged = onVideoPlaybackEnabledChanged,
-            delaySeconds = videoDelaySeconds,
-            onDelaySecondsChanged = onVideoDelaySecondsChanged,
-            audioEnabled = videoAudioEnabled,
-            onAudioEnabledChanged = onVideoAudioEnabledChanged,
-            aspectRatioMode = videoAspectRatioMode,
-            onAspectRatioModeChanged = onVideoAspectRatioModeChanged,
-        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VideoPlaybackSetting(
-    enabled: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
-    delaySeconds: Int,
-    onDelaySecondsChanged: (Int) -> Unit,
-    audioEnabled: Boolean,
-    onAudioEnabledChanged: (Boolean) -> Unit,
-    aspectRatioMode: VideoAspectRatioMode,
-    onAspectRatioModeChanged: (VideoAspectRatioMode) -> Unit,
+private fun VideoPlaybackSettingsContent(
+    videoPlaybackEnabled: Boolean,
+    onVideoPlaybackEnabledChanged: (Boolean) -> Unit,
+    videoDelaySeconds: Int,
+    onVideoDelaySecondsChanged: (Int) -> Unit,
+    videoAudioEnabled: Boolean,
+    onVideoAudioEnabledChanged: (Boolean) -> Unit,
 ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        VideoPlaybackEnabledSetting(enabled = videoPlaybackEnabled, onEnabledChanged = onVideoPlaybackEnabledChanged)
+        if (videoPlaybackEnabled) {
+            VideoDelaySetting(delaySeconds = videoDelaySeconds, onDelaySecondsChanged = onVideoDelaySecondsChanged)
+            VideoAudioSetting(enabled = videoAudioEnabled, onEnabledChanged = onVideoAudioEnabledChanged)
+        }
+    }
+}
+
+@Composable
+private fun VideoPlaybackEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -463,10 +456,10 @@ private fun VideoPlaybackSetting(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "Video Playback",
+                text = "Background Video",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -482,77 +475,71 @@ private fun VideoPlaybackSetting(
                 )
                 Switch(checked = enabled, onCheckedChange = onEnabledChanged)
             }
-
-            if (enabled) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = if (delaySeconds == 0) "Start delay: off" else "Start delay: ${delaySeconds}s",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Slider(
-                        value = delaySeconds.toFloat(),
-                        onValueChange = { onDelaySecondsChanged(it.roundToInt()) },
-                        valueRange = 0f..10f,
-                        steps = 9,
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Video audio",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Switch(checked = audioEnabled, onCheckedChange = onAudioEnabledChanged)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Scaling",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        VideoAspectRatioMode.entries.forEachIndexed { index, mode ->
-                            SegmentedButton(
-                                selected = mode == aspectRatioMode,
-                                onClick = { onAspectRatioModeChanged(mode) },
-                                shape = SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = VideoAspectRatioMode.entries.size,
-                                ),
-                                icon = {
-                                    SegmentedButtonDefaults.Icon(active = mode == aspectRatioMode) {
-                                        Icon(
-                                            imageVector = mode.icon,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                                        )
-                                    }
-                                },
-                                label = { Text(mode.label) },
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
 
-// Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
-private val VideoAspectRatioMode.icon: ImageVector
-    get() = when (this) {
-        VideoAspectRatioMode.Contain -> Icons.Filled.FitScreen
-        VideoAspectRatioMode.Cover -> Icons.Filled.Crop
+@Composable
+private fun VideoDelaySetting(delaySeconds: Int, onDelaySecondsChanged: (Int) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Video Start Delay",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = if (delaySeconds == 0) "Off" else "${delaySeconds}s",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Slider(
+                value = delaySeconds.toFloat(),
+                onValueChange = { onDelaySecondsChanged(it.roundToInt()) },
+                valueRange = 0f..10f,
+                steps = 9,
+            )
+        }
     }
+}
 
-private val VideoAspectRatioMode.label: String
-    get() = when (this) {
-        VideoAspectRatioMode.Contain -> "Contain"
-        VideoAspectRatioMode.Cover -> "Cover"
+@Composable
+private fun VideoAudioSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Video Audio",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Enable video audio",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            }
+        }
     }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -883,126 +870,203 @@ private fun SoundSettingsContent(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = SettingsItemShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        MusicEnabledSetting(enabled = musicEnabled, onEnabledChanged = onMusicEnabledChanged)
+        if (musicEnabled) {
+            MusicPlayWhileBrowsingSystemsSetting(
+                enabled = musicPlayWhileBrowsingSystems,
+                onEnabledChanged = onMusicPlayWhileBrowsingSystemsChanged,
+            )
+            MusicPlayWhileBrowsingGamesSetting(
+                enabled = musicPlayWhileBrowsingGames,
+                onEnabledChanged = onMusicPlayWhileBrowsingGamesChanged,
+            )
+            MusicPlayDuringScreensaverSetting(
+                enabled = musicPlayDuringScreensaver,
+                onEnabledChanged = onMusicPlayDuringScreensaverChanged,
+            )
+            MusicDuckingModeSetting(selected = musicDuckingMode, onSelected = onMusicDuckingModeChanged)
+            MusicOverlayOpacitySetting(percent = musicOverlayOpacityPercent, onPercentChanged = onMusicOverlayOpacityChanged)
+        }
+    }
+}
+
+@Composable
+private fun MusicEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            Text(
+                text = "Background Music",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Background Music",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    text = "Enable background music",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Enable background music",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Switch(checked = musicEnabled, onCheckedChange = onMusicEnabledChanged)
-                }
+                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            }
+        }
+    }
+}
 
-                if (musicEnabled) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Play while browsing systems",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Switch(
-                            checked = musicPlayWhileBrowsingSystems,
-                            onCheckedChange = onMusicPlayWhileBrowsingSystemsChanged,
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Play while browsing games",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Switch(
-                            checked = musicPlayWhileBrowsingGames,
-                            onCheckedChange = onMusicPlayWhileBrowsingGamesChanged,
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Play during screensaver",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Switch(
-                            checked = musicPlayDuringScreensaver,
-                            onCheckedChange = onMusicPlayDuringScreensaverChanged,
-                        )
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "During video playback",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            MusicDuckingMode.entries.forEachIndexed { index, mode ->
-                                SegmentedButton(
-                                    selected = mode == musicDuckingMode,
-                                    onClick = { onMusicDuckingModeChanged(mode) },
-                                    shape = SegmentedButtonDefaults.itemShape(
-                                        index = index,
-                                        count = MusicDuckingMode.entries.size,
-                                    ),
-                                    icon = {
-                                        SegmentedButtonDefaults.Icon(active = mode == musicDuckingMode) {
-                                            Icon(
-                                                imageVector = mode.icon,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                                            )
-                                        }
-                                    },
-                                    label = { Text(mode.label) },
+@Composable
+private fun MusicPlayWhileBrowsingSystemsSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Play while browsing systems",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+        }
+    }
+}
+
+@Composable
+private fun MusicPlayWhileBrowsingGamesSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Play while browsing games",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+        }
+    }
+}
+
+@Composable
+private fun MusicPlayDuringScreensaverSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Play during screensaver",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MusicDuckingModeSetting(selected: MusicDuckingMode, onSelected: (MusicDuckingMode) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "During Video Playback",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                MusicDuckingMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        selected = mode == selected,
+                        onClick = { onSelected(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = MusicDuckingMode.entries.size,
+                        ),
+                        icon = {
+                            SegmentedButtonDefaults.Icon(active = mode == selected) {
+                                Icon(
+                                    imageVector = mode.icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
                                 )
                             }
-                        }
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Music overlay opacity",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(text = "$musicOverlayOpacityPercent%", style = MaterialTheme.typography.bodySmall)
-                        Slider(
-                            value = musicOverlayOpacityPercent.toFloat(),
-                            onValueChange = { onMusicOverlayOpacityChanged(it.roundToInt()) },
-                            valueRange = 0f..100f,
-                        )
-                    }
+                        },
+                        label = { Text(mode.label) },
+                    )
                 }
             }
         }
     }
 }
 
-// Presentation-only icon/label, same reasoning as VideoAspectRatioMode.icon/label above.
+@Composable
+private fun MusicOverlayOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Music Overlay Opacity",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = "$percent%", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = percent.toFloat(),
+                onValueChange = { onPercentChanged(it.roundToInt()) },
+                valueRange = 0f..100f,
+            )
+        }
+    }
+}
+
+// Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
 private val MusicDuckingMode.icon: ImageVector
     get() = when (this) {
         MusicDuckingMode.Unchanged -> Icons.Filled.VolumeUp

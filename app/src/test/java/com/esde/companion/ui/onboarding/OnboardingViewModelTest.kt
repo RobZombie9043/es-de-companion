@@ -9,7 +9,6 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
-import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.repository.EsdeInstallationRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.OnboardingRepository
@@ -87,8 +86,6 @@ class OnboardingViewModelTest {
         override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
         override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
         override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-        override suspend fun setVideoAspectRatioMode(mode: VideoAspectRatioMode) {}
-        override fun observeVideoAspectRatioMode(): Flow<VideoAspectRatioMode> = flowOf(VideoAspectRatioMode.Cover)
         override suspend fun setMusicEnabled(enabled: Boolean) {}
         override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)
         override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {}

@@ -187,7 +187,6 @@ class MainActivity : ComponentActivity() {
                             val videoPath by videoOverlayViewModel.videoPath.collectAsStateWithLifecycle()
                             val videoDelaySeconds by videoOverlayViewModel.delaySeconds.collectAsStateWithLifecycle()
                             val videoAudioEnabled by videoOverlayViewModel.audioEnabled.collectAsStateWithLifecycle()
-                            val videoAspectRatioMode by videoOverlayViewModel.aspectRatioMode.collectAsStateWithLifecycle()
 
                             val musicControlsViewModel: MusicControlsViewModel =
                                 viewModel(factory = MusicControlsViewModelFactory(appContainer))
@@ -365,7 +364,6 @@ class MainActivity : ComponentActivity() {
                                         videoPath = videoPath!!,
                                         delaySeconds = videoDelaySeconds,
                                         audioEnabled = videoAudioEnabled,
-                                        aspectRatioMode = videoAspectRatioMode,
                                         modifier = Modifier.fillMaxSize(),
                                         onIsPlayingChanged = appContainer.videoPlaybackStateRepository::setIsPlaying,
                                     )

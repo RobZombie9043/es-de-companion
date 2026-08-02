@@ -9,7 +9,6 @@ import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
-import com.esde.companion.domain.model.VideoAspectRatioMode
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
@@ -32,7 +31,6 @@ import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
@@ -55,7 +53,6 @@ import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoAspectRatioModeUseCase
 import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
@@ -101,8 +98,6 @@ class SettingsViewModel(
     private val setVideoDelaySecondsUseCase: SetVideoDelaySecondsUseCase,
     private val observeVideoAudioEnabledUseCase: ObserveVideoAudioEnabledUseCase,
     private val setVideoAudioEnabledUseCase: SetVideoAudioEnabledUseCase,
-    private val observeVideoAspectRatioModeUseCase: ObserveVideoAspectRatioModeUseCase,
-    private val setVideoAspectRatioModeUseCase: SetVideoAspectRatioModeUseCase,
     private val observeMusicEnabledUseCase: ObserveMusicEnabledUseCase,
     private val setMusicEnabledUseCase: SetMusicEnabledUseCase,
     private val observeMusicPlayWhileBrowsingSystemsUseCase: ObserveMusicPlayWhileBrowsingSystemsUseCase,
@@ -149,7 +144,6 @@ class SettingsViewModel(
             val videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first()
             val videoDelaySeconds = observeVideoDelaySecondsUseCase().first()
             val videoAudioEnabled = observeVideoAudioEnabledUseCase().first()
-            val videoAspectRatioMode = observeVideoAspectRatioModeUseCase().first()
             val musicEnabled = observeMusicEnabledUseCase().first()
             val musicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase().first()
             val musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first()
@@ -178,7 +172,6 @@ class SettingsViewModel(
                 videoPlaybackEnabled = videoPlaybackEnabled,
                 videoDelaySeconds = videoDelaySeconds,
                 videoAudioEnabled = videoAudioEnabled,
-                videoAspectRatioMode = videoAspectRatioMode,
                 musicEnabled = musicEnabled,
                 musicPlayWhileBrowsingSystems = musicPlayWhileBrowsingSystems,
                 musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
@@ -242,11 +235,6 @@ class SettingsViewModel(
     fun onVideoAudioEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(videoAudioEnabled = enabled)
         viewModelScope.launch { setVideoAudioEnabledUseCase(enabled) }
-    }
-
-    fun onVideoAspectRatioModeChanged(mode: VideoAspectRatioMode) {
-        _uiState.value = _uiState.value.copy(videoAspectRatioMode = mode)
-        viewModelScope.launch { setVideoAspectRatioModeUseCase(mode) }
     }
 
     fun onMusicEnabledChanged(enabled: Boolean) {
