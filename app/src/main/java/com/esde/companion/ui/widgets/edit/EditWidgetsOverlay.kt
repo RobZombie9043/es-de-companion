@@ -88,6 +88,7 @@ import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.ui.dock.DockPreview
 import com.esde.companion.ui.widgets.WidgetContentView
 import com.esde.companion.ui.widgets.gridDimensionsFor
 import kotlin.math.roundToInt
@@ -191,6 +192,11 @@ fun EditWidgetsOverlay(
             val selectedCanvas by viewModel.selectedCanvas.collectAsStateWithLifecycle()
             val imageTransitionMode by viewModel.imageTransitionMode.collectAsStateWithLifecycle()
             val logoTransitionMode by viewModel.logoTransitionMode.collectAsStateWithLifecycle()
+            val dockEnabled by viewModel.dockEnabled.collectAsStateWithLifecycle()
+            val dockSize by viewModel.dockSize.collectAsStateWithLifecycle()
+            val dockOpacityPercent by viewModel.dockOpacityPercent.collectAsStateWithLifecycle()
+            val dockMaxApps by viewModel.dockMaxApps.collectAsStateWithLifecycle()
+            val dockItems by viewModel.dockItems.collectAsStateWithLifecycle()
             var showAddPicker by remember { mutableStateOf(false) }
 
             // Without this, back falls through to the system default and exits the app -
@@ -306,6 +312,28 @@ fun EditWidgetsOverlay(
                         drawLine(color = gridLineColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 2f)
                     }
                 }
+            }
+
+            // Visual-only preview of the live App Dock (Settings > App Drawer and Dock),
+            // so a widget can't be placed somewhere the dock will actually cover without
+            // the person knowing until they exit edit mode. Composed after the
+            // BoxWithConstraints above (grid/widgets/grid-lines), so it draws on top of
+            // all of it purely by composition order - zIndex only reorders siblings
+            // within the same parent, so the Float.MAX_VALUE grid-line Canvas inside that
+            // Box has no bearing on stacking against this outer sibling. No clickable/
+            // pointerInput modifier anywhere in DockPreview, so drags/taps for widget
+            // placement pass straight through it, same "no gesture modifier" idiom as the
+            // grid-line Canvas itself. BottomCenter reproduces the live dock's resting
+            // position (see MainScreen's comment on the drawer's closed/rest state)
+            // without needing edit mode to fake the drawer's own slide animation.
+            if (dockEnabled) {
+                DockPreview(
+                    dockSize = dockSize,
+                    dockOpacityPercent = dockOpacityPercent,
+                    maxApps = dockMaxApps,
+                    dockItems = dockItems,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
 
             val optionsButtonAlpha by animateFloatAsState(

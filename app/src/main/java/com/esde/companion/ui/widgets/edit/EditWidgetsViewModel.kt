@@ -2,8 +2,10 @@ package com.esde.companion.ui.widgets.edit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
@@ -11,7 +13,13 @@ import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetContentResolver
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
+import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
+import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
@@ -29,6 +37,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -79,6 +88,12 @@ class EditWidgetsViewModel(
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
     observeImageTransitionMode: ObserveImageTransitionModeUseCase,
     observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
+    observeDockEnabled: ObserveDockEnabledUseCase,
+    observeDockSize: ObserveDockSizeUseCase,
+    observeDockOpacity: ObserveDockOpacityUseCase,
+    observeDockMaxApps: ObserveDockMaxAppsUseCase,
+    observeDockApps: ObserveDockAppsUseCase,
+    observeInstalledApps: ObserveInstalledAppsUseCase,
 ) : ViewModel() {
 
     val imageTransitionMode: StateFlow<ImageTransitionMode> = observeImageTransitionMode()
@@ -86,6 +101,28 @@ class EditWidgetsViewModel(
 
     val logoTransitionMode: StateFlow<LogoTransitionMode> = observeLogoTransitionMode()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), LogoTransitionMode.None)
+
+    val dockEnabled: StateFlow<Boolean> = observeDockEnabled()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)
+
+    val dockSize: StateFlow<DockSize> = observeDockSize()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), DockSize.Medium)
+
+    val dockOpacityPercent: StateFlow<Int> = observeDockOpacity()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 60)
+
+    val dockMaxApps: StateFlow<Int> = observeDockMaxApps()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 5)
+
+    /** Same resolution as AppDockViewModel.dockItems (pinned package names -> InstalledApp,
+     * capped to maxApps) - duplicated rather than shared, per that file's own precedent for
+     * small logic at this size (see its kdoc on recordLaunchLocation). Purely for
+     * DockPreview - this ViewModel never lets the dock's own contents be edited here. */
+    val dockItems: StateFlow<List<InstalledApp>> =
+        combine(observeDockApps(), observeInstalledApps(), observeDockMaxApps()) { pinned, installed, max ->
+            val byPackageName = installed.associateBy { it.packageName }
+            pinned.take(max).mapNotNull { byPackageName[it] }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), emptyList())
 
     private var gridDimensions: GridDimensions? = null
     private var loadJob: Job? = null
