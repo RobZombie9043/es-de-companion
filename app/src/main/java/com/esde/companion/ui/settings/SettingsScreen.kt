@@ -1433,7 +1433,8 @@ private fun OptionalFolderSetting(
 private fun LogFolderValidation?.toStatusText(): String = when (this) {
     null -> ""
     is LogFolderValidation.FolderNotFound -> "Folder not found"
-    is LogFolderValidation.FolderFound -> if (logFileFound) "es_log.txt found" else "Folder found, but es_log.txt is missing"
+    is LogFolderValidation.FolderFound ->
+        if (settingsFileFound) "settings/es_settings.xml found" else "Folder found, but appears to be the incorrect folder"
 }
 
 private fun MediaFolderValidation?.toStatusText(): String = when (this) {
