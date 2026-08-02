@@ -39,7 +39,7 @@ private const val SCALE_FROM = 0.95f
  * a hard content swap, animated only via offset/scale transforms on the new layer.
  *
  * [direction] is which way the user just navigated (see NavigationDirectionTracker) - Slide
- * enters from the *opposite* side of travel (pressed Right -> enters from the Left, etc.),
+ * enters from the *same* side as travel (pressed Right -> enters from the Right, etc.),
  * falling back to entering from the right when the direction isn't known (no preceding
  * directional press, a non-directional button, or edit-mode preview, which has no live
  * AppState to derive a direction from at all).
@@ -132,15 +132,15 @@ fun AnimatedLogoImage(
 }
 
 /** Where a Slide-in should start from, in (x, y) pixels relative to its resting position
- * (0, 0) - always the opposite side of [direction] (travel Right -> enters from the Left,
- * etc.), falling back to the pre-existing "from the right" default when [direction] is
- * unknown. Extracted as a plain function (no Composable/Compose types beyond IntSize) so
- * it's unit-testable without a Compose test environment. */
+ * (0, 0) - the same side as [direction] (travel Right -> enters from the Right, etc.),
+ * falling back to the pre-existing "from the right" default when [direction] is unknown.
+ * Extracted as a plain function (no Composable/Compose types beyond IntSize) so it's
+ * unit-testable without a Compose test environment. */
 internal fun slideStartOffset(direction: NavigationDirection?, boxSize: IntSize): Pair<Float, Float> =
     when (direction) {
-        NavigationDirection.Left -> boxSize.width.toFloat() to 0f
-        NavigationDirection.Right -> -boxSize.width.toFloat() to 0f
-        NavigationDirection.Up -> 0f to boxSize.height.toFloat()
-        NavigationDirection.Down -> 0f to -boxSize.height.toFloat()
+        NavigationDirection.Left -> -boxSize.width.toFloat() to 0f
+        NavigationDirection.Right -> boxSize.width.toFloat() to 0f
+        NavigationDirection.Up -> 0f to -boxSize.height.toFloat()
+        NavigationDirection.Down -> 0f to boxSize.height.toFloat()
         null -> boxSize.width.toFloat() to 0f
     }

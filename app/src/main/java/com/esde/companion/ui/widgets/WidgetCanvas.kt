@@ -92,7 +92,7 @@ fun WidgetCanvas(
  *
  * [navigationDirection] is which way the user just navigated (if known - see
  * NavigationDirectionTracker), used only by [LogoTransitionMode.Slide] to enter from the
- * opposite side. Defaults to null - EditWidgetsOverlay's edit-mode preview has no live
+ * same side. Defaults to null - EditWidgetsOverlay's edit-mode preview has no live
  * AppState to derive it from, so it falls back to AnimatedLogoImage's default direction.
  */
 @Composable
