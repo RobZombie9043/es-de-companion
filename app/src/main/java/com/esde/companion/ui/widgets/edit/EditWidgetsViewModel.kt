@@ -298,7 +298,8 @@ class EditWidgetsViewModel(
     fun persistWidgets() {
         val stateGroup = _selectedCanvas.value
         val widgetsToSave = _widgets.value
-        viewModelScope.launch { saveWidgetCanvas(stateGroup, widgetsToSave) }
+        val grid = gridDimensions ?: return
+        viewModelScope.launch { saveWidgetCanvas(stateGroup, widgetsToSave, grid) }
     }
 
     private fun reload() {

@@ -1,8 +1,10 @@
 package com.esde.companion.data.settings
 
+import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
 
@@ -39,3 +41,10 @@ private fun PlacedWidgetDto.toDomain() =
 
 internal fun List<PlacedWidget>.toDtoList() = map { it.toDto() }
 internal fun List<PlacedWidgetDto>.toDomainList() = map { it.toDomain() }
+
+private fun GridDimensions.toDto() = GridDimensionsDto(columns, rows)
+private fun GridDimensionsDto.toDomain() = GridDimensions(columns, rows)
+
+internal fun CanvasDto.toDomain() = SavedWidgetCanvas(grid.toDomain(), widgets.toDomainList())
+internal fun canvasDtoOf(widgets: List<PlacedWidget>, grid: GridDimensions) =
+    CanvasDto(grid = grid.toDto(), widgets = widgets.toDtoList())

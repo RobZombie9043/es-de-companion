@@ -2,6 +2,25 @@ package com.esde.companion.data.settings
 
 import kotlinx.serialization.Serializable
 
+/**
+ * Wraps the persisted widget list together with the grid dimensions it was saved under,
+ * so it can be rescaled if loaded on a differently-sized grid (see SavedWidgetCanvas,
+ * rescaleWidgetsToGrid). This is a JSON *object* - FileWidgetLayoutRepository falls back
+ * to decoding the pre-existing bare-array format (just List<PlacedWidgetDto>) for data
+ * persisted before this field existed.
+ */
+@Serializable
+internal data class CanvasDto(
+    val grid: GridDimensionsDto,
+    val widgets: List<PlacedWidgetDto>,
+)
+
+@Serializable
+internal data class GridDimensionsDto(
+    val columns: Int,
+    val rows: Int,
+)
+
 @Serializable
 internal data class PlacedWidgetDto(
     val id: String,

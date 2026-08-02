@@ -13,6 +13,7 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
@@ -49,6 +50,7 @@ import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -73,22 +75,25 @@ class EditWidgetsViewModelTest {
      * exactly what the real use case would hand the ViewModel.
      */
     private class FakeWidgetLayoutRepository : WidgetLayoutRepository {
-        private val canvases = mutableMapOf<StateGroup, MutableStateFlow<List<PlacedWidget>>>()
+        private val canvases = mutableMapOf<StateGroup, MutableStateFlow<SavedWidgetCanvas>>()
         val locked = MutableStateFlow(false)
         var lastSaved: Pair<StateGroup, List<PlacedWidget>>? = null
 
-        fun seed(stateGroup: StateGroup, widgets: List<PlacedWidget>) {
-            flowFor(stateGroup).value = widgets
+        /** [grid] defaults to null - "matches whatever grid it's loaded under", same as
+         * production data saved before grid-tagging existed - so existing tests that don't
+         * care about rescaling keep seeing their seeded widgets completely unchanged. */
+        fun seed(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions? = null) {
+            flowFor(stateGroup).value = SavedWidgetCanvas(grid, widgets)
         }
 
         private fun flowFor(stateGroup: StateGroup) =
-            canvases.getOrPut(stateGroup) { MutableStateFlow(emptyList()) }
+            canvases.getOrPut(stateGroup) { MutableStateFlow(SavedWidgetCanvas(grid = null, widgets = emptyList())) }
 
-        override fun observeCanvas(stateGroup: StateGroup): Flow<List<PlacedWidget>> = flowFor(stateGroup)
+        override fun observeCanvas(stateGroup: StateGroup): Flow<SavedWidgetCanvas> = flowFor(stateGroup)
 
-        override suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>) {
+        override suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions) {
             lastSaved = stateGroup to widgets
-            flowFor(stateGroup).value = widgets
+            flowFor(stateGroup).value = SavedWidgetCanvas(grid, widgets)
         }
 
         override fun observeWidgetsLocked(): Flow<Boolean> = locked
@@ -476,6 +481,64 @@ class EditWidgetsViewModelTest {
         advanceUntilIdle()
 
         assertEquals("widget-b", viewModel.selectedWidgetId.value)
+    }
+
+    // --- grid rescaling on load ---------------------------------------------------------------
+
+    @Test
+    fun `widgets saved under a different grid size are rescaled to fit the current grid`() = runTest(testDispatcher) {
+        val repository = FakeWidgetLayoutRepository().apply {
+            seed(
+                StateGroup.System,
+                listOf(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0)),
+                grid = GridDimensions(columns = 10, rows = 10),
+            )
+        }
+        val viewModel = buildViewModel(widgetLayoutRepository = repository)
+
+        // Loaded on a grid twice as wide as the one it was saved under (e.g. moving the
+        // app to a wider secondary display) - the widget should keep occupying the right
+        // half of the canvas, not stay pinned at its original absolute columns 5-9.
+        viewModel.setGridDimensions(GridDimensions(columns = 20, rows = 10))
+        advanceUntilIdle()
+
+        val widget = viewModel.widgets.value.single()
+        assertEquals(10, widget.gridColumn)
+        assertEquals(10, widget.columnSpan)
+        assertEquals(0, widget.gridRow)
+        assertEquals(10, widget.rowSpan)
+    }
+
+    @Test
+    fun `widgets saved without a tagged grid (pre-rescaling data) load unchanged`() = runTest(testDispatcher) {
+        val repository = FakeWidgetLayoutRepository().apply {
+            seed(
+                StateGroup.System,
+                listOf(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0)),
+                // grid omitted - defaults to null, same as data persisted before this feature existed.
+            )
+        }
+        val viewModel = buildViewModel(widgetLayoutRepository = repository)
+
+        viewModel.setGridDimensions(GridDimensions(columns = 20, rows = 10))
+        advanceUntilIdle()
+
+        val widget = viewModel.widgets.value.single()
+        assertEquals(5, widget.gridColumn)
+        assertEquals(5, widget.columnSpan)
+    }
+
+    @Test
+    fun `persistWidgets saves the grid dimensions alongside the widgets`() = runTest(testDispatcher) {
+        val repository = FakeWidgetLayoutRepository()
+        val viewModel = buildViewModel(widgetLayoutRepository = repository)
+        viewModel.setGridDimensions(grid)
+        advanceUntilIdle()
+
+        viewModel.addWidget(WidgetType.ColorBackground(colorArgb = 0xFF112233, alpha = 1f))
+        advanceUntilIdle()
+
+        assertEquals(grid, repository.observeCanvas(StateGroup.System).first().grid)
     }
 
     // --- selectCanvas -----------------------------------------------------------------------
