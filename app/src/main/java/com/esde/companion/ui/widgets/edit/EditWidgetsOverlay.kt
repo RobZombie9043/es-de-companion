@@ -359,6 +359,21 @@ fun EditWidgetsOverlay(
                     onDismissRequest = { menuExpanded = false },
                     shape = MENU_SHAPE,
                 ) {
+                    StateGroup.entries.forEach { group ->
+                        DropdownMenuItem(
+                            text = { Text(group.displayLabel()) },
+                            leadingIcon = if (group == selectedCanvas) {
+                                { Icon(imageVector = Icons.Filled.Check, contentDescription = null) }
+                            } else {
+                                null
+                            },
+                            onClick = {
+                                viewModel.selectCanvas(group)
+                                menuExpanded = false
+                            },
+                        )
+                    }
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Add Widget") },
                         leadingIcon = { Icon(imageVector = Icons.Filled.Add, contentDescription = null) },
@@ -397,21 +412,6 @@ fun EditWidgetsOverlay(
                             leadingIcon = { Icon(imageVector = Icons.Filled.Delete, contentDescription = null) },
                             onClick = {
                                 viewModel.removeWidget(selectedWidgetId!!)
-                                menuExpanded = false
-                            },
-                        )
-                    }
-                    HorizontalDivider()
-                    StateGroup.entries.forEach { group ->
-                        DropdownMenuItem(
-                            text = { Text(group.displayLabel()) },
-                            leadingIcon = if (group == selectedCanvas) {
-                                { Icon(imageVector = Icons.Filled.Check, contentDescription = null) }
-                            } else {
-                                null
-                            },
-                            onClick = {
-                                viewModel.selectCanvas(group)
                                 menuExpanded = false
                             },
                         )
