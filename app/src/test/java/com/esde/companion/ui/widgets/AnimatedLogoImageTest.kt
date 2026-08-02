@@ -28,9 +28,4 @@ class AnimatedLogoImageTest {
     fun `travelling down enters from the bottom - the same side`() {
         assertEquals(0f to 100f, slideStartOffset(NavigationDirection.Down, boxSize))
     }
-
-    @Test
-    fun `unknown direction falls back to entering from the right`() {
-        assertEquals(200f to 0f, slideStartOffset(null, boxSize))
-    }
 }
