@@ -58,6 +58,15 @@ import kotlinx.coroutines.launch
  * straight to their end values instead of animating - this still goes through the
  * pre-decode-then-swap path above, so "no visible transition" doesn't reopen the
  * blank-frame flash the whole mechanism exists to prevent.
+ *
+ * The outgoing (previous) layer stays fully opaque for a plain fade (scaleFrom == null) -
+ * since both layers are the same size, a static backdrop plus a fading-in foreground
+ * already looks like a clean crossfade. It's the opposite for FadeScale: the incoming
+ * layer is smaller than the container while it scales up, so a still-opaque backdrop
+ * shows through the gap around its shrunken edges (and through its own fading-in
+ * translucency) - reported as "the previous image showing underneath." Fixed there by
+ * fading the outgoing layer's alpha out (1 -> 0) in lockstep with the incoming layer's
+ * fade-in, via the same Animatable, rather than leaving it static.
  */
 @Composable
 fun CrossfadeAsyncImage(
@@ -127,7 +136,9 @@ fun CrossfadeAsyncImage(
                     painter = painter,
                     contentDescription = null,
                     contentScale = contentScale,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .let { base -> if (scaleFrom != null) base.alpha(1f - alpha.value) else base },
                 )
             }
         }
