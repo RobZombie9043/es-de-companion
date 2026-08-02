@@ -149,7 +149,7 @@ class FileOnboardingRepository(
     }
 
     override fun observeVideoDelaySeconds(): Flow<Int> =
-        context.onboardingDataStore.data.map { it[VIDEO_DELAY_SECONDS_KEY] ?: 0 }
+        context.onboardingDataStore.data.map { it[VIDEO_DELAY_SECONDS_KEY] ?: DEFAULT_VIDEO_DELAY_SECONDS }
 
     override suspend fun setVideoAudioEnabled(enabled: Boolean) {
         context.onboardingDataStore.edit { it[VIDEO_AUDIO_ENABLED_KEY] = enabled }
@@ -163,7 +163,7 @@ class FileOnboardingRepository(
     }
 
     override fun observeMusicEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[MUSIC_ENABLED_KEY] ?: true }
+        context.onboardingDataStore.data.map { it[MUSIC_ENABLED_KEY] ?: false }
 
     override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {
         context.onboardingDataStore.edit { it[MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY] = enabled }
@@ -184,7 +184,7 @@ class FileOnboardingRepository(
     }
 
     override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[MUSIC_PLAY_DURING_SCREENSAVER_KEY] ?: true }
+        context.onboardingDataStore.data.map { it[MUSIC_PLAY_DURING_SCREENSAVER_KEY] ?: false }
 
     override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {
         context.onboardingDataStore.edit { it[MUSIC_DUCKING_MODE_KEY] = mode.name }
@@ -223,11 +223,11 @@ class FileOnboardingRepository(
 
     override fun observeImageTransitionMode(): Flow<ImageTransitionMode> =
         context.onboardingDataStore.data.map { prefs ->
-            // Falls back to None for both the unset case and any unrecognized stored
+            // Falls back to Fade for both the unset case and any unrecognized stored
             // value - same reasoning as observeThemePreference.
             prefs[IMAGE_TRANSITION_MODE_KEY]?.let { stored ->
                 runCatching { ImageTransitionMode.valueOf(stored) }.getOrNull()
-            } ?: ImageTransitionMode.None
+            } ?: ImageTransitionMode.Fade
         }
 
     override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {
@@ -238,13 +238,14 @@ class FileOnboardingRepository(
         context.onboardingDataStore.data.map { prefs ->
             prefs[LOGO_TRANSITION_MODE_KEY]?.let { stored ->
                 runCatching { LogoTransitionMode.valueOf(stored) }.getOrNull()
-            } ?: LogoTransitionMode.None
+            } ?: LogoTransitionMode.Slide
         }
 
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
-        const val DEFAULT_MUSIC_OVERLAY_OPACITY_PERCENT = 100
+        const val DEFAULT_VIDEO_DELAY_SECONDS = 3
+        const val DEFAULT_MUSIC_OVERLAY_OPACITY_PERCENT = 80
 
         val LOG_FOLDER_PATH_KEY = stringPreferencesKey("log_folder_path")
         val MEDIA_FOLDER_PATH_KEY = stringPreferencesKey("media_folder_path")

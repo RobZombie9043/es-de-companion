@@ -47,7 +47,7 @@ class FileAppDrawerSettingsRepository(
 
     private companion object {
         const val DEFAULT_DRAWER_OPACITY_PERCENT = 80
-        const val DEFAULT_GRID_COLUMNS = 4
+        const val DEFAULT_GRID_COLUMNS = 5
 
         val HIDDEN_APPS_KEY = stringSetPreferencesKey("hidden_app_packages")
         val DRAWER_OPACITY_KEY = intPreferencesKey("drawer_opacity_percent")

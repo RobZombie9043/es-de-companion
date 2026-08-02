@@ -63,7 +63,7 @@ class FileDockSettingsRepository(
 
     private companion object {
         const val DEFAULT_DOCK_MAX_APPS = 5
-        const val DEFAULT_DOCK_OPACITY_PERCENT = 60
+        const val DEFAULT_DOCK_OPACITY_PERCENT = 80
 
         val DOCK_ENABLED_KEY = booleanPreferencesKey("dock_enabled")
         val DOCK_MAX_APPS_KEY = intPreferencesKey("dock_max_apps")

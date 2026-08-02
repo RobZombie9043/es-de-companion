@@ -18,7 +18,7 @@ fun defaultCanvas(stateGroup: StateGroup, grid: GridDimensions): List<PlacedWidg
         StateGroup.System -> listOf(
             PlacedWidget(
                 id = "default-system-fanart",
-                widgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
+                widgetType = WidgetType.SystemImage(ScaleMode.Fill),
                 gridColumn = 0, gridRow = 0, columnSpan = grid.columns, rowSpan = grid.rows, zIndex = 0,
             ),
             PlacedWidget(
@@ -43,5 +43,6 @@ fun defaultCanvas(stateGroup: StateGroup, grid: GridDimensions): List<PlacedWidg
     }
 }
 
-private const val LOGO_WIDTH_FRACTION = 0.6
-private const val LOGO_HEIGHT_FRACTION = 0.35
+// 14/22 and 7/19 - matches the size the logo/marquee widget ends up at by default.
+private const val LOGO_WIDTH_FRACTION = 0.6363636363636364
+private const val LOGO_HEIGHT_FRACTION = 0.3684210526315789
