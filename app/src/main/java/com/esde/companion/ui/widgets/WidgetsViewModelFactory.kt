@@ -21,6 +21,7 @@ class WidgetsViewModelFactory(
             resolveGameDescription = appContainer.resolveGameDescriptionUseCase,
             resolveCustomSystemImage = appContainer.resolveCustomSystemImageUseCase,
             resolveCustomSystemLogo = appContainer.resolveCustomSystemLogoUseCase,
+            resolveBundledSystemLogo = appContainer.resolveBundledSystemLogoUseCase,
             observeImageTransitionMode = appContainer.observeImageTransitionModeUseCase,
             observeLogoTransitionMode = appContainer.observeLogoTransitionModeUseCase,
         ) as T

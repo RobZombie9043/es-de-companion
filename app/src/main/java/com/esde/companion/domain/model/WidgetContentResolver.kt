@@ -11,6 +11,8 @@ object WidgetContentResolver {
         gameMediaLookup: (MediaType) -> String?,
         gameDescriptionLookup: () -> String?,
         fallbackBackgroundAssetPath: String?,
+        systemNameLookup: () -> String? = { null },
+        gameNameLookup: () -> String? = { null },
     ): WidgetContent = when (widgetType) {
         is WidgetType.SystemLogo ->
             customSystemLogoLookup()
@@ -22,6 +24,7 @@ object WidgetContentResolver {
                 ?.let { WidgetContent.Image(it, widgetType.scaleMode, isTransparentOverlay = true, isAsset = false, effects = widgetType.effects) }
                 ?: systemLogoAssetPath()
                     ?.let { WidgetContent.SystemLogoAsset(it, widgetType.scaleMode, widgetType.effects) }
+                ?: systemNameLookup()?.let { WidgetContent.NameFallback(it) }
                 ?: WidgetContent.Empty
 
         is WidgetType.SystemImage ->
@@ -31,7 +34,7 @@ object WidgetContentResolver {
                     mediaType = MediaType.FanArt,
                     scaleMode = widgetType.scaleMode,
                     lookup = systemMediaLookup,
-                    fallbackBackgroundAssetPath = null,
+                    fallbackBackgroundAssetPath = fallbackBackgroundAssetPath,
                     effects = widgetType.effects,
                 )
 
@@ -42,7 +45,7 @@ object WidgetContentResolver {
                 systemMediaLookup,
                 fallbackBackgroundAssetPath,
                 widgetType.effects,
-            )
+            ).withNameFallback(widgetType.mediaType, systemNameLookup)
 
         is WidgetType.GameMedia ->
             resolveMediaWidgetContent(
@@ -51,7 +54,7 @@ object WidgetContentResolver {
                 gameMediaLookup,
                 fallbackBackgroundAssetPath,
                 widgetType.effects,
-            )
+            ).withNameFallback(widgetType.mediaType, gameNameLookup)
 
         is WidgetType.ColorBackground ->
             WidgetContent.Color(widgetType.colorArgb, widgetType.alpha)
@@ -69,4 +72,16 @@ object WidgetContentResolver {
                 }
                 ?: WidgetContent.Empty
     }
+
+    /** Marquees have no generic-background fallback (see [BACKGROUND_FALLBACK_ELIGIBLE]),
+     * so a missing marquee resolves all the way to [WidgetContent.Empty] - this catches
+     * that specific case and substitutes the system/game's display name instead, same as
+     * [WidgetType.SystemLogo] does for a missing logo. Any other media type is returned
+     * as-is. */
+    private fun WidgetContent.withNameFallback(mediaType: MediaType, nameLookup: () -> String?): WidgetContent =
+        if (this == WidgetContent.Empty && mediaType == MediaType.Marquees) {
+            nameLookup()?.let { WidgetContent.NameFallback(it) } ?: this
+        } else {
+            this
+        }
 }

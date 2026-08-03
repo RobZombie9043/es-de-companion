@@ -22,6 +22,7 @@ import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
@@ -56,6 +57,7 @@ class WidgetsViewModel(
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
+    private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
     observeImageTransitionMode: ObserveImageTransitionModeUseCase,
     observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
 ) : ViewModel() {
@@ -86,6 +88,13 @@ class WidgetsViewModel(
                 stateGroup = group,
                 gameRef = appState.currentGameReference(),
                 systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
+                systemFullName = (appState as? AppState.BrowsingSystem)?.systemFullName,
+                gameName = when (appState) {
+                    is AppState.BrowsingGame -> appState.gameName
+                    is AppState.PlayingGame -> appState.gameName
+                    is AppState.Screensaver -> appState.currentGame?.gameName
+                    is AppState.Idle, is AppState.BrowsingSystem -> null
+                },
                 navigationDirection = appState.navigationDirection(),
             )
         }
@@ -129,8 +138,7 @@ class WidgetsViewModel(
             neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMedia(shortName, mediaType) }
         } ?: emptyMap()
 
-        val systemLogoAssetPath = systemShortName
-            ?.let { "file:///android_asset/system_logos/${systemLogoAssetName(it)}.svg" }
+        val systemLogoAssetPath = systemShortName?.let { resolveBundledSystemLogo(systemLogoAssetName(it)) }
 
         val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
         val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
@@ -147,6 +155,8 @@ class WidgetsViewModel(
                 gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
                 gameDescriptionLookup = { gameDescription?.text },
                 fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET, // null in EditWidgetsViewModel, as today
+                systemNameLookup = { identity.systemFullName },
+                gameNameLookup = { identity.gameName },
             )
         }
     }
@@ -155,6 +165,8 @@ class WidgetsViewModel(
         val stateGroup: StateGroup,
         val gameRef: GameReference?,
         val systemShortName: String?,
+        val systemFullName: String?,
+        val gameName: String?,
         val navigationDirection: NavigationDirection?,
     )
 }

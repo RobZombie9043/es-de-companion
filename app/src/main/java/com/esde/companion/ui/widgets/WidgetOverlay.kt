@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.esde.companion.ui.theme.LocalIsDarkTheme
 
 /**
  * Top-level entry point for the widget system: measures available space to derive the
@@ -30,7 +31,7 @@ fun WidgetOverlay(viewModel: WidgetsViewModel, modifier: Modifier = Modifier) {
         when (val state = canvasState) {
             WidgetCanvasState.None ->
                 AsyncImage(
-                    model = FALLBACK_BACKGROUND_ASSET,
+                    model = fallbackBackgroundAssetPath(LocalIsDarkTheme.current),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),

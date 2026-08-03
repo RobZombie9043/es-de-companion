@@ -20,6 +20,7 @@ import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.repository.BundledSystemLogoRepository
 import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
@@ -41,6 +42,7 @@ import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
@@ -141,6 +143,12 @@ class EditWidgetsViewModelTest {
         private val logosByShortName: Map<String, String> = emptyMap(),
     ) : CustomSystemLogoRepository {
         override suspend fun findLogo(systemShortName: String): String? = logosByShortName[systemShortName]
+    }
+
+    private class FakeBundledSystemLogoRepository(
+        private val assetPathsByName: Map<String, String> = emptyMap(),
+    ) : BundledSystemLogoRepository {
+        override suspend fun findLogoAssetPath(assetName: String): String? = assetPathsByName[assetName]
     }
 
     private class FakeLastKnownContextRepository(
@@ -278,6 +286,7 @@ class EditWidgetsViewModelTest {
         systemMediaRepository: SystemMediaRepository = FakeSystemMediaRepository(),
         customSystemImageRepository: FakeCustomSystemImageRepository = FakeCustomSystemImageRepository(),
         customSystemLogoRepository: FakeCustomSystemLogoRepository = FakeCustomSystemLogoRepository(),
+        bundledSystemLogoRepository: FakeBundledSystemLogoRepository = FakeBundledSystemLogoRepository(),
         lastKnownContextRepository: FakeLastKnownContextRepository = FakeLastKnownContextRepository(),
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
@@ -290,6 +299,7 @@ class EditWidgetsViewModelTest {
         resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
         resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
         resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),
+        resolveBundledSystemLogo = ResolveBundledSystemLogoUseCase(bundledSystemLogoRepository),
         observeLastSystemShortName = ObserveLastSystemShortNameUseCase(lastKnownContextRepository),
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),
         observeImageTransitionMode = ObserveImageTransitionModeUseCase(onboardingRepository),

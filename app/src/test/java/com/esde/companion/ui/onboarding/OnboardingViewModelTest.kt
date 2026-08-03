@@ -18,6 +18,7 @@ import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
+import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -49,6 +50,12 @@ import org.junit.Test
  * to 0, which is always < Build.VERSION_CODES.R. So every ViewModel built here starts
  * straight on EsdeFolder, same as a real device that already granted the permission -
  * the Permission step itself isn't exercised by these tests.
+ *
+ * The very first validation of the default guessed ES-DE folder never auto-continues,
+ * even when it turns out correct - only a folder the user actively picked via the file
+ * browser does (see OnboardingViewModel.validateLogFolder). So most tests below still
+ * need an explicit onEsdeFolderConfirmed() call to get past EsdeFolder, same as before
+ * that feature existed - only the dedicated picker tests rely on auto-continue.
  */
 class OnboardingViewModelTest {
 
@@ -143,7 +150,7 @@ class OnboardingViewModelTest {
 
     private class FakeEsdeLogRepository : EsdeLogRepository {
         // extraBufferCapacity avoids a fragile suspend-until-rendezvous emit() - the
-        // ViewModel's own baseline-diffing logic is what's under test here, not exact
+        // ViewModel's own activity-detection logic is what's under test here, not exact
         // collector-subscription timing.
         val events = MutableSharedFlow<EsdeEvent>(extraBufferCapacity = 1)
         val logFileExists = MutableStateFlow(true)
@@ -181,22 +188,58 @@ class OnboardingViewModelTest {
             findLegacyScriptFilesUseCase = FindLegacyScriptFilesUseCase(installationRepository),
             deleteLegacyScriptFilesUseCase = DeleteLegacyScriptFilesUseCase(installationRepository),
             observeConnectionStateUseCase = observeConnectionState,
+            observeEsdeLogActivityUseCase = ObserveEsdeLogActivityUseCase(logRepository),
         )
     }
 
     @Test
-    fun `starts on EsdeFolder and confirming it saves the path`() = runTest(testDispatcher) {
-        val onboardingRepo = FakeOnboardingRepository()
+    fun `a validated default ES-DE folder does not auto-continue - still requires an explicit Next tap`() =
+        runTest(testDispatcher) {
+            val onboardingRepo = FakeOnboardingRepository()
+            val viewModel = buildViewModel(onboardingRepository = onboardingRepo)
+            advanceUntilIdle()
+
+            // Valid and ready to go, but the user hasn't actually confirmed anything yet -
+            // this is just the default guess, never explicitly chosen.
+            assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
+            assertEquals(LogFolderValidation.FolderFound(settingsFileFound = true), viewModel.uiState.value.logFolderValidation)
+            assertTrue(onboardingRepo.savedLogPaths.isEmpty())
+
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
+            assertEquals(listOf(onboardingRepo.defaultLogFolderPath()), onboardingRepo.savedLogPaths)
+        }
+
+    @Test
+    fun `picking a valid folder via the file picker auto-continues, without a confirmation tap`() =
+        runTest(testDispatcher) {
+            val onboardingRepo = FakeOnboardingRepository()
+            val viewModel = buildViewModel(onboardingRepository = onboardingRepo)
+            advanceUntilIdle()
+            assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
+
+            viewModel.onEsdeFolderPicked("/storage/emulated/0/SDCard/ES-DE")
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
+            assertEquals(listOf("/storage/emulated/0/SDCard/ES-DE"), onboardingRepo.savedLogPaths)
+        }
+
+    @Test
+    fun `picking an invalid folder via the file picker does not auto-continue`() = runTest(testDispatcher) {
+        val onboardingRepo = FakeOnboardingRepository().apply {
+            logFolderValidationResult = LogFolderValidation.FolderNotFound
+        }
         val viewModel = buildViewModel(onboardingRepository = onboardingRepo)
         advanceUntilIdle()
 
-        assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
-
-        viewModel.onEsdeFolderConfirmed()
+        viewModel.onEsdeFolderPicked("/storage/emulated/0/WrongFolder")
         advanceUntilIdle()
 
-        assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
-        assertEquals(listOf(onboardingRepo.defaultLogFolderPath()), onboardingRepo.savedLogPaths)
+        assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
+        assertTrue(onboardingRepo.savedLogPaths.isEmpty())
     }
 
     @Test
@@ -209,7 +252,6 @@ class OnboardingViewModelTest {
         }
         val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
         advanceUntilIdle()
-
         viewModel.onEsdeFolderConfirmed()
         advanceUntilIdle()
 
@@ -228,7 +270,6 @@ class OnboardingViewModelTest {
         }
         val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
         advanceUntilIdle()
-
         viewModel.onEsdeFolderConfirmed()
         advanceUntilIdle()
 
@@ -361,13 +402,12 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `Finish stays disabled until a connection state emission differs from the entry baseline`() {
+    fun `Finish stays disabled until an event is observed`() {
         // Unconfined (not the class-level StandardTestDispatcher) - matches
         // ObserveConnectionStateUseCaseTest's established pattern for this exact
         // combine()+SharedFlow-emit shape, where a queued/deferred dispatcher can
-        // conflate the baseline and post-emit combine() outputs before either is
-        // separately observable. Set for both Main (viewModelScope) and runTest's own
-        // scope so everything shares one scheduler.
+        // conflate emissions before either is separately observable. Set for both Main
+        // (viewModelScope) and runTest's own scope so everything shares one scheduler.
         val dispatcher = UnconfinedTestDispatcher()
         Dispatchers.setMain(dispatcher)
         runTest(dispatcher) {
@@ -393,5 +433,44 @@ class OnboardingViewModelTest {
             assertTrue(onboardingRepo.markedComplete)
         }
     }
-}
 
+    @Test
+    fun `re-entering LiveLogCheck after going back can pass again from the exact same event`() {
+        // See the previous test's dispatcher note - same shape applies here.
+        val dispatcher = UnconfinedTestDispatcher()
+        Dispatchers.setMain(dispatcher)
+        runTest(dispatcher) {
+            val logRepo = FakeEsdeLogRepository()
+            val viewModel = buildViewModel(logRepository = logRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+
+            val event = EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast")
+            logRepo.events.emit(event)
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.liveCheckPassed)
+
+            // Go back, then forward again - a real user re-attempting the check without
+            // ever leaving onboarding.
+            viewModel.onBack()
+            advanceUntilIdle()
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+            assertFalse(viewModel.uiState.value.liveCheckPassed)
+
+            // Repeats the exact same navigation as before - previously this failed to
+            // register as "activity" because the derived AppState was identical to the
+            // stale baseline (and the underlying StateFlow doesn't even emit for an
+            // unchanged value), leaving the check permanently stuck.
+            logRepo.events.emit(event)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.liveCheckPassed)
+        }
+    }
+}
