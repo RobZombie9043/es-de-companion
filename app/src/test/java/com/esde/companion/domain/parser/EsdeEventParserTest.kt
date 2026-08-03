@@ -83,6 +83,23 @@ class EsdeEventParserTest {
     }
 
     @Test
+    fun `parses game-select whose display name has unescaped embedded double quotes`() {
+        val line = "Debug:  Scripting::fireEvent(): game-select " +
+            "\"/storage/E2AB-E84A/ROMs/nes/Ivan 'Ironman' Stewart's Super Off Road (USA).zip\" " +
+            "\"Ivan \"Ironman\" Stewart's Super Off Road\" \"nes\" \"Nintendo Entertainment System\""
+
+        assertEquals(
+            EsdeEvent.GameSelect(
+                romPath = "/storage/E2AB-E84A/ROMs/nes/Ivan 'Ironman' Stewart's Super Off Road (USA).zip",
+                gameName = "Ivan \"Ironman\" Stewart's Super Off Road",
+                systemShortName = "nes",
+                systemFullName = "Nintendo Entertainment System",
+            ),
+            parser.parseLine(line),
+        )
+    }
+
+    @Test
     fun `parses game-end`() {
         val line = "Jul 28 07:01:55 Debug:  Scripting::fireEvent(): game-end " +
             "\"/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd\" " +

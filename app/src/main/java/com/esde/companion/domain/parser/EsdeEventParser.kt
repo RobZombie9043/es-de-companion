@@ -24,9 +24,7 @@ class EsdeEventParser {
 
         val eventName = payload.substring(0, nameEnd)
         val argsText = payload.substring(nameEnd + 1)
-        val args = QUOTED_ARG_REGEX.findAll(argsText)
-            .map { it.groupValues[1].unescapeBackslashes() }
-            .toList()
+        val args = argsText.splitQuotedArgs()
 
         return toEvent(eventName, args)
     }
@@ -85,8 +83,30 @@ class EsdeEventParser {
 
     private companion object {
         const val FIRE_EVENT_MARKER = "Scripting::fireEvent():"
-        val QUOTED_ARG_REGEX = Regex("\"([^\"]*)\"")
+
+        // Splitting on this exact 3-char sequence (rather than matching independent
+        // "..." groups) is what lets a field's own content safely contain unescaped
+        // double quotes - e.g. ES-DE writes the game title `Ivan "Ironman" Stewart's
+        // Super Off Road` with its embedded quotes completely unescaped. A field
+        // boundary's closing-quote/space/opening-quote never appears as a run inside
+        // real field content (title quoting is always "word"-adjacent, not
+        // "word"-space-"word"), so this delimiter reliably identifies only true
+        // boundaries and leaves embedded quotes in the middle of the split intact.
+        const val FIELD_DELIMITER = "\" \""
         val BACKSLASH_ESCAPE_REGEX = Regex("""\\(.)""")
+
+        fun String.splitQuotedArgs(): List<String> {
+            val trimmed = trim()
+            if (!trimmed.startsWith('"') || !trimmed.endsWith('"')) return emptyList()
+
+            val pieces = trimmed.split(FIELD_DELIMITER)
+            return pieces.mapIndexed { index, piece ->
+                val stripped = piece
+                    .let { if (index == 0) it.removePrefix("\"") else it }
+                    .let { if (index == pieces.lastIndex) it.removeSuffix("\"") else it }
+                stripped.unescapeBackslashes()
+            }
+        }
 
         fun String.unescapeBackslashes(): String =
             BACKSLASH_ESCAPE_REGEX.replace(this) { it.groupValues[1] }
