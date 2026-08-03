@@ -5,15 +5,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
@@ -25,6 +31,7 @@ import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.model.isLogoStyle
 import com.esde.companion.ui.main.CrossfadeAsyncImage
+import com.esde.companion.ui.theme.LocalIsDarkTheme
 import java.io.File
 
 /**
@@ -146,6 +153,16 @@ internal fun WidgetContentView(
                 modifier = Modifier.fillMaxSize().applyBlurEffect(effects),
             )
             DarkenOverlay(effects = effects)
+            if (content is WidgetContent.NameFallback) {
+                Text(
+                    text = content.text,
+                    color = if (LocalIsDarkTheme.current) Color.White else Color.Black,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center).padding(8.dp),
+                )
+            }
         }
         return
     }
@@ -158,7 +175,8 @@ internal fun WidgetContentView(
 
         is WidgetContent.Image ->
             Box(modifier = modifier) {
-                val model = if (content.isAsset) content.path else File(content.path)
+                val isDarkTheme = LocalIsDarkTheme.current
+                val model = if (content.isAsset) fallbackBackgroundAssetPath(isDarkTheme) else File(content.path)
                 val (durationMillis, scaleFrom) = imageTransitionMode.toDurationAndScale()
                 CrossfadeAsyncImage(
                     model = model,
@@ -172,6 +190,8 @@ internal fun WidgetContentView(
             }
 
         is WidgetContent.SystemLogoAsset -> Unit // unreachable: SystemLogoAsset only occurs for SystemLogo widgetType, which isLogoStyle handles above
+
+        is WidgetContent.NameFallback -> Unit // unreachable: only ever produced for isLogoStyle widget types, handled above
 
         is WidgetContent.Text ->
             Box(

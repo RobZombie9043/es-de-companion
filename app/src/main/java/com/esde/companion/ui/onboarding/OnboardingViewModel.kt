@@ -3,7 +3,7 @@ package com.esde.companion.ui.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
-import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
@@ -11,6 +11,7 @@ import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
+import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -59,6 +60,7 @@ class OnboardingViewModel(
     private val findLegacyScriptFilesUseCase: FindLegacyScriptFilesUseCase,
     private val deleteLegacyScriptFilesUseCase: DeleteLegacyScriptFilesUseCase,
     private val observeConnectionStateUseCase: ObserveConnectionStateUseCase,
+    private val observeEsdeLogActivityUseCase: ObserveEsdeLogActivityUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -99,7 +101,7 @@ class OnboardingViewModel(
 
     fun onEsdeFolderPicked(path: String) {
         _uiState.value = _uiState.value.copy(logFolderPath = path)
-        validateLogFolder(path)
+        validateLogFolder(path, autoConfirmIfValid = true)
     }
 
     fun onEsdeFolderConfirmed() {
@@ -246,39 +248,71 @@ class OnboardingViewModel(
         }
     }
 
-    /** Subscribes to the app-wide shared connection-state stream (not a fresh instance -
-     * see CLAUDE.md's gotcha on cold Flows duplicated per collector) and requires an
-     * emission distinct from whatever was seen *first* upon entering this step before
-     * [OnboardingUiState.liveCheckPassed] flips true - proving a fresh event was parsed
-     * while the user was watching, not just a replayed/stale value. Cancelled and
-     * restarted on re-entry (including via onBack + forward again) so a stale baseline
-     * from a previous visit can't linger. */
+    /** Subscribes to two independent streams while this step is showing, both cancelled
+     * and restarted together on re-entry (including via onBack + forward again) so
+     * neither can carry stale state from a previous visit:
+     *
+     * - The app-wide shared connection-state stream (not a fresh instance - see CLAUDE.md's
+     *   gotcha on cold Flows duplicated per collector), purely to drive the UI's
+     *   found/not-found/waiting message.
+     * - The raw event stream ([ObserveEsdeLogActivityUseCase]), which is what actually
+     *   flips [OnboardingUiState.liveCheckPassed] true - proving a fresh
+     *   Scripting::fireEvent() line was parsed while the user was watching. This
+     *   deliberately does NOT diff against a captured "baseline" AppState/connection
+     *   value: on a second visit to this step (go back, then forward again), the baseline
+     *   would already be whatever AppState the *first* visit ended on, so repeating the
+     *   exact same ES-DE navigation - the natural thing for a user re-attempting this step
+     *   to do - would reduce to that identical value and never register as "different."
+     *   Worse, the derived AppState/connection stream is backed by a StateFlow, which
+     *   doesn't even emit downstream when a new value structurally equals the one it
+     *   already holds - so a baseline-diff here could see *zero* emissions at all for a
+     *   repeated action, not just a false "unchanged" one. Any event on the raw stream,
+     *   regardless of content, is unambiguous proof of life. */
     private fun enterLiveLogCheck() {
         advanceTo(OnboardingStep.LiveLogCheck)
+        _uiState.value = _uiState.value.copy(liveCheckPassed = false)
         liveCheckJob?.cancel()
         liveCheckJob = viewModelScope.launch {
-            var baseline: EsdeConnectionState? = null
-            var baselineCaptured = false
-            observeConnectionStateUseCase().collect { connectionState ->
-                if (!baselineCaptured) {
-                    baseline = connectionState
-                    baselineCaptured = true
-                    _uiState.value = _uiState.value.copy(connectionState = connectionState, liveCheckPassed = false)
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        connectionState = connectionState,
-                        liveCheckPassed = _uiState.value.liveCheckPassed || connectionState != baseline,
-                    )
+            launch {
+                observeConnectionStateUseCase().collect { connectionState ->
+                    _uiState.value = _uiState.value.copy(connectionState = connectionState)
+                }
+            }
+            launch {
+                observeEsdeLogActivityUseCase().collect {
+                    _uiState.value = _uiState.value.copy(liveCheckPassed = true)
                 }
             }
         }
     }
 
-    private fun validateLogFolder(path: String) {
+    /** Validates [path] as ES-DE's root folder. [autoConfirmIfValid] is true only when the
+     * user just actively picked this folder via the file browser ([onEsdeFolderPicked]) -
+     * a folder they deliberately chose is auto-confirmed the instant it validates
+     * (settings/es_settings.xml actually found inside it), same "don't ask again for
+     * something already confirmed" principle applied to auto-skipping MediaFolder (see
+     * [fetchInstallationInfo]).
+     *
+     * It's false for the very first validation of the default guessed path (from [init]/
+     * [onPermissionResult]) even when that guess turns out correct - a location the user
+     * never actually chose still gets shown to them once, with Next already enabled, so
+     * they can see and confirm what was found (or pick something else) rather than being
+     * skipped straight past a step they haven't seen yet.
+     *
+     * Guarded by re-checking step/path once validation resolves, since this runs async and
+     * the user may have since picked a different folder or moved on entirely. */
+    private fun validateLogFolder(path: String, autoConfirmIfValid: Boolean = false) {
         _uiState.value = _uiState.value.copy(isValidatingLogFolder = true)
         viewModelScope.launch {
             val result = validateLogFolderUseCase(path)
             _uiState.value = _uiState.value.copy(isValidatingLogFolder = false, logFolderValidation = result)
+
+            val stillOnThisStepWithThisPath =
+                _uiState.value.step == OnboardingStep.EsdeFolder && _uiState.value.logFolderPath == path
+            val settingsFileFound = (result as? LogFolderValidation.FolderFound)?.settingsFileFound == true
+            if (autoConfirmIfValid && stillOnThisStepWithThisPath && settingsFileFound) {
+                onEsdeFolderConfirmed()
+            }
         }
     }
 

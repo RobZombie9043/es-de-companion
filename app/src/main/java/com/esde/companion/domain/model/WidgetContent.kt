@@ -39,6 +39,17 @@ sealed class WidgetContent {
         val backgroundColorArgb: Long,
         val backgroundAlpha: Float,
     ) : WidgetContent()
+
+    /**
+     * Shown by a logo-style widget (system logo, game/system marquee - see [isLogoStyle])
+     * when no actual logo/marquee image is available - the system or game's plain display
+     * name, so the widget reads as "empty content" rather than a literal blank rectangle.
+     * Deliberately not [Text]: that type's font/color/background fields are a
+     * user-configurable style meant for the GameDescription widget, whereas this has no
+     * per-widget configuration - it always renders with WidgetContentView's own fixed
+     * fallback styling.
+     */
+    data class NameFallback(val text: String) : WidgetContent()
 }
 
 /** Media types that are transparent overlay-style content rather than an opaque

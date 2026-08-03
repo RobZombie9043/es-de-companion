@@ -24,6 +24,7 @@ import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
@@ -84,6 +85,7 @@ class EditWidgetsViewModel(
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
+    private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
     private val observeLastSystemShortName: ObserveLastSystemShortNameUseCase,
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
     observeImageTransitionMode: ObserveImageTransitionModeUseCase,
@@ -343,8 +345,7 @@ class EditWidgetsViewModel(
             }
         } ?: emptyMap()
 
-        val systemLogoAssetPath = lastSystemShortName
-            ?.let { "file:///android_asset/system_logos/${systemLogoAssetName(it)}.svg" }
+        val systemLogoAssetPath = lastSystemShortName?.let { resolveBundledSystemLogo(systemLogoAssetName(it)) }
 
         val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
         val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }

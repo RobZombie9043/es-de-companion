@@ -24,6 +24,7 @@ class OnboardingViewModelFactory(
             findLegacyScriptFilesUseCase = appContainer.findLegacyScriptFilesUseCase,
             deleteLegacyScriptFilesUseCase = appContainer.deleteLegacyScriptFilesUseCase,
             observeConnectionStateUseCase = appContainer.observeConnectionStateUseCase,
+            observeEsdeLogActivityUseCase = appContainer.observeEsdeLogActivityUseCase,
         ) as T
     }
 }
