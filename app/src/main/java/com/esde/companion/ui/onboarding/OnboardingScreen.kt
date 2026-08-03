@@ -5,8 +5,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +42,7 @@ fun OnboardingScreen(
     onOnboardingComplete: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val onBack: (() -> Unit)? = if (uiState.stepBackStack.isNotEmpty()) viewModel::onBack else null
 
     LaunchedEffect(Unit) {
         viewModel.onboardingComplete.collect { onOnboardingComplete() }
@@ -64,55 +68,77 @@ fun OnboardingScreen(
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        when (uiState.step) {
-            OnboardingStep.Permission -> PermissionStep(granted = uiState.permissionGranted)
-
-            OnboardingStep.EsdeFolder -> EsdeFolderStep(
-                path = uiState.logFolderPath,
-                validation = uiState.logFolderValidation,
-                isValidating = uiState.isValidatingLogFolder,
-                onPickFolder = { uri ->
-                    SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
-                },
-                onConfirm = viewModel::onEsdeFolderConfirmed,
+        Column(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = "ES-DE Companion Setup",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
             )
+            Box(modifier = Modifier.weight(1f)) {
+                when (uiState.step) {
+                    OnboardingStep.Permission -> PermissionStep(
+                        granted = uiState.permissionGranted,
+                        onBack = onBack,
+                        onNext = { viewModel.onPermissionResult(uiState.permissionGranted) },
+                    )
 
-            OnboardingStep.MediaFolder -> MediaFolderStep(
-                path = uiState.mediaFolderPath,
-                validation = uiState.mediaFolderValidation,
-                isValidating = uiState.isValidatingMediaFolder,
-                autoDetected = uiState.mediaFolderAutoDetected,
-                isCheckingInstallation = uiState.isCheckingInstallation,
-                onPickFolder = { uri ->
-                    SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
-                },
-                onConfirm = viewModel::onMediaFolderConfirmed,
-            )
+                    OnboardingStep.EsdeFolder -> EsdeFolderStep(
+                        path = uiState.logFolderPath,
+                        validation = uiState.logFolderValidation,
+                        isValidating = uiState.isValidatingLogFolder,
+                        isCheckingInstallation = uiState.isCheckingInstallation,
+                        onPickFolder = { uri ->
+                            SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
+                        },
+                        onBack = onBack,
+                        onNext = viewModel::onEsdeFolderConfirmed,
+                    )
 
-            OnboardingStep.LegacyScripts -> LegacyScriptsStep(
-                scriptFiles = uiState.legacyScriptFiles,
-                isDeleting = uiState.isDeletingLegacyScripts,
-                onDelete = viewModel::onDeleteLegacyScriptFiles,
-                onConfirm = viewModel::onLegacyScriptsConfirmed,
-            )
+                    OnboardingStep.MediaFolder -> MediaFolderStep(
+                        path = uiState.mediaFolderPath,
+                        validation = uiState.mediaFolderValidation,
+                        isValidating = uiState.isValidatingMediaFolder,
+                        autoDetected = uiState.mediaFolderAutoDetected,
+                        onPickFolder = { uri ->
+                            SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
+                        },
+                        onBack = onBack,
+                        onNext = viewModel::onMediaFolderConfirmed,
+                    )
 
-            OnboardingStep.EventScriptSettings -> EventScriptSettingsStep(
-                settings = uiState.eventScriptSettings,
-                onConfirm = viewModel::onEventScriptSettingsConfirmed,
-            )
+                    OnboardingStep.LegacyScripts -> LegacyScriptsStep(
+                        scriptFiles = uiState.legacyScriptFiles,
+                        isDeleting = uiState.isDeletingLegacyScripts,
+                        onDelete = viewModel::onDeleteLegacyScriptFiles,
+                        onBack = onBack,
+                        onNext = viewModel::onLegacyScriptsConfirmed,
+                    )
 
-            OnboardingStep.LiveLogCheck -> LiveLogCheckStep(
-                connectionState = uiState.connectionState,
-                passed = uiState.liveCheckPassed,
-                isCompleting = uiState.isCompleting,
-                onFinish = viewModel::onFinishSetup,
-            )
+                    OnboardingStep.EventScriptSettings -> EventScriptSettingsStep(
+                        settings = uiState.eventScriptSettings,
+                        onBack = onBack,
+                        onNext = viewModel::onEventScriptSettingsConfirmed,
+                    )
+
+                    OnboardingStep.LiveLogCheck -> LiveLogCheckStep(
+                        connectionState = uiState.connectionState,
+                        passed = uiState.liveCheckPassed,
+                        isCompleting = uiState.isCompleting,
+                        onBack = onBack,
+                        onNext = viewModel::onFinishSetup,
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun PermissionStep(granted: Boolean) {
+private fun PermissionStep(
+    granted: Boolean,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
+) {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         // Result code is ignored - the DisposableEffect's ON_RESUME check in
@@ -123,6 +149,9 @@ private fun PermissionStep(granted: Boolean) {
         title = "Storage access",
         description = "ES-DE Companion reads ES-DE's log file and media folder directly " +
                 "from storage. Grant \"All files access\" to continue.",
+        onBack = onBack,
+        onNext = onNext,
+        nextEnabled = granted,
     ) {
         if (granted) {
             Text("Access granted.")
@@ -139,8 +168,10 @@ private fun EsdeFolderStep(
     path: String,
     validation: LogFolderValidation?,
     isValidating: Boolean,
+    isCheckingInstallation: Boolean,
     onPickFolder: (Uri) -> Unit,
-    onConfirm: () -> Unit,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
 ) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let(onPickFolder)
@@ -152,24 +183,27 @@ private fun EsdeFolderStep(
     StepScaffold(
         title = "ES-DE folder",
         description = "Select the ES-DE folder ES-DE itself is configured to use. Currently: $path",
+        onBack = onBack,
+        onNext = onNext,
+        nextEnabled = settingsFileFound && !isValidating && !isCheckingInstallation,
     ) {
         when {
             isValidating -> CircularProgressIndicator()
             settingsFileFound -> Text("Found settings/es_settings.xml - this looks right.")
             folderExistsButLooksWrong -> Text(
                 "This folder exists, but settings/es_settings.xml wasn't found inside it - " +
-                        "it appears to be the incorrect folder. You can continue anyway, or " +
-                        "choose a different folder.",
+                        "it appears to be the incorrect folder. Choose the correct one to continue.",
             )
             validation is LogFolderValidation.FolderNotFound -> Text("This folder doesn't exist. Choose the correct folder.")
         }
 
-        OutlinedButton(onClick = { launcher.launch(null) }) {
-            Text("Choose different folder")
+        if (isCheckingInstallation) {
+            CircularProgressIndicator()
+            Text("Checking ES-DE's installation...")
         }
 
-        Button(onClick = onConfirm, enabled = !isValidating) {
-            Text("Continue")
+        OutlinedButton(onClick = { launcher.launch(null) }) {
+            Text("Choose different folder")
         }
     }
 }
@@ -180,9 +214,9 @@ private fun MediaFolderStep(
     validation: MediaFolderValidation?,
     isValidating: Boolean,
     autoDetected: Boolean,
-    isCheckingInstallation: Boolean,
     onPickFolder: (Uri) -> Unit,
-    onConfirm: () -> Unit,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
 ) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let(onPickFolder)
@@ -191,22 +225,21 @@ private fun MediaFolderStep(
     StepScaffold(
         title = "Media folder",
         description = "ES-DE's downloaded_media folder, used to show game artwork. Currently: $path",
+        onBack = onBack,
+        onNext = onNext,
+        nextEnabled = !isValidating,
     ) {
-        if (autoDetected) {
-            Text("Detected from ES-DE's own settings - confirm this looks right.")
-        }
         when {
             isValidating -> CircularProgressIndicator()
             validation is MediaFolderValidation.FolderFound -> Text("Folder found.")
+            validation is MediaFolderValidation.FolderNotFound && autoDetected -> Text(
+                "ES-DE's settings point at this path, but it doesn't exist - choose the correct folder.",
+            )
             validation is MediaFolderValidation.FolderNotFound -> Text("This folder doesn't exist. Choose the correct folder.")
         }
 
         OutlinedButton(onClick = { launcher.launch(null) }) {
             Text("Choose different folder")
-        }
-
-        Button(onClick = onConfirm, enabled = !isValidating && !isCheckingInstallation) {
-            Text(if (isCheckingInstallation) "Checking..." else "Continue")
         }
     }
 }
@@ -216,13 +249,17 @@ private fun LegacyScriptsStep(
     scriptFiles: List<String>,
     isDeleting: Boolean,
     onDelete: () -> Unit,
-    onConfirm: () -> Unit,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
 ) {
     StepScaffold(
         title = "Leftover script files",
         description = "Found ${scriptFiles.size} leftover script file(s) from an older " +
                 "version of ES-DE Companion. These are no longer required - removing them " +
                 "will lead to improved performance.",
+        onBack = onBack,
+        onNext = onNext,
+        nextEnabled = !isDeleting,
     ) {
         if (isDeleting) {
             CircularProgressIndicator()
@@ -233,22 +270,24 @@ private fun LegacyScriptsStep(
         } else {
             Text("Deleted.")
         }
-
-        Button(onClick = onConfirm, enabled = !isDeleting) {
-            Text("Continue")
-        }
     }
 }
 
 @Composable
 private fun EventScriptSettingsStep(
     settings: EsdeEventScriptSettings?,
-    onConfirm: () -> Unit,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
 ) {
+    val allEnabled = settings?.allEnabled == true
+
     StepScaffold(
         title = "ES-DE settings",
         description = "ES-DE Companion needs a few settings enabled in ES-DE itself: " +
                 "Main Menu > Other Settings >",
+        onBack = onBack,
+        onNext = onNext,
+        nextEnabled = allEnabled,
     ) {
         if (settings?.customEventScripts != true) {
             Text("- \"Enable Custom Event Scripts\"")
@@ -259,13 +298,14 @@ private fun EventScriptSettingsStep(
         if (settings?.debugMode != true) {
             Text("- \"Debug Mode\"")
         }
-        Text(
-            "ES-DE doesn't update its settings file live, so this can't be re-checked " +
-                    "automatically - once you've made these changes in ES-DE, continue below.",
-        )
 
-        Button(onClick = onConfirm) {
-            Text("I've made these changes")
+        if (allEnabled) {
+            Text("Confirmed - these settings are enabled correctly.")
+        } else {
+            Text(
+                "Make these changes in ES-DE, then navigate back out of the settings menu - " +
+                        "this will be detected automatically.",
+            )
         }
     }
 }
@@ -275,12 +315,17 @@ private fun LiveLogCheckStep(
     connectionState: EsdeConnectionState?,
     passed: Boolean,
     isCompleting: Boolean,
-    onFinish: () -> Unit,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
 ) {
     StepScaffold(
         title = "Confirm it's working",
         description = "Browse to a system or game in ES-DE now, to confirm the log is " +
                 "found and generating activity.",
+        onBack = onBack,
+        onNext = onNext,
+        nextEnabled = passed && !isCompleting,
+        nextLabel = if (isCompleting) "Finishing..." else "Finish setup",
     ) {
         when {
             connectionState == null -> CircularProgressIndicator()
@@ -289,10 +334,6 @@ private fun LiveLogCheckStep(
             passed -> Text("Working! ES-DE activity detected.")
             else -> Text("Waiting for activity - browse a system or game in ES-DE now.")
         }
-
-        Button(onClick = onFinish, enabled = passed && !isCompleting) {
-            Text(if (isCompleting) "Finishing..." else "Finish setup")
-        }
     }
 }
 
@@ -300,6 +341,10 @@ private fun LiveLogCheckStep(
 private fun StepScaffold(
     title: String,
     description: String,
+    onBack: (() -> Unit)?,
+    onNext: () -> Unit,
+    nextEnabled: Boolean,
+    nextLabel: String = "Next",
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -310,6 +355,22 @@ private fun StepScaffold(
     ) {
         Text(text = title, style = MaterialTheme.typography.headlineSmall)
         Text(text = description, style = MaterialTheme.typography.bodyMedium)
-        content()
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            content()
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            OutlinedButton(onClick = { onBack?.invoke() }, enabled = onBack != null) {
+                Text("Back")
+            }
+            Button(onClick = onNext, enabled = nextEnabled) {
+                Text(nextLabel)
+            }
+        }
     }
 }

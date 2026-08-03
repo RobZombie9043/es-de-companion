@@ -17,6 +17,7 @@ import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -25,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -115,8 +118,22 @@ class OnboardingViewModelTest {
         var legacyScriptFiles: List<String> = emptyList()
         var deleteCalled = false
 
+        // Emits eventScriptSettings' value at subscription time, then replays whatever's
+        // pushed via pushEventScriptSettingsUpdate - mirrors the real repository re-reading
+        // the file on subscribe, then again each time it changes on disk.
+        val eventScriptSettingsUpdates = MutableSharedFlow<EsdeEventScriptSettings?>(extraBufferCapacity = 1)
+
+        fun pushEventScriptSettingsUpdate(settings: EsdeEventScriptSettings?) {
+            eventScriptSettings = settings
+            eventScriptSettingsUpdates.tryEmit(settings)
+        }
+
         override suspend fun readMediaDirectory(esdeRootPath: String): String? = mediaDirectory
         override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? = eventScriptSettings
+        override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> = flow {
+            emit(eventScriptSettings)
+            emitAll(eventScriptSettingsUpdates)
+        }
         override suspend fun findLegacyScriptFiles(esdeRootPath: String): List<String> = legacyScriptFiles
         override suspend fun deleteLegacyScriptFiles(esdeRootPath: String) {
             deleteCalled = true
@@ -160,6 +177,7 @@ class OnboardingViewModelTest {
             completeOnboardingUseCase = CompleteOnboardingUseCase(onboardingRepository),
             readEsdeMediaDirectoryUseCase = ReadEsdeMediaDirectoryUseCase(installationRepository),
             readEsdeEventScriptSettingsUseCase = ReadEsdeEventScriptSettingsUseCase(installationRepository),
+            observeEsdeEventScriptSettingsUseCase = ObserveEsdeEventScriptSettingsUseCase(installationRepository),
             findLegacyScriptFilesUseCase = FindLegacyScriptFilesUseCase(installationRepository),
             deleteLegacyScriptFilesUseCase = DeleteLegacyScriptFilesUseCase(installationRepository),
             observeConnectionStateUseCase = observeConnectionState,
@@ -179,6 +197,44 @@ class OnboardingViewModelTest {
 
         assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
         assertEquals(listOf(onboardingRepo.defaultLogFolderPath()), onboardingRepo.savedLogPaths)
+    }
+
+    @Test
+    fun `media folder confirmed by ES-DE's own settings skips the MediaFolder step entirely`() = runTest(testDispatcher) {
+        val onboardingRepo = FakeOnboardingRepository().apply {
+            mediaFolderValidationResult = MediaFolderValidation.FolderFound
+        }
+        val installationRepo = FakeEsdeInstallationRepository().apply {
+            mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
+        }
+        val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+        advanceUntilIdle()
+
+        viewModel.onEsdeFolderConfirmed()
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+        assertEquals(listOf(installationRepo.mediaDirectory), onboardingRepo.savedMediaPaths)
+        assertTrue(viewModel.uiState.value.mediaFolderAutoDetected)
+    }
+
+    @Test
+    fun `media folder named in settings but missing on disk still shows MediaFolder for manual pick`() = runTest(testDispatcher) {
+        val onboardingRepo = FakeOnboardingRepository().apply {
+            mediaFolderValidationResult = MediaFolderValidation.FolderNotFound
+        }
+        val installationRepo = FakeEsdeInstallationRepository().apply {
+            mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
+        }
+        val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+        advanceUntilIdle()
+
+        viewModel.onEsdeFolderConfirmed()
+        advanceUntilIdle()
+
+        assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
+        assertTrue(onboardingRepo.savedMediaPaths.isEmpty())
+        assertEquals(MediaFolderValidation.FolderNotFound, viewModel.uiState.value.mediaFolderValidation)
     }
 
     @Test
@@ -246,6 +302,47 @@ class OnboardingViewModelTest {
 
         assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
     }
+
+    @Test
+    fun `EventScriptSettings updates as es_settings xml changes are detected, without needing a manual re-check`() =
+        runTest(testDispatcher) {
+            val installationRepo = FakeEsdeInstallationRepository().apply {
+                eventScriptSettings = EsdeEventScriptSettings(
+                    customEventScripts = false,
+                    customEventScriptsBrowsing = true,
+                    debugMode = true,
+                )
+            }
+            val viewModel = buildViewModel(installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.EventScriptSettings, viewModel.uiState.value.step)
+            assertFalse(viewModel.uiState.value.eventScriptSettings?.allEnabled == true)
+
+            // Simulates ES-DE rewriting es_settings.xml once the user navigates back out of
+            // its settings menu, with the fix applied - no explicit re-check call from the
+            // ViewModel is involved, only the file-change signal.
+            installationRepo.pushEventScriptSettingsUpdate(
+                EsdeEventScriptSettings(
+                    customEventScripts = true,
+                    customEventScriptsBrowsing = true,
+                    debugMode = true,
+                ),
+            )
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.eventScriptSettings?.allEnabled == true)
+            assertEquals(OnboardingStep.EventScriptSettings, viewModel.uiState.value.step)
+
+            viewModel.onEventScriptSettingsConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+        }
 
     @Test
     fun `back navigation skips over steps that were skipped going forward`() = runTest(testDispatcher) {

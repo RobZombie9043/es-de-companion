@@ -51,6 +51,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
@@ -236,6 +237,7 @@ class AppContainer(context: Context) {
     val observeOnboardingCompleteUseCase = ObserveOnboardingCompleteUseCase(onboardingRepository)
     val readEsdeMediaDirectoryUseCase = ReadEsdeMediaDirectoryUseCase(esdeInstallationRepository)
     val readEsdeEventScriptSettingsUseCase = ReadEsdeEventScriptSettingsUseCase(esdeInstallationRepository)
+    val observeEsdeEventScriptSettingsUseCase = ObserveEsdeEventScriptSettingsUseCase(esdeInstallationRepository)
     val findLegacyScriptFilesUseCase = FindLegacyScriptFilesUseCase(esdeInstallationRepository)
     val deleteLegacyScriptFilesUseCase = DeleteLegacyScriptFilesUseCase(esdeInstallationRepository)
 

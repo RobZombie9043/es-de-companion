@@ -8,8 +8,9 @@ import com.esde.companion.domain.model.MediaFolderValidation
 data class OnboardingUiState(
     val step: OnboardingStep = OnboardingStep.Permission,
     /** Steps actually visited so far, in order - popped by onBack(). Skipped steps
-     * (LegacyScripts/EventScriptSettings when nothing needed fixing) are never pushed, so
-     * back navigation correctly jumps over them too. */
+     * (MediaFolder when auto-detected and confirmed valid, LegacyScripts/
+     * EventScriptSettings when nothing needed fixing) are never pushed, so back
+     * navigation correctly jumps over them too. */
     val stepBackStack: List<OnboardingStep> = emptyList(),
     val permissionGranted: Boolean = false,
     val logFolderPath: String = "",
@@ -22,9 +23,9 @@ data class OnboardingUiState(
      * than the hardcoded default guess. */
     val mediaFolderAutoDetected: Boolean = false,
     /** True while the background read kicked off on EsdeFolder confirm (media directory,
-     * event-script flags, legacy script files) is still in flight - gates MediaFolder's
-     * Continue button so tapping through fast can't race ahead of it (see
-     * OnboardingViewModel.fetchInstallationInfo). */
+     * event-script flags, legacy script files) is still in flight - gates EsdeFolder's Next
+     * button, since the app remains on that step until this decides whether MediaFolder can
+     * be auto-skipped (see OnboardingViewModel.fetchInstallationInfo). */
     val isCheckingInstallation: Boolean = false,
     val legacyScriptFiles: List<String> = emptyList(),
     val isDeletingLegacyScripts: Boolean = false,

@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -24,10 +26,11 @@ import kotlinx.coroutines.launch
 
 /**
  * Drives the first-run onboarding flow. Forward sequence (see [OnboardingStep]):
- * Permission -> EsdeFolder -> MediaFolder -> [LegacyScripts] -> [EventScriptSettings] ->
- * LiveLogCheck. The two bracketed steps are skipped entirely when there's nothing to fix,
- * decided from installation info fetched once, in the background, right after EsdeFolder
- * is confirmed (see [fetchInstallationInfo]).
+ * Permission -> EsdeFolder -> [MediaFolder] -> [LegacyScripts] -> [EventScriptSettings] ->
+ * LiveLogCheck. The three bracketed steps are skipped entirely when there's nothing to fix
+ * (MediaFolder when ES-DE's own settings file already names a media folder that exists on
+ * disk), decided from installation info fetched once, in the background, right after
+ * EsdeFolder is confirmed (see [fetchInstallationInfo]).
  *
  * Unlike the old linear-forward-only flow, this supports going back ([onBack]) via a plain
  * back-stack of visited steps - LiveLogCheck's troubleshooting needs a way to send the user
@@ -52,6 +55,7 @@ class OnboardingViewModel(
     private val completeOnboardingUseCase: CompleteOnboardingUseCase,
     private val readEsdeMediaDirectoryUseCase: ReadEsdeMediaDirectoryUseCase,
     private val readEsdeEventScriptSettingsUseCase: ReadEsdeEventScriptSettingsUseCase,
+    private val observeEsdeEventScriptSettingsUseCase: ObserveEsdeEventScriptSettingsUseCase,
     private val findLegacyScriptFilesUseCase: FindLegacyScriptFilesUseCase,
     private val deleteLegacyScriptFilesUseCase: DeleteLegacyScriptFilesUseCase,
     private val observeConnectionStateUseCase: ObserveConnectionStateUseCase,
@@ -75,6 +79,7 @@ class OnboardingViewModel(
 
     private var liveCheckJob: Job? = null
     private var installationInfoJob: Job? = null
+    private var eventScriptSettingsJob: Job? = null
 
     init {
         // See the class kdoc's seeding rationale - only kick off validation immediately
@@ -100,8 +105,6 @@ class OnboardingViewModel(
     fun onEsdeFolderConfirmed() {
         val path = _uiState.value.logFolderPath
         viewModelScope.launch { onboardingRepository.saveLogFolderPath(path) }
-        advanceTo(OnboardingStep.MediaFolder)
-        validateMediaFolder(_uiState.value.mediaFolderPath)
         fetchInstallationInfo(path)
     }
 
@@ -114,18 +117,7 @@ class OnboardingViewModel(
         val state = _uiState.value
         viewModelScope.launch {
             onboardingRepository.saveMediaFolderPath(state.mediaFolderPath)
-            // Wait for fetchInstallationInfo (kicked off on EsdeFolder confirm) to finish
-            // rather than deciding from whatever's in state right now - otherwise tapping
-            // through quickly can race ahead of it (confirmed bug: on slower storage, e.g.
-            // an SD card, the legacy-script check can lose the race and look like nothing
-            // was found even when files are present).
-            installationInfoJob?.join()
-            val current = _uiState.value
-            when {
-                current.legacyScriptFiles.isNotEmpty() -> advanceTo(OnboardingStep.LegacyScripts)
-                current.eventScriptSettings?.allEnabled != true -> advanceTo(OnboardingStep.EventScriptSettings)
-                else -> enterLiveLogCheck()
-            }
+            proceedFromMediaFolder()
         }
     }
 
@@ -140,13 +132,15 @@ class OnboardingViewModel(
 
     fun onLegacyScriptsConfirmed() {
         if (_uiState.value.eventScriptSettings?.allEnabled != true) {
-            advanceTo(OnboardingStep.EventScriptSettings)
+            enterEventScriptSettingsCheck()
         } else {
             enterLiveLogCheck()
         }
     }
 
     fun onEventScriptSettingsConfirmed() {
+        eventScriptSettingsJob?.cancel()
+        eventScriptSettingsJob = null
         enterLiveLogCheck()
     }
 
@@ -166,6 +160,10 @@ class OnboardingViewModel(
             liveCheckJob?.cancel()
             liveCheckJob = null
         }
+        if (state.step == OnboardingStep.EventScriptSettings) {
+            eventScriptSettingsJob?.cancel()
+            eventScriptSettingsJob = null
+        }
         _uiState.value = state.copy(step = previous, stepBackStack = state.stepBackStack.dropLast(1))
     }
 
@@ -176,11 +174,15 @@ class OnboardingViewModel(
 
     /** Reads settings/es_settings.xml (media directory, the 3 event-script flags) and
      * checks for legacy script files, all from [esdeRootPath] - kicked off once, right
-     * after EsdeFolder is confirmed, so MediaFolder/LegacyScripts/EventScriptSettings can
-     * decide what to show without their own loading step. The three reads run
-     * concurrently, but [installationInfoJob] as a whole is joined by
-     * [onMediaFolderConfirmed] before it decides what to show next - see that kdoc for why
-     * that join is required for correctness, not just a nicety. */
+     * after EsdeFolder is confirmed, while remaining on the EsdeFolder step (gated by
+     * [OnboardingUiState.isCheckingInstallation]).
+     *
+     * If the media directory is both found in ES-DE's own settings file and validated as
+     * an existing folder, that's a confirmed-correct location straight from ES-DE - the
+     * MediaFolder step is skipped entirely rather than making the user re-confirm
+     * something ES-DE already told us. It's only shown if auto-detection comes back empty
+     * or points at a folder that doesn't actually exist, so the user can pick one by hand.
+     */
     private fun fetchInstallationInfo(esdeRootPath: String) {
         installationInfoJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isCheckingInstallation = true)
@@ -190,15 +192,57 @@ class OnboardingViewModel(
             val legacyScriptFilesDeferred = async { findLegacyScriptFilesUseCase(esdeRootPath) }
 
             val mediaDirectory = mediaDirectoryDeferred.await()
-            if (mediaDirectory != null) {
-                _uiState.value = _uiState.value.copy(mediaFolderPath = mediaDirectory, mediaFolderAutoDetected = true)
-                validateMediaFolder(mediaDirectory)
-            }
+            val mediaFolderValidation = mediaDirectory?.let { validateMediaFolderUseCase(it) }
+
             _uiState.value = _uiState.value.copy(
+                mediaFolderPath = mediaDirectory ?: _uiState.value.mediaFolderPath,
+                mediaFolderAutoDetected = mediaDirectory != null,
+                mediaFolderValidation = mediaFolderValidation,
                 eventScriptSettings = eventScriptSettingsDeferred.await(),
                 legacyScriptFiles = legacyScriptFilesDeferred.await(),
                 isCheckingInstallation = false,
             )
+
+            if (mediaDirectory != null && mediaFolderValidation is MediaFolderValidation.FolderFound) {
+                onboardingRepository.saveMediaFolderPath(mediaDirectory)
+                proceedFromMediaFolder()
+            } else {
+                advanceTo(OnboardingStep.MediaFolder)
+                // Auto-detection found nothing - validate the fallback default guess so
+                // the step doesn't land with a blank validation state.
+                if (mediaDirectory == null) validateMediaFolder(_uiState.value.mediaFolderPath)
+            }
+        }
+    }
+
+    /** Shared by both the auto-skip path in [fetchInstallationInfo] and the manual
+     * [onMediaFolderConfirmed] path - decides which of LegacyScripts/EventScriptSettings/
+     * LiveLogCheck to show next, from whatever [fetchInstallationInfo] already found. Safe
+     * to call from either without an extra join: the manual path only reaches MediaFolder
+     * once [installationInfoJob] has already completed (see [fetchInstallationInfo]), so
+     * its results are always ready here. */
+    private fun proceedFromMediaFolder() {
+        val current = _uiState.value
+        when {
+            current.legacyScriptFiles.isNotEmpty() -> advanceTo(OnboardingStep.LegacyScripts)
+            current.eventScriptSettings?.allEnabled != true -> enterEventScriptSettingsCheck()
+            else -> enterLiveLogCheck()
+        }
+    }
+
+    /** Advances to EventScriptSettings and starts monitoring settings/es_settings.xml for
+     * changes - ES-DE rewrites this file once the user navigates back out of its settings
+     * menu (see [ObserveEsdeEventScriptSettingsUseCase]), so this lets the step confirm
+     * itself automatically rather than requiring a manual re-check. Cancelled on
+     * [onEventScriptSettingsConfirmed] and on stepping back out of this step via [onBack]. */
+    private fun enterEventScriptSettingsCheck() {
+        val esdeRootPath = _uiState.value.logFolderPath
+        advanceTo(OnboardingStep.EventScriptSettings)
+        eventScriptSettingsJob?.cancel()
+        eventScriptSettingsJob = viewModelScope.launch {
+            observeEsdeEventScriptSettingsUseCase(esdeRootPath).collect { settings ->
+                _uiState.value = _uiState.value.copy(eventScriptSettings = settings)
+            }
         }
     }
 

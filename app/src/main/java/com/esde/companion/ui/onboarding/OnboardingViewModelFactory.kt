@@ -20,6 +20,7 @@ class OnboardingViewModelFactory(
             completeOnboardingUseCase = appContainer.completeOnboardingUseCase,
             readEsdeMediaDirectoryUseCase = appContainer.readEsdeMediaDirectoryUseCase,
             readEsdeEventScriptSettingsUseCase = appContainer.readEsdeEventScriptSettingsUseCase,
+            observeEsdeEventScriptSettingsUseCase = appContainer.observeEsdeEventScriptSettingsUseCase,
             findLegacyScriptFilesUseCase = appContainer.findLegacyScriptFilesUseCase,
             deleteLegacyScriptFilesUseCase = appContainer.deleteLegacyScriptFilesUseCase,
             observeConnectionStateUseCase = appContainer.observeConnectionStateUseCase,
