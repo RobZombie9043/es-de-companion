@@ -18,7 +18,7 @@ fun defaultCanvas(stateGroup: StateGroup, grid: GridDimensions): List<PlacedWidg
         StateGroup.System -> listOf(
             PlacedWidget(
                 id = "default-system-fanart",
-                widgetType = WidgetType.SystemImage(ScaleMode.Fill),
+                widgetType = WidgetType.SystemImage(ScaleMode.Fill, ImageEffects(darkenAmount = DEFAULT_FANART_DARKEN)),
                 gridColumn = 0, gridRow = 0, columnSpan = grid.columns, rowSpan = grid.rows, zIndex = 0,
             ),
             PlacedWidget(
@@ -31,7 +31,7 @@ fun defaultCanvas(stateGroup: StateGroup, grid: GridDimensions): List<PlacedWidg
         StateGroup.Playing -> listOf(
             PlacedWidget(
                 id = "default-playing-fanart",
-                widgetType = WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill),
+                widgetType = WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill, ImageEffects(darkenAmount = DEFAULT_FANART_DARKEN)),
                 gridColumn = 0, gridRow = 0, columnSpan = grid.columns, rowSpan = grid.rows, zIndex = 0,
             ),
             PlacedWidget(
@@ -46,3 +46,7 @@ fun defaultCanvas(stateGroup: StateGroup, grid: GridDimensions): List<PlacedWidg
 // 14/22 and 7/19 - matches the size the logo/marquee widget ends up at by default.
 private const val LOGO_WIDTH_FRACTION = 0.6363636363636364
 private const val LOGO_HEIGHT_FRACTION = 0.3684210526315789
+
+// Mutes the default background image slightly so the overlaid logo/marquee reads more
+// clearly against it out of the box - see ImageEffects.darkenAmount.
+private const val DEFAULT_FANART_DARKEN = 0.1f
