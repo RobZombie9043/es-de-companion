@@ -16,6 +16,7 @@ private fun WidgetType.toDto(): WidgetTypeDto = when (this) {
     is WidgetType.SystemImage -> WidgetTypeDto.SystemImage(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.SystemMedia -> WidgetTypeDto.SystemMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.GameMedia -> WidgetTypeDto.GameMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
+    is WidgetType.CustomImage -> WidgetTypeDto.CustomImage(path, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
     is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha)
     is WidgetType.GameDescription -> WidgetTypeDto.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
 }
@@ -29,6 +30,8 @@ private fun WidgetTypeDto.toDomain(): WidgetType = when (this) {
         WidgetType.SystemMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
     is WidgetTypeDto.GameMedia ->
         WidgetType.GameMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
+    is WidgetTypeDto.CustomImage ->
+        WidgetType.CustomImage(path, scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
     is WidgetTypeDto.ColorBackground -> WidgetType.ColorBackground(colorArgb, alpha)
     is WidgetTypeDto.GameDescription ->
         WidgetType.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)

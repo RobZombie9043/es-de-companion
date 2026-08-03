@@ -21,6 +21,21 @@ object SafPathResolver {
 
     fun resolvePath(treeUri: Uri): String? {
         val docId = runCatching { DocumentsContract.getTreeDocumentId(treeUri) }.getOrNull() ?: return null
+        return resolveFromDocumentId(docId)
+    }
+
+    /**
+     * Same idea as [resolvePath] but for a single-document [Uri] from
+     * ACTION_OPEN_DOCUMENT (e.g. a user-picked image file) rather than a document *tree*
+     * from ACTION_OPEN_DOCUMENT_TREE - the document-id convention (`<volume-id>:<relative-
+     * path>`) is identical, only the id-extraction call differs.
+     */
+    fun resolveDocumentPath(documentUri: Uri): String? {
+        val docId = runCatching { DocumentsContract.getDocumentId(documentUri) }.getOrNull() ?: return null
+        return resolveFromDocumentId(docId)
+    }
+
+    private fun resolveFromDocumentId(docId: String): String? {
         val separatorIndex = docId.indexOf(':')
         if (separatorIndex == -1) return null
 

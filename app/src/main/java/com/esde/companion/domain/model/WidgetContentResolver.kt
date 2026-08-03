@@ -56,6 +56,13 @@ object WidgetContentResolver {
                 widgetType.effects,
             ).withNameFallback(widgetType.mediaType, gameNameLookup)
 
+        is WidgetType.CustomImage ->
+            if (widgetType.path.isNotBlank()) {
+                WidgetContent.Image(widgetType.path, widgetType.scaleMode, isTransparentOverlay = false, isAsset = false, effects = widgetType.effects)
+            } else {
+                WidgetContent.Empty
+            }
+
         is WidgetType.ColorBackground ->
             WidgetContent.Color(widgetType.colorArgb, widgetType.alpha)
 
