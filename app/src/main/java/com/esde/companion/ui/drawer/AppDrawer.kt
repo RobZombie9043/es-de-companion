@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +51,18 @@ import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
+
+/** Drawer background base color: black in dark mode, white in light mode - matches
+ * AppDock's [dockBackgroundColor] so the drawer and dock read as one consistent surface. */
+@Composable
+private fun drawerBackgroundColor(): Color =
+    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+
+/** App label text color: the inverse of [drawerBackgroundColor], so labels stay readable
+ * against the drawer's background in either theme. */
+@Composable
+private fun drawerContentColor(): Color =
+    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
 
 /**
  * Full-screen grid of launchable apps. Opening/closing and the drag gesture that drives
@@ -85,7 +98,7 @@ fun AppDrawer(
         modifier = modifier
             .fillMaxSize()
             // Standard convention: 0% = fully transparent, 100% = fully opaque.
-            .background(Color.Black.copy(alpha = drawerOpacityPercent / 100f)),
+            .background(drawerBackgroundColor().copy(alpha = drawerOpacityPercent / 100f)),
         contentPadding = PaddingValues(24.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -193,7 +206,7 @@ private fun AppDrawerItem(
             Text(
                 text = app.label,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
+                color = drawerContentColor(),
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
