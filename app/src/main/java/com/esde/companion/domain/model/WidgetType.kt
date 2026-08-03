@@ -39,6 +39,18 @@ sealed class WidgetType {
     data class SystemImage(val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
     data class SystemMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
     data class GameMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
+
+    /**
+     * A single image file the user picked directly (via a file picker), independent of
+     * whatever system/game is currently browsed - unlike every other image-backed variant
+     * above, [path] is fixed, user-chosen, persisted data rather than something re-derived
+     * from AppState at resolve time. Available on both the System and Playing canvases
+     * since it has no dependency on either's identity. An empty [path] means the widget
+     * was added but no image has been picked yet - resolves to WidgetContent.Empty (see
+     * WidgetContentResolver).
+     */
+    data class CustomImage(val path: String, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
+
     data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetType()
 
     /**

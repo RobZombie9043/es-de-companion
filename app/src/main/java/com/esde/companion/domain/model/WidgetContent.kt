@@ -71,7 +71,11 @@ val WidgetType.isLogoStyle: Boolean
         is WidgetType.SystemLogo -> true
         is WidgetType.GameMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
         is WidgetType.SystemMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
-        is WidgetType.SystemImage, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+        is WidgetType.SystemImage,
+        is WidgetType.CustomImage,
+        is WidgetType.ColorBackground,
+        is WidgetType.GameDescription,
+        -> false
     }
 
 /**

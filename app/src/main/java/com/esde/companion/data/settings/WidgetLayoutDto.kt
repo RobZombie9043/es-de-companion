@@ -71,6 +71,14 @@ internal sealed class WidgetTypeDto {
     ) : WidgetTypeDto()
 
     @Serializable
+    data class CustomImage(
+        val path: String,
+        val scaleMode: String,
+        val blurAmount: Float = 0f,
+        val darkenAmount: Float = 0f,
+    ) : WidgetTypeDto()
+
+    @Serializable
     data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetTypeDto()
 
     @Serializable

@@ -114,6 +114,27 @@ class WidgetContentResolverTest {
         assertEquals(WidgetContent.SystemLogoAsset("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit), content)
     }
 
+    // --- CustomImage: fixed user-picked path, independent of any lookup -------------------
+
+    @Test
+    fun `CustomImage resolves to the widget's own fixed path`() {
+        val content = resolve(
+            widgetType = WidgetType.CustomImage(path = "/storage/emulated/0/Pictures/cover.jpg", scaleMode = ScaleMode.Fill),
+        )
+
+        assertEquals(
+            WidgetContent.Image("/storage/emulated/0/Pictures/cover.jpg", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
+    }
+
+    @Test
+    fun `CustomImage with no path chosen yet resolves to Empty`() {
+        val content = resolve(widgetType = WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill))
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
     // --- Marquee: name-text fallback ------------------------------------------------------
 
     @Test

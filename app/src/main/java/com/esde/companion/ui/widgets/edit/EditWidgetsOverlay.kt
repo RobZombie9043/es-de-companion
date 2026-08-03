@@ -2,6 +2,8 @@ package com.esde.companion.ui.widgets.edit
 
 import android.graphics.Rect
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -78,6 +80,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
@@ -124,6 +127,7 @@ private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (s
         WidgetType.SystemImage(ScaleMode.Fill),
         WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
         WidgetType.SystemMedia(MediaType.Screenshots, ScaleMode.Fill),
+        WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
         WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
     )
 
@@ -138,6 +142,7 @@ private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (s
         WidgetType.GameMedia(MediaType.TitleScreens, ScaleMode.Fit),
         WidgetType.GameMedia(MediaType.BackCovers, ScaleMode.Fit),
         WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit),
+        WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
         WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
     )
 }
@@ -198,6 +203,18 @@ fun EditWidgetsOverlay(
             val dockMaxApps by viewModel.dockMaxApps.collectAsStateWithLifecycle()
             val dockItems by viewModel.dockItems.collectAsStateWithLifecycle()
             var showAddPicker by remember { mutableStateOf(false) }
+
+            // Picking "Custom Image" from AddWidgetDialog launches straight into this
+            // rather than adding a widget with an empty path first - every other catalog
+            // entry is immediately fully resolvable, so this keeps that same "add ->
+            // instantly see something real" experience instead of adding a placeholder
+            // that still needs a follow-up Configure Widget step. Cancelling the picker
+            // (null result) adds nothing.
+            val addCustomImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                uri?.let(SafPathResolver::resolveDocumentPath)?.let { path ->
+                    viewModel.addWidget(WidgetType.CustomImage(path = path, scaleMode = ScaleMode.Fill))
+                }
+            }
 
             // Without this, back falls through to the system default and exits the app -
             // MainScreen's own BackHandler (which normally intercepts back so this kiosk
@@ -432,8 +449,12 @@ fun EditWidgetsOverlay(
                 AddWidgetDialog(
                     catalog = widgetCatalogFor(selectedCanvas),
                     onPick = { widgetType ->
-                        viewModel.addWidget(widgetType)
                         showAddPicker = false
+                        if (widgetType is WidgetType.CustomImage) {
+                            addCustomImageLauncher.launch(arrayOf("image/*"))
+                        } else {
+                            viewModel.addWidget(widgetType)
+                        }
                     },
                     onDismiss = { showAddPicker = false },
                 )
@@ -726,6 +747,7 @@ private fun WidgetType.label(): String = when (this) {
     is WidgetType.SystemImage -> "System Image"
     is WidgetType.SystemMedia -> "System: ${mediaType.name}"
     is WidgetType.GameMedia -> "Game: ${mediaType.name}"
+    is WidgetType.CustomImage -> "Custom Image"
     is WidgetType.ColorBackground -> "Color Background"
     is WidgetType.GameDescription -> "Description"
 }
@@ -812,6 +834,12 @@ private fun ConfigureWidgetDialog(
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
+                    is WidgetType.CustomImage -> {
+                        CustomImageConfig(current = widgetType, onChange = onChange)
+                        ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                    }
+
                     is WidgetType.ColorBackground ->
                         ColorBackgroundConfig(current = widgetType, onChange = onChange)
 
@@ -826,6 +854,31 @@ private fun ConfigureWidgetDialog(
             }
         },
     )
+}
+
+/** Shows the currently-picked file's name (or a prompt if none picked yet, e.g. this
+ * widget was just added and the picker was cancelled) and a button to (re)launch the
+ * same document picker used on add - see addCustomImageLauncher in EditWidgetsOverlay. */
+@Composable
+private fun CustomImageConfig(
+    current: WidgetType.CustomImage,
+    onChange: (WidgetType.CustomImage) -> Unit,
+) {
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(SafPathResolver::resolveDocumentPath)?.let { path -> onChange(current.copy(path = path)) }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = "Image", style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = if (current.path.isNotBlank()) current.path.substringAfterLast('/') else "No image chosen",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = { launcher.launch(arrayOf("image/*")) }) {
+            Text(if (current.path.isNotBlank()) "Change Image" else "Choose Image")
+        }
+    }
 }
 
 private fun ScaleMode.displayLabel(): String = when (this) {
