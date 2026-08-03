@@ -137,4 +137,29 @@ class EsdeLogFileRepositoryTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `a rom path with a multi-byte UTF-8 character decodes correctly instead of as ISO-8859-1 mojibake`() = runTest {
+        val logFile = tempFolder.newFile("es_log.txt")
+        logFile.writeText(
+            "Aug 03 10:00:00 Debug:  Scripting::fireEvent(): game-select " +
+                "\"/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam\" \"NieR_Automata™\" \"steam\" \"Steam\"\n",
+        )
+
+        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+
+        repository.observeEvents().test {
+            assertEquals(
+                EsdeEvent.GameSelect(
+                    romPath = "/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam",
+                    gameName = "NieR_Automata™",
+                    systemShortName = "steam",
+                    systemFullName = "Steam",
+                    direction = null,
+                ),
+                awaitItem(),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

@@ -38,10 +38,12 @@ import kotlinx.coroutines.launch
  * which is visible (and wrong) in the UI. Instead we scan once for the most recent
  * parseable event, emit only that, and start tailing from end-of-file from then on.
  *
- * Known limitation, left as-is deliberately rather than over-engineered up front:
- * [RandomAccessFile.readLine] decodes bytes as ISO-8859-1, not UTF-8. Game/system names
- * with non-Latin-1 characters may render incorrectly. Worth revisiting if it turns out
- * to matter in practice.
+ * Lines are decoded as UTF-8, not via [RandomAccessFile.readLine] (which forces
+ * ISO-8859-1 and mangles any multi-byte character - e.g. "NieR_Automata™" - into garbage
+ * that then fails to match the real on-disk file name during media lookup). We read raw
+ * bytes ourselves and decode with UTF-8 instead; this is safe to split into lines by
+ * decoded-string line breaks because UTF-8 continuation/lead bytes never collide with
+ * the ASCII '\n'/'\r' byte values used as line terminators.
  */
 class EsdeLogFileRepository(
     private val logFilePath: String,
@@ -178,8 +180,8 @@ class EsdeLogFileRepository(
                 val buffer = ByteArray(bytesToRead)
                 raf.readFully(buffer)
 
-                // Same encoding assumption noted on the class kdoc.
-                val text = String(buffer, Charsets.ISO_8859_1)
+                // See class kdoc: decode as UTF-8, not ISO-8859-1.
+                val text = String(buffer, Charsets.UTF_8)
 
                 // startPos > 0 means the first line in this window may be a fragment cut
                 // off mid-line by the window boundary, not a real line boundary - drop it
@@ -207,13 +209,16 @@ class EsdeLogFileRepository(
     ): Long {
         RandomAccessFile(file, "r").use { raf ->
             raf.seek(fromPosition)
-            var line = raf.readLine()
-            while (line != null) {
+            val remaining = ByteArray((raf.length() - fromPosition).toInt())
+            raf.readFully(remaining)
+
+            // Decode as UTF-8 ourselves rather than raf.readLine() - see class kdoc.
+            val text = String(remaining, Charsets.UTF_8)
+            for (line in text.lineSequence()) {
                 directionTracker.observeLine(line)
                 parser.parseLine(line)?.withDirection(directionTracker.direction)?.let { onEvent(it) }
-                line = raf.readLine()
             }
-            return raf.filePointer
+            return fromPosition + remaining.size
         }
     }
 
