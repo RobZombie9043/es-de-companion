@@ -1,6 +1,5 @@
 package com.esde.companion.data.media
 
-import java.io.File
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,8 +7,29 @@ import org.junit.Test
 class NormalizingSvgDecoderTest {
 
     @Test
-    fun `handles a real-world Illustrator export with a DOCTYPE, switch fallback, and large embedded CDATA`() {
-        val xml = File("src/main/assets/system_logos/now-playing.svg").readText(Charsets.UTF_8)
+    fun `handles an Illustrator-style export with a DOCTYPE, switch fallback, and large embedded CDATA`() {
+        // Reproduces the structure that broke NormalizingSvgDecoder against a real bundled
+        // logo (now-playing.svg, since re-exported without this structure) - a DOCTYPE with
+        // internal entities, a <switch> falling back from an unsupported foreignObject
+        // extension, and a large single CDATA text run big enough to cross Okio's ~8KB
+        // buffer segment size, which is what actually broke the in-memory-Buffer version of
+        // the decode pipeline (see NormalizingSvgDecoder's kdoc). This fixture is inline
+        // rather than a real asset file so the regression coverage doesn't depend on that
+        // bundled logo keeping this exact shape.
+        val hugeCdata = "A".repeat(150_000)
+        val xml = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <!DOCTYPE svg [
+                <!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
+            ]>
+            <svg width="500px" height="350px" viewBox="0 0 500 350" xmlns="http://www.w3.org/2000/svg">
+            <switch>
+                <foreignObject requiredExtensions="&ns_ai;" x="0" y="0" width="1" height="1"/>
+                <g><path d="M1 1"/></g>
+            </switch>
+            <metadata><![CDATA[$hugeCdata]]></metadata>
+            </svg>
+        """.trimIndent()
 
         val result = normalizeSmallViewBoxSvg(xml)
 
@@ -18,6 +38,7 @@ class NormalizingSvgDecoderTest {
         assertTrue(result.contains("<!ENTITY ns_ai"))
         assertTrue(result.contains("""<g transform="scale(6.0)">"""))
         assertTrue(result.contains("<switch>"))
+        assertTrue(result.contains(hugeCdata))
         assertTrue(result.trim().endsWith("</g>\n</svg>"))
     }
 
