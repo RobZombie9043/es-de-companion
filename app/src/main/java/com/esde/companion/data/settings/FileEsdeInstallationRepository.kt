@@ -1,10 +1,18 @@
 package com.esde.companion.data.settings
 
+import android.os.FileObserver
 import com.esde.companion.domain.model.EsdeEventScriptSettings
 import com.esde.companion.domain.parser.EsdeSettingsParser
 import com.esde.companion.domain.repository.EsdeInstallationRepository
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -12,7 +20,9 @@ import kotlinx.coroutines.withContext
  * esdecompanion-*.sh script files the old app used to write into ES-DE's scripts/ folder
  * (see CLAUDE.md - that mechanism is gone, these files are pure leftover clutter now).
  */
-class FileEsdeInstallationRepository : EsdeInstallationRepository {
+class FileEsdeInstallationRepository(
+    private val fallbackPollIntervalMs: Long = DEFAULT_FALLBACK_POLL_INTERVAL_MS,
+) : EsdeInstallationRepository {
 
     override suspend fun readMediaDirectory(esdeRootPath: String): String? =
         withContext(Dispatchers.IO) {
@@ -23,13 +33,54 @@ class FileEsdeInstallationRepository : EsdeInstallationRepository {
 
     override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? =
         withContext(Dispatchers.IO) {
-            readSettingsXml(esdeRootPath)?.let { xml ->
-                EsdeEventScriptSettings(
-                    customEventScripts = EsdeSettingsParser.findBoolValue(xml, "CustomEventScripts") ?: false,
-                    customEventScriptsBrowsing = EsdeSettingsParser.findBoolValue(xml, "CustomEventScriptsBrowsing") ?: false,
-                    debugMode = EsdeSettingsParser.findBoolValue(xml, "DebugMode") ?: false,
-                )
+            parseEventScriptSettings(esdeRootPath)
+        }
+
+    /**
+     * Watches settings/es_settings.xml's parent directory (same "watch the directory, not
+     * the file" reasoning as [com.esde.companion.data.log.EsdeLogFileRepository] - ES-DE
+     * may rewrite the file rather than edit it in place) with a slow poll running
+     * alongside as a safety net, the same combination used there.
+     */
+    override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> = channelFlow {
+        send(parseEventScriptSettings(esdeRootPath))
+
+        val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
+
+        val settingsFile = File(esdeRootPath, SETTINGS_XML_RELATIVE_PATH)
+        val parentDir = settingsFile.parentFile ?: File(esdeRootPath)
+        val targetName = settingsFile.name
+        val fileObserver = object : FileObserver(parentDir, WRITE_EVENTS_MASK) {
+            override fun onEvent(event: Int, path: String?) {
+                if (path == null || path == targetName) checkSignal.trySend(Unit)
             }
+        }
+        fileObserver.startWatching()
+
+        val fallbackJob = launch {
+            while (isActive) {
+                delay(fallbackPollIntervalMs)
+                checkSignal.trySend(Unit)
+            }
+        }
+
+        try {
+            for (signal in checkSignal) {
+                send(parseEventScriptSettings(esdeRootPath))
+            }
+        } finally {
+            fallbackJob.cancel()
+            fileObserver.stopWatching()
+        }
+    }.flowOn(Dispatchers.IO)
+
+    private fun parseEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? =
+        readSettingsXml(esdeRootPath)?.let { xml ->
+            EsdeEventScriptSettings(
+                customEventScripts = EsdeSettingsParser.findBoolValue(xml, "CustomEventScripts") ?: false,
+                customEventScriptsBrowsing = EsdeSettingsParser.findBoolValue(xml, "CustomEventScriptsBrowsing") ?: false,
+                debugMode = EsdeSettingsParser.findBoolValue(xml, "DebugMode") ?: false,
+            )
         }
 
     override suspend fun findLegacyScriptFiles(esdeRootPath: String): List<String> =
@@ -47,11 +98,22 @@ class FileEsdeInstallationRepository : EsdeInstallationRepository {
     }
 
     private fun readSettingsXml(esdeRootPath: String): String? {
-        val file = File(esdeRootPath, "settings/es_settings.xml")
+        val file = File(esdeRootPath, SETTINGS_XML_RELATIVE_PATH)
         return if (file.isFile) file.readText() else null
     }
 
     private companion object {
+        const val SETTINGS_XML_RELATIVE_PATH = "settings/es_settings.xml"
+
+        // Safety net only - FileObserver handles the latency-sensitive path, same
+        // reasoning as EsdeLogFileRepository's fallback poll.
+        const val DEFAULT_FALLBACK_POLL_INTERVAL_MS = 3_000L
+
+        val WRITE_EVENTS_MASK = FileObserver.MODIFY or
+                FileObserver.CLOSE_WRITE or
+                FileObserver.CREATE or
+                FileObserver.MOVED_TO
+
         val LEGACY_SCRIPT_RELATIVE_PATHS = listOf(
             "scripts/game-end/esdecompanion-game-end.sh",
             "scripts/game-start/esdecompanion-game-start.sh",

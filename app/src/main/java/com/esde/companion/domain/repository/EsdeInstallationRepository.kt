@@ -1,6 +1,7 @@
 package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.EsdeEventScriptSettings
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Reads ES-DE's own on-disk configuration and legacy-script footprint, given its root
@@ -18,6 +19,13 @@ interface EsdeInstallationRepository {
      * settings/es_settings.xml itself can't be found/read - distinct from "found, but a
      * flag is false/absent". */
     suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings?
+
+    /** Emits [readEventScriptSettings]'s result once immediately, then again every time
+     * settings/es_settings.xml changes on disk - ES-DE rewrites this file once the user
+     * navigates back out of its settings menu (not live while the menu is still open), so
+     * this is what lets onboarding auto-detect a fix instead of requiring a manual
+     * re-check. */
+    fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?>
 
     /** Absolute paths of whichever legacy esdecompanion-*.sh script files (written by the
      * old app, no longer used - see CLAUDE.md) are currently present. Empty if none. */
