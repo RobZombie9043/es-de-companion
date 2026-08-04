@@ -14,7 +14,7 @@ android {
         minSdk = 29
         targetSdk = 35
         versionCode = 25
-        versionName = "0.7.0 alpha"
+        versionName = "0.7.0-alpha"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -37,6 +37,13 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    applicationVariants.all {
+        outputs.forEach { output ->
+            (output as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "ES-DE-Companion-v${versionName}.apk"
+        }
     }
 }
 
