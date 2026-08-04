@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 
 /**
@@ -30,10 +31,22 @@ import kotlinx.coroutines.launch
  * impure edges it touches are [MusicLibraryRepository] and [MusicPlayerController].
  *
  * All mutable session state below is coroutine-confined - read and written only from
- * inside this class's own collection loop (the [combine] loop in [init], plus the public
- * [togglePlayPause]/[next] entry points, which run on the same collector since they call
- * straight into [applyCachedAction] rather than launching their own coroutines) - the same
- * single-actor discipline [com.esde.companion.domain.state.AppStateReducer] relies on.
+ * inside this class's own single collection loop (the merged snapshot/track-completion
+ * flow in [init], plus the public [togglePlayPause]/[next] entry points, which run on the
+ * same collector since they call straight into [applyCachedAction] rather than launching
+ * their own coroutines) - the same single-actor discipline
+ * [com.esde.companion.domain.state.AppStateReducer] relies on.
+ *
+ * [init] used to launch two independent `applicationScope.launch` coroutines - one for the
+ * settings/AppState snapshot loop, one collecting [MusicPlayerController.observeTrackCompletion]
+ * - both mutating the same private vars with no synchronization. applicationScope runs on
+ * Dispatchers.Default (multi-threaded), so those two coroutines could genuinely execute
+ * concurrently on different threads: a real data race, not a theoretical one, that showed
+ * up as spurious/flickery [MusicPlaybackState.Stopped] flips - e.g. the music FAB and
+ * MusicControlsOverlay briefly appearing then disappearing as a torn read of
+ * currentTrack/loadedPool got published as a state. [merge]-ing both event sources into
+ * one flow collected by one coroutine below fixes it structurally rather than papering
+ * over it with a Mutex: there is now genuinely only one place these vars are ever touched.
  */
 class MusicPlaybackCoordinator(
     observeConnectionState: ObserveConnectionStateUseCase,
@@ -78,7 +91,7 @@ class MusicPlaybackCoordinator(
                 MusicSettings(enabled = enabled, systems = systems, games = games, screensaver = screensaver)
             }
 
-        applicationScope.launch {
+        val snapshotFlow =
             combine(
                 appStateFlow,
                 settingsFlow,
@@ -86,15 +99,18 @@ class MusicPlaybackCoordinator(
                 videoPlaybackStateRepository.observeIsPlaying(),
                 observeMusicDuckingMode(),
             ) { appState, settings, isVisible, isPlayingVideo, duckingMode ->
-                Snapshot(appState, settings, isVisible, isPlayingVideo, duckingMode)
-            }.collect { snapshot -> handleSnapshot(snapshot) }
-        }
+                CoordinatorEvent.SnapshotUpdated(Snapshot(appState, settings, isVisible, isPlayingVideo, duckingMode))
+            }
+
+        val trackCompletionFlow =
+            musicPlayerController.observeTrackCompletion().map { CoordinatorEvent.TrackCompleted }
 
         applicationScope.launch {
-            musicPlayerController.observeTrackCompletion().collect {
-                advanceToNextTrack()
-                currentTrack?.let(musicPlayerController::playTrack)
-                applyCachedAction()
+            merge(snapshotFlow, trackCompletionFlow).collect { event ->
+                when (event) {
+                    is CoordinatorEvent.SnapshotUpdated -> handleSnapshot(event.snapshot)
+                    CoordinatorEvent.TrackCompleted -> handleTrackCompletion()
+                }
             }
         }
     }
@@ -104,7 +120,9 @@ class MusicPlaybackCoordinator(
         applyCachedAction()
     }
 
-    fun next() {
+    fun next() = handleTrackCompletion()
+
+    private fun handleTrackCompletion() {
         advanceToNextTrack()
         currentTrack?.let(musicPlayerController::playTrack)
         applyCachedAction()
@@ -186,4 +204,11 @@ class MusicPlaybackCoordinator(
         val isPlayingVideo: Boolean,
         val duckingMode: MusicDuckingMode,
     )
+
+    /** The two event sources merged into [init]'s single collector - see its kdoc for why
+     * this replaced two independent coroutines. */
+    private sealed class CoordinatorEvent {
+        data class SnapshotUpdated(val snapshot: Snapshot) : CoordinatorEvent()
+        data object TrackCompleted : CoordinatorEvent()
+    }
 }

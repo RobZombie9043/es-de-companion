@@ -8,8 +8,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.FloatingActionButton
@@ -81,6 +84,19 @@ private object Destinations {
     const val MAIN = "main"
     const val SETTINGS = "settings"
 }
+
+// Layout constants for the music FAB + MusicControlsOverlay pairing - see their usage
+// site for why these are needed rather than a plain Row (the FAB and overlay are
+// independently aligned children of a BoxWithConstraints, not siblings in a Row, since
+// the overlay's visibility is conditional and shouldn't reflow the FAB's own position).
+// Size/edge padding come from CornerButtonMetrics, shared with MainScreen's Settings
+// button so all three corner controls stay aligned by construction.
+private val MUSIC_OVERLAY_GAP = 12.dp
+
+// MainScreen's Settings button is sized/positioned from the same CornerButtonMetrics
+// constants as the music FAB, so its footprint in the opposite corner is exactly
+// CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE - no guessing needed.
+private val SETTINGS_BUTTON_RESERVED_WIDTH = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE
 
 class MainActivity : ComponentActivity() {
 
@@ -203,18 +219,27 @@ class MainActivity : ComponentActivity() {
                             // since tapping the panel's own Pause button flips
                             // Playing -> Paused but shouldn't close the panel.
                             var musicControlsRevealed by remember { mutableStateOf(false) }
-                            LaunchedEffect(musicControlsRevealed) {
-                                if (musicControlsRevealed) {
-                                    delay(4_000)
-                                    musicControlsRevealed = false
-                                }
-                            }
 
                             val musicTrack = when (val state = musicPlaybackState) {
                                 is MusicPlaybackState.Playing -> state.track
                                 is MusicPlaybackState.Paused -> state.track
                                 MusicPlaybackState.Stopped -> null
                             }
+
+                            // Keyed on the track too, not just musicControlsRevealed, so a
+                            // new song starting while the panel is already showing restarts
+                            // the 4s countdown instead of letting it expire on the previous
+                            // track's schedule - setting an already-true mutableState to
+                            // true again doesn't change the key and wouldn't otherwise
+                            // restart this effect. Play/pause toggling the same track
+                            // doesn't change filePath, so it still doesn't reset the timer.
+                            LaunchedEffect(musicControlsRevealed, musicTrack?.filePath) {
+                                if (musicControlsRevealed) {
+                                    delay(4_000)
+                                    musicControlsRevealed = false
+                                }
+                            }
+
                             LaunchedEffect(musicTrack?.filePath) {
                                 if (musicTrack != null) musicControlsRevealed = true
                             }
@@ -374,23 +399,41 @@ class MainActivity : ComponentActivity() {
                                 // handling - same "small corner button" architecture as
                                 // EditWidgetsOverlay's options button, opposite corner.
                                 if (mainScreenActive && !isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
-                                    FloatingActionButton(
-                                        onClick = { musicControlsRevealed = !musicControlsRevealed },
-                                        modifier = Modifier
-                                            .align(Alignment.TopStart)
-                                            .padding(16.dp),
-                                    ) {
-                                        Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
-                                    }
-
-                                    if (musicControlsRevealed) {
-                                        MusicControlsOverlay(
-                                            viewModel = musicControlsViewModel,
-                                            opacityPercent = musicOverlayOpacityPercent,
+                                    // BoxWithConstraints (not the outer fillMaxSize Box) so
+                                    // the overlay's max width below can be computed from the
+                                    // actual available screen width, capped short of
+                                    // MainScreen's Settings gear in the opposite corner
+                                    // (that button lives in a different composable/file, so
+                                    // there's no shared layout to measure it against - a
+                                    // fixed reserved width is the simplest way to guarantee
+                                    // no overlap regardless of screen size).
+                                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                        FloatingActionButton(
+                                            onClick = { musicControlsRevealed = !musicControlsRevealed },
                                             modifier = Modifier
                                                 .align(Alignment.TopStart)
-                                                .padding(start = 16.dp, top = 80.dp),
-                                        )
+                                                .padding(CORNER_BUTTON_EDGE_PADDING),
+                                        ) {
+                                            Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
+                                        }
+
+                                        if (musicControlsRevealed) {
+                                            val overlayStart = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP
+                                            val overlayMaxWidth = maxWidth - overlayStart - SETTINGS_BUTTON_RESERVED_WIDTH
+                                            MusicControlsOverlay(
+                                                viewModel = musicControlsViewModel,
+                                                opacityPercent = musicOverlayOpacityPercent,
+                                                modifier = Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .padding(start = overlayStart, top = CORNER_BUTTON_EDGE_PADDING)
+                                                    .widthIn(max = overlayMaxWidth.coerceAtLeast(0.dp))
+                                                    // min, not exact - a wrapped two-line
+                                                    // title (see MusicControlsOverlay) needs
+                                                    // to grow taller than the FAB, not be
+                                                    // clipped to match it.
+                                                    .heightIn(min = CORNER_BUTTON_SIZE),
+                                            )
+                                        }
                                     }
                                 }
                             }
