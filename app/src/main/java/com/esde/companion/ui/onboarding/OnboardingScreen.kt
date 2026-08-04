@@ -23,18 +23,31 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.EsdeEventScriptSettings
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.ui.theme.LocalIsDarkTheme
+import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
+
+/** Onboarding text renders directly over the themed fallback background image rather than
+ * an opaque Material surface, so it can't rely on colorScheme.onBackground/onSurface for
+ * contrast the way a flat-colored Surface could - white in dark mode, black in light mode,
+ * same explicit-contrast approach AppDrawer/AppDock use for text over background art. */
+@Composable
+private fun onboardingContentColor(): Color =
+    if (LocalIsDarkTheme.current) Color.White else Color.Black
 
 @Composable
 fun OnboardingScreen(
@@ -67,66 +80,78 @@ fun OnboardingScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "ES-DE Companion Setup",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-            )
-            Box(modifier = Modifier.weight(1f)) {
-                when (uiState.step) {
-                    OnboardingStep.Permission -> PermissionStep(
-                        granted = uiState.permissionGranted,
-                        onBack = onBack,
-                        onNext = { viewModel.onPermissionResult(uiState.permissionGranted) },
-                    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = fallbackBackgroundAssetPath(LocalIsDarkTheme.current),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Transparent,
+            contentColor = onboardingContentColor(),
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = "ES-DE Companion Setup",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    when (uiState.step) {
+                        OnboardingStep.Permission -> PermissionStep(
+                            granted = uiState.permissionGranted,
+                            onBack = onBack,
+                            onNext = { viewModel.onPermissionResult(uiState.permissionGranted) },
+                        )
 
-                    OnboardingStep.EsdeFolder -> EsdeFolderStep(
-                        path = uiState.logFolderPath,
-                        validation = uiState.logFolderValidation,
-                        isValidating = uiState.isValidatingLogFolder,
-                        isCheckingInstallation = uiState.isCheckingInstallation,
-                        onPickFolder = { uri ->
-                            SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
-                        },
-                        onBack = onBack,
-                        onNext = viewModel::onEsdeFolderConfirmed,
-                    )
+                        OnboardingStep.EsdeFolder -> EsdeFolderStep(
+                            path = uiState.logFolderPath,
+                            validation = uiState.logFolderValidation,
+                            isValidating = uiState.isValidatingLogFolder,
+                            isCheckingInstallation = uiState.isCheckingInstallation,
+                            onPickFolder = { uri ->
+                                SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
+                            },
+                            onBack = onBack,
+                            onNext = viewModel::onEsdeFolderConfirmed,
+                        )
 
-                    OnboardingStep.MediaFolder -> MediaFolderStep(
-                        path = uiState.mediaFolderPath,
-                        validation = uiState.mediaFolderValidation,
-                        isValidating = uiState.isValidatingMediaFolder,
-                        autoDetected = uiState.mediaFolderAutoDetected,
-                        onPickFolder = { uri ->
-                            SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
-                        },
-                        onBack = onBack,
-                        onNext = viewModel::onMediaFolderConfirmed,
-                    )
+                        OnboardingStep.MediaFolder -> MediaFolderStep(
+                            path = uiState.mediaFolderPath,
+                            validation = uiState.mediaFolderValidation,
+                            isValidating = uiState.isValidatingMediaFolder,
+                            autoDetected = uiState.mediaFolderAutoDetected,
+                            onPickFolder = { uri ->
+                                SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
+                            },
+                            onBack = onBack,
+                            onNext = viewModel::onMediaFolderConfirmed,
+                        )
 
-                    OnboardingStep.LegacyScripts -> LegacyScriptsStep(
-                        scriptFiles = uiState.legacyScriptFiles,
-                        isDeleting = uiState.isDeletingLegacyScripts,
-                        onDelete = viewModel::onDeleteLegacyScriptFiles,
-                        onBack = onBack,
-                        onNext = viewModel::onLegacyScriptsConfirmed,
-                    )
+                        OnboardingStep.LegacyScripts -> LegacyScriptsStep(
+                            scriptFiles = uiState.legacyScriptFiles,
+                            isDeleting = uiState.isDeletingLegacyScripts,
+                            onDelete = viewModel::onDeleteLegacyScriptFiles,
+                            onBack = onBack,
+                            onNext = viewModel::onLegacyScriptsConfirmed,
+                        )
 
-                    OnboardingStep.EventScriptSettings -> EventScriptSettingsStep(
-                        settings = uiState.eventScriptSettings,
-                        onBack = onBack,
-                        onNext = viewModel::onEventScriptSettingsConfirmed,
-                    )
+                        OnboardingStep.EventScriptSettings -> EventScriptSettingsStep(
+                            settings = uiState.eventScriptSettings,
+                            onBack = onBack,
+                            onNext = viewModel::onEventScriptSettingsConfirmed,
+                        )
 
-                    OnboardingStep.LiveLogCheck -> LiveLogCheckStep(
-                        connectionState = uiState.connectionState,
-                        passed = uiState.liveCheckPassed,
-                        isCompleting = uiState.isCompleting,
-                        onBack = onBack,
-                        onNext = viewModel::onFinishSetup,
-                    )
+                        OnboardingStep.LiveLogCheck -> LiveLogCheckStep(
+                            connectionState = uiState.connectionState,
+                            passed = uiState.liveCheckPassed,
+                            isCompleting = uiState.isCompleting,
+                            onBack = onBack,
+                            onNext = viewModel::onFinishSetup,
+                        )
+                    }
                 }
             }
         }

@@ -61,6 +61,12 @@ class OnboardingViewModel(
     private val deleteLegacyScriptFilesUseCase: DeleteLegacyScriptFilesUseCase,
     private val observeConnectionStateUseCase: ObserveConnectionStateUseCase,
     private val observeEsdeLogActivityUseCase: ObserveEsdeLogActivityUseCase,
+    /** Whatever was already confirmed and persisted from a prior onboarding run, if any -
+     * null on a genuinely fresh install. Lets re-entering onboarding solely because the
+     * permission was revoked post-completion (see MainActivity) seed EsdeFolder/MediaFolder
+     * with the real prior location instead of the hardcoded default guess. */
+    private val savedLogFolderPath: String? = null,
+    private val savedMediaFolderPath: String? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -69,8 +75,8 @@ class OnboardingViewModel(
             OnboardingUiState(
                 step = if (permissionGranted) OnboardingStep.EsdeFolder else OnboardingStep.Permission,
                 permissionGranted = permissionGranted,
-                logFolderPath = onboardingRepository.defaultLogFolderPath(),
-                mediaFolderPath = onboardingRepository.defaultMediaFolderPath(),
+                logFolderPath = savedLogFolderPath ?: onboardingRepository.defaultLogFolderPath(),
+                mediaFolderPath = savedMediaFolderPath ?: onboardingRepository.defaultMediaFolderPath(),
             )
         },
     )
