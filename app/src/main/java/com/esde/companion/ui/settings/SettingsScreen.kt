@@ -12,6 +12,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -66,13 +68,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import com.esde.companion.BuildConfig
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.storage.SafPathResolver
@@ -84,6 +89,8 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.ui.theme.LocalIsDarkTheme
+import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 import kotlin.math.roundToInt
 
 /**
@@ -144,108 +151,118 @@ fun SettingsScreen(
         else -> selectedCategory?.title ?: "Settings"
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            if (showManageApps) {
-                ManageAppsScreen(viewModel = manageAppsViewModel)
-            } else {
-                AnimatedContent(
-                    targetState = selectedCategory,
-                    transitionSpec = {
-                        // Drilling into a subpage slides in from the right; returning to the
-                        // list slides in from the left - mirrors typical drill-down navigation
-                        // even though this isn't nav-compose under the hood.
-                        val enteringSubpage = targetState != null
-                        val slideDistance = { width: Int -> width / 3 }
-                        if (enteringSubpage) {
-                            (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
-                        } else {
-                            (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = fallbackBackgroundAssetPath(LocalIsDarkTheme.current),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text(title) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    label = "settingsContent",
-                ) { category ->
-                    when (category) {
-                        null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
-                        SettingsCategory.Setup -> SetupSettingsContent(
-                            uiState = uiState,
-                            onLogFolderPicked = viewModel::onLogFolderPicked,
-                            onMediaFolderPicked = viewModel::onMediaFolderPicked,
-                            onCustomSystemImagesFolderPicked = viewModel::onCustomSystemImagesFolderPicked,
-                            onCustomSystemImagesFolderCleared = viewModel::onCustomSystemImagesFolderCleared,
-                            onCustomLogosFolderPicked = viewModel::onCustomLogosFolderPicked,
-                            onCustomLogosFolderCleared = viewModel::onCustomLogosFolderCleared,
-                            onCustomMusicFolderPicked = viewModel::onCustomMusicFolderPicked,
-                            onCustomMusicFolderCleared = viewModel::onCustomMusicFolderCleared,
-                        )
-                        SettingsCategory.UI -> UISettingsContent(
-                            themePreference = uiState.themePreference,
-                            onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
-                            imageTransitionMode = uiState.imageTransitionMode,
-                            onImageTransitionModeChanged = viewModel::onImageTransitionModeChanged,
-                            logoTransitionMode = uiState.logoTransitionMode,
-                            onLogoTransitionModeChanged = viewModel::onLogoTransitionModeChanged,
-                            overlayOpacityPercent = uiState.overlayOpacityPercent,
-                            onOverlayOpacityChanged = viewModel::onOverlayOpacityChanged,
-                            gamePlayingBehavior = uiState.gamePlayingBehavior,
-                            onGamePlayingBehaviorChanged = viewModel::onGamePlayingBehaviorChanged,
-                            screensaverBehavior = uiState.screensaverBehavior,
-                            onScreensaverBehaviorChanged = viewModel::onScreensaverBehaviorChanged,
-                        )
-                        SettingsCategory.VideoPlayback -> VideoPlaybackSettingsContent(
-                            videoPlaybackEnabled = uiState.videoPlaybackEnabled,
-                            onVideoPlaybackEnabledChanged = viewModel::onVideoPlaybackEnabledChanged,
-                            videoDelaySeconds = uiState.videoDelaySeconds,
-                            onVideoDelaySecondsChanged = viewModel::onVideoDelaySecondsChanged,
-                            videoAudioEnabled = uiState.videoAudioEnabled,
-                            onVideoAudioEnabledChanged = viewModel::onVideoAudioEnabledChanged,
-                        )
-                        SettingsCategory.Widgets -> WidgetsSettingsContent(
-                            widgetsLocked = uiState.widgetsLocked,
-                            onWidgetsLockedChanged = viewModel::onWidgetsLockedChanged,
-                            onEditWidgetsClick = onEditWidgetsClick,
-                        )
-                        SettingsCategory.AppDrawer -> AppDrawerSettingsContent(
-                            gridColumns = uiState.gridColumns,
-                            onGridColumnsChanged = viewModel::onGridColumnsChanged,
-                            onManageAppsClick = { showManageApps = true },
-                            dockEnabled = uiState.dockEnabled,
-                            onDockEnabledChanged = viewModel::onDockEnabledChanged,
-                            dockMaxApps = uiState.dockMaxApps,
-                            onDockMaxAppsChanged = viewModel::onDockMaxAppsChanged,
-                            dockSize = uiState.dockSize,
-                            onDockSizeChanged = viewModel::onDockSizeChanged,
-                        )
-                        SettingsCategory.Sound -> SoundSettingsContent(
-                            musicEnabled = uiState.musicEnabled,
-                            onMusicEnabledChanged = viewModel::onMusicEnabledChanged,
-                            musicPlayWhileBrowsingSystems = uiState.musicPlayWhileBrowsingSystems,
-                            onMusicPlayWhileBrowsingSystemsChanged = viewModel::onMusicPlayWhileBrowsingSystemsChanged,
-                            musicPlayWhileBrowsingGames = uiState.musicPlayWhileBrowsingGames,
-                            onMusicPlayWhileBrowsingGamesChanged = viewModel::onMusicPlayWhileBrowsingGamesChanged,
-                            musicPlayDuringScreensaver = uiState.musicPlayDuringScreensaver,
-                            onMusicPlayDuringScreensaverChanged = viewModel::onMusicPlayDuringScreensaverChanged,
-                            musicDuckingMode = uiState.musicDuckingMode,
-                            onMusicDuckingModeChanged = viewModel::onMusicDuckingModeChanged,
-                        )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                )
+            },
+        ) { innerPadding ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                color = Color.Transparent,
+            ) {
+                if (showManageApps) {
+                    ManageAppsScreen(viewModel = manageAppsViewModel)
+                } else {
+                    AnimatedContent(
+                        targetState = selectedCategory,
+                        transitionSpec = {
+                            // Drilling into a subpage slides in from the right; returning to the
+                            // list slides in from the left - mirrors typical drill-down navigation
+                            // even though this isn't nav-compose under the hood.
+                            val enteringSubpage = targetState != null
+                            val slideDistance = { width: Int -> width / 3 }
+                            if (enteringSubpage) {
+                                (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
+                                    .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                            } else {
+                                (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
+                                    .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
+                            }
+                        },
+                        label = "settingsContent",
+                    ) { category ->
+                        when (category) {
+                            null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
+                            SettingsCategory.Setup -> SetupSettingsContent(
+                                uiState = uiState,
+                                onLogFolderPicked = viewModel::onLogFolderPicked,
+                                onMediaFolderPicked = viewModel::onMediaFolderPicked,
+                                onCustomSystemImagesFolderPicked = viewModel::onCustomSystemImagesFolderPicked,
+                                onCustomSystemImagesFolderCleared = viewModel::onCustomSystemImagesFolderCleared,
+                                onCustomLogosFolderPicked = viewModel::onCustomLogosFolderPicked,
+                                onCustomLogosFolderCleared = viewModel::onCustomLogosFolderCleared,
+                                onCustomMusicFolderPicked = viewModel::onCustomMusicFolderPicked,
+                                onCustomMusicFolderCleared = viewModel::onCustomMusicFolderCleared,
+                            )
+                            SettingsCategory.UI -> UISettingsContent(
+                                themePreference = uiState.themePreference,
+                                onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
+                                imageTransitionMode = uiState.imageTransitionMode,
+                                onImageTransitionModeChanged = viewModel::onImageTransitionModeChanged,
+                                logoTransitionMode = uiState.logoTransitionMode,
+                                onLogoTransitionModeChanged = viewModel::onLogoTransitionModeChanged,
+                                overlayOpacityPercent = uiState.overlayOpacityPercent,
+                                onOverlayOpacityChanged = viewModel::onOverlayOpacityChanged,
+                                gamePlayingBehavior = uiState.gamePlayingBehavior,
+                                onGamePlayingBehaviorChanged = viewModel::onGamePlayingBehaviorChanged,
+                                screensaverBehavior = uiState.screensaverBehavior,
+                                onScreensaverBehaviorChanged = viewModel::onScreensaverBehaviorChanged,
+                            )
+                            SettingsCategory.VideoPlayback -> VideoPlaybackSettingsContent(
+                                videoPlaybackEnabled = uiState.videoPlaybackEnabled,
+                                onVideoPlaybackEnabledChanged = viewModel::onVideoPlaybackEnabledChanged,
+                                videoDelaySeconds = uiState.videoDelaySeconds,
+                                onVideoDelaySecondsChanged = viewModel::onVideoDelaySecondsChanged,
+                                videoAudioEnabled = uiState.videoAudioEnabled,
+                                onVideoAudioEnabledChanged = viewModel::onVideoAudioEnabledChanged,
+                            )
+                            SettingsCategory.Widgets -> WidgetsSettingsContent(
+                                widgetsLocked = uiState.widgetsLocked,
+                                onWidgetsLockedChanged = viewModel::onWidgetsLockedChanged,
+                                onEditWidgetsClick = onEditWidgetsClick,
+                            )
+                            SettingsCategory.AppDrawer -> AppDrawerSettingsContent(
+                                gridColumns = uiState.gridColumns,
+                                onGridColumnsChanged = viewModel::onGridColumnsChanged,
+                                onManageAppsClick = { showManageApps = true },
+                                dockEnabled = uiState.dockEnabled,
+                                onDockEnabledChanged = viewModel::onDockEnabledChanged,
+                                dockMaxApps = uiState.dockMaxApps,
+                                onDockMaxAppsChanged = viewModel::onDockMaxAppsChanged,
+                                dockSize = uiState.dockSize,
+                                onDockSizeChanged = viewModel::onDockSizeChanged,
+                            )
+                            SettingsCategory.Sound -> SoundSettingsContent(
+                                musicEnabled = uiState.musicEnabled,
+                                onMusicEnabledChanged = viewModel::onMusicEnabledChanged,
+                                musicPlayWhileBrowsingSystems = uiState.musicPlayWhileBrowsingSystems,
+                                onMusicPlayWhileBrowsingSystemsChanged = viewModel::onMusicPlayWhileBrowsingSystemsChanged,
+                                musicPlayWhileBrowsingGames = uiState.musicPlayWhileBrowsingGames,
+                                onMusicPlayWhileBrowsingGamesChanged = viewModel::onMusicPlayWhileBrowsingGamesChanged,
+                                musicPlayDuringScreensaver = uiState.musicPlayDuringScreensaver,
+                                onMusicPlayDuringScreensaverChanged = viewModel::onMusicPlayDuringScreensaverChanged,
+                                musicDuckingMode = uiState.musicDuckingMode,
+                                onMusicDuckingModeChanged = viewModel::onMusicDuckingModeChanged,
+                            )
+                        }
                     }
                 }
             }
