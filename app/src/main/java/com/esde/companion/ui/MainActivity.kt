@@ -320,6 +320,64 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
+                                // Corner FAB (not a full-screen tap gesture) so it never
+                                // clashes with MainScreen's existing long-press/double-tap
+                                // handling - same "small corner button" architecture as
+                                // EditWidgetsOverlay's options button, opposite corner.
+                                //
+                                // Deliberately NOT gated on drawerOpen (unlike mainScreenActive)
+                                // - the music FAB/overlay should stay visible while the App
+                                // Drawer is opening/closing rather than popping in and out.
+                                // Placed here, before the `when` block below (rather than after
+                                // it, where composition order would draw it on top of
+                                // everything) precisely so that when the App Drawer slides up
+                                // over it, the drawer sheet/dock draw over the FAB rather than
+                                // the FAB floating above them - Compose draws siblings in
+                                // composition order absent an explicit zIndex, so being
+                                // composed first here means drawn first, i.e. underneath. It's
+                                // still gated on showSettings/showEditWidgets, since those are
+                                // real full-screen covers. The overlay itself still auto-hides
+                                // on its own timeout as usual.
+                                if (!showSettings && !showEditWidgets && !isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
+                                    // BoxWithConstraints (not the outer fillMaxSize Box) so
+                                    // the overlay's max width below can be computed from the
+                                    // actual available screen width, capped short of
+                                    // MainScreen's Settings gear in the opposite corner
+                                    // (that button lives in a different composable/file, so
+                                    // there's no shared layout to measure it against - a
+                                    // fixed reserved width is the simplest way to guarantee
+                                    // no overlap regardless of screen size).
+                                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                        CornerFab(
+                                            onClick = { musicControlsRevealed = !musicControlsRevealed },
+                                            opacityPercent = overlayOpacityPercent,
+                                            modifier = Modifier
+                                                .align(Alignment.TopStart)
+                                                .padding(CORNER_BUTTON_EDGE_PADDING),
+                                        ) {
+                                            Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
+                                        }
+
+                                        if (musicControlsRevealed) {
+                                            val overlayStart = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP
+                                            val overlayMaxWidth = maxWidth - overlayStart - SETTINGS_BUTTON_RESERVED_WIDTH
+                                            MusicControlsOverlay(
+                                                viewModel = musicControlsViewModel,
+                                                opacityPercent = overlayOpacityPercent,
+                                                modifier = Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .padding(start = overlayStart, top = CORNER_BUTTON_EDGE_PADDING)
+                                                    .widthIn(max = overlayMaxWidth.coerceAtLeast(0.dp))
+                                                    // min, not exact - a wrapped two-line
+                                                    // title (see MusicControlsOverlay) needs
+                                                    // to grow taller than the FAB, not be
+                                                    // clipped to match it.
+                                                    .heightIn(min = CORNER_BUTTON_SIZE),
+                                            )
+                                        }
+                                    }
+                                }
+
                                 when {
                                     showEditWidgets -> {
                                         val editWidgetsViewModel: EditWidgetsViewModel =
@@ -426,50 +484,6 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.fillMaxSize(),
                                         onIsPlayingChanged = appContainer.videoPlaybackStateRepository::setIsPlaying,
                                     )
-                                }
-
-                                // Corner FAB (not a full-screen tap gesture) so it never
-                                // clashes with MainScreen's existing long-press/double-tap
-                                // handling - same "small corner button" architecture as
-                                // EditWidgetsOverlay's options button, opposite corner.
-                                if (mainScreenActive && !isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
-                                    // BoxWithConstraints (not the outer fillMaxSize Box) so
-                                    // the overlay's max width below can be computed from the
-                                    // actual available screen width, capped short of
-                                    // MainScreen's Settings gear in the opposite corner
-                                    // (that button lives in a different composable/file, so
-                                    // there's no shared layout to measure it against - a
-                                    // fixed reserved width is the simplest way to guarantee
-                                    // no overlap regardless of screen size).
-                                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                                        CornerFab(
-                                            onClick = { musicControlsRevealed = !musicControlsRevealed },
-                                            opacityPercent = overlayOpacityPercent,
-                                            modifier = Modifier
-                                                .align(Alignment.TopStart)
-                                                .padding(CORNER_BUTTON_EDGE_PADDING),
-                                        ) {
-                                            Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
-                                        }
-
-                                        if (musicControlsRevealed) {
-                                            val overlayStart = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP
-                                            val overlayMaxWidth = maxWidth - overlayStart - SETTINGS_BUTTON_RESERVED_WIDTH
-                                            MusicControlsOverlay(
-                                                viewModel = musicControlsViewModel,
-                                                opacityPercent = overlayOpacityPercent,
-                                                modifier = Modifier
-                                                    .align(Alignment.TopStart)
-                                                    .padding(start = overlayStart, top = CORNER_BUTTON_EDGE_PADDING)
-                                                    .widthIn(max = overlayMaxWidth.coerceAtLeast(0.dp))
-                                                    // min, not exact - a wrapped two-line
-                                                    // title (see MusicControlsOverlay) needs
-                                                    // to grow taller than the FAB, not be
-                                                    // clipped to match it.
-                                                    .heightIn(min = CORNER_BUTTON_SIZE),
-                                            )
-                                        }
-                                    }
                                 }
                             }
                         }
