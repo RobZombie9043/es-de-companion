@@ -20,4 +20,9 @@ class EsdeEventAnchorTest {
         assertTrue(EsdeEvent.GameStart("p", "n", "s", "sf").isStartupAnchor())
         assertTrue(EsdeEvent.GameEnd("p", "n", "s", "sf").isStartupAnchor())
     }
+
+    @Test
+    fun `quit is a startup anchor`() {
+        assertTrue(EsdeEvent.Quit.isStartupAnchor())
+    }
 }

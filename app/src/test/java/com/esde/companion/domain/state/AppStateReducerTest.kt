@@ -192,4 +192,23 @@ class AppStateReducerTest {
 
         assertEquals(AppState.Idle, result)
     }
+
+    @Test
+    fun `quit resets to Idle from a game in progress`() {
+        val playing = AppState.PlayingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast")
+
+        val result = AppStateReducer.reduce(playing, EsdeEvent.Quit)
+
+        assertEquals(AppState.Idle, result)
+    }
+
+    @Test
+    fun `quit resets to Idle from mid-screensaver`() {
+        val previous = AppState.BrowsingSystem("gc", "Nintendo GameCube", "/roms/gc")
+        val screensaver = AppState.Screensaver(mode = "manual", currentGame = null, previousState = previous)
+
+        val result = AppStateReducer.reduce(screensaver, EsdeEvent.Quit)
+
+        assertEquals(AppState.Idle, result)
+    }
 }

@@ -90,5 +90,9 @@ object AppStateReducer {
             // a screensaver-end without ever seeing screensaver-start (current isn't a
             // Screensaver), Idle is the only safe fallback.
             (current as? AppState.Screensaver)?.previousState ?: AppState.Idle
+
+        // ES-DE is shutting down - whatever was on screen is no longer real, regardless
+        // of what it was. See WidgetOverlay's Disconnected case for the resulting UI.
+        is EsdeEvent.Quit -> AppState.Idle
     }
 }
