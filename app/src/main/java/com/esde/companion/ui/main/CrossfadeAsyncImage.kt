@@ -1,6 +1,7 @@
 package com.esde.companion.ui.main
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -68,6 +69,14 @@ import kotlinx.coroutines.launch
  * fading the outgoing layer's alpha out (1 -> 0) in lockstep with the incoming layer's
  * fade-in, via the same Animatable, rather than leaving it static.
  */
+
+/**
+ * Reproduces android.view.animation.DecelerateInterpolator's default (factor = 1.0)
+ * curve - fast start, easing into the landing point - since Compose has no built-in
+ * equivalent and the legacy Glide-based transition used it explicitly.
+ */
+private val DecelerateEasing = Easing { fraction -> 1f - (1f - fraction) * (1f - fraction) }
+
 @Composable
 fun CrossfadeAsyncImage(
     model: Any?,
@@ -97,9 +106,9 @@ fun CrossfadeAsyncImage(
             // alpha and scale must animate concurrently, not one after the other -
             // coroutineScope + two launches so neither animateTo blocks the other.
             coroutineScope {
-                launch { alpha.animateTo(1f, animationSpec = tween(durationMillis)) }
+                launch { alpha.animateTo(1f, animationSpec = tween(durationMillis, easing = DecelerateEasing)) }
                 if (scaleFrom != null) {
-                    launch { scale.animateTo(1f, animationSpec = tween(durationMillis)) }
+                    launch { scale.animateTo(1f, animationSpec = tween(durationMillis, easing = DecelerateEasing)) }
                 }
             }
         }
