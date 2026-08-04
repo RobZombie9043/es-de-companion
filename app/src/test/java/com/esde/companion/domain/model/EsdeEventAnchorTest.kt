@@ -25,4 +25,9 @@ class EsdeEventAnchorTest {
     fun `quit is a startup anchor`() {
         assertTrue(EsdeEvent.Quit.isStartupAnchor())
     }
+
+    @Test
+    fun `reload is a startup anchor`() {
+        assertTrue(EsdeEvent.Reload.isStartupAnchor())
+    }
 }

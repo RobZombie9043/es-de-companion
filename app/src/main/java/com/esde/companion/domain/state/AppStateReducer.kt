@@ -94,5 +94,10 @@ object AppStateReducer {
         // ES-DE is shutting down - whatever was on screen is no longer real, regardless
         // of what it was. See WidgetOverlay's Disconnected case for the resulting UI.
         is EsdeEvent.Quit -> AppState.Idle
+
+        // ES-DE is rebuilding its UI (window/display size change) - whatever was on
+        // screen is stale until it re-fires system-select/game-select once reload
+        // finishes, so drop to Idle in the meantime, same as Quit.
+        is EsdeEvent.Reload -> AppState.Idle
     }
 }

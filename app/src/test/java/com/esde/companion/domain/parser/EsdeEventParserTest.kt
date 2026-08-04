@@ -154,6 +154,13 @@ class EsdeEventParserTest {
     }
 
     @Test
+    fun `parses a window-size-changed line as Reload`() {
+        val line = "Aug 04 17:08:54 Info:   Window size has changed from 1240x1080 to 1920x1080, reloading..."
+
+        assertEquals(EsdeEvent.Reload, parser.parseLine(line))
+    }
+
+    @Test
     fun `ignores lines with no fireEvent marker`() {
         val line = "Jul 28 07:01:30 Debug:  Window::logInput(Xbox Wireless Controller): " +
             "Button 14, isMappedTo=right, value=1"

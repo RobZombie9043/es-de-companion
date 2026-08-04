@@ -9,6 +9,9 @@ package com.esde.companion.domain.model
  * Unused positional args come through as empty strings ("") in the raw log - the parser
  * (see EsdeEventParser) maps them onto whichever fields are actually meaningful for that
  * event type.
+ *
+ * [Reload] is the one exception: it isn't a fireEvent() line at all, just an ordinary
+ * ES-DE log line the parser also recognizes - see its own kdoc.
  */
 sealed class EsdeEvent {
 
@@ -56,6 +59,16 @@ sealed class EsdeEvent {
 
     /** Fired as ES-DE begins a clean shutdown - see AppStateReducer, which resets to Idle. */
     data object Quit : EsdeEvent()
+
+    /**
+     * ES-DE is rebuilding its UI after a window/display size change (e.g. a secondary
+     * display attaching/detaching), logged as "Window size has changed from ... to ...,
+     * reloading..." rather than a Scripting::fireEvent() line (see EsdeEventParser). What
+     * was on screen is stale until reload finishes, at which point ES-DE re-fires a fresh
+     * system-select/game-select - see AppStateReducer, which resets to Idle in the
+     * meantime, the same as Quit.
+     */
+    data object Reload : EsdeEvent()
 }
 
 /**
@@ -70,7 +83,8 @@ fun EsdeEvent.isStartupAnchor(): Boolean = when (this) {
     is EsdeEvent.GameSelect,
     is EsdeEvent.GameStart,
     is EsdeEvent.GameEnd,
-    is EsdeEvent.Quit -> true
+    is EsdeEvent.Quit,
+    is EsdeEvent.Reload -> true
 
     is EsdeEvent.ScreensaverStart,
     is EsdeEvent.ScreensaverGameSelect,
@@ -90,5 +104,6 @@ fun EsdeEvent.withDirection(direction: NavigationDirection?): EsdeEvent = when (
     is EsdeEvent.ScreensaverStart,
     is EsdeEvent.ScreensaverGameSelect,
     is EsdeEvent.ScreensaverEnd,
-    is EsdeEvent.Quit -> this
+    is EsdeEvent.Quit,
+    is EsdeEvent.Reload -> this
 }
