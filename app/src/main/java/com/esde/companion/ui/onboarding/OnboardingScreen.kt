@@ -207,7 +207,7 @@ private fun EsdeFolderStep(
 
     StepScaffold(
         title = "ES-DE folder",
-        description = "Select the ES-DE folder ES-DE itself is configured to use. Currently: $path",
+        description = "Select the ES-DE folder ES-DE itself is configured to use.\nCurrently: $path",
         onBack = onBack,
         onNext = onNext,
         nextEnabled = settingsFileFound && !isValidating && !isCheckingInstallation,
@@ -249,7 +249,7 @@ private fun MediaFolderStep(
 
     StepScaffold(
         title = "Media folder",
-        description = "ES-DE's downloaded_media folder, used to show game artwork. Currently: $path",
+        description = "ES-DE's downloaded_media folder, used to show game artwork.\nCurrently: $path",
         onBack = onBack,
         onNext = onNext,
         nextEnabled = !isValidating,
