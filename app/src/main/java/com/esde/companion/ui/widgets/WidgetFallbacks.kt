@@ -3,8 +3,8 @@ package com.esde.companion.ui.widgets
 /**
  * Generic full-bleed background shown when a widget/screen has no real image to display -
  * see WidgetContentResolver's BACKGROUND_FALLBACK_ELIGIBLE and WidgetOverlay's
- * WidgetCanvasState.None case. Two variants so it matches the current color scheme rather
- * than always rendering the dark asset in a light theme; [fallbackBackgroundAssetPath]
+ * WidgetCanvasState.Unmeasured/Disconnected cases. Two variants so it matches the current
+ * color scheme rather than always rendering the dark asset in a light theme; [fallbackBackgroundAssetPath]
  * picks between them from the resolved theme at render time (see WidgetCanvas.kt).
  */
 internal const val FALLBACK_BACKGROUND_ASSET_DARK = "file:///android_asset/fallback/default_background.webp"

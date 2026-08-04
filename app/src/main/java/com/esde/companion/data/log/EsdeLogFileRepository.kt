@@ -1,6 +1,7 @@
 package com.esde.companion.data.log
 
 import android.os.FileObserver
+import android.os.SystemClock
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.isStartupAnchor
 import com.esde.companion.domain.model.withDirection
@@ -38,6 +39,12 @@ import kotlinx.coroutines.launch
  * which is visible (and wrong) in the UI. Instead we scan once for the most recent
  * parseable event, emit only that, and start tailing from end-of-file from then on.
  *
+ * That replay is also skipped entirely if the file predates the current boot (see
+ * [bootTimeMillis]). A device reboot can auto-start this app before ES-DE has
+ * (re)written es_log.txt this session, in which case any anchor found would be a
+ * leftover from before the reboot - stale system/game info, not current truth.
+ *
+
  * Lines are decoded as UTF-8, not via [RandomAccessFile.readLine] (which forces
  * ISO-8859-1 and mangles any multi-byte character - e.g. "NieR_Automata™" - into garbage
  * that then fails to match the real on-disk file name during media lookup). We read raw
@@ -49,6 +56,7 @@ class EsdeLogFileRepository(
     private val logFilePath: String,
     private val parser: EsdeEventParser = EsdeEventParser(),
     private val fallbackPollIntervalMs: Long = DEFAULT_FALLBACK_POLL_INTERVAL_MS,
+    private val bootTimeMillis: () -> Long = { System.currentTimeMillis() - SystemClock.elapsedRealtime() },
 ) : EsdeLogRepository {
 
     override fun observeEvents(): Flow<EsdeEvent> = channelFlow {
@@ -57,7 +65,13 @@ class EsdeLogFileRepository(
 
         val startupFile = File(logFilePath)
         if (startupFile.exists()) {
-            findEventsSinceLastAnchor(startupFile, directionTracker).forEach { send(it) }
+            // A device reboot can auto-start this app (see MainActivity's HOME intent
+            // filter) before ES-DE has (re)written es_log.txt this boot. If the file
+            // predates boot, any anchor in it is guaranteed to be from a previous
+            // session - skip replay rather than surface stale system/game info.
+            if (startupFile.lastModified() >= bootTimeMillis() - STALE_ANCHOR_GRACE_MS) {
+                findEventsSinceLastAnchor(startupFile, directionTracker).forEach { send(it) }
+            }
             position = startupFile.length()
         }
 
@@ -233,6 +247,12 @@ class EsdeLogFileRepository(
         // this guess being right, only speed does.
         const val INITIAL_TAIL_WINDOW_BYTES = 64L * 1024
         const val TAIL_WINDOW_GROWTH_FACTOR = 4L
+
+        // Jitter tolerance only, not a "how old is too old" staleness threshold - the
+        // wall clock can be adjusted by a few seconds (e.g. NTP sync) right around
+        // boot, which would otherwise make a genuinely fresh file look like it
+        // predates bootTimeMillis()'s computed value.
+        const val STALE_ANCHOR_GRACE_MS = 10_000L
 
         val WRITE_EVENTS_MASK = FileObserver.MODIFY or
                 FileObserver.CLOSE_WRITE or

@@ -17,6 +17,16 @@ class EsdeLogFileRepositoryTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
 
+    /**
+     * Defaults [bootTimeMillis] to well before any real file's mtime, so tests
+     * unrelated to boot-staleness detection get the pre-existing "always replay"
+     * behavior without needing to know about it. Real usage wires the actual
+     * SystemClock-based default on [EsdeLogFileRepository] itself; tests here go
+     * through this helper instead so they never touch that Android stub.
+     */
+    private fun repositoryFor(logFile: File, bootTimeMillis: () -> Long = { 0L }): EsdeLogFileRepository =
+        EsdeLogFileRepository(logFilePath = logFile.absolutePath, bootTimeMillis = bootTimeMillis)
+
     @Test
     fun `startup replays from the last anchor event so screensaver-end resolves to the real prior state`() = runTest {
         val logFile = tempFolder.newFile("es_log.txt")
@@ -29,7 +39,7 @@ class EsdeLogFileRepositoryTest {
             """.trimIndent(),
         )
 
-        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+        val repository = repositoryFor(logFile)
 
         repository.observeEvents().test {
             val events = mutableListOf<EsdeEvent>()
@@ -47,13 +57,51 @@ class EsdeLogFileRepositoryTest {
     }
 
     @Test
+    fun `startup skips replay when the file predates the current boot`() = runTest {
+        val logFile = tempFolder.newFile("es_log.txt")
+        logFile.writeText(
+            "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+        )
+
+        // Simulates a reboot: the file's real mtime is "now" (test-run time), but boot
+        // is reported as happening well after that - i.e. the file hasn't been touched
+        // since boot, so its anchor must be a leftover from before the reboot.
+        val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() + 60_000L })
+
+        repository.observeEvents().test {
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `startup replays normally when the file was written after boot`() = runTest {
+        val logFile = tempFolder.newFile("es_log.txt")
+        logFile.writeText(
+            "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+        )
+
+        // Boot reported as happening well before the file's real (test-run time) mtime -
+        // i.e. the file was written after boot, so its anchor is trustworthy.
+        val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() - 60_000L })
+
+        repository.observeEvents().test {
+            assertEquals(
+                EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
+                awaitItem(),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `startup emits nothing when the file has no anchor event at all`() = runTest {
         val logFile = tempFolder.newFile("es_log.txt")
         logFile.writeText(
             "Jul 28 15:16:08 Debug:  Scripting::fireEvent(): screensaver-start \"manual\" \"\" \"\" \"\"\n",
         )
 
-        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+        val repository = repositoryFor(logFile)
 
         repository.observeEvents().test {
             expectNoEvents()
@@ -72,7 +120,7 @@ class EsdeLogFileRepositoryTest {
             """.trimIndent(),
         )
 
-        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+        val repository = repositoryFor(logFile)
 
         repository.observeEvents().test {
             assertEquals(
@@ -103,7 +151,7 @@ class EsdeLogFileRepositoryTest {
             """.trimIndent(),
         )
 
-        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+        val repository = repositoryFor(logFile)
 
         repository.observeEvents().test {
             assertEquals(
@@ -127,7 +175,7 @@ class EsdeLogFileRepositoryTest {
                 "system-select \"dreamcast\" \"Sega Dreamcast\" \"/roms/dreamcast\" \"\""
         logFile.writeText(padding + anchorLine + "\n")
 
-        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+        val repository = repositoryFor(logFile)
 
         repository.observeEvents().test {
             assertEquals(
@@ -146,7 +194,7 @@ class EsdeLogFileRepositoryTest {
                 "\"/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam\" \"NieR_Automata™\" \"steam\" \"Steam\"\n",
         )
 
-        val repository = EsdeLogFileRepository(logFilePath = logFile.absolutePath)
+        val repository = repositoryFor(logFile)
 
         repository.observeEvents().test {
             assertEquals(

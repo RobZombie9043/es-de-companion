@@ -105,7 +105,7 @@ class WidgetsViewModel(
         combine(contentIdentity, gridDimensions.filterNotNull()) { identity, grid -> identity to grid }
             .flatMapLatest { (identity, grid) ->
                 if (identity == null) {
-                    flowOf(WidgetCanvasState.None)
+                    flowOf(WidgetCanvasState.Disconnected)
                 } else {
                     observeWidgetCanvas(identity.stateGroup, grid).map { widgets ->
                         WidgetCanvasState.Showing(widgets, resolveContent(widgets, identity), identity.navigationDirection)
@@ -115,7 +115,7 @@ class WidgetsViewModel(
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                initialValue = WidgetCanvasState.None,
+                initialValue = WidgetCanvasState.Unmeasured,
             )
 
     /**
