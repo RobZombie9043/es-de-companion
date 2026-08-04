@@ -15,6 +15,11 @@ import com.esde.companion.domain.model.EsdeEvent
 class EsdeEventParser {
 
     fun parseLine(rawLine: String): EsdeEvent? {
+        // Not a Scripting::fireEvent() line - ES-DE logs this one plainly as its window
+        // is torn down and rebuilt (e.g. a secondary display attaching/detaching), so it
+        // needs its own marker rather than going through the fireEvent parsing below.
+        if (rawLine.contains(WINDOW_RELOAD_MARKER)) return EsdeEvent.Reload
+
         val markerIndex = rawLine.indexOf(FIRE_EVENT_MARKER)
         if (markerIndex == -1) return null
 
@@ -85,6 +90,7 @@ class EsdeEventParser {
 
     private companion object {
         const val FIRE_EVENT_MARKER = "Scripting::fireEvent():"
+        const val WINDOW_RELOAD_MARKER = "Window size has changed from"
 
         // Splitting on this exact 3-char sequence (rather than matching independent
         // "..." groups) is what lets a field's own content safely contain unescaped
