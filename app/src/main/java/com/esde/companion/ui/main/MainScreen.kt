@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,6 +73,7 @@ fun MainScreen(
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
+    topStartOverlay: @Composable BoxScope.() -> Unit = {},
 ) {
     MainScreenContent(
         appDrawerViewModel = appDrawerViewModel,
@@ -82,6 +84,7 @@ fun MainScreen(
         onOpenEditWidgets = onOpenEditWidgets,
         onToggleBlankScreen = onToggleBlankScreen,
         onDrawerOpenChanged = onDrawerOpenChanged,
+        topStartOverlay = topStartOverlay,
     )
 }
 
@@ -104,6 +107,7 @@ private fun MainScreenContent(
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
+    topStartOverlay: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -241,6 +245,21 @@ private fun MainScreenContent(
             ) {
                 Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
             }
+
+            // Rendered as a genuine child of this same gesture-handling Box - not a
+            // sibling composed elsewhere - for the same reason the Settings CornerFab
+            // above works reliably: Compose's Main pointer-input pass runs leaf-to-root,
+            // so a descendant's own clickable/pointerInput gets first crack at a touch
+            // before this Box's detectVerticalDragGestures/detectTapGestures do. Two
+            // sibling subtrees that both cover the same screen area don't get that for
+            // free - whichever is composed later simply wins the whole hit test, which
+            // is what previously made the music FAB (composed as an external sibling,
+            // deliberately placed before the `when` block in MainActivity so it would
+            // draw underneath the App Drawer) untappable: MainScreen, composed after it,
+            // silently absorbed the touch via this Box's own gesture detectors. Placed
+            // here, before the App Drawer's Box below, so the drawer sheet still slides
+            // up over it exactly as before.
+            topStartOverlay()
 
             // Slides up from below the bottom edge as openFraction goes 0 -> 1. At
             // openFraction = 0 this sits entirely below the visible screen (offset =

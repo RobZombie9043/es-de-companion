@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -317,29 +319,19 @@ class MainActivity : ComponentActivity() {
                                 isBlanked = autoBlackTrigger
                             }
 
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
-
-                                // Corner FAB (not a full-screen tap gesture) so it never
-                                // clashes with MainScreen's existing long-press/double-tap
-                                // handling - same "small corner button" architecture as
-                                // EditWidgetsOverlay's options button, opposite corner.
-                                //
-                                // Deliberately NOT gated on drawerOpen (unlike mainScreenActive)
-                                // - the music FAB/overlay should stay visible while the App
-                                // Drawer is opening/closing rather than popping in and out.
-                                // Placed here, before the `when` block below (rather than after
-                                // it, where composition order would draw it on top of
-                                // everything) precisely so that when the App Drawer slides up
-                                // over it, the drawer sheet/dock draw over the FAB rather than
-                                // the FAB floating above them - Compose draws siblings in
-                                // composition order absent an explicit zIndex, so being
-                                // composed first here means drawn first, i.e. underneath. It's
-                                // still gated on showSettings/showEditWidgets, since those are
-                                // real full-screen covers. The overlay itself still auto-hides
-                                // on its own timeout as usual.
-                                if (!showSettings && !showEditWidgets && !isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
-                                    // BoxWithConstraints (not the outer fillMaxSize Box) so
+                            // Extracted so it can be handed to MainScreen as a slot
+                            // rendered INSIDE its own gesture-handling Box (see
+                            // topStartOverlay's kdoc in MainScreen.kt for why a sibling
+                            // composed elsewhere, even one ordered to draw underneath the
+                            // App Drawer, silently loses every touch to MainScreen's
+                            // full-screen drag/tap detectors - Compose only gives a
+                            // descendant the touch-priority edge, not a same-level
+                            // sibling). Still gated on showSettings/showEditWidgets isn't
+                            // needed here since this is only ever passed to the `else`
+                            // branch of the `when` below, where both are already false.
+                            val musicFab: @Composable BoxScope.() -> Unit = {
+                                if (!isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
+                                    // BoxWithConstraints (not a plain fillMaxSize Box) so
                                     // the overlay's max width below can be computed from the
                                     // actual available screen width, capped short of
                                     // MainScreen's Settings gear in the opposite corner
@@ -377,6 +369,10 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 }
+                            }
+
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
                                 when {
                                     showEditWidgets -> {
@@ -414,6 +410,7 @@ class MainActivity : ComponentActivity() {
                                             onOpenEditWidgets = { showEditWidgets = true },
                                             onToggleBlankScreen = { isBlanked = !isBlanked },
                                             onDrawerOpenChanged = { drawerOpen = it },
+                                            topStartOverlay = musicFab,
                                         )
                                     }
                                 }
