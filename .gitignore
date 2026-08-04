@@ -1,11 +1,32 @@
-*.iml
+# Gradle build files
+/build
 .gradle/
-/local.properties
-/.idea/
-.DS_Store
-/build/
-/captures/
-.externalNativeBuild/
-.cxx/
+build/
+
+# Local configuration
 local.properties
-/app/build/
+
+# Keystore files - NEVER commit these!
+*.jks
+*.keystore
+keystore.properties
+
+# IDE files
+*.iml
+.idea/
+.DS_Store
+
+# APK files
+*.apk
+*.aab
+
+# Build artifacts
+app/release/
+app/debug/
+app/persistent/
+app/standard/
+*/output-metadata.json
+*/baselineProfiles/
+
+# Logs
+*.log
