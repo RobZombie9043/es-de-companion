@@ -246,4 +246,4 @@ No — ES-DE Companion is specifically built around ES-DE's own log file format 
 
 **ES-DE Resources:**
 - ES-DE Documentation: https://gitlab.com/es-de/emulationstation-de
-- ES-DE Discord: https://discord.gg/kKUE8Djk
+- ES-DE Discord: https://discord.gg/r2uubuxp
