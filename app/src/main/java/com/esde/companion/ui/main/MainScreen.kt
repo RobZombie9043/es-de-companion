@@ -13,14 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -29,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
@@ -37,6 +33,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
+import com.esde.companion.ui.CORNER_BUTTON_SIZE
 import com.esde.companion.ui.dock.AppDock
 import com.esde.companion.ui.dock.AppDockViewModel
 import com.esde.companion.ui.dock.dockBarHeight
@@ -96,7 +94,6 @@ fun MainScreen(
 // here - see MainActivity's MAIN destination for why (it needs to sit above the widget
 // layer, which is a sibling of this whole screen, not a descendant of it). This
 // composable only owns the gesture that toggles it, via onToggleBlankScreen.
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
     appDrawerViewModel: AppDrawerViewModel,
@@ -224,21 +221,21 @@ private fun MainScreenContent(
                     )
                 },
         ) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                containerColor = Color.Transparent,
-                topBar = {
-                    TopAppBar(
-                        title = {},
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                        actions = {
-                            IconButton(onClick = onOpenSettings) {
-                                Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
-                            }
-                        },
-                    )
-                },
-            ) { }
+            // Sized/positioned from the same CornerButtonMetrics constants as
+            // MainActivity's music FAB (opposite corner) so the two stay vertically
+            // aligned by construction - see CornerButtonMetrics' kdoc. Previously lived in
+            // a Material3 TopAppBar purely to get a corner button; that added a whole
+            // Scaffold+TopAppBar (with an otherwise-unused empty content slot) just to
+            // reach a vertical centering that never actually matched the FAB's.
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(CORNER_BUTTON_EDGE_PADDING)
+                    .size(CORNER_BUTTON_SIZE),
+            ) {
+                Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
+            }
 
             // Slides up from below the bottom edge as openFraction goes 0 -> 1. At
             // openFraction = 0 this sits entirely below the visible screen (offset =
