@@ -11,6 +11,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +55,9 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -61,7 +66,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -91,6 +99,7 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 /**
  * Shared corner radius for the background panel behind every settings item (category
@@ -98,6 +107,33 @@ import kotlin.math.roundToInt
  * cards rather than each item picking its own rounding.
  */
 private val SettingsItemShape = RoundedCornerShape(16.dp)
+
+/** Number of consecutive taps on the version label (see SettingsCategoryList) required to
+ * trigger the Easter egg below - not exposed anywhere, deliberately undiscoverable short
+ * of trying it. */
+private const val EASTER_EGG_TAP_THRESHOLD = 7
+
+private val EasterEggMessages = listOf(
+    "It's dangerous to go alone! Take this.",
+    "Hey! Listen!",
+    "Do a barrel roll!",
+    "Snake? Snake?! SNAAAAAKE!",
+    "The cake is a lie.",
+    "Stay a while and listen.",
+    "Praise the Sun!",
+    "War. War never changes.",
+    "Would you kindly...",
+    "Finish the fight.",
+    "Rip and tear!",
+    "You must construct additional pylons.",
+    "Gotta go fast!",
+    "A winner is you!",
+    "Wake up, we've got a city to burn.",
+    "The princess is in another castle.",
+    "Get over here!",
+    "There is no cow level.",
+    "Wake me. When you need me.",
+)
 
 /**
  * Settings entry point: shows a top-level list of [SettingsCategory] items, and drills
@@ -135,6 +171,12 @@ fun SettingsScreen(
     var selectedCategory by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
     var showManageApps by rememberSaveable { mutableStateOf(false) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val onEasterEggUnlocked: () -> Unit = {
+        coroutineScope.launch { snackbarHostState.showSnackbar(EasterEggMessages.random()) }
+    }
+
     val onBack: () -> Unit = {
         when {
             showManageApps -> showManageApps = false
@@ -170,6 +212,33 @@ fun SettingsScreen(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 )
             },
+            snackbarHost = {
+                // The stock Snackbar composable always reports its width as
+                // min(constraints.maxWidth, ContainerMaxWidth) regardless of how short its
+                // text is (see OneRowSnackbar's Layout in Material3's Snackbar.kt) - no
+                // outer Modifier can shrink that, since it's the offered max width that
+                // gets filled, not the text's intrinsic width. For a short one-off quip
+                // like the Easter egg message, that reads as an oversized bar rather than
+                // a small popup, so this renders a plain styled Surface + Text instead
+                // (matching SnackbarDefaults' look), which wraps to its content like any
+                // ordinary composable, centered in a fillMaxWidth() Box.
+                SnackbarHost(snackbarHostState) { data ->
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Surface(
+                            shape = SnackbarDefaults.shape,
+                            color = SnackbarDefaults.color,
+                            contentColor = SnackbarDefaults.contentColor,
+                            shadowElevation = 6.dp,
+                        ) {
+                            Text(
+                                text = data.visuals.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            )
+                        }
+                    }
+                }
+            },
         ) { innerPadding ->
             Surface(
                 modifier = Modifier
@@ -199,7 +268,10 @@ fun SettingsScreen(
                         label = "settingsContent",
                     ) { category ->
                         when (category) {
-                            null -> SettingsCategoryList(onCategorySelected = { selectedCategory = it })
+                            null -> SettingsCategoryList(
+                                onCategorySelected = { selectedCategory = it },
+                                onEasterEggUnlocked = onEasterEggUnlocked,
+                            )
                             SettingsCategory.Setup -> SetupSettingsContent(
                                 uiState = uiState,
                                 onLogFolderPicked = viewModel::onLogFolderPicked,
@@ -270,7 +342,10 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsCategoryList(onCategorySelected: (SettingsCategory) -> Unit) {
+private fun SettingsCategoryList(
+    onCategorySelected: (SettingsCategory) -> Unit,
+    onEasterEggUnlocked: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -284,12 +359,28 @@ private fun SettingsCategoryList(onCategorySelected: (SettingsCategory) -> Unit)
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // No visual tap affordance (indication = null) - same no-ripple pattern as
+        // AppDock's no-op clickable - so this reads as plain text, not an obvious button,
+        // keeping the Easter egg's presence undiscoverable short of trying it.
+        var versionTapCount by remember { mutableIntStateOf(0) }
         Text(
             text = "ES-DE Companion v${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        versionTapCount++
+                        if (versionTapCount >= EASTER_EGG_TAP_THRESHOLD) {
+                            versionTapCount = 0
+                            onEasterEggUnlocked()
+                        }
+                    },
+                ),
         )
     }
 }
