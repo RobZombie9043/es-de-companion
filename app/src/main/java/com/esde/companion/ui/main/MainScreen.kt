@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -34,7 +32,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
-import com.esde.companion.ui.CORNER_BUTTON_SIZE
+import com.esde.companion.ui.CornerFab
 import com.esde.companion.ui.dock.AppDock
 import com.esde.companion.ui.dock.AppDockViewModel
 import com.esde.companion.ui.dock.dockBarHeight
@@ -69,6 +67,7 @@ fun MainScreen(
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
     widgetsLocked: Boolean,
+    overlayOpacityPercent: Int,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
@@ -78,6 +77,7 @@ fun MainScreen(
         appDrawerViewModel = appDrawerViewModel,
         dockViewModel = dockViewModel,
         widgetsLocked = widgetsLocked,
+        overlayOpacityPercent = overlayOpacityPercent,
         onOpenSettings = onOpenSettings,
         onOpenEditWidgets = onOpenEditWidgets,
         onToggleBlankScreen = onToggleBlankScreen,
@@ -99,6 +99,7 @@ private fun MainScreenContent(
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
     widgetsLocked: Boolean,
+    overlayOpacityPercent: Int,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
@@ -221,18 +222,22 @@ private fun MainScreenContent(
                     )
                 },
         ) {
-            // Sized/positioned from the same CornerButtonMetrics constants as
-            // MainActivity's music FAB (opposite corner) so the two stay vertically
-            // aligned by construction - see CornerButtonMetrics' kdoc. Previously lived in
-            // a Material3 TopAppBar purely to get a corner button; that added a whole
+            // CornerFab, not a plain IconButton with a Settings icon - same composable as
+            // MainActivity's music FAB (opposite corner) and EditWidgetsOverlay's options
+            // button, so all three pick up the exact same theme-driven container/content
+            // colors (black-in-dark/white-in-light, matching the App Dock/App Drawer/music
+            // panel) for free rather than needing their own color logic to match. Sized/
+            // positioned from the same CornerButtonMetrics constants too - see its kdoc -
+            // so all three stay vertically aligned by construction. Previously lived in a
+            // Material3 TopAppBar purely to get a corner button; that added a whole
             // Scaffold+TopAppBar (with an otherwise-unused empty content slot) just to
             // reach a vertical centering that never actually matched the FAB's.
-            IconButton(
+            CornerFab(
                 onClick = onOpenSettings,
+                opacityPercent = overlayOpacityPercent,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(CORNER_BUTTON_EDGE_PADDING)
-                    .size(CORNER_BUTTON_SIZE),
+                    .padding(CORNER_BUTTON_EDGE_PADDING),
             ) {
                 Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
             }

@@ -8,10 +8,10 @@ import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,7 +41,7 @@ class AppDockViewModel(
     private val setDockApps: SetDockAppsUseCase,
     observeDockMaxApps: ObserveDockMaxAppsUseCase,
     observeDockSize: ObserveDockSizeUseCase,
-    observeDockOpacity: ObserveDockOpacityUseCase,
+    observeOverlayOpacity: ObserveOverlayOpacityUseCase,
     private val observeInstalledApps: ObserveInstalledAppsUseCase,
     private val observeOtherScreenLaunchApps: ObserveOtherScreenLaunchAppsUseCase,
     private val setOtherScreenLaunchApps: SetOtherScreenLaunchAppsUseCase,
@@ -56,8 +56,8 @@ class AppDockViewModel(
     val dockSize: StateFlow<DockSize> = observeDockSize()
         .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = DockSize.Medium)
 
-    val dockOpacityPercent: StateFlow<Int> = observeDockOpacity()
-        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 60)
+    val dockOpacityPercent: StateFlow<Int> = observeOverlayOpacity()
+        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 80)
 
     /** The pinned apps actually shown, in order, resolved to their current
      * label/packageName and capped to [maxApps] - lowering the max never deletes

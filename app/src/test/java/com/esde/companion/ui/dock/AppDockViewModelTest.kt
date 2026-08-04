@@ -1,18 +1,26 @@
 package com.esde.companion.ui.dock
 
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.domain.model.LogFolderValidation
+import com.esde.companion.domain.model.LogoTransitionMode
+import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.ScreenBehavior
+import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
+import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +52,6 @@ class AppDockViewModelTest {
         val enabled = MutableStateFlow(initialEnabled)
         val maxApps = MutableStateFlow(initialMaxApps)
         val size = MutableStateFlow(DockSize.Medium)
-        val opacity = MutableStateFlow(60)
         val dockApps = MutableStateFlow(initialDockApps)
 
         override suspend fun setDockEnabled(enabled: Boolean) { this.enabled.value = enabled }
@@ -53,8 +60,6 @@ class AppDockViewModelTest {
         override fun observeDockMaxApps(): Flow<Int> = maxApps
         override suspend fun setDockSize(size: DockSize) { this.size.value = size }
         override fun observeDockSize(): Flow<DockSize> = size
-        override suspend fun setDockOpacityPercent(percent: Int) { opacity.value = percent }
-        override fun observeDockOpacityPercent(): Flow<Int> = opacity
         override suspend fun setDockApps(packageNames: List<String>) { dockApps.value = packageNames }
         override fun observeDockApps(): Flow<List<String>> = dockApps
     }
@@ -66,12 +71,60 @@ class AppDockViewModelTest {
 
         override suspend fun setHiddenApps(packageNames: Set<String>) {}
         override fun observeHiddenApps(): Flow<Set<String>> = flowOf(emptySet())
-        override suspend fun setDrawerOpacityPercent(percent: Int) {}
-        override fun observeDrawerOpacityPercent(): Flow<Int> = flowOf(80)
         override suspend fun setGridColumns(columns: Int) {}
         override fun observeGridColumns(): Flow<Int> = flowOf(4)
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { otherScreenLaunchApps.value = packageNames }
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = otherScreenLaunchApps
+    }
+
+    private class FakeOnboardingRepository : OnboardingRepository {
+        override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
+        override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
+        override suspend fun validateLogFolder(path: String) = LogFolderValidation.FolderFound(true)
+        override suspend fun validateMediaFolder(path: String) = MediaFolderValidation.FolderFound
+        override suspend fun saveLogFolderPath(path: String) {}
+        override suspend fun saveMediaFolderPath(path: String) {}
+        override fun observeLogFolderPath(): Flow<String?> = flowOf(null)
+        override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun saveCustomSystemImagesFolderPath(path: String) {}
+        override fun observeCustomSystemImagesFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomSystemImagesFolderPath() {}
+        override suspend fun saveCustomLogosFolderPath(path: String) {}
+        override fun observeCustomLogosFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomLogosFolderPath() {}
+        override suspend fun markOnboardingComplete() {}
+        override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(true)
+        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
+        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
+        override suspend fun setVideoDelaySeconds(seconds: Int) {}
+        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
+        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
+        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
+        override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
+        override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+        override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {}
+        override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+        override suspend fun setThemePreference(preference: ThemePreference) {}
+        override fun observeThemePreference(): Flow<ThemePreference> = flowOf(ThemePreference.Auto)
+        override suspend fun setMusicEnabled(enabled: Boolean) {}
+        override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {}
+        override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) {}
+        override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) {}
+        override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {}
+        override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(MusicDuckingMode.LowerVolume)
+        override suspend fun setOverlayOpacityPercent(percent: Int) {}
+        override fun observeOverlayOpacityPercent(): Flow<Int> = flowOf(80)
+        override suspend fun saveCustomMusicFolderPath(path: String) {}
+        override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomMusicFolderPath() {}
+        override suspend fun setImageTransitionMode(mode: ImageTransitionMode) {}
+        override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(ImageTransitionMode.None)
+        override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {}
+        override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
     }
 
     private val testDispatcher = StandardTestDispatcher()
@@ -96,6 +149,7 @@ class AppDockViewModelTest {
         apps: List<InstalledApp> = allApps,
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
+        onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
     ): AppDockViewModel {
         val installedAppsRepository = FakeInstalledAppsRepository(flowOf(apps))
         return AppDockViewModel(
@@ -104,7 +158,7 @@ class AppDockViewModelTest {
             setDockApps = SetDockAppsUseCase(dockSettingsRepository),
             observeDockMaxApps = ObserveDockMaxAppsUseCase(dockSettingsRepository),
             observeDockSize = ObserveDockSizeUseCase(dockSettingsRepository),
-            observeDockOpacity = ObserveDockOpacityUseCase(dockSettingsRepository),
+            observeOverlayOpacity = ObserveOverlayOpacityUseCase(onboardingRepository),
             observeInstalledApps = ObserveInstalledAppsUseCase(installedAppsRepository),
             observeOtherScreenLaunchApps = ObserveOtherScreenLaunchAppsUseCase(appDrawerSettingsRepository),
             setOtherScreenLaunchApps = SetOtherScreenLaunchAppsUseCase(appDrawerSettingsRepository),

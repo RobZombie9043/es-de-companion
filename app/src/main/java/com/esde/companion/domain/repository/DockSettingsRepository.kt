@@ -5,7 +5,9 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Persisted App Dock settings: whether it's shown, how many apps it holds, its icon
- * size, its background opacity, and the ordered list of pinned apps. Kept separate from
+ * size, and the ordered list of pinned apps. Background opacity is not here - it's the
+ * shared master Overlay Opacity setting, see
+ * [OnboardingRepository.observeOverlayOpacityPercent]. Kept separate from
  * [AppDrawerSettingsRepository] - the dock is a distinct surface with its own settings,
  * though it deliberately reuses that repository's `otherScreenLaunchApps` for launch
  * location so an app's this-screen/other-screen preference is shared between the Drawer
@@ -24,13 +26,6 @@ interface DockSettingsRepository {
     /** Icon/bar size. Defaults to [DockSize.Medium]. */
     suspend fun setDockSize(size: DockSize)
     fun observeDockSize(): Flow<DockSize>
-
-    /**
-     * Background opacity of the dock bar, 0-100, standard convention: 0 = fully
-     * transparent, 100 = fully opaque. Defaults to 60.
-     */
-    suspend fun setDockOpacityPercent(percent: Int)
-    fun observeDockOpacityPercent(): Flow<Int>
 
     /**
      * Package names pinned to the dock, in display order. Persists whatever list it's

@@ -203,6 +203,8 @@ fun SettingsScreen(
                             onImageTransitionModeChanged = viewModel::onImageTransitionModeChanged,
                             logoTransitionMode = uiState.logoTransitionMode,
                             onLogoTransitionModeChanged = viewModel::onLogoTransitionModeChanged,
+                            overlayOpacityPercent = uiState.overlayOpacityPercent,
+                            onOverlayOpacityChanged = viewModel::onOverlayOpacityChanged,
                             gamePlayingBehavior = uiState.gamePlayingBehavior,
                             onGamePlayingBehaviorChanged = viewModel::onGamePlayingBehaviorChanged,
                             screensaverBehavior = uiState.screensaverBehavior,
@@ -222,9 +224,7 @@ fun SettingsScreen(
                             onEditWidgetsClick = onEditWidgetsClick,
                         )
                         SettingsCategory.AppDrawer -> AppDrawerSettingsContent(
-                            drawerOpacityPercent = uiState.drawerOpacityPercent,
                             gridColumns = uiState.gridColumns,
-                            onDrawerOpacityChanged = viewModel::onDrawerOpacityChanged,
                             onGridColumnsChanged = viewModel::onGridColumnsChanged,
                             onManageAppsClick = { showManageApps = true },
                             dockEnabled = uiState.dockEnabled,
@@ -233,8 +233,6 @@ fun SettingsScreen(
                             onDockMaxAppsChanged = viewModel::onDockMaxAppsChanged,
                             dockSize = uiState.dockSize,
                             onDockSizeChanged = viewModel::onDockSizeChanged,
-                            dockOpacityPercent = uiState.dockOpacityPercent,
-                            onDockOpacityChanged = viewModel::onDockOpacityChanged,
                         )
                         SettingsCategory.Sound -> SoundSettingsContent(
                             musicEnabled = uiState.musicEnabled,
@@ -247,8 +245,6 @@ fun SettingsScreen(
                             onMusicPlayDuringScreensaverChanged = viewModel::onMusicPlayDuringScreensaverChanged,
                             musicDuckingMode = uiState.musicDuckingMode,
                             onMusicDuckingModeChanged = viewModel::onMusicDuckingModeChanged,
-                            musicOverlayOpacityPercent = uiState.musicOverlayOpacityPercent,
-                            onMusicOverlayOpacityChanged = viewModel::onMusicOverlayOpacityChanged,
                         )
                     }
                 }
@@ -389,6 +385,8 @@ private fun UISettingsContent(
     onImageTransitionModeChanged: (ImageTransitionMode) -> Unit,
     logoTransitionMode: LogoTransitionMode,
     onLogoTransitionModeChanged: (LogoTransitionMode) -> Unit,
+    overlayOpacityPercent: Int,
+    onOverlayOpacityChanged: (Int) -> Unit,
     gamePlayingBehavior: ScreenBehavior,
     onGamePlayingBehaviorChanged: (ScreenBehavior) -> Unit,
     screensaverBehavior: ScreenBehavior,
@@ -402,6 +400,7 @@ private fun UISettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
+        OverlayOpacitySetting(percent = overlayOpacityPercent, onPercentChanged = onOverlayOpacityChanged)
         ImageTransitionPicker(selected = imageTransitionMode, onSelected = onImageTransitionModeChanged)
         LogoTransitionPicker(selected = logoTransitionMode, onSelected = onLogoTransitionModeChanged)
         ScreenBehaviorPicker(
@@ -416,6 +415,38 @@ private fun UISettingsContent(
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
         )
+    }
+}
+
+/**
+ * Master background opacity for every translucent overlay surface - the App Drawer, the
+ * App Dock, the music controls panel, and the Settings/music-FAB/Edit-Widgets corner
+ * buttons - see OnboardingRepository.observeOverlayOpacityPercent's kdoc for why this
+ * replaced a separate slider per surface.
+ */
+@Composable
+private fun OverlayOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Overlay Opacity",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(text = "$percent%", style = MaterialTheme.typography.bodyMedium)
+            Slider(
+                value = percent.toFloat(),
+                onValueChange = { onPercentChanged(it.roundToInt()) },
+                valueRange = 0f..100f,
+            )
+        }
     }
 }
 
@@ -604,9 +635,7 @@ private val ScreenBehavior.label: String
 
 @Composable
 private fun AppDrawerSettingsContent(
-    drawerOpacityPercent: Int,
     gridColumns: Int,
-    onDrawerOpacityChanged: (Int) -> Unit,
     onGridColumnsChanged: (Int) -> Unit,
     onManageAppsClick: () -> Unit,
     dockEnabled: Boolean,
@@ -615,8 +644,6 @@ private fun AppDrawerSettingsContent(
     onDockMaxAppsChanged: (Int) -> Unit,
     dockSize: DockSize,
     onDockSizeChanged: (DockSize) -> Unit,
-    dockOpacityPercent: Int,
-    onDockOpacityChanged: (Int) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -626,13 +653,11 @@ private fun AppDrawerSettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ManageAppsEntry(onClick = onManageAppsClick)
-        DrawerOpacitySetting(percent = drawerOpacityPercent, onPercentChanged = onDrawerOpacityChanged)
         GridColumnsSetting(columns = gridColumns, onColumnsChanged = onGridColumnsChanged)
         DockEnabledSetting(enabled = dockEnabled, onEnabledChanged = onDockEnabledChanged)
         if (dockEnabled) {
             DockMaxAppsSetting(maxApps = dockMaxApps, onMaxAppsChanged = onDockMaxAppsChanged)
             DockSizeSetting(size = dockSize, onSizeChanged = onDockSizeChanged)
-            DockOpacitySetting(percent = dockOpacityPercent, onPercentChanged = onDockOpacityChanged)
         }
     }
 }
@@ -734,32 +759,6 @@ private val DockSize.label: String
     }
 
 @Composable
-private fun DockOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Dock opacity",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = "$percent%", style = MaterialTheme.typography.bodyMedium)
-            Slider(
-                value = percent.toFloat(),
-                onValueChange = { onPercentChanged(it.roundToInt()) },
-                valueRange = 0f..100f,
-            )
-        }
-    }
-}
-
-@Composable
 private fun ManageAppsEntry(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
@@ -786,32 +785,6 @@ private fun ManageAppsEntry(onClick: () -> Unit) {
                 )
             }
             Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
-        }
-    }
-}
-
-@Composable
-private fun DrawerOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Drawer opacity",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = "$percent%", style = MaterialTheme.typography.bodyMedium)
-            Slider(
-                value = percent.toFloat(),
-                onValueChange = { onPercentChanged(it.roundToInt()) },
-                valueRange = 0f..100f,
-            )
         }
     }
 }
@@ -856,8 +829,6 @@ private fun SoundSettingsContent(
     onMusicPlayDuringScreensaverChanged: (Boolean) -> Unit,
     musicDuckingMode: MusicDuckingMode,
     onMusicDuckingModeChanged: (MusicDuckingMode) -> Unit,
-    musicOverlayOpacityPercent: Int,
-    onMusicOverlayOpacityChanged: (Int) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -881,7 +852,6 @@ private fun SoundSettingsContent(
                 onEnabledChanged = onMusicPlayDuringScreensaverChanged,
             )
             MusicDuckingModeSetting(selected = musicDuckingMode, onSelected = onMusicDuckingModeChanged)
-            MusicOverlayOpacitySetting(percent = musicOverlayOpacityPercent, onPercentChanged = onMusicOverlayOpacityChanged)
         }
     }
 }
@@ -1036,32 +1006,6 @@ private fun MusicDuckingModeSetting(selected: MusicDuckingMode, onSelected: (Mus
     }
 }
 
-@Composable
-private fun MusicOverlayOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Music Overlay Opacity",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(text = "$percent%", style = MaterialTheme.typography.bodyMedium)
-            Slider(
-                value = percent.toFloat(),
-                onValueChange = { onPercentChanged(it.roundToInt()) },
-                valueRange = 0f..100f,
-            )
-        }
-    }
-}
-
 // Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
 private val MusicDuckingMode.icon: ImageVector
     get() = when (this) {
@@ -1153,7 +1097,7 @@ private fun ImageTransitionPicker(selected: ImageTransitionMode, onSelected: (Im
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Image Transition",
+                text = "Image Transitions",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -1213,7 +1157,7 @@ private fun LogoTransitionPicker(selected: LogoTransitionMode, onSelected: (Logo
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Logo Transition",
+                text = "Logo Transitions",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )

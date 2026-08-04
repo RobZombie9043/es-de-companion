@@ -34,13 +34,13 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
@@ -205,8 +205,8 @@ class EditWidgetsViewModelTest {
         override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(true)
         override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {}
         override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(MusicDuckingMode.LowerVolume)
-        override suspend fun setMusicOverlayOpacityPercent(percent: Int) {}
-        override fun observeMusicOverlayOpacityPercent(): Flow<Int> = flowOf(100)
+        override suspend fun setOverlayOpacityPercent(percent: Int) {}
+        override fun observeOverlayOpacityPercent(): Flow<Int> = flowOf(80)
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
@@ -220,13 +220,11 @@ class EditWidgetsViewModelTest {
         initialEnabled: Boolean = false,
         initialMaxApps: Int = 5,
         initialSize: DockSize = DockSize.Medium,
-        initialOpacity: Int = 60,
         initialApps: List<String> = emptyList(),
     ) : DockSettingsRepository {
         val enabled = MutableStateFlow(initialEnabled)
         val maxApps = MutableStateFlow(initialMaxApps)
         val size = MutableStateFlow(initialSize)
-        val opacity = MutableStateFlow(initialOpacity)
         val apps = MutableStateFlow(initialApps)
 
         override suspend fun setDockEnabled(enabled: Boolean) { this.enabled.value = enabled }
@@ -235,8 +233,6 @@ class EditWidgetsViewModelTest {
         override fun observeDockMaxApps(): Flow<Int> = maxApps
         override suspend fun setDockSize(size: DockSize) { this.size.value = size }
         override fun observeDockSize(): Flow<DockSize> = size
-        override suspend fun setDockOpacityPercent(percent: Int) { opacity.value = percent }
-        override fun observeDockOpacityPercent(): Flow<Int> = opacity
         override suspend fun setDockApps(packageNames: List<String>) { apps.value = packageNames }
         override fun observeDockApps(): Flow<List<String>> = apps
     }
@@ -306,7 +302,7 @@ class EditWidgetsViewModelTest {
         observeLogoTransitionMode = ObserveLogoTransitionModeUseCase(onboardingRepository),
         observeDockEnabled = ObserveDockEnabledUseCase(dockSettingsRepository),
         observeDockSize = ObserveDockSizeUseCase(dockSettingsRepository),
-        observeDockOpacity = ObserveDockOpacityUseCase(dockSettingsRepository),
+        observeOverlayOpacity = ObserveOverlayOpacityUseCase(onboardingRepository),
         observeDockMaxApps = ObserveDockMaxAppsUseCase(dockSettingsRepository),
         observeDockApps = ObserveDockAppsUseCase(dockSettingsRepository),
         observeInstalledApps = ObserveInstalledAppsUseCase(installedAppsRepository),

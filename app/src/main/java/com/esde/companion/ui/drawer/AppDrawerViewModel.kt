@@ -4,11 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
-import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,7 +24,7 @@ class AppDrawerViewModel(
     private val setHiddenApps: SetHiddenAppsUseCase,
     private val observeOtherScreenLaunchApps: ObserveOtherScreenLaunchAppsUseCase,
     private val setOtherScreenLaunchApps: SetOtherScreenLaunchAppsUseCase,
-    observeDrawerOpacity: ObserveDrawerOpacityUseCase,
+    observeOverlayOpacity: ObserveOverlayOpacityUseCase,
     observeGridColumns: ObserveGridColumnsUseCase,
 ) : ViewModel() {
 
@@ -48,7 +48,7 @@ class AppDrawerViewModel(
             initialValue = emptySet(),
         )
 
-    val drawerOpacityPercent: StateFlow<Int> = observeDrawerOpacity()
+    val drawerOpacityPercent: StateFlow<Int> = observeOverlayOpacity()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),

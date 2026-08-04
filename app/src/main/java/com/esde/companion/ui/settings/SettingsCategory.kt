@@ -19,7 +19,7 @@ enum class SettingsCategory(val title: String, val description: String) {
     ),
     AppDrawer(
         title = "App Drawer and Dock",
-        description = "Visible apps, background opacity, grid columns, dock",
+        description = "Visible apps, grid columns, dock",
     ),
     VideoPlayback(
         title = "Video Playback",

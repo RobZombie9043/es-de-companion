@@ -92,8 +92,8 @@ class MusicPlaybackCoordinatorTest {
         override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = musicPlayDuringScreensaver
         override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) { musicDuckingMode.value = mode }
         override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = musicDuckingMode
-        override suspend fun setMusicOverlayOpacityPercent(percent: Int) {}
-        override fun observeMusicOverlayOpacityPercent(): Flow<Int> = flowOf(100)
+        override suspend fun setOverlayOpacityPercent(percent: Int) {}
+        override fun observeOverlayOpacityPercent(): Flow<Int> = flowOf(80)
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}

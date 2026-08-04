@@ -50,9 +50,7 @@ import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
-import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
@@ -67,10 +65,10 @@ import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
-import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -90,9 +88,7 @@ import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.SetDockOpacityUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
-import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
@@ -104,9 +100,9 @@ import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
-import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
+import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -209,9 +205,6 @@ class AppContainer(context: Context) {
     val observeOtherScreenLaunchAppsUseCase = ObserveOtherScreenLaunchAppsUseCase(appDrawerSettingsRepository)
     val setOtherScreenLaunchAppsUseCase = SetOtherScreenLaunchAppsUseCase(appDrawerSettingsRepository)
 
-    val observeDrawerOpacityUseCase = ObserveDrawerOpacityUseCase(appDrawerSettingsRepository)
-    val setDrawerOpacityUseCase = SetDrawerOpacityUseCase(appDrawerSettingsRepository)
-
     val observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository)
     val setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository)
 
@@ -227,8 +220,6 @@ class AppContainer(context: Context) {
     val setDockMaxAppsUseCase = SetDockMaxAppsUseCase(dockSettingsRepository)
     val observeDockSizeUseCase = ObserveDockSizeUseCase(dockSettingsRepository)
     val setDockSizeUseCase = SetDockSizeUseCase(dockSettingsRepository)
-    val observeDockOpacityUseCase = ObserveDockOpacityUseCase(dockSettingsRepository)
-    val setDockOpacityUseCase = SetDockOpacityUseCase(dockSettingsRepository)
     val observeDockAppsUseCase = ObserveDockAppsUseCase(dockSettingsRepository)
     val setDockAppsUseCase = SetDockAppsUseCase(dockSettingsRepository)
 
@@ -276,8 +267,12 @@ class AppContainer(context: Context) {
     val setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository)
     val observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository)
     val setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository)
-    val observeMusicOverlayOpacityUseCase = ObserveMusicOverlayOpacityUseCase(onboardingRepository)
-    val setMusicOverlayOpacityUseCase = SetMusicOverlayOpacityUseCase(onboardingRepository)
+
+    // Master opacity for every translucent overlay surface (App Drawer, App Dock, music
+    // controls panel, and the Settings/music-FAB/Edit-Widgets corner buttons) - one shared
+    // setting rather than a separate one per surface. See OnboardingRepository's kdoc.
+    val observeOverlayOpacityUseCase = ObserveOverlayOpacityUseCase(onboardingRepository)
+    val setOverlayOpacityUseCase = SetOverlayOpacityUseCase(onboardingRepository)
 
     val musicPlaybackCoordinator = MusicPlaybackCoordinator(
         observeConnectionState = observeConnectionStateUseCase,

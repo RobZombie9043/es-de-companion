@@ -16,13 +16,13 @@ import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
@@ -92,7 +92,7 @@ class EditWidgetsViewModel(
     observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
     observeDockEnabled: ObserveDockEnabledUseCase,
     observeDockSize: ObserveDockSizeUseCase,
-    observeDockOpacity: ObserveDockOpacityUseCase,
+    observeOverlayOpacity: ObserveOverlayOpacityUseCase,
     observeDockMaxApps: ObserveDockMaxAppsUseCase,
     observeDockApps: ObserveDockAppsUseCase,
     observeInstalledApps: ObserveInstalledAppsUseCase,
@@ -110,8 +110,8 @@ class EditWidgetsViewModel(
     val dockSize: StateFlow<DockSize> = observeDockSize()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), DockSize.Medium)
 
-    val dockOpacityPercent: StateFlow<Int> = observeDockOpacity()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 60)
+    val dockOpacityPercent: StateFlow<Int> = observeOverlayOpacity()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 80)
 
     val dockMaxApps: StateFlow<Int> = observeDockMaxApps()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 5)

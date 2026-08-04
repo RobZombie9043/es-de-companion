@@ -103,10 +103,15 @@ interface OnboardingRepository {
     suspend fun setMusicDuckingMode(mode: MusicDuckingMode)
     fun observeMusicDuckingMode(): Flow<MusicDuckingMode>
 
-    /** Background opacity of the music FAB's expanded track/controls panel, 0-100,
-     * standard convention: 0 = fully transparent, 100 = fully opaque. Defaults to 100. */
-    suspend fun setMusicOverlayOpacityPercent(percent: Int)
-    fun observeMusicOverlayOpacityPercent(): Flow<Int>
+    /**
+     * Settings > UI Settings > Overlay Opacity: shared background opacity for every
+     * translucent overlay surface - the App Drawer, the App Dock, the music FAB's expanded
+     * track/controls panel, and the Settings/music-FAB/Edit-Widgets corner buttons. One
+     * master value rather than a separate slider per surface, 0-100, standard convention:
+     * 0 = fully transparent, 100 = fully opaque. Defaults to 80.
+     */
+    suspend fun setOverlayOpacityPercent(percent: Int)
+    fun observeOverlayOpacityPercent(): Flow<Int>
 
     suspend fun saveCustomMusicFolderPath(path: String)
     fun observeCustomMusicFolderPath(): Flow<String?>

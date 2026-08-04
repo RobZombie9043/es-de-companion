@@ -47,7 +47,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -91,6 +90,8 @@ import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
+import com.esde.companion.ui.CornerFab
 import com.esde.companion.ui.dock.DockPreview
 import com.esde.companion.ui.widgets.WidgetContentView
 import com.esde.companion.ui.widgets.gridDimensionsFor
@@ -362,13 +363,16 @@ fun EditWidgetsOverlay(
             var menuExpanded by remember { mutableStateOf(false) }
             var showConfigureDialog by remember { mutableStateOf(false) }
 
+            // Same edge padding as MainScreen's Settings FAB and MainActivity's music FAB
+            // (CornerButtonMetrics) - opposite corner, but keeps all three corner buttons
+            // at the same offset from their respective edges by construction.
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(16.dp)
+                    .padding(CORNER_BUTTON_EDGE_PADDING)
                     .alpha(optionsButtonAlpha),
             ) {
-                FloatingActionButton(onClick = { menuExpanded = true }) {
+                CornerFab(onClick = { menuExpanded = true }, opacityPercent = dockOpacityPercent) {
                     Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "Widget options")
                 }
                 DropdownMenu(
