@@ -147,6 +147,13 @@ class EsdeEventParserTest {
     }
 
     @Test
+    fun `parses quit`() {
+        val line = "Aug 04 14:52:13 Debug:  Scripting::fireEvent(): quit \"\" \"\" \"\" \"\""
+
+        assertEquals(EsdeEvent.Quit, parser.parseLine(line))
+    }
+
+    @Test
     fun `ignores lines with no fireEvent marker`() {
         val line = "Jul 28 07:01:30 Debug:  Window::logInput(Xbox Wireless Controller): " +
             "Button 14, isMappedTo=right, value=1"
