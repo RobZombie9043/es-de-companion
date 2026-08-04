@@ -62,6 +62,27 @@ class WidgetsViewModel(
     observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
 ) : ViewModel() {
 
+    /** Caches the current system's random picks (per media type), reused as long as
+     * [randomSystemMediaCacheSystem] still matches the system being resolved for - so a
+     * flatMapLatest restart that doesn't correspond to an actual system change (e.g.
+     * canvasState's WhileSubscribed(5_000) dropping and resubscribing the whole upstream
+     * chain across a device sleep longer than that timeout) doesn't reroll
+     * ResolveRandomSystemMediaUseCase's random pick for a system that's still the one
+     * being displayed. The cache is cleared and rerolled the moment a *different* system
+     * is resolved for - including returning to a system already visited earlier in the
+     * session - so "system A -> system B -> system A" intentionally shows fresh art for
+     * A the second time, while repeated resolution without ever leaving A does not. */
+    private var randomSystemMediaCacheSystem: String? = null
+    private val randomSystemMediaCache = mutableMapOf<MediaType, String?>()
+
+    private suspend fun resolveRandomSystemMediaCached(systemShortName: String, mediaType: MediaType): String? {
+        if (randomSystemMediaCacheSystem != systemShortName) {
+            randomSystemMediaCache.clear()
+            randomSystemMediaCacheSystem = systemShortName
+        }
+        return randomSystemMediaCache.getOrPut(mediaType) { resolveRandomSystemMedia(systemShortName, mediaType) }
+    }
+
     private val gridDimensions = MutableStateFlow<GridDimensions?>(null)
 
     fun setGridDimensions(grid: GridDimensions) {
@@ -135,7 +156,7 @@ class WidgetsViewModel(
                         if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
                 ).distinct()
         val systemMediaByType: Map<MediaType, String?> = systemShortName?.let { shortName ->
-            neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMedia(shortName, mediaType) }
+            neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMediaCached(shortName, mediaType) }
         } ?: emptyMap()
 
         val systemLogoAssetPath = systemShortName?.let { resolveBundledSystemLogo(systemLogoAssetName(it)) }

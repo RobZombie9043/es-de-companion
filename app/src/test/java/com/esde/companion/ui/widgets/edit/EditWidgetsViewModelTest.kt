@@ -571,7 +571,7 @@ class EditWidgetsViewModelTest {
     // --- live drag/resize preview -----------------------------------------------------------
 
     @Test
-    fun `updateWidgetPosition and updateWidgetSize update in place without touching previewContent`() = runTest(testDispatcher) {
+    fun `updateWidgetPosition and updateWidgetBounds update in place without touching previewContent`() = runTest(testDispatcher) {
         val repository = FakeWidgetLayoutRepository().apply {
             seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)))
         }
@@ -581,7 +581,7 @@ class EditWidgetsViewModelTest {
         val previewBefore = viewModel.previewContent.value
 
         viewModel.updateWidgetPosition("widget-a", gridColumn = 4, gridRow = 5)
-        viewModel.updateWidgetSize("widget-a", columnSpan = 3, rowSpan = 3)
+        viewModel.updateWidgetBounds("widget-a", gridColumn = 4, gridRow = 5, columnSpan = 3, rowSpan = 3)
         advanceUntilIdle()
 
         val updated = viewModel.widgets.value.single()

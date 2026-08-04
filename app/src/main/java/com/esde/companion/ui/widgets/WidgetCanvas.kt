@@ -29,6 +29,7 @@ import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.model.forcesInstantImageTransition
 import com.esde.companion.domain.model.isLogoStyle
 import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.LocalIsDarkTheme
@@ -97,8 +98,10 @@ fun WidgetCanvas(
  * transition styles - which one applies is decided purely by content shape:
  * [WidgetContent.Image.isTransparentOverlay] (custom logos, marquees) and
  * [WidgetContent.SystemLogoAsset] both always use [logoTransitionMode]; opaque
- * [WidgetContent.Image] uses [imageTransitionMode]. See AnimatedLogoImage's kdoc for why
- * logo-style content never gets a fade option.
+ * [WidgetContent.Image] uses [imageTransitionMode] - except [WidgetType.forcesInstantImageTransition]
+ * widget types (box-art-style game media), which always snap instantly regardless of the
+ * configured mode. See AnimatedLogoImage's kdoc for why logo-style content never gets a
+ * fade option.
  *
  * [navigationDirection] is which way the user just navigated (if known - see
  * NavigationDirectionTracker), used only by [LogoTransitionMode.Slide] to enter from the
@@ -181,7 +184,7 @@ internal fun WidgetContentView(
                     model = model,
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
-                    durationMillis = imageTransitionMode.toDurationMillis(),
+                    durationMillis = if (widgetType.forcesInstantImageTransition) 0 else imageTransitionMode.toDurationMillis(),
                     modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                 )
                 DarkenOverlay(effects = content.effects)

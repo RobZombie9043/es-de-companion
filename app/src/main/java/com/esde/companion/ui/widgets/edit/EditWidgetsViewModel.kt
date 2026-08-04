@@ -181,11 +181,19 @@ class EditWidgetsViewModel(
         }
     }
 
-    /** Live preview during a resize - updates the in-memory size only, no persistence,
-     * same non-interaction with previewContent as updateWidgetPosition. */
-    fun updateWidgetSize(widgetId: String, columnSpan: Int, rowSpan: Int) {
+    /** Live preview during a resize - updates the in-memory position and size together,
+     * no persistence, same non-interaction with previewContent as updateWidgetPosition.
+     * Position is included (not just size) because a Left/Top edge resize (see
+     * EditWidgetsOverlay's ResizeHandle) moves gridColumn/gridRow to keep the opposite
+     * edge anchored - Right/Bottom resizes simply pass through the widget's existing
+     * position unchanged. */
+    fun updateWidgetBounds(widgetId: String, gridColumn: Int, gridRow: Int, columnSpan: Int, rowSpan: Int) {
         _widgets.value = _widgets.value.map { widget ->
-            if (widget.id == widgetId) widget.copy(columnSpan = columnSpan, rowSpan = rowSpan) else widget
+            if (widget.id == widgetId) {
+                widget.copy(gridColumn = gridColumn, gridRow = gridRow, columnSpan = columnSpan, rowSpan = rowSpan)
+            } else {
+                widget
+            }
         }
     }
 

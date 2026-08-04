@@ -107,7 +107,20 @@ private const val OPTIONS_BUTTON_DRAGGING_ALPHA = 0.15f
 /** A widget can never be resized smaller than one grid cell in either dimension. */
 private const val MIN_SPAN = 1
 
+/** Touch target size for a resize handle - offsets/positioning throughout this file are
+ * all in terms of this, so the grab zone stays full-size regardless of [HANDLE_DOT_SIZE]. */
 private val HANDLE_SIZE = 32.dp
+
+/** Visual size of the dot drawn inside a resize handle's touch target - smaller than
+ * [HANDLE_SIZE] so the dot reads as a compact grab indicator without shrinking the
+ * actual (harder-to-hit-precisely) touch target to match. */
+private val HANDLE_DOT_SIZE = 24.dp
+
+/** How far PlaceholderWidgetBox insets its visible border from the widget's true grid
+ * bounds (its own `.padding(2.dp)`) - resize handle offsets subtract this so a handle
+ * centers on the border as it's actually drawn, not on the untouched cell boundary 2dp
+ * further out. Kept as one named constant so the two can't silently drift apart. */
+private val WIDGET_BORDER_INSET = 2.dp
 
 /** Once the resize handle's actual on-screen position gets this close to the grid's true
  * edge, snap straight to the grid boundary rather than requiring further delta-based
@@ -288,26 +301,80 @@ fun EditWidgetsOverlay(
                     )
                 }
 
-                // Rendered as a sibling of the widget boxes above, not nested inside the
+                // Rendered as siblings of the widget boxes above, not nested inside the
                 // selected widget's own Box - a nested handle would have its drag gesture
-                // and the widget's own move-drag both react to the same touch. As a
-                // sibling positioned over just the corner, standard hit-testing routes
-                // each touch to exactly one of them.
+                // and the widget's own move-drag both react to the same touch. As
+                // siblings positioned over just their own edge midpoint, standard
+                // hit-testing routes each touch to exactly one of them.
                 widgets.firstOrNull { it.id == selectedWidgetId }?.let { selectedWidget ->
+                    val verticalCenter = cellHeight * (selectedWidget.gridRow + selectedWidget.rowSpan / 2f)
+                    val horizontalCenter = cellWidth * (selectedWidget.gridColumn + selectedWidget.columnSpan / 2f)
+
                     ResizeHandle(
+                        edge = ResizeEdge.Right,
                         widget = selectedWidget,
                         grid = grid,
                         cellWidth = cellWidth,
                         cellHeight = cellHeight,
-                        onResize = viewModel::updateWidgetSize,
+                        onResize = viewModel::updateWidgetBounds,
                         onDragStateChanged = viewModel::setDragging,
                         onDragEnd = viewModel::persistWidgets,
                         modifier = Modifier
                             .offset(
-                                x = cellWidth * (selectedWidget.gridColumn + selectedWidget.columnSpan) - HANDLE_SIZE / 2,
-                                y = cellHeight * (selectedWidget.gridRow + selectedWidget.rowSpan) - HANDLE_SIZE / 2,
+                                x = cellWidth * (selectedWidget.gridColumn + selectedWidget.columnSpan) -
+                                    WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                                y = verticalCenter - HANDLE_SIZE / 2,
                             )
                             .zIndex(Float.MAX_VALUE - 1), // always above widgets, below grid-line overlay
+                    )
+                    ResizeHandle(
+                        edge = ResizeEdge.Left,
+                        widget = selectedWidget,
+                        grid = grid,
+                        cellWidth = cellWidth,
+                        cellHeight = cellHeight,
+                        onResize = viewModel::updateWidgetBounds,
+                        onDragStateChanged = viewModel::setDragging,
+                        onDragEnd = viewModel::persistWidgets,
+                        modifier = Modifier
+                            .offset(
+                                x = cellWidth * selectedWidget.gridColumn + WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                                y = verticalCenter - HANDLE_SIZE / 2,
+                            )
+                            .zIndex(Float.MAX_VALUE - 1),
+                    )
+                    ResizeHandle(
+                        edge = ResizeEdge.Bottom,
+                        widget = selectedWidget,
+                        grid = grid,
+                        cellWidth = cellWidth,
+                        cellHeight = cellHeight,
+                        onResize = viewModel::updateWidgetBounds,
+                        onDragStateChanged = viewModel::setDragging,
+                        onDragEnd = viewModel::persistWidgets,
+                        modifier = Modifier
+                            .offset(
+                                x = horizontalCenter - HANDLE_SIZE / 2,
+                                y = cellHeight * (selectedWidget.gridRow + selectedWidget.rowSpan) -
+                                    WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                            )
+                            .zIndex(Float.MAX_VALUE - 1),
+                    )
+                    ResizeHandle(
+                        edge = ResizeEdge.Top,
+                        widget = selectedWidget,
+                        grid = grid,
+                        cellWidth = cellWidth,
+                        cellHeight = cellHeight,
+                        onResize = viewModel::updateWidgetBounds,
+                        onDragStateChanged = viewModel::setDragging,
+                        onDragEnd = viewModel::persistWidgets,
+                        modifier = Modifier
+                            .offset(
+                                x = horizontalCenter - HANDLE_SIZE / 2,
+                                y = cellHeight * selectedWidget.gridRow + WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                            )
+                            .zIndex(Float.MAX_VALUE - 1),
                     )
                 }
 
@@ -498,6 +565,14 @@ fun EditWidgetsOverlay(
  * touch never triggers the drag detector's touch-slop consumption, so the tap detector
  * fires cleanly; a real drag does consume, which correctly cancels tap recognition
  * instead of both firing for the same gesture.
+ *
+ * The drag-to-move modifier is only attached while [isSelected] - an unselected widget
+ * can still be tapped (that's how it becomes selected) but not dragged, so a touch that
+ * merely brushes across an unrelated widget on its way to the one actually being
+ * targeted can't accidentally reposition it. [isSelected] is safe to gate on directly
+ * (rather than through rememberUpdatedState) because it can only change between
+ * gestures, never mid-drag - selecting is its own separate tap, so by the time a drag
+ * starts, whichever value applies has already been composed in.
  */
 @Composable
 private fun PlaceholderWidgetBox(
@@ -521,7 +596,7 @@ private fun PlaceholderWidgetBox(
 
     Box(
         modifier = modifier
-            .padding(2.dp)
+            .padding(WIDGET_BORDER_INSET)
             .then(
                 if (isPlaceholder) {
                     Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
@@ -543,56 +618,62 @@ private fun PlaceholderWidgetBox(
             .pointerInput(widget.id) {
                 detectTapGestures(onTap = { onSelect() })
             }
-            .pointerInput(widget.id, cellWidth, cellHeight) {
-                val cellWidthPx = with(density) { cellWidth.toPx() }
-                val cellHeightPx = with(density) { cellHeight.toPx() }
-                var currentColumn = 0
-                var currentRow = 0
-                var maxColumn = 0
-                var maxRow = 0
-                var accumX = 0f
-                var accumY = 0f
+            .then(
+                if (isSelected) {
+                    Modifier.pointerInput(widget.id, cellWidth, cellHeight) {
+                        val cellWidthPx = with(density) { cellWidth.toPx() }
+                        val cellHeightPx = with(density) { cellHeight.toPx() }
+                        var currentColumn = 0
+                        var currentRow = 0
+                        var maxColumn = 0
+                        var maxRow = 0
+                        var accumX = 0f
+                        var accumY = 0f
 
-                detectDragGestures(
-                    onDragStart = {
-                        val liveWidget = currentWidget
-                        currentColumn = liveWidget.gridColumn
-                        currentRow = liveWidget.gridRow
-                        // A saved widget's span can exceed the live-measured grid (e.g.
-                        // it was placed on a differently-sized canvas) - coerceAtLeast(0)
-                        // keeps the coerceIn below from throwing on an empty range in
-                        // that case, pinning the widget to the origin instead of crashing.
-                        maxColumn = (grid.columns - liveWidget.columnSpan).coerceAtLeast(0)
-                        maxRow = (grid.rows - liveWidget.rowSpan).coerceAtLeast(0)
-                        accumX = 0f
-                        accumY = 0f
-                        onDragStateChanged(true)
-                    },
-                    onDragEnd = {
-                        onDragStateChanged(false)
-                        onDragEnd()
-                    },
-                    onDragCancel = {
-                        onDragStateChanged(false)
-                        onDragEnd()
-                    },
-                ) { change, dragAmount ->
-                    change.consume()
-                    accumX += dragAmount.x
-                    accumY += dragAmount.y
+                        detectDragGestures(
+                            onDragStart = {
+                                val liveWidget = currentWidget
+                                currentColumn = liveWidget.gridColumn
+                                currentRow = liveWidget.gridRow
+                                // A saved widget's span can exceed the live-measured grid (e.g.
+                                // it was placed on a differently-sized canvas) - coerceAtLeast(0)
+                                // keeps the coerceIn below from throwing on an empty range in
+                                // that case, pinning the widget to the origin instead of crashing.
+                                maxColumn = (grid.columns - liveWidget.columnSpan).coerceAtLeast(0)
+                                maxRow = (grid.rows - liveWidget.rowSpan).coerceAtLeast(0)
+                                accumX = 0f
+                                accumY = 0f
+                                onDragStateChanged(true)
+                            },
+                            onDragEnd = {
+                                onDragStateChanged(false)
+                                onDragEnd()
+                            },
+                            onDragCancel = {
+                                onDragStateChanged(false)
+                                onDragEnd()
+                            },
+                        ) { change, dragAmount ->
+                            change.consume()
+                            accumX += dragAmount.x
+                            accumY += dragAmount.y
 
-                    val columnDelta = (accumX / cellWidthPx).toInt()
-                    val rowDelta = (accumY / cellHeightPx).toInt()
+                            val columnDelta = (accumX / cellWidthPx).toInt()
+                            val rowDelta = (accumY / cellHeightPx).toInt()
 
-                    if (columnDelta != 0 || rowDelta != 0) {
-                        currentColumn = (currentColumn + columnDelta).coerceIn(0, maxColumn)
-                        currentRow = (currentRow + rowDelta).coerceIn(0, maxRow)
-                        accumX -= columnDelta * cellWidthPx
-                        accumY -= rowDelta * cellHeightPx
-                        onMove(widget.id, currentColumn, currentRow)
+                            if (columnDelta != 0 || rowDelta != 0) {
+                                currentColumn = (currentColumn + columnDelta).coerceIn(0, maxColumn)
+                                currentRow = (currentRow + rowDelta).coerceIn(0, maxRow)
+                                accumX -= columnDelta * cellWidthPx
+                                accumY -= rowDelta * cellHeightPx
+                                onMove(widget.id, currentColumn, currentRow)
+                            }
+                        }
                     }
-                }
-            },
+                } else {
+                    Modifier
+                },
+            ),
         contentAlignment = Alignment.Center,
     ) {
         if (isPlaceholder) {
@@ -614,19 +695,31 @@ private fun PlaceholderWidgetBox(
     }
 }
 
+/** Which side of the selected widget a [ResizeHandle] sits on and drags along. Left/Right
+ * affect the column axis, Top/Bottom the row axis - each handle only ever touches one
+ * axis, unlike the single bottom-right corner handle this replaced, which resized both
+ * at once. */
+private enum class ResizeEdge { Left, Right, Top, Bottom }
+
 /**
- * Grid-snapped drag-to-resize, anchored at the widget's fixed top-left (gridColumn/
- * gridRow never change here) - only columnSpan/rowSpan grow or shrink, clamped to
- * [MIN_SPAN, grid.columns/rows - the widget's fixed anchor position].
+ * Grid-snapped drag-to-resize for one edge of the selected widget - four render around a
+ * selected widget (Left, Right, Top, Bottom). Right/Bottom keep the widget's own
+ * gridColumn/gridRow fixed and only grow/shrink columnSpan/rowSpan, same as the original
+ * corner handle. Left/Top instead keep the *opposite* edge fixed - dragging them moves
+ * gridColumn/gridRow while columnSpan/rowSpan shrinks or grows to match, so the anchored
+ * far edge never visibly jumps. Each handle only ever touches one axis (Left/Right:
+ * columns; Top/Bottom: rows) - [onResize] always reports the full new bounds regardless,
+ * with the untouched axis read fresh from [currentWidget] so it reflects whatever the
+ * other three handles (or a move drag) most recently applied.
  *
- * Delta-based drag alone (grow the span once the finger has moved a full cell-width)
- * cannot reach the grid's true edge: right at the physical screen boundary there's no
- * more room left for the finger to keep moving, so the required delta for the last
- * cell(s) can never accumulate. [totalDragX]/[totalDragY] (tracked separately from the
- * per-cell accumulator, never reset within a gesture) give the handle's actual on-screen
- * position, so once that gets within [EDGE_SNAP_THRESHOLD] of the grid boundary, this
- * snaps straight to the max span instead - reaching the edge only requires getting near
- * it, not traveling the exact remaining distance.
+ * Delta-based drag alone (grow/shrink once the finger has moved a full cell-width) cannot
+ * reach the grid's true edge: right at the physical screen boundary there's no more room
+ * left for the finger to keep moving, so the required delta for the last cell(s) can
+ * never accumulate. [totalDrag] (tracked separately from the per-cell accumulator, never
+ * reset within a gesture) gives the handle's actual on-screen position, so once that gets
+ * within [EDGE_SNAP_THRESHOLD] of the grid boundary, this snaps straight to the limit
+ * instead - reaching the edge only requires getting near it, not traveling the exact
+ * remaining distance.
  *
  * Same stable-key + rememberUpdatedState + compute-in-onDragStart pattern as
  * PlaceholderWidgetBox - see its kdoc for why. Without this, resizing the same widget a
@@ -638,58 +731,67 @@ private fun PlaceholderWidgetBox(
  */
 @Composable
 private fun ResizeHandle(
+    edge: ResizeEdge,
     widget: PlacedWidget,
     grid: GridDimensions,
     cellWidth: Dp,
     cellHeight: Dp,
-    onResize: (widgetId: String, columnSpan: Int, rowSpan: Int) -> Unit,
+    onResize: (widgetId: String, gridColumn: Int, gridRow: Int, columnSpan: Int, rowSpan: Int) -> Unit,
     onDragStateChanged: (Boolean) -> Unit,
     onDragEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
     val currentWidget by rememberUpdatedState(widget)
+    val isColumnAxis = edge == ResizeEdge.Left || edge == ResizeEdge.Right
+    // Right/Bottom: the anchor is this widget's own near/start edge (gridColumn/gridRow),
+    // and this handle is on the far edge, growing span away from it. Left/Top: the anchor
+    // is the opposite (far) edge instead, so this handle - on the near/start edge - moves
+    // gridColumn/gridRow itself as span adjusts to compensate.
+    val isFarEdge = edge == ResizeEdge.Right || edge == ResizeEdge.Bottom
 
     Box(
         modifier = modifier
-            .size(HANDLE_SIZE)
-            .background(MaterialTheme.colorScheme.primary, CircleShape)
-            .pointerInput(widget.id, cellWidth, cellHeight, grid) {
+            .size(HANDLE_SIZE) // touch target - see HANDLE_SIZE's kdoc for why this stays full-size
+            .pointerInput(widget.id, edge, cellWidth, cellHeight, grid) {
                 val cellWidthPx = with(density) { cellWidth.toPx() }
                 val cellHeightPx = with(density) { cellHeight.toPx() }
-                val gridWidthPx = cellWidthPx * grid.columns
-                val gridHeightPx = cellHeightPx * grid.rows
+                val cellPx = if (isColumnAxis) cellWidthPx else cellHeightPx
+                val gridExtentCells = if (isColumnAxis) grid.columns else grid.rows
+                val gridExtentPx = cellPx * gridExtentCells
                 val edgeSnapThresholdPx = with(density) { EDGE_SNAP_THRESHOLD.toPx() }
 
-                var maxColumnSpan = 0
-                var maxRowSpan = 0
-                var startCornerXPx = 0f
-                var startCornerYPx = 0f
-                var currentColumnSpan = 0
-                var currentRowSpan = 0
-                var accumX = 0f
-                var accumY = 0f
-                var totalDragX = 0f
-                var totalDragY = 0f
+                // maxSpan means different things per anchor: for a far-edge (Right/Bottom)
+                // handle it's the largest span can grow to; for a near-edge (Left/Top)
+                // handle it's the anchored far edge's fixed cell position, since span
+                // there is derived as maxSpan - start.
+                var maxSpan = 0
+                var start = 0
+                var span = 0
+                var initialFarEdgePx = 0f
+                var initialStartPx = 0f
+                var accum = 0f
+                var totalDrag = 0f
 
                 detectDragGestures(
                     onDragStart = {
                         val liveWidget = currentWidget
+                        start = if (isColumnAxis) liveWidget.gridColumn else liveWidget.gridRow
+                        span = if (isColumnAxis) liveWidget.columnSpan else liveWidget.rowSpan
                         // Same reasoning as PlaceholderWidgetBox's onDragStart: a saved
                         // widget's position can leave less room than MIN_SPAN on a
                         // live-measured grid smaller than the one it was placed on -
                         // coerceAtLeast(MIN_SPAN) keeps the coerceIn calls below from
                         // throwing on an empty range in that case.
-                        maxColumnSpan = (grid.columns - liveWidget.gridColumn).coerceAtLeast(MIN_SPAN)
-                        maxRowSpan = (grid.rows - liveWidget.gridRow).coerceAtLeast(MIN_SPAN)
-                        startCornerXPx = (liveWidget.gridColumn + liveWidget.columnSpan) * cellWidthPx
-                        startCornerYPx = (liveWidget.gridRow + liveWidget.rowSpan) * cellHeightPx
-                        currentColumnSpan = liveWidget.columnSpan
-                        currentRowSpan = liveWidget.rowSpan
-                        accumX = 0f
-                        accumY = 0f
-                        totalDragX = 0f
-                        totalDragY = 0f
+                        maxSpan = if (isFarEdge) {
+                            (gridExtentCells - start).coerceAtLeast(MIN_SPAN)
+                        } else {
+                            (start + span).coerceAtLeast(MIN_SPAN)
+                        }
+                        initialFarEdgePx = (start + span) * cellPx
+                        initialStartPx = start * cellPx
+                        accum = 0f
+                        totalDrag = 0f
                         onDragStateChanged(true)
                     },
                     onDragEnd = {
@@ -702,58 +804,102 @@ private fun ResizeHandle(
                     },
                 ) { change, dragAmount ->
                     change.consume()
-                    accumX += dragAmount.x
-                    accumY += dragAmount.y
-                    totalDragX += dragAmount.x
-                    totalDragY += dragAmount.y
-
-                    val cornerXPx = startCornerXPx + totalDragX
-                    val cornerYPx = startCornerYPx + totalDragY
-                    val nearRightEdge = gridWidthPx - cornerXPx <= edgeSnapThresholdPx
-                    val nearBottomEdge = gridHeightPx - cornerYPx <= edgeSnapThresholdPx
+                    val delta = if (isColumnAxis) dragAmount.x else dragAmount.y
+                    accum += delta
+                    totalDrag += delta
 
                     var changed = false
 
-                    if (nearRightEdge && currentColumnSpan != maxColumnSpan) {
-                        currentColumnSpan = maxColumnSpan
-                        changed = true
-                    } else if (!nearRightEdge) {
-                        val columnDelta = (accumX / cellWidthPx).toInt()
-                        if (columnDelta != 0) {
-                            currentColumnSpan = (currentColumnSpan + columnDelta).coerceIn(MIN_SPAN, maxColumnSpan)
-                            accumX -= columnDelta * cellWidthPx
+                    if (isFarEdge) {
+                        // Right/Bottom: the far edge moves with the drag, start is fixed.
+                        val farEdgePx = initialFarEdgePx + totalDrag
+                        val nearGridBoundary = gridExtentPx - farEdgePx <= edgeSnapThresholdPx
+                        if (nearGridBoundary && span != maxSpan) {
+                            span = maxSpan
                             changed = true
+                        } else if (!nearGridBoundary) {
+                            val cellDelta = (accum / cellPx).toInt()
+                            if (cellDelta != 0) {
+                                span = (span + cellDelta).coerceIn(MIN_SPAN, maxSpan)
+                                accum -= cellDelta * cellPx
+                                changed = true
+                            }
                         }
-                    }
-
-                    if (nearBottomEdge && currentRowSpan != maxRowSpan) {
-                        currentRowSpan = maxRowSpan
-                        changed = true
-                    } else if (!nearBottomEdge) {
-                        val rowDelta = (accumY / cellHeightPx).toInt()
-                        if (rowDelta != 0) {
-                            currentRowSpan = (currentRowSpan + rowDelta).coerceIn(MIN_SPAN, maxRowSpan)
-                            accumY -= rowDelta * cellHeightPx
+                    } else {
+                        // Left/Top: the near edge (start) moves with the drag, the far
+                        // edge is fixed - start and span must update together.
+                        val startPx = initialStartPx + totalDrag
+                        val nearGridBoundary = startPx <= edgeSnapThresholdPx
+                        if (nearGridBoundary && start != 0) {
+                            start = 0
+                            span = maxSpan
                             changed = true
+                        } else if (!nearGridBoundary) {
+                            val cellDelta = (accum / cellPx).toInt()
+                            if (cellDelta != 0) {
+                                start = (start + cellDelta).coerceIn(0, maxSpan - MIN_SPAN)
+                                span = maxSpan - start
+                                accum -= cellDelta * cellPx
+                                changed = true
+                            }
                         }
                     }
 
                     if (changed) {
-                        onResize(widget.id, currentColumnSpan, currentRowSpan)
+                        val liveWidget = currentWidget
+                        onResize(
+                            widget.id,
+                            if (isColumnAxis) start else liveWidget.gridColumn,
+                            if (isColumnAxis) liveWidget.gridRow else start,
+                            if (isColumnAxis) span else liveWidget.columnSpan,
+                            if (isColumnAxis) liveWidget.rowSpan else span,
+                        )
                     }
                 }
             },
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(HANDLE_DOT_SIZE)
+                .background(MaterialTheme.colorScheme.primary, CircleShape),
+        )
+    }
 }
 
 private fun WidgetType.label(): String = when (this) {
     is WidgetType.SystemLogo -> "System Logo"
     is WidgetType.SystemImage -> "System Image"
-    is WidgetType.SystemMedia -> "System: ${mediaType.name}"
-    is WidgetType.GameMedia -> "Game: ${mediaType.name}"
+    is WidgetType.SystemMedia -> mediaType.systemWidgetLabel()
+    is WidgetType.GameMedia -> mediaType.gameWidgetLabel()
     is WidgetType.CustomImage -> "Custom Image"
     is WidgetType.ColorBackground -> "Color Background"
     is WidgetType.GameDescription -> "Description"
+}
+
+/** Display label for a MediaType-backed System-canvas widget - only FanArt/Screenshots
+ * ever appear there (see widgetCatalogFor), named for what they actually show: a random
+ * game's art for the browsed system, not the system's own art. */
+private fun MediaType.systemWidgetLabel(): String = when (this) {
+    MediaType.FanArt -> "Random Game Fanart"
+    MediaType.Screenshots -> "Random Game Screenshot"
+    else -> "System: $name"
+}
+
+/** Display label for a MediaType-backed Game-canvas widget - plain-English names in
+ * place of the raw MediaType enum constant (e.g. "Box Cover" instead of "Covers", "3D
+ * Box" instead of "ThreeDBoxes"). */
+private fun MediaType.gameWidgetLabel(): String = when (this) {
+    MediaType.Marquees -> "Marquee"
+    MediaType.Covers -> "Box Cover"
+    MediaType.ThreeDBoxes -> "3D Box"
+    MediaType.MixImages -> "Mix Image"
+    MediaType.Screenshots -> "Screenshot"
+    MediaType.FanArt -> "Fan Art"
+    MediaType.TitleScreens -> "Title Screen"
+    MediaType.BackCovers -> "Box Back Cover"
+    MediaType.PhysicalMedia -> "Physical Media"
+    else -> "Game: $name"
 }
 
 /**
