@@ -37,6 +37,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.esde.companion.CompanionApplication
+import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.MusicPlaybackState
@@ -84,6 +85,20 @@ private object Destinations {
     const val SETTINGS = "settings"
 }
 
+/**
+ * Resolved once at startup (see the produceState block below) before NavHost's start
+ * destination is decided. [savedLogFolderPath]/[savedMediaFolderPath] carry whatever was
+ * already confirmed and persisted from a prior onboarding run, if any - passed into
+ * OnboardingViewModelFactory so re-entering onboarding solely because the permission was
+ * revoked (see [showOnboarding]) seeds EsdeFolder/MediaFolder with the real prior
+ * location instead of the hardcoded default guess.
+ */
+private data class OnboardingStartupInfo(
+    val showOnboarding: Boolean,
+    val savedLogFolderPath: String?,
+    val savedMediaFolderPath: String?,
+)
+
 // Layout constants for the music FAB + MusicControlsOverlay pairing - see their usage
 // site for why these are needed rather than a plain Row (the FAB and overlay are
 // independently aligned children of a BoxWithConstraints, not siblings in a Row, since
@@ -112,20 +127,35 @@ class MainActivity : ComponentActivity() {
                 // Read once, not continuously observed - NavHost's start destination is
                 // fixed at first composition. Onboarding finishing later is handled by
                 // an explicit navController.navigate call, not by this value changing
-                // underneath the NavHost.
-                val onboardingComplete by produceState<Boolean?>(initialValue = null) {
-                    value = appContainer.observeOnboardingCompleteUseCase().first()
+                // underneath the NavHost. Also re-checked here (not just at first-ever
+                // install) because "All files access" can be revoked from Android
+                // Settings independently of the onboarding-complete flag - the log/media
+                // read pipeline this permission gates would otherwise silently stop
+                // working with no path back to the grant screen. OnboardingViewModel
+                // already knows how to start at OnboardingStep.Permission and walk
+                // forward from there, same as a fresh install.
+                val startupInfo by produceState<OnboardingStartupInfo?>(initialValue = null) {
+                    val onboardingComplete = appContainer.observeOnboardingCompleteUseCase().first()
+                    value = OnboardingStartupInfo(
+                        showOnboarding = !onboardingComplete || !AllFilesAccessPermission.isGranted(),
+                        savedLogFolderPath = appContainer.onboardingRepository.observeLogFolderPath().first(),
+                        savedMediaFolderPath = appContainer.onboardingRepository.observeMediaFolderPath().first(),
+                    )
                 }
 
-                onboardingComplete?.let { complete ->
+                startupInfo?.let { info ->
                     val navController = rememberNavController()
                     NavHost(
                         navController = navController,
-                        startDestination = if (complete) Destinations.MAIN else Destinations.ONBOARDING,
+                        startDestination = if (info.showOnboarding) Destinations.ONBOARDING else Destinations.MAIN,
                     ) {
                         composable(Destinations.ONBOARDING) {
                             val viewModel: OnboardingViewModel = viewModel(
-                                factory = OnboardingViewModelFactory(appContainer),
+                                factory = OnboardingViewModelFactory(
+                                    appContainer = appContainer,
+                                    initialLogFolderPath = info.savedLogFolderPath,
+                                    initialMediaFolderPath = info.savedMediaFolderPath,
+                                ),
                             )
                             OnboardingScreen(
                                 viewModel = viewModel,
