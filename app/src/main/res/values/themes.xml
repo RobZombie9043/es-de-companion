@@ -8,9 +8,9 @@
         <!-- Nothing in the Compose tree (MainActivity's root Box, WidgetOverlay,
              WidgetCanvas, CrossfadeAsyncImage) paints an opaque background of its own -
              they're deliberately transparent so widgets/overlays can stack freely. This
-             window background is what actually shows through any gap (e.g. a shrunken
-             edge mid-scale during a Fade+Scale crossfade), so it needs to be black, not
-             the platform light theme's default white. -->
+             window background is what actually shows through any gap (e.g. transparent
+             content, or the moment before a widget's first image decodes), so it needs
+             to be black, not the platform light theme's default white. -->
         <item name="android:windowBackground">@android:color/black</item>
     </style>
 </resources>

@@ -9,5 +9,4 @@ package com.esde.companion.domain.model
 enum class ImageTransitionMode {
     None,
     Fade,
-    FadeScale,
 }

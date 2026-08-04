@@ -15,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.rememberAsyncImagePainter
@@ -23,8 +22,6 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import java.io.File
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 
 /**
  * Crossfades from whatever model was previously shown to [model], never showing a
@@ -53,21 +50,13 @@ import kotlinx.coroutines.launch
  * cache entry. Non-File models (bundled asset path strings) are never mutated at a
  * fixed path, so they keep using their own value as-is.
  *
- * [scaleFrom], when non-null (ImageTransitionMode.FadeScale), animates the incoming
- * image's scale from that fraction up to 1f in lockstep with the alpha fade. When
- * [durationMillis] is 0 or less (ImageTransitionMode.None), both alpha and scale snap
- * straight to their end values instead of animating - this still goes through the
- * pre-decode-then-swap path above, so "no visible transition" doesn't reopen the
- * blank-frame flash the whole mechanism exists to prevent.
+ * When [durationMillis] is 0 or less (ImageTransitionMode.None), alpha snaps straight to
+ * its end value instead of animating - this still goes through the pre-decode-then-swap
+ * path above, so "no visible transition" doesn't reopen the blank-frame flash the whole
+ * mechanism exists to prevent.
  *
- * The outgoing (previous) layer stays fully opaque for a plain fade (scaleFrom == null) -
- * since both layers are the same size, a static backdrop plus a fading-in foreground
- * already looks like a clean crossfade. It's the opposite for FadeScale: the incoming
- * layer is smaller than the container while it scales up, so a still-opaque backdrop
- * shows through the gap around its shrunken edges (and through its own fading-in
- * translucency) - reported as "the previous image showing underneath." Fixed there by
- * fading the outgoing layer's alpha out (1 -> 0) in lockstep with the incoming layer's
- * fade-in, via the same Animatable, rather than leaving it static.
+ * The outgoing (previous) layer stays fully opaque - since both layers are the same size,
+ * a static backdrop plus a fading-in foreground already looks like a clean crossfade.
  */
 
 /**
@@ -84,13 +73,11 @@ fun CrossfadeAsyncImage(
     contentScale: ContentScale,
     modifier: Modifier = Modifier,
     durationMillis: Int = 250,
-    scaleFrom: Float? = null,
 ) {
     val context = LocalContext.current
     var previousModel by remember { mutableStateOf<Any?>(null) }
     var currentModel by remember { mutableStateOf(model) }
     val alpha = remember { Animatable(1f) }
-    val scale = remember { Animatable(1f) }
 
     LaunchedEffect(identityKeyOf(model)) {
         if (identityKeyOf(model) == identityKeyOf(currentModel)) return@LaunchedEffect
@@ -98,19 +85,10 @@ fun CrossfadeAsyncImage(
         suspend fun animateIn() {
             if (durationMillis <= 0) {
                 alpha.snapTo(1f)
-                scale.snapTo(1f)
                 return
             }
             alpha.snapTo(0f)
-            scale.snapTo(scaleFrom ?: 1f)
-            // alpha and scale must animate concurrently, not one after the other -
-            // coroutineScope + two launches so neither animateTo blocks the other.
-            coroutineScope {
-                launch { alpha.animateTo(1f, animationSpec = tween(durationMillis, easing = DecelerateEasing)) }
-                if (scaleFrom != null) {
-                    launch { scale.animateTo(1f, animationSpec = tween(durationMillis, easing = DecelerateEasing)) }
-                }
-            }
+            alpha.animateTo(1f, animationSpec = tween(durationMillis, easing = DecelerateEasing))
         }
 
         if (model == null) {
@@ -145,9 +123,7 @@ fun CrossfadeAsyncImage(
                     painter = painter,
                     contentDescription = null,
                     contentScale = contentScale,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .let { base -> if (scaleFrom != null) base.alpha(1f - alpha.value) else base },
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -164,8 +140,7 @@ fun CrossfadeAsyncImage(
                     contentScale = contentScale,
                     modifier = Modifier
                         .fillMaxSize()
-                        .alpha(alpha.value)
-                        .graphicsLayer(scaleX = scale.value, scaleY = scale.value),
+                        .alpha(alpha.value),
                 )
             }
         }

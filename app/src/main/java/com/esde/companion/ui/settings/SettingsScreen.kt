@@ -43,7 +43,6 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -1148,14 +1147,12 @@ private val ImageTransitionMode.icon: ImageVector
     get() = when (this) {
         ImageTransitionMode.None -> Icons.Filled.Block
         ImageTransitionMode.Fade -> Icons.Filled.BlurOn
-        ImageTransitionMode.FadeScale -> Icons.Filled.ZoomOutMap
     }
 
 private val ImageTransitionMode.label: String
     get() = when (this) {
         ImageTransitionMode.None -> "None"
         ImageTransitionMode.Fade -> "Fade"
-        ImageTransitionMode.FadeScale -> "Fade + Scale"
     }
 
 /**

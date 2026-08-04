@@ -177,13 +177,11 @@ internal fun WidgetContentView(
             Box(modifier = modifier) {
                 val isDarkTheme = LocalIsDarkTheme.current
                 val model = if (content.isAsset) fallbackBackgroundAssetPath(isDarkTheme) else File(content.path)
-                val (durationMillis, scaleFrom) = imageTransitionMode.toDurationAndScale()
                 CrossfadeAsyncImage(
                     model = model,
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
-                    durationMillis = durationMillis,
-                    scaleFrom = scaleFrom,
+                    durationMillis = imageTransitionMode.toDurationMillis(),
                     modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                 )
                 DarkenOverlay(effects = content.effects)
@@ -231,15 +229,13 @@ private fun ScaleMode.toContentScale(): ContentScale = when (this) {
     ScaleMode.Fill -> ContentScale.Crop
 }
 
-/** Fade duration + scale-start fraction CrossfadeAsyncImage should use for this mode.
- * durationMillis of 0 makes it snap instead of animate (see its kdoc), which is how
- * ImageTransitionMode.None avoids a visible transition without losing the flash-safe
- * pre-decode. Not yet user-customizable - see ImageTransitionMode's kdoc. */
-private fun ImageTransitionMode.toDurationAndScale(): Pair<Int, Float?> = when (this) {
-    ImageTransitionMode.None -> 0 to null
-    ImageTransitionMode.Fade -> IMAGE_TRANSITION_DURATION_MILLIS to null
-    ImageTransitionMode.FadeScale -> IMAGE_TRANSITION_DURATION_MILLIS to IMAGE_TRANSITION_SCALE_FROM
+/** Fade duration CrossfadeAsyncImage should use for this mode. durationMillis of 0 makes
+ * it snap instead of animate (see its kdoc), which is how ImageTransitionMode.None avoids
+ * a visible transition without losing the flash-safe pre-decode. Not yet user-customizable
+ * - see ImageTransitionMode's kdoc. */
+private fun ImageTransitionMode.toDurationMillis(): Int = when (this) {
+    ImageTransitionMode.None -> 0
+    ImageTransitionMode.Fade -> IMAGE_TRANSITION_DURATION_MILLIS
 }
 
 private const val IMAGE_TRANSITION_DURATION_MILLIS = 500
-private const val IMAGE_TRANSITION_SCALE_FROM = 0.95f
