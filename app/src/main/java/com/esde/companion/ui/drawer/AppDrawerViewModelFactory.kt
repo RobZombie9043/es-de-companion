@@ -19,7 +19,7 @@ class AppDrawerViewModelFactory(
             setHiddenApps = appContainer.setHiddenAppsUseCase,
             observeOtherScreenLaunchApps = appContainer.observeOtherScreenLaunchAppsUseCase,
             setOtherScreenLaunchApps = appContainer.setOtherScreenLaunchAppsUseCase,
-            observeDrawerOpacity = appContainer.observeDrawerOpacityUseCase,
+            observeOverlayOpacity = appContainer.observeOverlayOpacityUseCase,
             observeGridColumns = appContainer.observeGridColumnsUseCase,
         ) as T
     }

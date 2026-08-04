@@ -28,8 +28,8 @@ class SettingsViewModelFactory(
             setImageTransitionModeUseCase = appContainer.setImageTransitionModeUseCase,
             observeLogoTransitionModeUseCase = appContainer.observeLogoTransitionModeUseCase,
             setLogoTransitionModeUseCase = appContainer.setLogoTransitionModeUseCase,
-            observeDrawerOpacityUseCase = appContainer.observeDrawerOpacityUseCase,
-            setDrawerOpacityUseCase = appContainer.setDrawerOpacityUseCase,
+            observeOverlayOpacityUseCase = appContainer.observeOverlayOpacityUseCase,
+            setOverlayOpacityUseCase = appContainer.setOverlayOpacityUseCase,
             observeGridColumnsUseCase = appContainer.observeGridColumnsUseCase,
             setGridColumnsUseCase = appContainer.setGridColumnsUseCase,
             observeDockEnabledUseCase = appContainer.observeDockEnabledUseCase,
@@ -38,8 +38,6 @@ class SettingsViewModelFactory(
             setDockMaxAppsUseCase = appContainer.setDockMaxAppsUseCase,
             observeDockSizeUseCase = appContainer.observeDockSizeUseCase,
             setDockSizeUseCase = appContainer.setDockSizeUseCase,
-            observeDockOpacityUseCase = appContainer.observeDockOpacityUseCase,
-            setDockOpacityUseCase = appContainer.setDockOpacityUseCase,
             observeWidgetsLockedUseCase = appContainer.observeWidgetsLockedUseCase,
             setWidgetsLockedUseCase = appContainer.setWidgetsLockedUseCase,
             observeVideoPlaybackEnabledUseCase = appContainer.observeVideoPlaybackEnabledUseCase,
@@ -58,8 +56,6 @@ class SettingsViewModelFactory(
             setMusicPlayDuringScreensaverUseCase = appContainer.setMusicPlayDuringScreensaverUseCase,
             observeMusicDuckingModeUseCase = appContainer.observeMusicDuckingModeUseCase,
             setMusicDuckingModeUseCase = appContainer.setMusicDuckingModeUseCase,
-            observeMusicOverlayOpacityUseCase = appContainer.observeMusicOverlayOpacityUseCase,
-            setMusicOverlayOpacityUseCase = appContainer.setMusicOverlayOpacityUseCase,
         ) as T
     }
 }

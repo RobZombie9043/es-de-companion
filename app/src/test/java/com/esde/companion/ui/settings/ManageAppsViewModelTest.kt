@@ -34,8 +34,6 @@ class ManageAppsViewModelTest {
 
         override suspend fun setHiddenApps(packageNames: Set<String>) { hiddenApps.value = packageNames }
         override fun observeHiddenApps(): Flow<Set<String>> = hiddenApps
-        override suspend fun setDrawerOpacityPercent(percent: Int) { /* not under test */ }
-        override fun observeDrawerOpacityPercent(): Flow<Int> = MutableStateFlow(30)
         override suspend fun setGridColumns(columns: Int) { /* not under test */ }
         override fun observeGridColumns(): Flow<Int> = MutableStateFlow(4)
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { /* not under test */ }

@@ -18,19 +18,17 @@ import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
-import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -39,19 +37,17 @@ import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.SetDockOpacityUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
-import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
-import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
+import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -88,7 +84,7 @@ class SettingsViewModelTest {
         var musicPlayWhileBrowsingGames = true
         var musicPlayDuringScreensaver = true
         var musicDuckingMode = MusicDuckingMode.LowerVolume
-        var musicOverlayOpacityPercent = 100
+        var overlayOpacityPercent = 80
         var imageTransitionMode = ImageTransitionMode.None
         var logoTransitionMode = LogoTransitionMode.None
 
@@ -130,8 +126,8 @@ class SettingsViewModelTest {
         override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(musicPlayDuringScreensaver)
         override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) { musicDuckingMode = mode }
         override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(musicDuckingMode)
-        override suspend fun setMusicOverlayOpacityPercent(percent: Int) { musicOverlayOpacityPercent = percent }
-        override fun observeMusicOverlayOpacityPercent(): Flow<Int> = flowOf(musicOverlayOpacityPercent)
+        override suspend fun setOverlayOpacityPercent(percent: Int) { overlayOpacityPercent = percent }
+        override fun observeOverlayOpacityPercent(): Flow<Int> = flowOf(overlayOpacityPercent)
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
@@ -142,16 +138,12 @@ class SettingsViewModelTest {
     }
 
     private class FakeAppDrawerSettingsRepository(
-        initialOpacity: Int = 80,
         initialColumns: Int = 4,
     ) : AppDrawerSettingsRepository {
-        val opacity = MutableStateFlow(initialOpacity)
         val columns = MutableStateFlow(initialColumns)
 
         override suspend fun setHiddenApps(packageNames: Set<String>) {}
         override fun observeHiddenApps(): Flow<Set<String>> = flowOf(emptySet())
-        override suspend fun setDrawerOpacityPercent(percent: Int) { opacity.value = percent }
-        override fun observeDrawerOpacityPercent(): Flow<Int> = opacity
         override suspend fun setGridColumns(columns: Int) { this.columns.value = columns }
         override fun observeGridColumns(): Flow<Int> = columns
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) {}
@@ -162,12 +154,10 @@ class SettingsViewModelTest {
         initialEnabled: Boolean = false,
         initialMaxApps: Int = 5,
         initialSize: DockSize = DockSize.Medium,
-        initialOpacity: Int = 60,
     ) : DockSettingsRepository {
         val enabled = MutableStateFlow(initialEnabled)
         val maxApps = MutableStateFlow(initialMaxApps)
         val size = MutableStateFlow(initialSize)
-        val opacity = MutableStateFlow(initialOpacity)
 
         override suspend fun setDockEnabled(enabled: Boolean) { this.enabled.value = enabled }
         override fun observeDockEnabled(): Flow<Boolean> = enabled
@@ -175,8 +165,6 @@ class SettingsViewModelTest {
         override fun observeDockMaxApps(): Flow<Int> = maxApps
         override suspend fun setDockSize(size: DockSize) { this.size.value = size }
         override fun observeDockSize(): Flow<DockSize> = size
-        override suspend fun setDockOpacityPercent(percent: Int) { opacity.value = percent }
-        override fun observeDockOpacityPercent(): Flow<Int> = opacity
         override suspend fun setDockApps(packageNames: List<String>) {}
         override fun observeDockApps(): Flow<List<String>> = flowOf(emptyList())
     }
@@ -231,8 +219,8 @@ class SettingsViewModelTest {
             setImageTransitionModeUseCase = SetImageTransitionModeUseCase(onboardingRepository),
             observeLogoTransitionModeUseCase = ObserveLogoTransitionModeUseCase(onboardingRepository),
             setLogoTransitionModeUseCase = SetLogoTransitionModeUseCase(onboardingRepository),
-            observeDrawerOpacityUseCase = ObserveDrawerOpacityUseCase(appDrawerSettingsRepository),
-            setDrawerOpacityUseCase = SetDrawerOpacityUseCase(appDrawerSettingsRepository),
+            observeOverlayOpacityUseCase = ObserveOverlayOpacityUseCase(onboardingRepository),
+            setOverlayOpacityUseCase = SetOverlayOpacityUseCase(onboardingRepository),
             observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository),
             setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository),
             observeDockEnabledUseCase = ObserveDockEnabledUseCase(dockSettingsRepository),
@@ -241,8 +229,6 @@ class SettingsViewModelTest {
             setDockMaxAppsUseCase = SetDockMaxAppsUseCase(dockSettingsRepository),
             observeDockSizeUseCase = ObserveDockSizeUseCase(dockSettingsRepository),
             setDockSizeUseCase = SetDockSizeUseCase(dockSettingsRepository),
-            observeDockOpacityUseCase = ObserveDockOpacityUseCase(dockSettingsRepository),
-            setDockOpacityUseCase = SetDockOpacityUseCase(dockSettingsRepository),
             observeWidgetsLockedUseCase = ObserveWidgetsLockedUseCase(widgetLayoutRepository),
             setWidgetsLockedUseCase = SetWidgetsLockedUseCase(widgetLayoutRepository),
             observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository),
@@ -255,36 +241,36 @@ class SettingsViewModelTest {
             setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository),
             observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository),
             setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository),
-            observeMusicOverlayOpacityUseCase = ObserveMusicOverlayOpacityUseCase(onboardingRepository),
-            setMusicOverlayOpacityUseCase = SetMusicOverlayOpacityUseCase(onboardingRepository),
         )
         return viewModel to appDrawerSettingsRepository
     }
 
     @Test
-    fun `initial state loads drawer opacity and grid columns from the repository`() = runTest(testDispatcher) {
+    fun `initial state loads overlay opacity and grid columns from the repository`() = runTest(testDispatcher) {
         val (viewModel, _) = buildViewModel(
-            appDrawerSettingsRepository = FakeAppDrawerSettingsRepository(initialOpacity = 70, initialColumns = 5),
+            onboardingRepository = FakeOnboardingRepository().apply { overlayOpacityPercent = 70 },
+            appDrawerSettingsRepository = FakeAppDrawerSettingsRepository(initialColumns = 5),
         )
 
         advanceUntilIdle()
 
-        assertEquals(70, viewModel.uiState.value.drawerOpacityPercent)
+        assertEquals(70, viewModel.uiState.value.overlayOpacityPercent)
         assertEquals(5, viewModel.uiState.value.gridColumns)
     }
 
     @Test
-    fun `onDrawerOpacityChanged updates ui state immediately and persists`() = runTest(testDispatcher) {
-        val (viewModel, appDrawerSettingsRepository) = buildViewModel()
+    fun `onOverlayOpacityChanged updates ui state immediately and persists`() = runTest(testDispatcher) {
+        val onboardingRepository = FakeOnboardingRepository()
+        val (viewModel, _) = buildViewModel(onboardingRepository = onboardingRepository)
         advanceUntilIdle()
 
-        viewModel.onDrawerOpacityChanged(85)
+        viewModel.onOverlayOpacityChanged(85)
 
         // ui state updates synchronously, before the persistence coroutine runs.
-        assertEquals(85, viewModel.uiState.value.drawerOpacityPercent)
+        assertEquals(85, viewModel.uiState.value.overlayOpacityPercent)
 
         advanceUntilIdle()
-        assertEquals(85, appDrawerSettingsRepository.opacity.value)
+        assertEquals(85, onboardingRepository.overlayOpacityPercent)
     }
 
     @Test

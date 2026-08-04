@@ -19,7 +19,7 @@ class AppDockViewModelFactory(
             setDockApps = appContainer.setDockAppsUseCase,
             observeDockMaxApps = appContainer.observeDockMaxAppsUseCase,
             observeDockSize = appContainer.observeDockSizeUseCase,
-            observeDockOpacity = appContainer.observeDockOpacityUseCase,
+            observeOverlayOpacity = appContainer.observeOverlayOpacityUseCase,
             observeInstalledApps = appContainer.observeInstalledAppsUseCase,
             observeOtherScreenLaunchApps = appContainer.observeOtherScreenLaunchAppsUseCase,
             setOtherScreenLaunchApps = appContainer.setOtherScreenLaunchAppsUseCase,

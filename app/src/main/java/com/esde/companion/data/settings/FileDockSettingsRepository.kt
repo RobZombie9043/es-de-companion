@@ -45,13 +45,6 @@ class FileDockSettingsRepository(
             prefs[DOCK_SIZE_KEY]?.let { name -> DockSize.entries.find { it.name == name } } ?: DockSize.Medium
         }
 
-    override suspend fun setDockOpacityPercent(percent: Int) {
-        context.dockSettingsDataStore.edit { it[DOCK_OPACITY_KEY] = percent.coerceIn(0, 100) }
-    }
-
-    override fun observeDockOpacityPercent(): Flow<Int> =
-        context.dockSettingsDataStore.data.map { it[DOCK_OPACITY_KEY] ?: DEFAULT_DOCK_OPACITY_PERCENT }
-
     override suspend fun setDockApps(packageNames: List<String>) {
         context.dockSettingsDataStore.edit { it[DOCK_APPS_KEY] = Json.encodeToString(packageNames) }
     }
@@ -63,12 +56,10 @@ class FileDockSettingsRepository(
 
     private companion object {
         const val DEFAULT_DOCK_MAX_APPS = 5
-        const val DEFAULT_DOCK_OPACITY_PERCENT = 80
 
         val DOCK_ENABLED_KEY = booleanPreferencesKey("dock_enabled")
         val DOCK_MAX_APPS_KEY = intPreferencesKey("dock_max_apps")
         val DOCK_SIZE_KEY = stringPreferencesKey("dock_size")
-        val DOCK_OPACITY_KEY = intPreferencesKey("dock_opacity_percent")
         val DOCK_APPS_KEY = stringPreferencesKey("dock_apps")
     }
 }

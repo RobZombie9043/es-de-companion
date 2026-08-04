@@ -1,14 +1,22 @@
 package com.esde.companion.ui.drawer
 
+import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.domain.model.LogFolderValidation
+import com.esde.companion.domain.model.LogoTransitionMode
+import com.esde.companion.domain.model.MediaFolderValidation
+import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.ScreenBehavior
+import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
-import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
+import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import kotlinx.coroutines.Dispatchers
@@ -34,23 +42,71 @@ class AppDrawerViewModelTest {
 
     private class FakeAppDrawerSettingsRepository(
         initialHiddenApps: Set<String> = emptySet(),
-        initialOpacity: Int = 80,
         initialColumns: Int = 4,
         initialOtherScreenLaunchApps: Set<String> = emptySet(),
     ) : AppDrawerSettingsRepository {
         val hiddenApps = MutableStateFlow(initialHiddenApps)
-        val opacity = MutableStateFlow(initialOpacity)
         val columns = MutableStateFlow(initialColumns)
         val otherScreenLaunchApps = MutableStateFlow(initialOtherScreenLaunchApps)
 
         override suspend fun setHiddenApps(packageNames: Set<String>) { hiddenApps.value = packageNames }
         override fun observeHiddenApps(): Flow<Set<String>> = hiddenApps
-        override suspend fun setDrawerOpacityPercent(percent: Int) { opacity.value = percent }
-        override fun observeDrawerOpacityPercent(): Flow<Int> = opacity
         override suspend fun setGridColumns(columns: Int) { this.columns.value = columns }
         override fun observeGridColumns(): Flow<Int> = columns
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { otherScreenLaunchApps.value = packageNames }
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = otherScreenLaunchApps
+    }
+
+    private class FakeOnboardingRepository(initialOverlayOpacity: Int = 80) : OnboardingRepository {
+        val overlayOpacity = MutableStateFlow(initialOverlayOpacity)
+
+        override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
+        override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
+        override suspend fun validateLogFolder(path: String) = LogFolderValidation.FolderFound(true)
+        override suspend fun validateMediaFolder(path: String) = MediaFolderValidation.FolderFound
+        override suspend fun saveLogFolderPath(path: String) {}
+        override suspend fun saveMediaFolderPath(path: String) {}
+        override fun observeLogFolderPath(): Flow<String?> = flowOf(null)
+        override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun saveCustomSystemImagesFolderPath(path: String) {}
+        override fun observeCustomSystemImagesFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomSystemImagesFolderPath() {}
+        override suspend fun saveCustomLogosFolderPath(path: String) {}
+        override fun observeCustomLogosFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomLogosFolderPath() {}
+        override suspend fun markOnboardingComplete() {}
+        override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(true)
+        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
+        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
+        override suspend fun setVideoDelaySeconds(seconds: Int) {}
+        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
+        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
+        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
+        override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
+        override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+        override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {}
+        override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+        override suspend fun setThemePreference(preference: ThemePreference) {}
+        override fun observeThemePreference(): Flow<ThemePreference> = flowOf(ThemePreference.Auto)
+        override suspend fun setMusicEnabled(enabled: Boolean) {}
+        override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {}
+        override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) {}
+        override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) {}
+        override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(true)
+        override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {}
+        override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(MusicDuckingMode.LowerVolume)
+        override suspend fun setOverlayOpacityPercent(percent: Int) { overlayOpacity.value = percent }
+        override fun observeOverlayOpacityPercent(): Flow<Int> = overlayOpacity
+        override suspend fun saveCustomMusicFolderPath(path: String) {}
+        override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
+        override suspend fun clearCustomMusicFolderPath() {}
+        override suspend fun setImageTransitionMode(mode: ImageTransitionMode) {}
+        override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(ImageTransitionMode.None)
+        override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {}
+        override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
     }
 
     private val testDispatcher = StandardTestDispatcher()
@@ -74,6 +130,7 @@ class AppDrawerViewModelTest {
     private fun buildViewModel(
         apps: List<InstalledApp> = allApps,
         settingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
+        onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
     ): AppDrawerViewModel {
         val installedAppsRepository = FakeInstalledAppsRepository(flowOf(apps))
         return AppDrawerViewModel(
@@ -82,7 +139,7 @@ class AppDrawerViewModelTest {
             setHiddenApps = SetHiddenAppsUseCase(settingsRepository),
             observeOtherScreenLaunchApps = ObserveOtherScreenLaunchAppsUseCase(settingsRepository),
             setOtherScreenLaunchApps = SetOtherScreenLaunchAppsUseCase(settingsRepository),
-            observeDrawerOpacity = ObserveDrawerOpacityUseCase(settingsRepository),
+            observeOverlayOpacity = ObserveOverlayOpacityUseCase(onboardingRepository),
             observeGridColumns = ObserveGridColumnsUseCase(settingsRepository),
         )
     }
@@ -128,8 +185,8 @@ class AppDrawerViewModelTest {
 
     @Test
     fun `drawerOpacityPercent reflects the repository value`() = runTest(testDispatcher) {
-        val settingsRepository = FakeAppDrawerSettingsRepository(initialOpacity = 65)
-        val viewModel = buildViewModel(settingsRepository = settingsRepository)
+        val onboardingRepository = FakeOnboardingRepository(initialOverlayOpacity = 65)
+        val viewModel = buildViewModel(onboardingRepository = onboardingRepository)
 
         val collectJob = launch { viewModel.drawerOpacityPercent.collect {} }
         advanceUntilIdle()

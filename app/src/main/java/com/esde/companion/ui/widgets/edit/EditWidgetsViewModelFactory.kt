@@ -28,7 +28,7 @@ class EditWidgetsViewModelFactory(
             observeLogoTransitionMode = appContainer.observeLogoTransitionModeUseCase,
             observeDockEnabled = appContainer.observeDockEnabledUseCase,
             observeDockSize = appContainer.observeDockSizeUseCase,
-            observeDockOpacity = appContainer.observeDockOpacityUseCase,
+            observeOverlayOpacity = appContainer.observeOverlayOpacityUseCase,
             observeDockMaxApps = appContainer.observeDockMaxAppsUseCase,
             observeDockApps = appContainer.observeDockAppsUseCase,
             observeInstalledApps = appContainer.observeInstalledAppsUseCase,

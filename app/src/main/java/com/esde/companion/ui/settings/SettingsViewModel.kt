@@ -12,19 +12,17 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.ObserveDockOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
-import com.esde.companion.domain.usecase.ObserveDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
+import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -33,19 +31,17 @@ import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
-import com.esde.companion.domain.usecase.SetDockOpacityUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
-import com.esde.companion.domain.usecase.SetDrawerOpacityUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
-import com.esde.companion.domain.usecase.SetMusicOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
+import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -74,8 +70,8 @@ class SettingsViewModel(
     private val setImageTransitionModeUseCase: SetImageTransitionModeUseCase,
     private val observeLogoTransitionModeUseCase: ObserveLogoTransitionModeUseCase,
     private val setLogoTransitionModeUseCase: SetLogoTransitionModeUseCase,
-    private val observeDrawerOpacityUseCase: ObserveDrawerOpacityUseCase,
-    private val setDrawerOpacityUseCase: SetDrawerOpacityUseCase,
+    private val observeOverlayOpacityUseCase: ObserveOverlayOpacityUseCase,
+    private val setOverlayOpacityUseCase: SetOverlayOpacityUseCase,
     private val observeGridColumnsUseCase: ObserveGridColumnsUseCase,
     private val setGridColumnsUseCase: SetGridColumnsUseCase,
     private val observeDockEnabledUseCase: ObserveDockEnabledUseCase,
@@ -84,8 +80,6 @@ class SettingsViewModel(
     private val setDockMaxAppsUseCase: SetDockMaxAppsUseCase,
     private val observeDockSizeUseCase: ObserveDockSizeUseCase,
     private val setDockSizeUseCase: SetDockSizeUseCase,
-    private val observeDockOpacityUseCase: ObserveDockOpacityUseCase,
-    private val setDockOpacityUseCase: SetDockOpacityUseCase,
     private val observeWidgetsLockedUseCase: ObserveWidgetsLockedUseCase,
     private val setWidgetsLockedUseCase: SetWidgetsLockedUseCase,
     private val observeVideoPlaybackEnabledUseCase: ObserveVideoPlaybackEnabledUseCase,
@@ -104,8 +98,6 @@ class SettingsViewModel(
     private val setMusicPlayDuringScreensaverUseCase: SetMusicPlayDuringScreensaverUseCase,
     private val observeMusicDuckingModeUseCase: ObserveMusicDuckingModeUseCase,
     private val setMusicDuckingModeUseCase: SetMusicDuckingModeUseCase,
-    private val observeMusicOverlayOpacityUseCase: ObserveMusicOverlayOpacityUseCase,
-    private val setMusicOverlayOpacityUseCase: SetMusicOverlayOpacityUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -129,12 +121,11 @@ class SettingsViewModel(
             val themePreference = observeThemePreferenceUseCase().first()
             val imageTransitionMode = observeImageTransitionModeUseCase().first()
             val logoTransitionMode = observeLogoTransitionModeUseCase().first()
-            val drawerOpacityPercent = observeDrawerOpacityUseCase().first()
+            val overlayOpacityPercent = observeOverlayOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
             val dockEnabled = observeDockEnabledUseCase().first()
             val dockMaxApps = observeDockMaxAppsUseCase().first()
             val dockSize = observeDockSizeUseCase().first()
-            val dockOpacityPercent = observeDockOpacityUseCase().first()
             val widgetsLocked = observeWidgetsLockedUseCase().first()
             val videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first()
             val videoDelaySeconds = observeVideoDelaySecondsUseCase().first()
@@ -144,7 +135,6 @@ class SettingsViewModel(
             val musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first()
             val musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first()
             val musicDuckingMode = observeMusicDuckingModeUseCase().first()
-            val musicOverlayOpacityPercent = observeMusicOverlayOpacityUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
@@ -156,12 +146,11 @@ class SettingsViewModel(
                 themePreference = themePreference,
                 imageTransitionMode = imageTransitionMode,
                 logoTransitionMode = logoTransitionMode,
-                drawerOpacityPercent = drawerOpacityPercent,
+                overlayOpacityPercent = overlayOpacityPercent,
                 gridColumns = gridColumns,
                 dockEnabled = dockEnabled,
                 dockMaxApps = dockMaxApps,
                 dockSize = dockSize,
-                dockOpacityPercent = dockOpacityPercent,
                 widgetsLocked = widgetsLocked,
                 videoPlaybackEnabled = videoPlaybackEnabled,
                 videoDelaySeconds = videoDelaySeconds,
@@ -171,7 +160,6 @@ class SettingsViewModel(
                 musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
                 musicPlayDuringScreensaver = musicPlayDuringScreensaver,
                 musicDuckingMode = musicDuckingMode,
-                musicOverlayOpacityPercent = musicOverlayOpacityPercent,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -251,11 +239,6 @@ class SettingsViewModel(
         viewModelScope.launch { setMusicDuckingModeUseCase(mode) }
     }
 
-    fun onMusicOverlayOpacityChanged(percent: Int) {
-        _uiState.value = _uiState.value.copy(musicOverlayOpacityPercent = percent)
-        viewModelScope.launch { setMusicOverlayOpacityUseCase(percent) }
-    }
-
     fun onCustomMusicFolderPicked(path: String) {
         _uiState.value = _uiState.value.copy(customMusicFolderPath = path)
         viewModelScope.launch {
@@ -295,9 +278,9 @@ class SettingsViewModel(
         viewModelScope.launch { setLogoTransitionModeUseCase(mode) }
     }
 
-    fun onDrawerOpacityChanged(percent: Int) {
-        _uiState.value = _uiState.value.copy(drawerOpacityPercent = percent)
-        viewModelScope.launch { setDrawerOpacityUseCase(percent) }
+    fun onOverlayOpacityChanged(percent: Int) {
+        _uiState.value = _uiState.value.copy(overlayOpacityPercent = percent)
+        viewModelScope.launch { setOverlayOpacityUseCase(percent) }
     }
 
     fun onGridColumnsChanged(columns: Int) {
@@ -318,11 +301,6 @@ class SettingsViewModel(
     fun onDockSizeChanged(size: DockSize) {
         _uiState.value = _uiState.value.copy(dockSize = size)
         viewModelScope.launch { setDockSizeUseCase(size) }
-    }
-
-    fun onDockOpacityChanged(percent: Int) {
-        _uiState.value = _uiState.value.copy(dockOpacityPercent = percent)
-        viewModelScope.launch { setDockOpacityUseCase(percent) }
     }
 
     private suspend fun validateLogFolder(path: String) {

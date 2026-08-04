@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -210,8 +209,12 @@ class MainActivity : ComponentActivity() {
                             val musicEnabled by produceState(initialValue = true) {
                                 appContainer.observeMusicEnabledUseCase().collect { value = it }
                             }
-                            val musicOverlayOpacityPercent by produceState(initialValue = 100) {
-                                appContainer.observeMusicOverlayOpacityUseCase().collect { value = it }
+                            // Master opacity for every translucent overlay surface (App
+                            // Drawer, App Dock, this music panel, and the Settings/
+                            // music-FAB/Edit-Widgets corner buttons) - one shared Settings
+                            // > UI Settings slider rather than a separate one per surface.
+                            val overlayOpacityPercent by produceState(initialValue = 80) {
+                                appContainer.observeOverlayOpacityUseCase().collect { value = it }
                             }
 
                             // Tapping the FAB toggles this; the timer alone controls
@@ -318,6 +321,7 @@ class MainActivity : ComponentActivity() {
                                             appDrawerViewModel = appDrawerViewModel,
                                             dockViewModel = dockViewModel,
                                             widgetsLocked = widgetsLocked,
+                                            overlayOpacityPercent = overlayOpacityPercent,
                                             onOpenSettings = { showSettings = true },
                                             onOpenEditWidgets = { showEditWidgets = true },
                                             onToggleBlankScreen = { isBlanked = !isBlanked },
@@ -408,8 +412,9 @@ class MainActivity : ComponentActivity() {
                                     // fixed reserved width is the simplest way to guarantee
                                     // no overlap regardless of screen size).
                                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                                        FloatingActionButton(
+                                        CornerFab(
                                             onClick = { musicControlsRevealed = !musicControlsRevealed },
+                                            opacityPercent = overlayOpacityPercent,
                                             modifier = Modifier
                                                 .align(Alignment.TopStart)
                                                 .padding(CORNER_BUTTON_EDGE_PADDING),
@@ -422,7 +427,7 @@ class MainActivity : ComponentActivity() {
                                             val overlayMaxWidth = maxWidth - overlayStart - SETTINGS_BUTTON_RESERVED_WIDTH
                                             MusicControlsOverlay(
                                                 viewModel = musicControlsViewModel,
-                                                opacityPercent = musicOverlayOpacityPercent,
+                                                opacityPercent = overlayOpacityPercent,
                                                 modifier = Modifier
                                                     .align(Alignment.TopStart)
                                                     .padding(start = overlayStart, top = CORNER_BUTTON_EDGE_PADDING)
