@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+        Media3's @UnstableApi marker is used deliberately in VideoOverlayScreen (see its
+        @file:OptIn). This lint-gradle version's UnsafeOptInUsageError check has a bug where
+        it flags the class-literal reference inside the @OptIn/@file:OptIn annotation itself
+        as its own unresolved usage, on top of the real call site - a chicken-and-egg false
+        positive. Project-wide opt-in via this documented option avoids both.
+    -->
+    <issue id="UnsafeOptInUsageError">
+        <option name="opt-in" value="androidx.media3.common.util.UnstableApi" />
+    </issue>
+</lint>
