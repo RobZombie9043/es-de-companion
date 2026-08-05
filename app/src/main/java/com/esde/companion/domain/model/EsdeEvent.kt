@@ -68,12 +68,14 @@ sealed class EsdeEvent {
     data object Quit : EsdeEvent()
 
     /**
-     * ES-DE is rebuilding its UI after a window/display size change (e.g. a secondary
-     * display attaching/detaching), logged as "Window size has changed from ... to ...,
-     * reloading..." rather than a Scripting::fireEvent() line (see EsdeEventParser). What
-     * was on screen is stale until reload finishes, at which point ES-DE re-fires a fresh
-     * system-select/game-select - see AppStateReducer, which resets to Idle in the
-     * meantime, the same as Quit.
+     * ES-DE is rebuilding its UI/game-system list, either from a window/display size
+     * change (e.g. a secondary display attaching/detaching, logged as "Window size has
+     * changed from ... to ..., reloading...") or a game-system rescan (logged as
+     * "Populating game systems..." - this also fires without a prior Startup/Quit, e.g.
+     * after importing a game via GuiGameImporter). Neither is a Scripting::fireEvent()
+     * line (see EsdeEventParser). What was on screen is stale until reload finishes, at
+     * which point ES-DE re-fires a fresh system-select/game-select - see AppStateReducer,
+     * which resets to Idle in the meantime, the same as Quit.
      */
     data object Reload : EsdeEvent()
 }

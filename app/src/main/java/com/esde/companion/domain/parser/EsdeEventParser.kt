@@ -15,10 +15,14 @@ import com.esde.companion.domain.model.EsdeEvent
 class EsdeEventParser {
 
     fun parseLine(rawLine: String): EsdeEvent? {
-        // Not a Scripting::fireEvent() line - ES-DE logs this one plainly as its window
-        // is torn down and rebuilt (e.g. a secondary display attaching/detaching), so it
-        // needs its own marker rather than going through the fireEvent parsing below.
-        if (rawLine.contains(WINDOW_RELOAD_MARKER)) return EsdeEvent.Reload
+        // Neither of these is a Scripting::fireEvent() line - ES-DE logs them plainly as
+        // it tears down and rebuilds state (a window/display change, or a game-system
+        // rescan triggered by e.g. importing a game via GuiGameImporter without a full
+        // app restart), so they need their own markers rather than going through the
+        // fireEvent parsing below.
+        if (rawLine.contains(WINDOW_RELOAD_MARKER) || rawLine.contains(GAME_SYSTEMS_RELOAD_MARKER)) {
+            return EsdeEvent.Reload
+        }
 
         val markerIndex = rawLine.indexOf(FIRE_EVENT_MARKER)
         if (markerIndex == -1) return null
@@ -93,6 +97,7 @@ class EsdeEventParser {
     private companion object {
         const val FIRE_EVENT_MARKER = "Scripting::fireEvent():"
         const val WINDOW_RELOAD_MARKER = "Window size has changed from"
+        const val GAME_SYSTEMS_RELOAD_MARKER = "Populating game systems"
 
         // Splitting on this exact 3-char sequence (rather than matching independent
         // "..." groups) is what lets a field's own content safely contain unescaped

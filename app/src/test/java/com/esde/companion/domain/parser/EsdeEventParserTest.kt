@@ -168,6 +168,13 @@ class EsdeEventParserTest {
     }
 
     @Test
+    fun `parses a populating-game-systems line as Reload`() {
+        val line = "Aug 05 18:00:34 Info:   Populating game systems..."
+
+        assertEquals(EsdeEvent.Reload, parser.parseLine(line))
+    }
+
+    @Test
     fun `ignores lines with no fireEvent marker`() {
         val line = "Jul 28 07:01:30 Debug:  Window::logInput(Xbox Wireless Controller): " +
             "Button 14, isMappedTo=right, value=1"
