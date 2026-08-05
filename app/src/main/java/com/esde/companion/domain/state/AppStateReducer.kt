@@ -91,6 +91,12 @@ object AppStateReducer {
             // Screensaver), Idle is the only safe fallback.
             (current as? AppState.Screensaver)?.previousState ?: AppState.Idle
 
+        // ES-DE has just begun its startup routine, which can take several seconds before
+        // it fires a system-select/game-select saying what's actually on screen - whatever
+        // was on screen before (e.g. left over from before an ungraceful restart with no
+        // preceding quit) is no longer real, so drop to Idle for the duration.
+        is EsdeEvent.Startup -> AppState.Idle
+
         // ES-DE is shutting down - whatever was on screen is no longer real, regardless
         // of what it was. See WidgetOverlay's Disconnected case for the resulting UI.
         is EsdeEvent.Quit -> AppState.Idle

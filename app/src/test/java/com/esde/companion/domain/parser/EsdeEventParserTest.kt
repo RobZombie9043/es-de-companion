@@ -147,6 +147,13 @@ class EsdeEventParserTest {
     }
 
     @Test
+    fun `parses startup`() {
+        val line = "Aug 05 17:13:32 Debug:  Scripting::fireEvent(): startup \"\" \"\" \"\" \"\""
+
+        assertEquals(EsdeEvent.Startup, parser.parseLine(line))
+    }
+
+    @Test
     fun `parses quit`() {
         val line = "Aug 04 14:52:13 Debug:  Scripting::fireEvent(): quit \"\" \"\" \"\" \"\""
 

@@ -57,6 +57,8 @@ class EsdeEventParser {
 
         "screensaver-end" -> args.getOrNull(0)?.let { EsdeEvent.ScreensaverEnd(it) }
 
+        "startup" -> EsdeEvent.Startup
+
         "quit" -> EsdeEvent.Quit
 
         else -> null

@@ -129,6 +129,24 @@ class EsdeLogFileRepositoryTest {
     }
 
     @Test
+    fun `startup replays as an anchor so a game left running before an ungraceful restart resolves to Idle`() = runTest {
+        val logFile = tempFolder.newFile("es_log.txt")
+        logFile.writeText(
+            """
+            Jul 28 15:16:07 Debug:  Scripting::fireEvent(): game-start "/roms/dc/game.chd" "Game" "dreamcast" "Sega Dreamcast"
+            Aug 05 17:13:32 Debug:  Scripting::fireEvent(): startup "" "" "" ""
+            """.trimIndent(),
+        )
+
+        val repository = repositoryFor(logFile)
+
+        repository.observeEvents().test {
+            assertEquals(EsdeEvent.Startup, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `the replayed navigation event carries the direction of its preceding controller press`() = runTest {
         val logFile = tempFolder.newFile("es_log.txt")
         logFile.writeText(

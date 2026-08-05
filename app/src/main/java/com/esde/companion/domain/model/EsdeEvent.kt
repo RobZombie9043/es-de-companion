@@ -57,6 +57,13 @@ sealed class EsdeEvent {
     /** [reason] is whatever ES-DE reports, e.g. "cancel", "game-jump", or "game-start". */
     data class ScreensaverEnd(val reason: String) : EsdeEvent()
 
+    /**
+     * Fired as ES-DE begins its startup routine, which can take several seconds (theme/
+     * gamelist parsing, etc.) before it fires a system-select or similar to say what's
+     * actually on screen - see AppStateReducer, which resets to Idle for the duration.
+     */
+    data object Startup : EsdeEvent()
+
     /** Fired as ES-DE begins a clean shutdown - see AppStateReducer, which resets to Idle. */
     data object Quit : EsdeEvent()
 
@@ -83,6 +90,7 @@ fun EsdeEvent.isStartupAnchor(): Boolean = when (this) {
     is EsdeEvent.GameSelect,
     is EsdeEvent.GameStart,
     is EsdeEvent.GameEnd,
+    is EsdeEvent.Startup,
     is EsdeEvent.Quit,
     is EsdeEvent.Reload -> true
 
@@ -104,6 +112,7 @@ fun EsdeEvent.withDirection(direction: NavigationDirection?): EsdeEvent = when (
     is EsdeEvent.ScreensaverStart,
     is EsdeEvent.ScreensaverGameSelect,
     is EsdeEvent.ScreensaverEnd,
+    is EsdeEvent.Startup,
     is EsdeEvent.Quit,
     is EsdeEvent.Reload -> this
 }
