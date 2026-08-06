@@ -17,6 +17,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCas
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,11 +32,12 @@ import kotlinx.coroutines.launch
  * impure edges it touches are [MusicLibraryRepository] and [MusicPlayerController].
  *
  * All mutable session state below is coroutine-confined - read and written only from
- * inside this class's own single collection loop (the merged snapshot/track-completion
- * flow in [init], plus the public [togglePlayPause]/[next] entry points, which run on the
- * same collector since they call straight into [applyCachedAction] rather than launching
- * their own coroutines) - the same single-actor discipline
- * [com.esde.companion.domain.state.AppStateReducer] relies on.
+ * inside this class's own single collection loop (the merged snapshot/track-completion/
+ * user-action flow in [init]). The public [togglePlayPause]/[next] entry points do not
+ * mutate state directly - they [MutableSharedFlow.tryEmit] onto [userActions], a third arm
+ * of the same [merge], so a UI-thread tap is turned into just another event processed by
+ * the one collector rather than a second writer racing it. This is the same single-actor
+ * discipline [com.esde.companion.domain.state.AppStateReducer] relies on.
  *
  * [init] used to launch two independent `applicationScope.launch` coroutines - one for the
  * settings/AppState snapshot loop, one collecting [MusicPlayerController.observeTrackCompletion]
@@ -45,8 +47,12 @@ import kotlinx.coroutines.launch
  * up as spurious/flickery [MusicPlaybackState.Stopped] flips - e.g. the music FAB and
  * MusicControlsOverlay briefly appearing then disappearing as a torn read of
  * currentTrack/loadedPool got published as a state. [merge]-ing both event sources into
- * one flow collected by one coroutine below fixes it structurally rather than papering
- * over it with a Mutex: there is now genuinely only one place these vars are ever touched.
+ * one flow collected by one coroutine fixed that structurally rather than papering over it
+ * with a Mutex - but [togglePlayPause]/[next] were still calling straight into the shared
+ * vars from whatever thread invoked them (the main thread, via Compose `onClick`), racing
+ * the same vars against the Default-dispatcher collector. Routing them through [userActions]
+ * closes that gap the same way: there is now genuinely only one place these vars are ever
+ * touched.
  */
 class MusicPlaybackCoordinator(
     observeConnectionState: ObserveConnectionStateUseCase,
@@ -74,6 +80,17 @@ class MusicPlaybackCoordinator(
     private var lastEligible: Boolean = false
     private var lastIsDuckedByVideo: Boolean = false
     private var lastDuckingMode: MusicDuckingMode = MusicDuckingMode.LowerVolume
+
+    /**
+     * Where [togglePlayPause]/[next] feed in - merged into [init]'s single collector so a
+     * UI-thread tap becomes just another event on the one coroutine that owns the mutable
+     * state above, rather than a second concurrent writer. Sized generously for user-tap
+     * frequency; the collector is already running by the time either entry point is
+     * reachable (the coordinator must be constructed, starting [init], before anything can
+     * hold a reference to call them), so [MutableSharedFlow.tryEmit] should never actually
+     * see a full buffer.
+     */
+    private val userActions = MutableSharedFlow<CoordinatorEvent>(extraBufferCapacity = 16)
 
     init {
         val appStateFlow =
@@ -106,21 +123,26 @@ class MusicPlaybackCoordinator(
             musicPlayerController.observeTrackCompletion().map { CoordinatorEvent.TrackCompleted }
 
         applicationScope.launch {
-            merge(snapshotFlow, trackCompletionFlow).collect { event ->
+            merge(snapshotFlow, trackCompletionFlow, userActions).collect { event ->
                 when (event) {
                     is CoordinatorEvent.SnapshotUpdated -> handleSnapshot(event.snapshot)
                     CoordinatorEvent.TrackCompleted -> handleTrackCompletion()
+                    CoordinatorEvent.PlayPauseToggled -> {
+                        userPaused = !userPaused
+                        applyCachedAction()
+                    }
                 }
             }
         }
     }
 
     fun togglePlayPause() {
-        userPaused = !userPaused
-        applyCachedAction()
+        userActions.tryEmit(CoordinatorEvent.PlayPauseToggled)
     }
 
-    fun next() = handleTrackCompletion()
+    fun next() {
+        userActions.tryEmit(CoordinatorEvent.TrackCompleted)
+    }
 
     private fun handleTrackCompletion() {
         advanceToNextTrack()
@@ -205,10 +227,12 @@ class MusicPlaybackCoordinator(
         val duckingMode: MusicDuckingMode,
     )
 
-    /** The two event sources merged into [init]'s single collector - see its kdoc for why
-     * this replaced two independent coroutines. */
+    /** The event sources merged into [init]'s single collector - see the class kdoc for why
+     * [togglePlayPause]/[next] emit [PlayPauseToggled]/[TrackCompleted] here instead of
+     * mutating state directly. */
     private sealed class CoordinatorEvent {
         data class SnapshotUpdated(val snapshot: Snapshot) : CoordinatorEvent()
         data object TrackCompleted : CoordinatorEvent()
+        data object PlayPauseToggled : CoordinatorEvent()
     }
 }

@@ -320,6 +320,66 @@ class MusicPlaybackCoordinatorTest {
         }
 
     @Test
+    fun `togglePlayPause pauses in place and resumes the same track`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
+            val library = FakeMusicLibraryRepository(
+                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
+                generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+            )
+            val controller = FakeMusicPlayerController()
+            val events = MutableSharedFlow<EsdeEvent>()
+            val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)
+
+            coordinator.playbackState.test {
+                awaitItem() // Stopped
+
+                events.emit(EsdeEvent.SystemSelect("a", "System A", "/roms/a"))
+                assertEquals(MusicPlaybackState.Playing(trackA1, MusicPool.PerSystem("a")), awaitItem())
+
+                coordinator.togglePlayPause()
+                assertEquals(MusicPlaybackState.Paused(trackA1, MusicPool.PerSystem("a")), awaitItem())
+
+                coordinator.togglePlayPause()
+                assertEquals(MusicPlaybackState.Playing(trackA1, MusicPool.PerSystem("a")), awaitItem())
+
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            // Toggling play/pause never reloads or re-selects a track.
+            assertEquals(listOf(trackA1), controller.playedTracks)
+        }
+
+    @Test
+    fun `next skips to a different track in a multi-track pool`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
+            val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
+            val library = FakeMusicLibraryRepository(
+                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+            )
+            val controller = FakeMusicPlayerController()
+            val events = MutableSharedFlow<EsdeEvent>()
+            val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)
+
+            coordinator.playbackState.test {
+                awaitItem() // Stopped
+                events.emit(EsdeEvent.SystemSelect("a", "System A", "/roms/a"))
+                awaitItem() // Playing the first track
+
+                coordinator.next()
+                val afterSkip = awaitItem()
+                check(afterSkip is MusicPlaybackState.Playing)
+
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(2, controller.playedTracks.size)
+            assertNotEquals(controller.playedTracks[0], controller.playedTracks[1])
+        }
+
+    @Test
     fun `track completion advances to a different track in a multi-track pool`() =
         runTest(UnconfinedTestDispatcher()) {
             val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
