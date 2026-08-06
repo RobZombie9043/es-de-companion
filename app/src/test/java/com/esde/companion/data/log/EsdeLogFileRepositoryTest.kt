@@ -23,9 +23,27 @@ class EsdeLogFileRepositoryTest {
      * behavior without needing to know about it. Real usage wires the actual
      * SystemClock-based default on [EsdeLogFileRepository] itself; tests here go
      * through this helper instead so they never touch that Android stub.
+     *
+     * Also injects a no-op [DirectoryWatcher] rather than the real
+     * [FileObserver]-backed default - [FileObserver]'s methods are stubbed to throw
+     * under plain JUnit (no Robolectric), and observeEvents()/observeLogFileExists()
+     * construct one unconditionally, so without this every test would be racing its own
+     * cancellation against the producer coroutine's real Dispatchers.IO thread reaching
+     * `startWatching()` first. That race was real, not hypothetical - it surfaced as an
+     * intermittent failure in "startup skips replay when the file predates the current
+     * boot" before this seam existed.
      */
     private fun repositoryFor(logFile: File, bootTimeMillis: () -> Long = { 0L }): EsdeLogFileRepository =
-        EsdeLogFileRepository(logFilePath = logFile.absolutePath, bootTimeMillis = bootTimeMillis)
+        EsdeLogFileRepository(
+            logFilePath = logFile.absolutePath,
+            bootTimeMillis = bootTimeMillis,
+            watchDirectory = { _, _, _ -> NoOpDirectoryWatcher },
+        )
+
+    private object NoOpDirectoryWatcher : DirectoryWatcher {
+        override fun startWatching() = Unit
+        override fun stopWatching() = Unit
+    }
 
     @Test
     fun `startup replays from the last anchor event so screensaver-end resolves to the real prior state`() = runTest {

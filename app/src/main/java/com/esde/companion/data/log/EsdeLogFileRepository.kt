@@ -57,6 +57,8 @@ class EsdeLogFileRepository(
     private val parser: EsdeEventParser = EsdeEventParser(),
     private val fallbackPollIntervalMs: Long = DEFAULT_FALLBACK_POLL_INTERVAL_MS,
     private val bootTimeMillis: () -> Long = { System.currentTimeMillis() - SystemClock.elapsedRealtime() },
+    private val watchDirectory: (targetPath: String, mask: Int, onChange: () -> Unit) -> DirectoryWatcher =
+        ::FileObserverDirectoryWatcher,
 ) : EsdeLogRepository {
 
     override fun observeEvents(): Flow<EsdeEvent> = channelFlow {
@@ -80,7 +82,7 @@ class EsdeLogFileRepository(
         // current end-of-file regardless of how many signals coalesce into one wakeup.
         val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
 
-        val fileObserver = watchDirectoryFor(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+        val fileObserver = watchDirectory(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
         fileObserver.startWatching()
 
         val fallbackJob = launch {
@@ -125,7 +127,7 @@ class EsdeLogFileRepository(
         send(lastKnown)
 
         val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
-        val fileObserver = watchDirectoryFor(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+        val fileObserver = watchDirectory(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
         fileObserver.startWatching()
 
         val fallbackJob = launch {
@@ -148,23 +150,6 @@ class EsdeLogFileRepository(
             fileObserver.stopWatching()
         }
     }.flowOn(Dispatchers.IO)
-
-    /**
-     * Watches [targetPath]'s parent directory and invokes [onChange] for any event in
-     * [mask] on an entry matching its file name. See class doc for why this watches the
-     * directory rather than the file itself.
-     */
-    private fun watchDirectoryFor(targetPath: String, mask: Int, onChange: () -> Unit): FileObserver {
-        val targetFile = File(targetPath)
-        val parentDir = targetFile.parentFile ?: File("/")
-        val targetName = targetFile.name
-
-        return object : FileObserver(parentDir, mask) {
-            override fun onEvent(event: Int, path: String?) {
-                if (path == null || path == targetName) onChange()
-            }
-        }
-    }
 
     /**
      * Finds the most recent "anchor" event (see [isStartupAnchor]) and returns it plus
@@ -264,4 +249,39 @@ class EsdeLogFileRepository(
                 FileObserver.MOVED_TO or
                 FileObserver.MOVED_FROM
     }
+}
+
+/**
+ * Seam for [EsdeLogFileRepository]'s directory-watching mechanism - injected the same way
+ * as its `bootTimeMillis` parameter, so tests can substitute a no-op fake instead of
+ * touching real [FileObserver]. [FileObserver]'s method bodies are stubbed to throw under
+ * a plain JUnit unit test (no Robolectric, no Android runtime), so without this seam every
+ * call to `observeEvents()`/`observeLogFileExists()` in a test races the producer
+ * coroutine's real `Dispatchers.IO` thread against the test's own cancellation to reach
+ * `startWatching()` before it throws - a genuine, observed flake, not a hypothetical one.
+ */
+interface DirectoryWatcher {
+    fun startWatching()
+    fun stopWatching()
+}
+
+/**
+ * Watches [targetPath]'s parent directory and invokes [onChange] for any event in [mask]
+ * on an entry matching its file name. See [EsdeLogFileRepository]'s class doc for why this
+ * watches the directory rather than the file itself.
+ */
+private class FileObserverDirectoryWatcher(
+    targetPath: String,
+    mask: Int,
+    onChange: () -> Unit,
+) : DirectoryWatcher {
+    private val targetFile = File(targetPath)
+    private val observer = object : FileObserver(targetFile.parentFile ?: File("/"), mask) {
+        override fun onEvent(event: Int, path: String?) {
+            if (path == null || path == targetFile.name) onChange()
+        }
+    }
+
+    override fun startWatching() = observer.startWatching()
+    override fun stopWatching() = observer.stopWatching()
 }
