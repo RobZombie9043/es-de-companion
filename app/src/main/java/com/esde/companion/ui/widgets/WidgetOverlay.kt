@@ -37,6 +37,7 @@ fun WidgetOverlay(viewModel: WidgetsViewModel, modifier: Modifier = Modifier) {
         val canvasState by viewModel.canvasState.collectAsStateWithLifecycle()
         val imageTransitionMode by viewModel.imageTransitionMode.collectAsStateWithLifecycle()
         val logoTransitionMode by viewModel.logoTransitionMode.collectAsStateWithLifecycle()
+        val glintEnabled by viewModel.glintEnabled.collectAsStateWithLifecycle()
 
         when (val state = canvasState) {
             WidgetCanvasState.Unmeasured ->
@@ -72,6 +73,7 @@ fun WidgetOverlay(viewModel: WidgetsViewModel, modifier: Modifier = Modifier) {
                     imageTransitionMode = imageTransitionMode,
                     logoTransitionMode = logoTransitionMode,
                     navigationDirection = state.navigationDirection,
+                    glintEnabled = glintEnabled,
                     modifier = Modifier.fillMaxSize(),
                 )
         }

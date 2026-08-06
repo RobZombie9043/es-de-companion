@@ -54,6 +54,7 @@ import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
@@ -90,6 +91,7 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.SetGlintEnabledUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
@@ -250,6 +252,8 @@ class AppContainer(context: Context) {
     val setImageTransitionModeUseCase = SetImageTransitionModeUseCase(onboardingRepository)
     val observeLogoTransitionModeUseCase = ObserveLogoTransitionModeUseCase(onboardingRepository)
     val setLogoTransitionModeUseCase = SetLogoTransitionModeUseCase(onboardingRepository)
+    val observeGlintEnabledUseCase = ObserveGlintEnabledUseCase(onboardingRepository)
+    val setGlintEnabledUseCase = SetGlintEnabledUseCase(onboardingRepository)
     val observeVideoPlaybackEnabledUseCase = ObserveVideoPlaybackEnabledUseCase(onboardingRepository)
     val setVideoPlaybackEnabledUseCase = SetVideoPlaybackEnabledUseCase(onboardingRepository)
     val observeVideoDelaySecondsUseCase = ObserveVideoDelaySecondsUseCase(onboardingRepository)

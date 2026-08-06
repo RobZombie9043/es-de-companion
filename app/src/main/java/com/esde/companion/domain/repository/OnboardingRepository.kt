@@ -132,4 +132,13 @@ interface OnboardingRepository {
      */
     suspend fun setLogoTransitionMode(mode: LogoTransitionMode)
     fun observeLogoTransitionMode(): Flow<LogoTransitionMode>
+
+    /**
+     * Settings > UI Settings > Logo Glint: whether logo-style widgets (system logos, game
+     * marquees) show a periodic diagonal light-sweep. Independent of [LogoTransitionMode] -
+     * can be combined with any of None/Slide/Scale, since it's an ambient loop rather than
+     * a content-change transition. Defaults to false.
+     */
+    suspend fun setGlintEnabled(enabled: Boolean)
+    fun observeGlintEnabled(): Flow<Boolean>
 }

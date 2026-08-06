@@ -31,6 +31,7 @@ import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.model.forcesInstantImageTransition
 import com.esde.companion.domain.model.isLogoStyle
+import com.esde.companion.domain.model.panZoomActive
 import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import java.io.File
@@ -51,6 +52,7 @@ fun WidgetCanvas(
     imageTransitionMode: ImageTransitionMode,
     logoTransitionMode: LogoTransitionMode,
     navigationDirection: NavigationDirection? = null,
+    glintEnabled: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -67,6 +69,7 @@ fun WidgetCanvas(
                     imageTransitionMode = imageTransitionMode,
                     logoTransitionMode = logoTransitionMode,
                     navigationDirection = navigationDirection,
+                    glintEnabled = glintEnabled,
                     modifier = Modifier
                         .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
                         .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
@@ -106,6 +109,17 @@ fun WidgetCanvas(
  * ("Cover") widgets are fading. See AnimatedLogoImage's kdoc for why logo-style content
  * never gets a fade option.
  *
+ * [WidgetType.panZoomActive] (per-widget Configure dialog toggle, see
+ * [WidgetType.supportsPanZoom]) drives a continuous ambient zoom/pan on top of the same
+ * opaque [WidgetContent.Image] rendering - see PanZoomImage.kt's `rememberPanZoomModifier`.
+ * It composes with the crossfade above it in the same Modifier chain rather than as a
+ * separate layer, so a fading-in/out image pans/zooms as a single rigid unit.
+ *
+ * [glintEnabled] (Settings > UI Settings > Logo Glint, a global toggle - unlike
+ * [WidgetType.panZoomActive]'s per-widget one) only reaches logo-style content, since it's
+ * threaded solely into the single AnimatedLogoImage call site below; the non-logo-style
+ * `is WidgetContent.Image` branch never receives it.
+ *
  * [navigationDirection] is which way the user just navigated (if known - see
  * NavigationDirectionTracker), used only by [LogoTransitionMode.Slide] to enter from the
  * same side. Defaults to null - EditWidgetsOverlay's edit-mode preview has no live
@@ -129,6 +143,7 @@ internal fun WidgetContentView(
     imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
     logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
     navigationDirection: NavigationDirection? = null,
+    glintEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     textUserScrollEnabled: Boolean = true,
 ) {
@@ -156,6 +171,7 @@ internal fun WidgetContentView(
                 contentScale = scaleMode.toContentScale(),
                 mode = logoTransitionMode,
                 direction = navigationDirection,
+                glintEnabled = glintEnabled,
                 modifier = Modifier.fillMaxSize().applyBlurEffect(effects),
             )
             DarkenOverlay(effects = effects)
@@ -192,7 +208,9 @@ internal fun WidgetContentView(
                     } else {
                         imageTransitionMode.toDurationMillis()
                     },
-                    modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
+                    modifier = Modifier.fillMaxSize()
+                        .applyBlurEffect(content.effects)
+                        .then(rememberPanZoomModifier(enabled = widgetType.panZoomActive, model = model)),
                 )
                 DarkenOverlay(effects = content.effects)
             }

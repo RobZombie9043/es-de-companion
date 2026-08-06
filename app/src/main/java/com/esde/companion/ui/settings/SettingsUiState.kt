@@ -26,6 +26,7 @@ data class SettingsUiState(
     val themePreference: ThemePreference = ThemePreference.Auto,
     val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
     val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
+    val glintEnabled: Boolean = false,
     val overlayOpacityPercent: Int = 80,
     val gridColumns: Int = 4,
     val dockEnabled: Boolean = false,

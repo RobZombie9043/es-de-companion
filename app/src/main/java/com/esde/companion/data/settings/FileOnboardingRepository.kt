@@ -241,6 +241,13 @@ class FileOnboardingRepository(
             } ?: LogoTransitionMode.Slide
         }
 
+    override suspend fun setGlintEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[GLINT_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeGlintEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[GLINT_ENABLED_KEY] ?: false }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -267,5 +274,6 @@ class FileOnboardingRepository(
         val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
         val IMAGE_TRANSITION_MODE_KEY = stringPreferencesKey("image_transition_mode")
         val LOGO_TRANSITION_MODE_KEY = stringPreferencesKey("logo_transition_mode")
+        val GLINT_ENABLED_KEY = booleanPreferencesKey("logo_glint_enabled")
     }
 }

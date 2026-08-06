@@ -290,6 +290,8 @@ fun SettingsScreen(
                                 onImageTransitionModeChanged = viewModel::onImageTransitionModeChanged,
                                 logoTransitionMode = uiState.logoTransitionMode,
                                 onLogoTransitionModeChanged = viewModel::onLogoTransitionModeChanged,
+                                glintEnabled = uiState.glintEnabled,
+                                onGlintEnabledChanged = viewModel::onGlintEnabledChanged,
                                 overlayOpacityPercent = uiState.overlayOpacityPercent,
                                 onOverlayOpacityChanged = viewModel::onOverlayOpacityChanged,
                                 gamePlayingBehavior = uiState.gamePlayingBehavior,
@@ -492,6 +494,8 @@ private fun UISettingsContent(
     onImageTransitionModeChanged: (ImageTransitionMode) -> Unit,
     logoTransitionMode: LogoTransitionMode,
     onLogoTransitionModeChanged: (LogoTransitionMode) -> Unit,
+    glintEnabled: Boolean,
+    onGlintEnabledChanged: (Boolean) -> Unit,
     overlayOpacityPercent: Int,
     onOverlayOpacityChanged: (Int) -> Unit,
     gamePlayingBehavior: ScreenBehavior,
@@ -510,6 +514,7 @@ private fun UISettingsContent(
         OverlayOpacitySetting(percent = overlayOpacityPercent, onPercentChanged = onOverlayOpacityChanged)
         ImageTransitionPicker(selected = imageTransitionMode, onSelected = onImageTransitionModeChanged)
         LogoTransitionPicker(selected = logoTransitionMode, onSelected = onLogoTransitionModeChanged)
+        GlintEnabledSetting(enabled = glintEnabled, onEnabledChanged = onGlintEnabledChanged)
         ScreenBehaviorPicker(
             title = "Game Playing Screen Behavior",
             options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual),
@@ -1305,6 +1310,41 @@ private val LogoTransitionMode.label: String
         LogoTransitionMode.Slide -> "Slide"
         LogoTransitionMode.Scale -> "Scale"
     }
+
+/**
+ * Independent of [LogoTransitionMode] - a periodic ambient shimmer over system logos and
+ * game marquees, orthogonal to whichever entrance-transition mode is selected above (see
+ * AnimatedLogoImage's glint loop).
+ */
+@Composable
+private fun GlintEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Logo Glint",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "A periodic light sweep across system logos and marquees",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+        }
+    }
+}
 
 @Composable
 private fun WidgetsSettingsContent(

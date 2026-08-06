@@ -24,6 +24,7 @@ class WidgetsViewModelFactory(
             resolveBundledSystemLogo = appContainer.resolveBundledSystemLogoUseCase,
             observeImageTransitionMode = appContainer.observeImageTransitionModeUseCase,
             observeLogoTransitionMode = appContainer.observeLogoTransitionModeUseCase,
+            observeGlintEnabled = appContainer.observeGlintEnabledUseCase,
         ) as T
     }
 }

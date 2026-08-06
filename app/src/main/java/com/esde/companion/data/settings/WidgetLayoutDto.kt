@@ -36,7 +36,8 @@ internal data class PlacedWidgetDto(
  * blurAmount/darkenAmount default to the same no-op values as
  * ImageEffects()'s own defaults, so JSON persisted before this feature existed (missing
  * these keys entirely) decodes as "no effect" rather than needing a migration. Same idea
- * for GameDescription's defaults, mirroring WidgetType.GameDescription's own defaults.
+ * for GameDescription's defaults, mirroring WidgetType.GameDescription's own defaults, and
+ * for panZoomEnabled defaulting to false (see WidgetType.panZoomEnabled).
  */
 @Serializable
 internal sealed class WidgetTypeDto {
@@ -52,6 +53,7 @@ internal sealed class WidgetTypeDto {
         val scaleMode: String,
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
+        val panZoomEnabled: Boolean = false,
     ) : WidgetTypeDto()
 
     @Serializable
@@ -60,6 +62,7 @@ internal sealed class WidgetTypeDto {
         val scaleMode: String,
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
+        val panZoomEnabled: Boolean = false,
     ) : WidgetTypeDto()
 
     @Serializable
@@ -68,6 +71,7 @@ internal sealed class WidgetTypeDto {
         val scaleMode: String,
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
+        val panZoomEnabled: Boolean = false,
     ) : WidgetTypeDto()
 
     @Serializable
@@ -76,6 +80,7 @@ internal sealed class WidgetTypeDto {
         val scaleMode: String,
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
+        val panZoomEnabled: Boolean = false,
     ) : WidgetTypeDto()
 
     @Serializable

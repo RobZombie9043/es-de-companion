@@ -35,6 +35,7 @@ import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
+import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
@@ -214,6 +215,8 @@ class EditWidgetsViewModelTest {
         override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(ImageTransitionMode.None)
         override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {}
         override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
+        override suspend fun setGlintEnabled(enabled: Boolean) {}
+        override fun observeGlintEnabled(): Flow<Boolean> = flowOf(false)
     }
 
     private class FakeDockSettingsRepository(
@@ -300,6 +303,7 @@ class EditWidgetsViewModelTest {
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),
         observeImageTransitionMode = ObserveImageTransitionModeUseCase(onboardingRepository),
         observeLogoTransitionMode = ObserveLogoTransitionModeUseCase(onboardingRepository),
+        observeGlintEnabled = ObserveGlintEnabledUseCase(onboardingRepository),
         observeDockEnabled = ObserveDockEnabledUseCase(dockSettingsRepository),
         observeDockSize = ObserveDockSizeUseCase(dockSettingsRepository),
         observeOverlayOpacity = ObserveOverlayOpacityUseCase(onboardingRepository),

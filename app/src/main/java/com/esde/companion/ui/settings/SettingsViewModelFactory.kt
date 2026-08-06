@@ -28,6 +28,8 @@ class SettingsViewModelFactory(
             setImageTransitionModeUseCase = appContainer.setImageTransitionModeUseCase,
             observeLogoTransitionModeUseCase = appContainer.observeLogoTransitionModeUseCase,
             setLogoTransitionModeUseCase = appContainer.setLogoTransitionModeUseCase,
+            observeGlintEnabledUseCase = appContainer.observeGlintEnabledUseCase,
+            setGlintEnabledUseCase = appContainer.setGlintEnabledUseCase,
             observeOverlayOpacityUseCase = appContainer.observeOverlayOpacityUseCase,
             setOverlayOpacityUseCase = appContainer.setOverlayOpacityUseCase,
             observeGridColumnsUseCase = appContainer.observeGridColumnsUseCase,

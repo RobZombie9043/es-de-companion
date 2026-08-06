@@ -107,6 +107,8 @@ class AppDrawerViewModelTest {
         override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(ImageTransitionMode.None)
         override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {}
         override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
+        override suspend fun setGlintEnabled(enabled: Boolean) {}
+        override fun observeGlintEnabled(): Flow<Boolean> = flowOf(false)
     }
 
     private val testDispatcher = StandardTestDispatcher()

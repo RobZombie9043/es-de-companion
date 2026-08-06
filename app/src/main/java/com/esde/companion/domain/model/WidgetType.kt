@@ -35,10 +35,14 @@ sealed class WidgetType {
      * Setup): a literal `<systemShortName>.<ext>` file. Falls back to a random FanArt,
      * then a random Screenshot, from ES-DE's own media if no custom file is found - see
      * WidgetContentResolver.
+     *
+     * [panZoomEnabled] is a per-widget opt-in for a continuous slow Ken Burns-style
+     * zoom/pan while displayed - see WidgetType.supportsPanZoom for eligibility (only
+     * offered when scaleMode is Fill) and PanZoomImage.kt for the animation itself.
      */
-    data class SystemImage(val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
-    data class SystemMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
-    data class GameMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
+    data class SystemImage(val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
+    data class SystemMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
+    data class GameMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
 
     /**
      * A single image file the user picked directly (via a file picker), independent of
@@ -49,7 +53,7 @@ sealed class WidgetType {
      * was added but no image has been picked yet - resolves to WidgetContent.Empty (see
      * WidgetContentResolver).
      */
-    data class CustomImage(val path: String, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
+    data class CustomImage(val path: String, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
 
     data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetType()
 

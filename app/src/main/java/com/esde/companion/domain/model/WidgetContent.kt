@@ -100,6 +100,45 @@ private val INSTANT_ONLY_MEDIA_TYPES = setOf(
 val WidgetType.forcesInstantImageTransition: Boolean
     get() = this is WidgetType.GameMedia && mediaType in INSTANT_ONLY_MEDIA_TYPES
 
+/** Media types eligible for the pan-zoom ambient animation - full-bleed backdrop-style
+ * media only. Explicitly enumerated (rather than derived by subtracting
+ * TRANSPARENT_MEDIA_TYPES/INSTANT_ONLY_MEDIA_TYPES from MediaType.entries) so a future
+ * catalog addition doesn't silently become pan-zoom-eligible without a deliberate choice. */
+private val PAN_ZOOM_ELIGIBLE_MEDIA_TYPES = setOf(MediaType.FanArt, MediaType.Screenshots, MediaType.TitleScreens)
+
+/**
+ * Whether this widget type's Configure dialog should offer the pan-zoom toggle at all -
+ * purely structural (ignores the widget's own stored [WidgetType.panZoomEnabled]-style
+ * flag). Excludes SystemLogo/Marquees (logo-style, rendered via AnimatedLogoImage, which
+ * never applies pan-zoom), non-image variants, and [ScaleMode.Fit]-scaled widgets - a
+ * letterboxed image has empty bars that would visibly pan/zoom along with the photo,
+ * which looks broken rather than cinematic, so pan-zoom is Fill-only.
+ */
+val WidgetType.supportsPanZoom: Boolean
+    get() = when (this) {
+        is WidgetType.SystemImage -> scaleMode == ScaleMode.Fill
+        is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
+        is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
+        is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
+        is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+    }
+
+/**
+ * Whether pan-zoom should actually render right now - [supportsPanZoom] AND the user's
+ * stored per-widget toggle. Re-checked at render time (not just trusting the stored flag)
+ * as defense-in-depth against stale persisted data - e.g. a widget's scaleMode switched
+ * from Fill to Fit while panZoomEnabled stayed true simply stops animating rather than
+ * needing its flag actively cleared, the same reasoning as [forcesInstantImageTransition].
+ */
+val WidgetType.panZoomActive: Boolean
+    get() = supportsPanZoom && when (this) {
+        is WidgetType.SystemImage -> panZoomEnabled
+        is WidgetType.SystemMedia -> panZoomEnabled
+        is WidgetType.GameMedia -> panZoomEnabled
+        is WidgetType.CustomImage -> panZoomEnabled
+        else -> false
+    }
+
 /**
  * FanArt and Screenshots fall back to each other when the primary type is missing - the
  * only two MediaTypes that do. Every other type is exact-or-empty; see widget system

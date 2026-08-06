@@ -19,6 +19,7 @@ import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.model.navigationDirection
 import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
@@ -60,6 +61,7 @@ class WidgetsViewModel(
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
     observeImageTransitionMode: ObserveImageTransitionModeUseCase,
     observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
+    observeGlintEnabled: ObserveGlintEnabledUseCase,
 ) : ViewModel() {
 
     /** Caches the current system's random picks (per media type), reused as long as
@@ -94,6 +96,9 @@ class WidgetsViewModel(
 
     val logoTransitionMode: StateFlow<LogoTransitionMode> = observeLogoTransitionMode()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), LogoTransitionMode.None)
+
+    val glintEnabled: StateFlow<Boolean> = observeGlintEnabled()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)
 
     // Distilled from raw AppState down to just the identity that actually matters for
     // widget content - same reasoning as MainViewModel's ImageSource. Without

@@ -17,6 +17,7 @@ import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
+import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
@@ -90,6 +91,7 @@ class EditWidgetsViewModel(
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
     observeImageTransitionMode: ObserveImageTransitionModeUseCase,
     observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
+    observeGlintEnabled: ObserveGlintEnabledUseCase,
     observeDockEnabled: ObserveDockEnabledUseCase,
     observeDockSize: ObserveDockSizeUseCase,
     observeOverlayOpacity: ObserveOverlayOpacityUseCase,
@@ -103,6 +105,9 @@ class EditWidgetsViewModel(
 
     val logoTransitionMode: StateFlow<LogoTransitionMode> = observeLogoTransitionMode()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), LogoTransitionMode.None)
+
+    val glintEnabled: StateFlow<Boolean> = observeGlintEnabled()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)
 
     val dockEnabled: StateFlow<Boolean> = observeDockEnabled()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)

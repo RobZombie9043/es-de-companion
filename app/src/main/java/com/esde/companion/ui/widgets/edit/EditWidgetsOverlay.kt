@@ -56,6 +56,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -90,6 +91,7 @@ import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.model.supportsPanZoom
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
 import com.esde.companion.ui.CornerFab
 import com.esde.companion.ui.dock.DockPreview
@@ -211,6 +213,7 @@ fun EditWidgetsOverlay(
             val selectedCanvas by viewModel.selectedCanvas.collectAsStateWithLifecycle()
             val imageTransitionMode by viewModel.imageTransitionMode.collectAsStateWithLifecycle()
             val logoTransitionMode by viewModel.logoTransitionMode.collectAsStateWithLifecycle()
+            val glintEnabled by viewModel.glintEnabled.collectAsStateWithLifecycle()
             val dockEnabled by viewModel.dockEnabled.collectAsStateWithLifecycle()
             val dockSize by viewModel.dockSize.collectAsStateWithLifecycle()
             val dockOpacityPercent by viewModel.dockOpacityPercent.collectAsStateWithLifecycle()
@@ -286,6 +289,7 @@ fun EditWidgetsOverlay(
                         content = previewContent[widget.id] ?: WidgetContent.Empty,
                         imageTransitionMode = imageTransitionMode,
                         logoTransitionMode = logoTransitionMode,
+                        glintEnabled = glintEnabled,
                         isSelected = widget.id == selectedWidgetId,
                         grid = grid,
                         cellWidth = cellWidth,
@@ -580,6 +584,7 @@ private fun PlaceholderWidgetBox(
     content: WidgetContent,
     imageTransitionMode: ImageTransitionMode,
     logoTransitionMode: LogoTransitionMode,
+    glintEnabled: Boolean,
     isSelected: Boolean,
     grid: GridDimensions,
     cellWidth: Dp,
@@ -688,6 +693,7 @@ private fun PlaceholderWidgetBox(
                 widgetType = widget.widgetType,
                 imageTransitionMode = imageTransitionMode,
                 logoTransitionMode = logoTransitionMode,
+                glintEnabled = glintEnabled,
                 modifier = Modifier.fillMaxSize(),
                 textUserScrollEnabled = false,
             )
@@ -972,22 +978,34 @@ private fun ConfigureWidgetDialog(
                     is WidgetType.SystemImage -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        if (widgetType.supportsPanZoom) {
+                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                        }
                     }
 
                     is WidgetType.SystemMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        if (widgetType.supportsPanZoom) {
+                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                        }
                     }
 
                     is WidgetType.GameMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        if (widgetType.supportsPanZoom) {
+                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                        }
                     }
 
                     is WidgetType.CustomImage -> {
                         CustomImageConfig(current = widgetType, onChange = onChange)
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        if (widgetType.supportsPanZoom) {
+                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                        }
                     }
 
                     is WidgetType.ColorBackground ->
@@ -1095,6 +1113,30 @@ private fun ImageEffectsConfig(current: ImageEffects, onChange: (ImageEffects) -
                 valueRange = 0f..1f,
             )
         }
+    }
+}
+
+/**
+ * Only shown when [WidgetType.supportsPanZoom] is true for the widget being configured -
+ * eligible image-backed types with ScaleMode.Fill (see its kdoc for why Fit is excluded).
+ * See PanZoomImage.kt for the animation this toggle drives.
+ */
+@Composable
+private fun PanZoomConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = "Pan & Zoom", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "Slowly zooms and pans across the image while it's displayed",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onChange)
     }
 }
 

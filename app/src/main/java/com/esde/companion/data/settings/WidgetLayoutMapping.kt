@@ -13,10 +13,10 @@ private fun String.toScaleMode() = ScaleMode.valueOf(this)
 
 private fun WidgetType.toDto(): WidgetTypeDto = when (this) {
     is WidgetType.SystemLogo -> WidgetTypeDto.SystemLogo(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
-    is WidgetType.SystemImage -> WidgetTypeDto.SystemImage(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
-    is WidgetType.SystemMedia -> WidgetTypeDto.SystemMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
-    is WidgetType.GameMedia -> WidgetTypeDto.GameMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
-    is WidgetType.CustomImage -> WidgetTypeDto.CustomImage(path, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount)
+    is WidgetType.SystemImage -> WidgetTypeDto.SystemImage(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount, panZoomEnabled)
+    is WidgetType.SystemMedia -> WidgetTypeDto.SystemMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount, panZoomEnabled)
+    is WidgetType.GameMedia -> WidgetTypeDto.GameMedia(mediaType.name, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount, panZoomEnabled)
+    is WidgetType.CustomImage -> WidgetTypeDto.CustomImage(path, scaleMode.toDto(), effects.blurAmount, effects.darkenAmount, panZoomEnabled)
     is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha)
     is WidgetType.GameDescription -> WidgetTypeDto.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
 }
@@ -25,13 +25,13 @@ private fun WidgetTypeDto.toDomain(): WidgetType = when (this) {
     is WidgetTypeDto.SystemLogo ->
         WidgetType.SystemLogo(scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
     is WidgetTypeDto.SystemImage ->
-        WidgetType.SystemImage(scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
+        WidgetType.SystemImage(scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount), panZoomEnabled)
     is WidgetTypeDto.SystemMedia ->
-        WidgetType.SystemMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
+        WidgetType.SystemMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount), panZoomEnabled)
     is WidgetTypeDto.GameMedia ->
-        WidgetType.GameMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
+        WidgetType.GameMedia(MediaType.valueOf(mediaType), scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount), panZoomEnabled)
     is WidgetTypeDto.CustomImage ->
-        WidgetType.CustomImage(path, scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount))
+        WidgetType.CustomImage(path, scaleMode.toScaleMode(), ImageEffects(blurAmount, darkenAmount), panZoomEnabled)
     is WidgetTypeDto.ColorBackground -> WidgetType.ColorBackground(colorArgb, alpha)
     is WidgetTypeDto.GameDescription ->
         WidgetType.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
