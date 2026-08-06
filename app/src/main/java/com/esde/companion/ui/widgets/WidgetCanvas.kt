@@ -98,10 +98,13 @@ fun WidgetCanvas(
  * transition styles - which one applies is decided purely by content shape:
  * [WidgetContent.Image.isTransparentOverlay] (custom logos, marquees) and
  * [WidgetContent.SystemLogoAsset] both always use [logoTransitionMode]; opaque
- * [WidgetContent.Image] uses [imageTransitionMode] - except [WidgetType.forcesInstantImageTransition]
- * widget types (box-art-style game media), which always snap instantly regardless of the
- * configured mode. See AnimatedLogoImage's kdoc for why logo-style content never gets a
- * fade option.
+ * [WidgetContent.Image] uses [imageTransitionMode] - except two cases that always snap
+ * instantly regardless of the configured mode: [WidgetType.forcesInstantImageTransition]
+ * widget types (box-art-style game media), and any widget whose configured [ScaleMode] is
+ * [ScaleMode.Fit] ("Contain") - a letterboxed image swap reads as a hard content change
+ * rather than a scene transition, so it always cuts rather than fades even when [ScaleMode.Fill]
+ * ("Cover") widgets are fading. See AnimatedLogoImage's kdoc for why logo-style content
+ * never gets a fade option.
  *
  * [navigationDirection] is which way the user just navigated (if known - see
  * NavigationDirectionTracker), used only by [LogoTransitionMode.Slide] to enter from the
@@ -184,7 +187,11 @@ internal fun WidgetContentView(
                     model = model,
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
-                    durationMillis = if (widgetType.forcesInstantImageTransition) 0 else imageTransitionMode.toDurationMillis(),
+                    durationMillis = if (widgetType.forcesInstantImageTransition || content.scaleMode == ScaleMode.Fit) {
+                        0
+                    } else {
+                        imageTransitionMode.toDurationMillis()
+                    },
                     modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
                 )
                 DarkenOverlay(effects = content.effects)
