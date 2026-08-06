@@ -5,6 +5,7 @@ import com.esde.companion.domain.parser.GameListDescriptionParser
 import com.esde.companion.domain.parser.LegacyGamelistPathResolver
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -24,12 +25,20 @@ import kotlinx.coroutines.withContext
  * wasteful. Keyed by path rather than systemShortName since which file applies (standard
  * vs legacy) is resolved fresh each call. A stale entry is corrected automatically the
  * next time the timestamp is checked, no manual invalidation needed.
+ *
+ * ReactiveGameDescriptionRepository keeps one instance of this class alive across calls,
+ * shared by every caller app-wide - resolveDescription() runs on Dispatchers.IO (a
+ * multi-threaded pool), so two calls in flight at once (e.g. fast browsing outpacing IO, or
+ * the main widgets screen and an edit-mode preview both resolving around the same time) can
+ * genuinely land on different threads. [cache] is a ConcurrentHashMap rather than a plain
+ * map for exactly that reason - each entry is independent (no cross-key invariant to
+ * protect), so a concurrent map is a complete fix with no Mutex/single-writer needed.
  */
 class FileGameDescriptionRepository(
     private val esdeRootPath: String,
 ) : GameDescriptionRepository {
 
-    private val cache = mutableMapOf<String, CacheEntry>()
+    private val cache = ConcurrentHashMap<String, CacheEntry>()
 
     override suspend fun resolveDescription(systemShortName: String, romPath: String): GameDescription =
         withContext(Dispatchers.IO) {
