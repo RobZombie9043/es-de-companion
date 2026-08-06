@@ -4,8 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.DockSize
-import com.esde.companion.domain.model.ImageTransitionMode
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
@@ -14,10 +12,7 @@ import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
-import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
-import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
-import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -34,10 +29,7 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
-import com.esde.companion.domain.usecase.SetGlintEnabledUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
-import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
-import com.esde.companion.domain.usecase.SetLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -68,12 +60,6 @@ class SettingsViewModel(
     private val setScreensaverBehaviorUseCase: SetScreensaverBehaviorUseCase,
     private val observeThemePreferenceUseCase: ObserveThemePreferenceUseCase,
     private val setThemePreferenceUseCase: SetThemePreferenceUseCase,
-    private val observeImageTransitionModeUseCase: ObserveImageTransitionModeUseCase,
-    private val setImageTransitionModeUseCase: SetImageTransitionModeUseCase,
-    private val observeLogoTransitionModeUseCase: ObserveLogoTransitionModeUseCase,
-    private val setLogoTransitionModeUseCase: SetLogoTransitionModeUseCase,
-    private val observeGlintEnabledUseCase: ObserveGlintEnabledUseCase,
-    private val setGlintEnabledUseCase: SetGlintEnabledUseCase,
     private val observeOverlayOpacityUseCase: ObserveOverlayOpacityUseCase,
     private val setOverlayOpacityUseCase: SetOverlayOpacityUseCase,
     private val observeGridColumnsUseCase: ObserveGridColumnsUseCase,
@@ -123,9 +109,6 @@ class SettingsViewModel(
             val gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first()
             val screensaverBehavior = observeScreensaverBehaviorUseCase().first()
             val themePreference = observeThemePreferenceUseCase().first()
-            val imageTransitionMode = observeImageTransitionModeUseCase().first()
-            val logoTransitionMode = observeLogoTransitionModeUseCase().first()
-            val glintEnabled = observeGlintEnabledUseCase().first()
             val overlayOpacityPercent = observeOverlayOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
             val dockEnabled = observeDockEnabledUseCase().first()
@@ -149,9 +132,6 @@ class SettingsViewModel(
                 gamePlayingBehavior = gamePlayingBehavior,
                 screensaverBehavior = screensaverBehavior,
                 themePreference = themePreference,
-                imageTransitionMode = imageTransitionMode,
-                logoTransitionMode = logoTransitionMode,
-                glintEnabled = glintEnabled,
                 overlayOpacityPercent = overlayOpacityPercent,
                 gridColumns = gridColumns,
                 dockEnabled = dockEnabled,
@@ -272,21 +252,6 @@ class SettingsViewModel(
     fun onThemePreferenceChanged(preference: ThemePreference) {
         _uiState.value = _uiState.value.copy(themePreference = preference)
         viewModelScope.launch { setThemePreferenceUseCase(preference) }
-    }
-
-    fun onImageTransitionModeChanged(mode: ImageTransitionMode) {
-        _uiState.value = _uiState.value.copy(imageTransitionMode = mode)
-        viewModelScope.launch { setImageTransitionModeUseCase(mode) }
-    }
-
-    fun onLogoTransitionModeChanged(mode: LogoTransitionMode) {
-        _uiState.value = _uiState.value.copy(logoTransitionMode = mode)
-        viewModelScope.launch { setLogoTransitionModeUseCase(mode) }
-    }
-
-    fun onGlintEnabledChanged(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(glintEnabled = enabled)
-        viewModelScope.launch { setGlintEnabledUseCase(enabled) }
     }
 
     fun onOverlayOpacityChanged(percent: Int) {

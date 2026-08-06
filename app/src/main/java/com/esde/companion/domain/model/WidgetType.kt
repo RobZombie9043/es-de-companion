@@ -29,7 +29,18 @@ data class ImageEffects(
  * without a scaleMode or ImageEffects.
  */
 sealed class WidgetType {
-    data class SystemLogo(val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects()) : WidgetType()
+    /**
+     * [logoTransitionMode]/[glintEnabled] are this widget's own per-instance transition/
+     * glint config (Configure Widget dialog) - see WidgetContent.kt's WidgetType.logoTransitionMode/
+     * glintEnabled extension properties for how these are read uniformly across every
+     * logo-style variant, and AnimatedLogoImage for what they drive.
+     */
+    data class SystemLogo(
+        val scaleMode: ScaleMode,
+        val effects: ImageEffects = ImageEffects(),
+        val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
+        val glintEnabled: Boolean = false,
+    ) : WidgetType()
     /**
      * A whole-system image sourced from the Custom System Images folder (Settings >
      * Setup): a literal `<systemShortName>.<ext>` file. Falls back to a random FanArt,
@@ -39,10 +50,46 @@ sealed class WidgetType {
      * [panZoomEnabled] is a per-widget opt-in for a continuous slow Ken Burns-style
      * zoom/pan while displayed - see WidgetType.supportsPanZoom for eligibility (only
      * offered when scaleMode is Fill) and PanZoomImage.kt for the animation itself.
+     *
+     * [imageTransitionMode] is this widget's own per-instance transition config
+     * (Configure Widget dialog) - see WidgetType.imageTransitionMode's extension property
+     * kdoc and allowsFadeTransition for the scaleMode-Fit exclusion.
      */
-    data class SystemImage(val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
-    data class SystemMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
-    data class GameMedia(val mediaType: MediaType, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
+    data class SystemImage(
+        val scaleMode: ScaleMode,
+        val effects: ImageEffects = ImageEffects(),
+        val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+    ) : WidgetType()
+
+    /**
+     * [mediaType] decides whether this instance is logo-style (Marquees, see [isLogoStyle])
+     * or opaque backdrop-style - only the fields relevant to whichever it is get read at
+     * render/Configure-dialog time (see WidgetContent.kt's extension properties); the
+     * others are simply unused for that instance, same reasoning as [SystemLogo] carrying
+     * fields [ColorBackground] doesn't need.
+     */
+    data class SystemMedia(
+        val mediaType: MediaType,
+        val scaleMode: ScaleMode,
+        val effects: ImageEffects = ImageEffects(),
+        val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+        val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
+        val glintEnabled: Boolean = false,
+    ) : WidgetType()
+
+    /** See [SystemMedia]'s kdoc - same logo-style-vs-opaque field split, just for the
+     * Playing/game canvas's media catalog instead of System's. */
+    data class GameMedia(
+        val mediaType: MediaType,
+        val scaleMode: ScaleMode,
+        val effects: ImageEffects = ImageEffects(),
+        val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+        val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
+        val glintEnabled: Boolean = false,
+    ) : WidgetType()
 
     /**
      * A single image file the user picked directly (via a file picker), independent of
@@ -51,9 +98,16 @@ sealed class WidgetType {
      * from AppState at resolve time. Available on both the System and Playing canvases
      * since it has no dependency on either's identity. An empty [path] means the widget
      * was added but no image has been picked yet - resolves to WidgetContent.Empty (see
-     * WidgetContentResolver).
+     * WidgetContentResolver). Never logo-style (see [isLogoStyle]), so only carries
+     * [imageTransitionMode], not the logo-related fields.
      */
-    data class CustomImage(val path: String, val scaleMode: ScaleMode, val effects: ImageEffects = ImageEffects(), val panZoomEnabled: Boolean = false) : WidgetType()
+    data class CustomImage(
+        val path: String,
+        val scaleMode: ScaleMode,
+        val effects: ImageEffects = ImageEffects(),
+        val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+    ) : WidgetType()
 
     data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetType()
 

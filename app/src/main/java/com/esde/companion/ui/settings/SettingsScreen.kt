@@ -28,9 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Brightness7
@@ -44,7 +41,6 @@ import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -89,9 +85,7 @@ import com.esde.companion.BuildConfig
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.DockSize
-import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogFolderValidation
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
@@ -286,12 +280,6 @@ fun SettingsScreen(
                             SettingsCategory.UI -> UISettingsContent(
                                 themePreference = uiState.themePreference,
                                 onThemePreferenceChanged = viewModel::onThemePreferenceChanged,
-                                imageTransitionMode = uiState.imageTransitionMode,
-                                onImageTransitionModeChanged = viewModel::onImageTransitionModeChanged,
-                                logoTransitionMode = uiState.logoTransitionMode,
-                                onLogoTransitionModeChanged = viewModel::onLogoTransitionModeChanged,
-                                glintEnabled = uiState.glintEnabled,
-                                onGlintEnabledChanged = viewModel::onGlintEnabledChanged,
                                 overlayOpacityPercent = uiState.overlayOpacityPercent,
                                 onOverlayOpacityChanged = viewModel::onOverlayOpacityChanged,
                                 gamePlayingBehavior = uiState.gamePlayingBehavior,
@@ -490,12 +478,6 @@ private fun SetupSettingsContent(
 private fun UISettingsContent(
     themePreference: ThemePreference,
     onThemePreferenceChanged: (ThemePreference) -> Unit,
-    imageTransitionMode: ImageTransitionMode,
-    onImageTransitionModeChanged: (ImageTransitionMode) -> Unit,
-    logoTransitionMode: LogoTransitionMode,
-    onLogoTransitionModeChanged: (LogoTransitionMode) -> Unit,
-    glintEnabled: Boolean,
-    onGlintEnabledChanged: (Boolean) -> Unit,
     overlayOpacityPercent: Int,
     onOverlayOpacityChanged: (Int) -> Unit,
     gamePlayingBehavior: ScreenBehavior,
@@ -512,9 +494,6 @@ private fun UISettingsContent(
     ) {
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
         OverlayOpacitySetting(percent = overlayOpacityPercent, onPercentChanged = onOverlayOpacityChanged)
-        ImageTransitionPicker(selected = imageTransitionMode, onSelected = onImageTransitionModeChanged)
-        LogoTransitionPicker(selected = logoTransitionMode, onSelected = onLogoTransitionModeChanged)
-        GlintEnabledSetting(enabled = glintEnabled, onEnabledChanged = onGlintEnabledChanged)
         ScreenBehaviorPicker(
             title = "Game Playing Screen Behavior",
             options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual),
@@ -1191,160 +1170,6 @@ private val ThemePreference.label: String
         ThemePreference.Light -> "Light"
         ThemePreference.Dark -> "Dark"
     }
-
-/**
- * Applies to general/opaque image widgets (fanart, screenshots, custom system images) -
- * see ImageTransitionMode's kdoc for why logo-style content (LogoTransitionPicker) is a
- * separate setting with different options.
- */
-@Composable
-private fun ImageTransitionPicker(selected: ImageTransitionMode, onSelected: (ImageTransitionMode) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = "Image Transitions",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                ImageTransitionMode.entries.forEachIndexed { index, mode ->
-                    SegmentedButton(
-                        selected = mode == selected,
-                        onClick = { onSelected(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = ImageTransitionMode.entries.size,
-                        ),
-                        icon = {
-                            SegmentedButtonDefaults.Icon(active = mode == selected) {
-                                Icon(
-                                    imageVector = mode.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                                )
-                            }
-                        },
-                        label = { Text(mode.label) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-private val ImageTransitionMode.icon: ImageVector
-    get() = when (this) {
-        ImageTransitionMode.None -> Icons.Filled.Block
-        ImageTransitionMode.Fade -> Icons.Filled.BlurOn
-    }
-
-private val ImageTransitionMode.label: String
-    get() = when (this) {
-        ImageTransitionMode.None -> "None"
-        ImageTransitionMode.Fade -> "Fade"
-    }
-
-/**
- * Applies to system logos and game marquees - deliberately no Fade option, see
- * AnimatedLogoImage's kdoc for why (double-exposure on overlapping transparent images).
- */
-@Composable
-private fun LogoTransitionPicker(selected: LogoTransitionMode, onSelected: (LogoTransitionMode) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = "Logo Transitions",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                LogoTransitionMode.entries.forEachIndexed { index, mode ->
-                    SegmentedButton(
-                        selected = mode == selected,
-                        onClick = { onSelected(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = LogoTransitionMode.entries.size,
-                        ),
-                        icon = {
-                            SegmentedButtonDefaults.Icon(active = mode == selected) {
-                                Icon(
-                                    imageVector = mode.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                                )
-                            }
-                        },
-                        label = { Text(mode.label) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-private val LogoTransitionMode.icon: ImageVector
-    get() = when (this) {
-        LogoTransitionMode.None -> Icons.Filled.Block
-        LogoTransitionMode.Slide -> Icons.Filled.ArrowForward
-        LogoTransitionMode.Scale -> Icons.Filled.ZoomIn
-    }
-
-private val LogoTransitionMode.label: String
-    get() = when (this) {
-        LogoTransitionMode.None -> "None"
-        LogoTransitionMode.Slide -> "Slide"
-        LogoTransitionMode.Scale -> "Scale"
-    }
-
-/**
- * Independent of [LogoTransitionMode] - a periodic ambient shimmer over system logos and
- * game marquees, orthogonal to whichever entrance-transition mode is selected above (see
- * AnimatedLogoImage's glint loop).
- */
-@Composable
-private fun GlintEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Logo Glint",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = "A periodic light sweep across system logos and marquees",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
-        }
-    }
-}
 
 @Composable
 private fun WidgetsSettingsContent(

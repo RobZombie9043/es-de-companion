@@ -5,10 +5,8 @@ import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
-import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -35,12 +33,9 @@ import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
-import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
-import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
@@ -165,8 +160,7 @@ class EditWidgetsViewModelTest {
         override suspend fun setLastGameReference(gameReference: GameReference) { this.gameReference.value = gameReference }
     }
 
-    /** Only imageTransitionMode/logoTransitionMode are exercised by this ViewModel -
-     * everything else here is a fixed default, not under test. */
+    /** Every field here is a fixed default, not under test. */
     private class FakeOnboardingRepository : OnboardingRepository {
         override fun defaultLogFolderPath() = ""
         override fun defaultMediaFolderPath() = ""
@@ -211,12 +205,6 @@ class EditWidgetsViewModelTest {
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
-        override suspend fun setImageTransitionMode(mode: ImageTransitionMode) {}
-        override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(ImageTransitionMode.None)
-        override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {}
-        override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
-        override suspend fun setGlintEnabled(enabled: Boolean) {}
-        override fun observeGlintEnabled(): Flow<Boolean> = flowOf(false)
     }
 
     private class FakeDockSettingsRepository(
@@ -301,9 +289,6 @@ class EditWidgetsViewModelTest {
         resolveBundledSystemLogo = ResolveBundledSystemLogoUseCase(bundledSystemLogoRepository),
         observeLastSystemShortName = ObserveLastSystemShortNameUseCase(lastKnownContextRepository),
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),
-        observeImageTransitionMode = ObserveImageTransitionModeUseCase(onboardingRepository),
-        observeLogoTransitionMode = ObserveLogoTransitionModeUseCase(onboardingRepository),
-        observeGlintEnabled = ObserveGlintEnabledUseCase(onboardingRepository),
         observeDockEnabled = ObserveDockEnabledUseCase(dockSettingsRepository),
         observeDockSize = ObserveDockSizeUseCase(dockSettingsRepository),
         observeOverlayOpacity = ObserveOverlayOpacityUseCase(onboardingRepository),

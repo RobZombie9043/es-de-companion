@@ -23,14 +23,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
-import com.esde.companion.domain.model.forcesInstantImageTransition
+import com.esde.companion.domain.model.glintEnabled
+import com.esde.companion.domain.model.imageTransitionActive
 import com.esde.companion.domain.model.isLogoStyle
+import com.esde.companion.domain.model.logoTransitionMode
 import com.esde.companion.domain.model.panZoomActive
 import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.LocalIsDarkTheme
@@ -49,10 +50,7 @@ import java.io.File
 fun WidgetCanvas(
     widgets: List<PlacedWidget>,
     contentByWidgetId: Map<String, WidgetContent>,
-    imageTransitionMode: ImageTransitionMode,
-    logoTransitionMode: LogoTransitionMode,
     navigationDirection: NavigationDirection? = null,
-    glintEnabled: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -66,10 +64,7 @@ fun WidgetCanvas(
                 WidgetContentView(
                     content = content,
                     widgetType = widget.widgetType,
-                    imageTransitionMode = imageTransitionMode,
-                    logoTransitionMode = logoTransitionMode,
                     navigationDirection = navigationDirection,
-                    glintEnabled = glintEnabled,
                     modifier = Modifier
                         .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
                         .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
@@ -97,17 +92,21 @@ fun WidgetCanvas(
  * [textUserScrollEnabled] only affects [WidgetContent.Text] (GameDescription) - see
  * [ScrollingText]'s kdoc for why EditWidgetsOverlay passes false.
  *
- * [imageTransitionMode]/[logoTransitionMode] are the two global Settings > UI Settings
- * transition styles - which one applies is decided purely by content shape:
+ * Transition/glint config is per-widget (Configure Widget dialog), not a global Settings
+ * toggle - [WidgetType.imageTransitionMode]/[WidgetType.logoTransitionMode]/
+ * [WidgetType.glintEnabled] read straight off [widgetType], since each placed widget
+ * carries its own values. Which one applies is decided purely by content shape:
  * [WidgetContent.Image.isTransparentOverlay] (custom logos, marquees) and
- * [WidgetContent.SystemLogoAsset] both always use [logoTransitionMode]; opaque
- * [WidgetContent.Image] uses [imageTransitionMode] - except two cases that always snap
- * instantly regardless of the configured mode: [WidgetType.forcesInstantImageTransition]
- * widget types (box-art-style game media), and any widget whose configured [ScaleMode] is
- * [ScaleMode.Fit] ("Contain") - a letterboxed image swap reads as a hard content change
- * rather than a scene transition, so it always cuts rather than fades even when [ScaleMode.Fill]
- * ("Cover") widgets are fading. See AnimatedLogoImage's kdoc for why logo-style content
- * never gets a fade option.
+ * [WidgetContent.SystemLogoAsset] both always use [WidgetType.logoTransitionMode]; opaque
+ * [WidgetContent.Image] uses [WidgetType.imageTransitionActive] - which forces an instant
+ * (no-fade) transition regardless of the widget's stored mode in two cases:
+ * [WidgetType.forcesInstantImageTransition] widget types (box-art-style game media), and
+ * any widget whose configured [ScaleMode] is [ScaleMode.Fit] ("Contain") - a letterboxed
+ * image swap reads as a hard content change rather than a scene transition, so it always
+ * cuts rather than fades even when a [ScaleMode.Fill] ("Cover") widget elsewhere is fading.
+ * See AnimatedLogoImage's kdoc for why logo-style content never gets a fade option, and
+ * [WidgetType.allowsFadeTransition]/[WidgetType.supportsImageTransition] for how the
+ * Configure dialog decides whether to offer Fade at all.
  *
  * [WidgetType.panZoomActive] (per-widget Configure dialog toggle, see
  * [WidgetType.supportsPanZoom]) drives a continuous ambient zoom/pan on top of the same
@@ -115,15 +114,15 @@ fun WidgetCanvas(
  * It composes with the crossfade above it in the same Modifier chain rather than as a
  * separate layer, so a fading-in/out image pans/zooms as a single rigid unit.
  *
- * [glintEnabled] (Settings > UI Settings > Logo Glint, a global toggle - unlike
- * [WidgetType.panZoomActive]'s per-widget one) only reaches logo-style content, since it's
- * threaded solely into the single AnimatedLogoImage call site below; the non-logo-style
- * `is WidgetContent.Image` branch never receives it.
+ * [WidgetType.glintEnabled] only reaches logo-style content, since it's read solely at
+ * the single AnimatedLogoImage call site below; the non-logo-style `is WidgetContent.Image`
+ * branch never reads it.
  *
  * [navigationDirection] is which way the user just navigated (if known - see
- * NavigationDirectionTracker), used only by [LogoTransitionMode.Slide] to enter from the
- * same side. Defaults to null - EditWidgetsOverlay's edit-mode preview has no live
- * AppState to derive it from, so it falls back to AnimatedLogoImage's default direction.
+ * NavigationDirectionTracker), used only by [WidgetType.logoTransitionMode] being
+ * [LogoTransitionMode.Slide] to enter from the same side. Defaults to null -
+ * EditWidgetsOverlay's edit-mode preview has no live AppState to derive it from, so it
+ * falls back to AnimatedLogoImage's default direction.
  *
  * [widgetType] decides *how* [content] is rendered, not just what content means -
  * specifically, [WidgetType.isLogoStyle] widgets (system logo, game/system marquees)
@@ -140,10 +139,7 @@ fun WidgetCanvas(
 internal fun WidgetContentView(
     content: WidgetContent,
     widgetType: WidgetType,
-    imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
-    logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
     navigationDirection: NavigationDirection? = null,
-    glintEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     textUserScrollEnabled: Boolean = true,
 ) {
@@ -169,9 +165,9 @@ internal fun WidgetContentView(
                 model = model,
                 contentDescription = null,
                 contentScale = scaleMode.toContentScale(),
-                mode = logoTransitionMode,
+                mode = widgetType.logoTransitionMode,
                 direction = navigationDirection,
-                glintEnabled = glintEnabled,
+                glintEnabled = widgetType.glintEnabled,
                 modifier = Modifier.fillMaxSize().applyBlurEffect(effects),
             )
             DarkenOverlay(effects = effects)
@@ -203,11 +199,7 @@ internal fun WidgetContentView(
                     model = model,
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
-                    durationMillis = if (widgetType.forcesInstantImageTransition || content.scaleMode == ScaleMode.Fit) {
-                        0
-                    } else {
-                        imageTransitionMode.toDurationMillis()
-                    },
+                    durationMillis = widgetType.imageTransitionActive.toDurationMillis(),
                     modifier = Modifier.fillMaxSize()
                         .applyBlurEffect(content.effects)
                         .then(rememberPanZoomModifier(enabled = widgetType.panZoomActive, model = model)),
@@ -259,8 +251,7 @@ private fun ScaleMode.toContentScale(): ContentScale = when (this) {
 
 /** Fade duration CrossfadeAsyncImage should use for this mode. durationMillis of 0 makes
  * it snap instead of animate (see its kdoc), which is how ImageTransitionMode.None avoids
- * a visible transition without losing the flash-safe pre-decode. Not yet user-customizable
- * - see ImageTransitionMode's kdoc. */
+ * a visible transition without losing the flash-safe pre-decode. */
 private fun ImageTransitionMode.toDurationMillis(): Int = when (this) {
     ImageTransitionMode.None -> 0
     ImageTransitionMode.Fade -> IMAGE_TRANSITION_DURATION_MILLIS

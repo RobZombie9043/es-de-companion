@@ -4,9 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.GridDimensions
-import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.InstalledApp
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.StateGroup
@@ -17,12 +15,9 @@ import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
-import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
-import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
@@ -89,9 +84,6 @@ class EditWidgetsViewModel(
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
     private val observeLastSystemShortName: ObserveLastSystemShortNameUseCase,
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
-    observeImageTransitionMode: ObserveImageTransitionModeUseCase,
-    observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
-    observeGlintEnabled: ObserveGlintEnabledUseCase,
     observeDockEnabled: ObserveDockEnabledUseCase,
     observeDockSize: ObserveDockSizeUseCase,
     observeOverlayOpacity: ObserveOverlayOpacityUseCase,
@@ -99,15 +91,6 @@ class EditWidgetsViewModel(
     observeDockApps: ObserveDockAppsUseCase,
     observeInstalledApps: ObserveInstalledAppsUseCase,
 ) : ViewModel() {
-
-    val imageTransitionMode: StateFlow<ImageTransitionMode> = observeImageTransitionMode()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), ImageTransitionMode.None)
-
-    val logoTransitionMode: StateFlow<LogoTransitionMode> = observeLogoTransitionMode()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), LogoTransitionMode.None)
-
-    val glintEnabled: StateFlow<Boolean> = observeGlintEnabled()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)
 
     val dockEnabled: StateFlow<Boolean> = observeDockEnabled()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)

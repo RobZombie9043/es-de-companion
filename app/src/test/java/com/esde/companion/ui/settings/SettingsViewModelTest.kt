@@ -1,9 +1,7 @@
 package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.DockSize
-import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogFolderValidation
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.GridDimensions
@@ -20,10 +18,7 @@ import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
-import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
-import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
-import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -40,10 +35,7 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
-import com.esde.companion.domain.usecase.SetGlintEnabledUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
-import com.esde.companion.domain.usecase.SetImageTransitionModeUseCase
-import com.esde.companion.domain.usecase.SetLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -87,9 +79,6 @@ class SettingsViewModelTest {
         var musicPlayDuringScreensaver = true
         var musicDuckingMode = MusicDuckingMode.LowerVolume
         var overlayOpacityPercent = 80
-        var imageTransitionMode = ImageTransitionMode.None
-        var logoTransitionMode = LogoTransitionMode.None
-        var glintEnabled = false
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -134,12 +123,6 @@ class SettingsViewModelTest {
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
-        override suspend fun setImageTransitionMode(mode: ImageTransitionMode) { imageTransitionMode = mode }
-        override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(imageTransitionMode)
-        override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) { logoTransitionMode = mode }
-        override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(logoTransitionMode)
-        override suspend fun setGlintEnabled(enabled: Boolean) { glintEnabled = enabled }
-        override fun observeGlintEnabled(): Flow<Boolean> = flowOf(glintEnabled)
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -220,12 +203,6 @@ class SettingsViewModelTest {
             setScreensaverBehaviorUseCase = SetScreensaverBehaviorUseCase(onboardingRepository),
             observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository),
             setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository),
-            observeImageTransitionModeUseCase = ObserveImageTransitionModeUseCase(onboardingRepository),
-            setImageTransitionModeUseCase = SetImageTransitionModeUseCase(onboardingRepository),
-            observeLogoTransitionModeUseCase = ObserveLogoTransitionModeUseCase(onboardingRepository),
-            setLogoTransitionModeUseCase = SetLogoTransitionModeUseCase(onboardingRepository),
-            observeGlintEnabledUseCase = ObserveGlintEnabledUseCase(onboardingRepository),
-            setGlintEnabledUseCase = SetGlintEnabledUseCase(onboardingRepository),
             observeOverlayOpacityUseCase = ObserveOverlayOpacityUseCase(onboardingRepository),
             setOverlayOpacityUseCase = SetOverlayOpacityUseCase(onboardingRepository),
             observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository),

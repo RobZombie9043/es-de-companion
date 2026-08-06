@@ -35,6 +35,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.CropFree
@@ -43,6 +46,7 @@ import androidx.compose.material.icons.filled.FlipToFront
 import androidx.compose.material.icons.filled.FlipToBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -91,6 +95,12 @@ import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.model.allowsFadeTransition
+import com.esde.companion.domain.model.glintEnabled
+import com.esde.companion.domain.model.imageTransitionMode
+import com.esde.companion.domain.model.isLogoStyle
+import com.esde.companion.domain.model.logoTransitionMode
+import com.esde.companion.domain.model.supportsImageTransition
 import com.esde.companion.domain.model.supportsPanZoom
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
 import com.esde.companion.ui.CornerFab
@@ -164,8 +174,8 @@ private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (s
 }
 
 private fun StateGroup.displayLabel(): String = when (this) {
-    StateGroup.System -> "System View"
-    StateGroup.Playing -> "Game View"
+    StateGroup.System -> "System Canvas"
+    StateGroup.Playing -> "Game Canvas"
 }
 
 /**
@@ -211,9 +221,6 @@ fun EditWidgetsOverlay(
             val isDragging by viewModel.isDragging.collectAsStateWithLifecycle()
             val selectedWidgetId by viewModel.selectedWidgetId.collectAsStateWithLifecycle()
             val selectedCanvas by viewModel.selectedCanvas.collectAsStateWithLifecycle()
-            val imageTransitionMode by viewModel.imageTransitionMode.collectAsStateWithLifecycle()
-            val logoTransitionMode by viewModel.logoTransitionMode.collectAsStateWithLifecycle()
-            val glintEnabled by viewModel.glintEnabled.collectAsStateWithLifecycle()
             val dockEnabled by viewModel.dockEnabled.collectAsStateWithLifecycle()
             val dockSize by viewModel.dockSize.collectAsStateWithLifecycle()
             val dockOpacityPercent by viewModel.dockOpacityPercent.collectAsStateWithLifecycle()
@@ -287,9 +294,6 @@ fun EditWidgetsOverlay(
                     PlaceholderWidgetBox(
                         widget = widget,
                         content = previewContent[widget.id] ?: WidgetContent.Empty,
-                        imageTransitionMode = imageTransitionMode,
-                        logoTransitionMode = logoTransitionMode,
-                        glintEnabled = glintEnabled,
                         isSelected = widget.id == selectedWidgetId,
                         grid = grid,
                         cellWidth = cellWidth,
@@ -582,9 +586,6 @@ fun EditWidgetsOverlay(
 private fun PlaceholderWidgetBox(
     widget: PlacedWidget,
     content: WidgetContent,
-    imageTransitionMode: ImageTransitionMode,
-    logoTransitionMode: LogoTransitionMode,
-    glintEnabled: Boolean,
     isSelected: Boolean,
     grid: GridDimensions,
     cellWidth: Dp,
@@ -691,9 +692,6 @@ private fun PlaceholderWidgetBox(
             WidgetContentView(
                 content = content,
                 widgetType = widget.widgetType,
-                imageTransitionMode = imageTransitionMode,
-                logoTransitionMode = logoTransitionMode,
-                glintEnabled = glintEnabled,
                 modifier = Modifier.fillMaxSize(),
                 textUserScrollEnabled = false,
             )
@@ -972,40 +970,72 @@ private fun ConfigureWidgetDialog(
                 when (widgetType) {
                     is WidgetType.SystemLogo -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
+                        GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
                     is WidgetType.SystemImage -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
-                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
+                        if (widgetType.supportsImageTransition) {
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                                allowsFade = widgetType.allowsFadeTransition,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
                     is WidgetType.SystemMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
-                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
+                        if (widgetType.isLogoStyle) {
+                            LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
+                            GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
+                        } else if (widgetType.supportsImageTransition) {
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                                allowsFade = widgetType.allowsFadeTransition,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
                     is WidgetType.GameMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
-                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
+                        if (widgetType.isLogoStyle) {
+                            LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
+                            GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
+                        } else if (widgetType.supportsImageTransition) {
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                                allowsFade = widgetType.allowsFadeTransition,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
                     is WidgetType.CustomImage -> {
                         CustomImageConfig(current = widgetType, onChange = onChange)
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
-                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
+                        if (widgetType.supportsImageTransition) {
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                                allowsFade = widgetType.allowsFadeTransition,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
+                        ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
                     is WidgetType.ColorBackground ->
@@ -1132,6 +1162,131 @@ private fun PanZoomConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
             Text(text = "Pan & Zoom", style = MaterialTheme.typography.titleSmall)
             Text(
                 text = "Slowly zooms and pans across the image while it's displayed",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onChange)
+    }
+}
+
+/**
+ * Only shown when [WidgetType.supportsImageTransition] is true for the widget being
+ * configured (opaque/backdrop-style image widgets, not logo-style or permanently-instant
+ * box-art-style GameMedia - see its kdoc). [allowsFade] gates whether Fade itself is
+ * offered within the picker - false whenever [current]'s widget has ScaleMode.Fit selected
+ * (see [WidgetType.allowsFadeTransition]), in which case only None is shown as an option.
+ * [displaySelected] rather than [current] directly decides which segment highlights, so a
+ * stale Fade value left over from before a Fit switch doesn't render as "nothing selected"
+ * - it just displays as None until Fill is reselected and Fade becomes available again,
+ * without needing to actively clear the stored value (same reasoning as panZoomActive's
+ * defense-in-depth re-check rather than mutating stale config away).
+ */
+@Composable
+private fun ImageTransitionPicker(current: ImageTransitionMode, allowsFade: Boolean, onSelected: (ImageTransitionMode) -> Unit) {
+    val options = if (allowsFade) ImageTransitionMode.entries else listOf(ImageTransitionMode.None)
+    val displaySelected = if (allowsFade) current else ImageTransitionMode.None
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = "Image Transitions", style = MaterialTheme.typography.titleSmall)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = mode == displaySelected,
+                    onClick = { onSelected(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    icon = {
+                        SegmentedButtonDefaults.Icon(active = mode == displaySelected) {
+                            Icon(
+                                imageVector = mode.icon(),
+                                contentDescription = null,
+                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                            )
+                        }
+                    },
+                    label = { Text(mode.displayLabel()) },
+                )
+            }
+        }
+        if (!allowsFade) {
+            Text(
+                text = "Fade isn't available while Image Scaling is set to Contain",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun ImageTransitionMode.icon(): ImageVector = when (this) {
+    ImageTransitionMode.None -> Icons.Filled.Block
+    ImageTransitionMode.Fade -> Icons.Filled.BlurOn
+}
+
+private fun ImageTransitionMode.displayLabel(): String = when (this) {
+    ImageTransitionMode.None -> "None"
+    ImageTransitionMode.Fade -> "Fade"
+}
+
+/**
+ * Shown for every logo-style widget (SystemLogo, or SystemMedia/GameMedia with mediaType
+ * Marquees - see [WidgetType.isLogoStyle]). Deliberately no Fade option - see
+ * AnimatedLogoImage's kdoc for why (double-exposure on overlapping transparent images).
+ */
+@Composable
+private fun LogoTransitionPicker(current: LogoTransitionMode, onSelected: (LogoTransitionMode) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = "Logo Transitions", style = MaterialTheme.typography.titleSmall)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            LogoTransitionMode.entries.forEachIndexed { index, mode ->
+                SegmentedButton(
+                    selected = mode == current,
+                    onClick = { onSelected(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = LogoTransitionMode.entries.size),
+                    icon = {
+                        SegmentedButtonDefaults.Icon(active = mode == current) {
+                            Icon(
+                                imageVector = mode.icon(),
+                                contentDescription = null,
+                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                            )
+                        }
+                    },
+                    label = { Text(mode.displayLabel()) },
+                )
+            }
+        }
+    }
+}
+
+private fun LogoTransitionMode.icon(): ImageVector = when (this) {
+    LogoTransitionMode.None -> Icons.Filled.Block
+    LogoTransitionMode.Slide -> Icons.Filled.ArrowForward
+    LogoTransitionMode.Scale -> Icons.Filled.ZoomIn
+}
+
+private fun LogoTransitionMode.displayLabel(): String = when (this) {
+    LogoTransitionMode.None -> "None"
+    LogoTransitionMode.Slide -> "Slide"
+    LogoTransitionMode.Scale -> "Scale"
+}
+
+/**
+ * Shown alongside [LogoTransitionPicker] for the same logo-style widget types -
+ * independent of [LogoTransitionMode], a periodic ambient shimmer orthogonal to whichever
+ * entrance-transition mode is selected above (see AnimatedLogoImage's glint loop).
+ */
+@Composable
+private fun GlintConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = "Logo Glint", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "A periodic light sweep across this widget",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

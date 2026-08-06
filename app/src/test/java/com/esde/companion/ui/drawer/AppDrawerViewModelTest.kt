@@ -1,10 +1,8 @@
 package com.esde.companion.ui.drawer
 
-import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.LogFolderValidation
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
@@ -103,12 +101,6 @@ class AppDrawerViewModelTest {
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
-        override suspend fun setImageTransitionMode(mode: ImageTransitionMode) {}
-        override fun observeImageTransitionMode(): Flow<ImageTransitionMode> = flowOf(ImageTransitionMode.None)
-        override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {}
-        override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> = flowOf(LogoTransitionMode.None)
-        override suspend fun setGlintEnabled(enabled: Boolean) {}
-        override fun observeGlintEnabled(): Flow<Boolean> = flowOf(false)
     }
 
     private val testDispatcher = StandardTestDispatcher()

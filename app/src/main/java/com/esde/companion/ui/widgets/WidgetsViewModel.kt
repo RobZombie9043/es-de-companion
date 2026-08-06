@@ -6,8 +6,6 @@ import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
-import com.esde.companion.domain.model.ImageTransitionMode
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.PlacedWidget
@@ -19,9 +17,6 @@ import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.model.navigationDirection
 import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
-import com.esde.companion.domain.usecase.ObserveGlintEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveImageTransitionModeUseCase
-import com.esde.companion.domain.usecase.ObserveLogoTransitionModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
@@ -59,9 +54,6 @@ class WidgetsViewModel(
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
-    observeImageTransitionMode: ObserveImageTransitionModeUseCase,
-    observeLogoTransitionMode: ObserveLogoTransitionModeUseCase,
-    observeGlintEnabled: ObserveGlintEnabledUseCase,
 ) : ViewModel() {
 
     /** Caches the current system's random picks (per media type), reused as long as
@@ -90,15 +82,6 @@ class WidgetsViewModel(
     fun setGridDimensions(grid: GridDimensions) {
         gridDimensions.value = grid
     }
-
-    val imageTransitionMode: StateFlow<ImageTransitionMode> = observeImageTransitionMode()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), ImageTransitionMode.None)
-
-    val logoTransitionMode: StateFlow<LogoTransitionMode> = observeLogoTransitionMode()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), LogoTransitionMode.None)
-
-    val glintEnabled: StateFlow<Boolean> = observeGlintEnabled()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)
 
     // Distilled from raw AppState down to just the identity that actually matters for
     // widget content - same reasoning as MainViewModel's ImageSource. Without

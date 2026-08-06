@@ -1,5 +1,7 @@
 package com.esde.companion.data.settings
 
+import com.esde.companion.domain.model.ImageTransitionMode
+import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
@@ -70,6 +72,58 @@ class WidgetLayoutMappingTest {
             WidgetType.CustomImage("path", ScaleMode.Fill, panZoomEnabled = false),
             roundTrip(WidgetType.CustomImage("path", ScaleMode.Fill, panZoomEnabled = false)),
         )
+    }
+
+    @Test
+    fun `SystemLogo round-trips logoTransitionMode and glintEnabled`() {
+        val widget = WidgetType.SystemLogo(ScaleMode.Fit, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `SystemImage round-trips imageTransitionMode`() {
+        val widget = WidgetType.SystemImage(ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `SystemMedia round-trips imageTransitionMode, logoTransitionMode, and glintEnabled`() {
+        val widget = WidgetType.SystemMedia(
+            MediaType.Marquees,
+            ScaleMode.Fit,
+            imageTransitionMode = ImageTransitionMode.Fade,
+            logoTransitionMode = LogoTransitionMode.Scale,
+            glintEnabled = true,
+        )
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `GameMedia round-trips imageTransitionMode, logoTransitionMode, and glintEnabled`() {
+        val widget = WidgetType.GameMedia(
+            MediaType.Screenshots,
+            ScaleMode.Fill,
+            imageTransitionMode = ImageTransitionMode.Fade,
+            logoTransitionMode = LogoTransitionMode.Slide,
+            glintEnabled = true,
+        )
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `CustomImage round-trips imageTransitionMode`() {
+        val widget = WidgetType.CustomImage("path", ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON without the new transition or glint keys decodes to their defaults`() {
+        // Same migration-free reasoning as the panZoomEnabled test below - persisted
+        // JSON from before these fields existed (or encoded today with them at their
+        // default) never actually contains these keys.
+        val json = """{"scaleMode":"Fill"}"""
+        val decoded = kotlinx.serialization.json.Json.decodeFromString(WidgetTypeDto.SystemImage.serializer(), json)
+        assertEquals(WidgetTypeDto.SystemImage(scaleMode = "Fill", imageTransitionMode = "None"), decoded)
     }
 
     @Test

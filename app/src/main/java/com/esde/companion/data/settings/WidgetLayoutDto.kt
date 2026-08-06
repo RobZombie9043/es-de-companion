@@ -37,7 +37,9 @@ internal data class PlacedWidgetDto(
  * ImageEffects()'s own defaults, so JSON persisted before this feature existed (missing
  * these keys entirely) decodes as "no effect" rather than needing a migration. Same idea
  * for GameDescription's defaults, mirroring WidgetType.GameDescription's own defaults, and
- * for panZoomEnabled defaulting to false (see WidgetType.panZoomEnabled).
+ * for panZoomEnabled defaulting to false (see WidgetType.panZoomEnabled). imageTransitionMode/
+ * logoTransitionMode/glintEnabled follow the same pattern for the per-widget transition/glint
+ * config that used to live in global Settings.
  */
 @Serializable
 internal sealed class WidgetTypeDto {
@@ -46,6 +48,8 @@ internal sealed class WidgetTypeDto {
         val scaleMode: String,
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
+        val logoTransitionMode: String = "None",
+        val glintEnabled: Boolean = false,
     ) : WidgetTypeDto()
 
     @Serializable
@@ -54,6 +58,7 @@ internal sealed class WidgetTypeDto {
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
         val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: String = "None",
     ) : WidgetTypeDto()
 
     @Serializable
@@ -63,6 +68,9 @@ internal sealed class WidgetTypeDto {
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
         val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: String = "None",
+        val logoTransitionMode: String = "None",
+        val glintEnabled: Boolean = false,
     ) : WidgetTypeDto()
 
     @Serializable
@@ -72,6 +80,9 @@ internal sealed class WidgetTypeDto {
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
         val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: String = "None",
+        val logoTransitionMode: String = "None",
+        val glintEnabled: Boolean = false,
     ) : WidgetTypeDto()
 
     @Serializable
@@ -81,6 +92,7 @@ internal sealed class WidgetTypeDto {
         val blurAmount: Float = 0f,
         val darkenAmount: Float = 0f,
         val panZoomEnabled: Boolean = false,
+        val imageTransitionMode: String = "None",
     ) : WidgetTypeDto()
 
     @Serializable

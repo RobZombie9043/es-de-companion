@@ -22,9 +22,6 @@ class WidgetsViewModelFactory(
             resolveCustomSystemImage = appContainer.resolveCustomSystemImageUseCase,
             resolveCustomSystemLogo = appContainer.resolveCustomSystemLogoUseCase,
             resolveBundledSystemLogo = appContainer.resolveBundledSystemLogoUseCase,
-            observeImageTransitionMode = appContainer.observeImageTransitionModeUseCase,
-            observeLogoTransitionMode = appContainer.observeLogoTransitionModeUseCase,
-            observeGlintEnabled = appContainer.observeGlintEnabledUseCase,
         ) as T
     }
 }

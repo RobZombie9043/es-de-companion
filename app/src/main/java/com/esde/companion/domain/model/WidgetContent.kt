@@ -100,6 +100,91 @@ private val INSTANT_ONLY_MEDIA_TYPES = setOf(
 val WidgetType.forcesInstantImageTransition: Boolean
     get() = this is WidgetType.GameMedia && mediaType in INSTANT_ONLY_MEDIA_TYPES
 
+/**
+ * This widget instance's own per-widget [ImageTransitionMode] (Configure Widget dialog),
+ * for whichever [WidgetType] variants are opaque/backdrop-style - see
+ * [supportsImageTransition] for which variants and configurations actually use this at
+ * render/Configure-dialog time; irrelevant instances (logo-style, non-image) simply read
+ * [ImageTransitionMode.None] here without it ever being displayed or applied.
+ */
+val WidgetType.imageTransitionMode: ImageTransitionMode
+    get() = when (this) {
+        is WidgetType.SystemImage -> imageTransitionMode
+        is WidgetType.SystemMedia -> imageTransitionMode
+        is WidgetType.GameMedia -> imageTransitionMode
+        is WidgetType.CustomImage -> imageTransitionMode
+        else -> ImageTransitionMode.None
+    }
+
+/**
+ * This widget instance's own per-widget [LogoTransitionMode] (Configure Widget dialog),
+ * for whichever [WidgetType] variants are logo-style - see [WidgetType.isLogoStyle].
+ */
+val WidgetType.logoTransitionMode: LogoTransitionMode
+    get() = when (this) {
+        is WidgetType.SystemLogo -> logoTransitionMode
+        is WidgetType.SystemMedia -> logoTransitionMode
+        is WidgetType.GameMedia -> logoTransitionMode
+        else -> LogoTransitionMode.None
+    }
+
+/**
+ * This widget instance's own per-widget Logo Glint toggle (Configure Widget dialog), for
+ * whichever [WidgetType] variants are logo-style - see [WidgetType.isLogoStyle].
+ */
+val WidgetType.glintEnabled: Boolean
+    get() = when (this) {
+        is WidgetType.SystemLogo -> glintEnabled
+        is WidgetType.SystemMedia -> glintEnabled
+        is WidgetType.GameMedia -> glintEnabled
+        else -> false
+    }
+
+/**
+ * Whether this widget type's Configure dialog should offer the Image Transitions picker
+ * at all - purely structural, mirroring [supportsPanZoom]'s pattern. Excludes logo-style
+ * content (routed through Logo Transitions/AnimatedLogoImage instead, see [isLogoStyle])
+ * and [forcesInstantImageTransition] box-art-style GameMedia (permanently locked to
+ * instant with zero user choice, ever - hidden entirely rather than shown-but-disabled,
+ * same reasoning as [supportsPanZoom] hiding rather than graying out).
+ */
+val WidgetType.supportsImageTransition: Boolean
+    get() = when (this) {
+        is WidgetType.SystemImage, is WidgetType.CustomImage -> true
+        is WidgetType.SystemMedia -> !isLogoStyle
+        is WidgetType.GameMedia -> !isLogoStyle && !forcesInstantImageTransition
+        is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+    }
+
+/**
+ * Whether Fade is currently selectable within the Image Transitions picker - unlike
+ * [supportsImageTransition] (which decides whether the picker exists at all), this is
+ * reactive to the widget's own [ScaleMode]: a letterboxed ([ScaleMode.Fit]) image swap
+ * reads as a hard content change rather than a scene transition, so Fade is excluded
+ * whenever Fit is selected and re-offered the moment the person switches back to Fill -
+ * see WidgetCanvas.kt's [imageTransitionActive] for how a stale Fade value left over from
+ * before a Fit switch is ignored rather than needing to be actively cleared.
+ */
+val WidgetType.allowsFadeTransition: Boolean
+    get() = when (this) {
+        is WidgetType.SystemImage -> scaleMode == ScaleMode.Fill
+        is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
+        is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill
+        is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill
+        else -> false
+    }
+
+/**
+ * The [ImageTransitionMode] that should actually apply at render time -
+ * [WidgetType.imageTransitionMode] unless this instance can't use Fade right now
+ * ([forcesInstantImageTransition] or [allowsFadeTransition] is false), in which case it's
+ * forced to [ImageTransitionMode.None] regardless of the stored value. Checked at render
+ * time (not just trusting the stored value) as defense-in-depth against stale persisted
+ * data, the same reasoning as [panZoomActive].
+ */
+val WidgetType.imageTransitionActive: ImageTransitionMode
+    get() = if (forcesInstantImageTransition || !allowsFadeTransition) ImageTransitionMode.None else imageTransitionMode
+
 /** Media types eligible for the pan-zoom ambient animation - full-bleed backdrop-style
  * media only. Explicitly enumerated (rather than derived by subtracting
  * TRANSPARENT_MEDIA_TYPES/INSTANT_ONLY_MEDIA_TYPES from MediaType.entries) so a future

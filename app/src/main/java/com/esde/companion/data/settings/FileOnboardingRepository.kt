@@ -5,9 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogFolderValidation
-import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
@@ -217,37 +215,6 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it.remove(CUSTOM_MUSIC_FOLDER_PATH_KEY) }
     }
 
-    override suspend fun setImageTransitionMode(mode: ImageTransitionMode) {
-        context.onboardingDataStore.edit { it[IMAGE_TRANSITION_MODE_KEY] = mode.name }
-    }
-
-    override fun observeImageTransitionMode(): Flow<ImageTransitionMode> =
-        context.onboardingDataStore.data.map { prefs ->
-            // Falls back to Fade for both the unset case and any unrecognized stored
-            // value - same reasoning as observeThemePreference.
-            prefs[IMAGE_TRANSITION_MODE_KEY]?.let { stored ->
-                runCatching { ImageTransitionMode.valueOf(stored) }.getOrNull()
-            } ?: ImageTransitionMode.Fade
-        }
-
-    override suspend fun setLogoTransitionMode(mode: LogoTransitionMode) {
-        context.onboardingDataStore.edit { it[LOGO_TRANSITION_MODE_KEY] = mode.name }
-    }
-
-    override fun observeLogoTransitionMode(): Flow<LogoTransitionMode> =
-        context.onboardingDataStore.data.map { prefs ->
-            prefs[LOGO_TRANSITION_MODE_KEY]?.let { stored ->
-                runCatching { LogoTransitionMode.valueOf(stored) }.getOrNull()
-            } ?: LogoTransitionMode.Slide
-        }
-
-    override suspend fun setGlintEnabled(enabled: Boolean) {
-        context.onboardingDataStore.edit { it[GLINT_ENABLED_KEY] = enabled }
-    }
-
-    override fun observeGlintEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[GLINT_ENABLED_KEY] ?: false }
-
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -272,8 +239,5 @@ class FileOnboardingRepository(
         val MUSIC_DUCKING_MODE_KEY = stringPreferencesKey("music_ducking_mode")
         val OVERLAY_OPACITY_KEY = intPreferencesKey("overlay_opacity_percent")
         val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
-        val IMAGE_TRANSITION_MODE_KEY = stringPreferencesKey("image_transition_mode")
-        val LOGO_TRANSITION_MODE_KEY = stringPreferencesKey("logo_transition_mode")
-        val GLINT_ENABLED_KEY = booleanPreferencesKey("logo_glint_enabled")
     }
 }
