@@ -119,6 +119,8 @@ class AppDockViewModelTest {
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
+        override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) {}
+        override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(false)
     }
 
     private val testDispatcher = StandardTestDispatcher()

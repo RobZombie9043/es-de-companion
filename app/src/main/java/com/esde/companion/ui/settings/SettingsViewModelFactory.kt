@@ -52,6 +52,8 @@ class SettingsViewModelFactory(
             setMusicPlayDuringScreensaverUseCase = appContainer.setMusicPlayDuringScreensaverUseCase,
             observeMusicDuckingModeUseCase = appContainer.observeMusicDuckingModeUseCase,
             setMusicDuckingModeUseCase = appContainer.setMusicDuckingModeUseCase,
+            observeCloseCompanionOnQuitEnabledUseCase = appContainer.observeCloseCompanionOnQuitEnabledUseCase,
+            setCloseCompanionOnQuitEnabledUseCase = appContainer.setCloseCompanionOnQuitEnabledUseCase,
         ) as T
     }
 }

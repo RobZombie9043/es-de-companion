@@ -41,4 +41,5 @@ data class SettingsUiState(
     val customMusicFolderPath: String? = null,
     val customMusicFolderValidation: MediaFolderValidation? = null,
     val isValidatingCustomMusicFolder: Boolean = false,
+    val closeCompanionOnQuitEnabled: Boolean = false,
 )

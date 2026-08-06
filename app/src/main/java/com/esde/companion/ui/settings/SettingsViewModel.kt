@@ -8,6 +8,7 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
@@ -25,6 +26,7 @@ import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
@@ -88,6 +90,8 @@ class SettingsViewModel(
     private val setMusicPlayDuringScreensaverUseCase: SetMusicPlayDuringScreensaverUseCase,
     private val observeMusicDuckingModeUseCase: ObserveMusicDuckingModeUseCase,
     private val setMusicDuckingModeUseCase: SetMusicDuckingModeUseCase,
+    private val observeCloseCompanionOnQuitEnabledUseCase: ObserveCloseCompanionOnQuitEnabledUseCase,
+    private val setCloseCompanionOnQuitEnabledUseCase: SetCloseCompanionOnQuitEnabledUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -123,6 +127,7 @@ class SettingsViewModel(
             val musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first()
             val musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first()
             val musicDuckingMode = observeMusicDuckingModeUseCase().first()
+            val closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
@@ -146,6 +151,7 @@ class SettingsViewModel(
                 musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
                 musicPlayDuringScreensaver = musicPlayDuringScreensaver,
                 musicDuckingMode = musicDuckingMode,
+                closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -223,6 +229,11 @@ class SettingsViewModel(
     fun onMusicDuckingModeChanged(mode: MusicDuckingMode) {
         _uiState.value = _uiState.value.copy(musicDuckingMode = mode)
         viewModelScope.launch { setMusicDuckingModeUseCase(mode) }
+    }
+
+    fun onCloseCompanionOnQuitEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(closeCompanionOnQuitEnabled = enabled)
+        viewModelScope.launch { setCloseCompanionOnQuitEnabledUseCase(enabled) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

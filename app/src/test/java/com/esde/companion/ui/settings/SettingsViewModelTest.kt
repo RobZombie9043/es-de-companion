@@ -14,6 +14,7 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
+import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
@@ -31,6 +32,7 @@ import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
+import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
@@ -79,6 +81,7 @@ class SettingsViewModelTest {
         var musicPlayDuringScreensaver = true
         var musicDuckingMode = MusicDuckingMode.LowerVolume
         var overlayOpacityPercent = 80
+        var closeCompanionOnQuitEnabled = false
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -123,6 +126,8 @@ class SettingsViewModelTest {
         override suspend fun saveCustomMusicFolderPath(path: String) {}
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
         override suspend fun clearCustomMusicFolderPath() {}
+        override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) { closeCompanionOnQuitEnabled = enabled }
+        override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(closeCompanionOnQuitEnabled)
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -225,6 +230,8 @@ class SettingsViewModelTest {
             setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository),
             observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository),
             setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository),
+            observeCloseCompanionOnQuitEnabledUseCase = ObserveCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
+            setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
         )
         return viewModel to appDrawerSettingsRepository
     }

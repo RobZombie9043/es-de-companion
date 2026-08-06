@@ -323,6 +323,10 @@ fun SettingsScreen(
                                 musicDuckingMode = uiState.musicDuckingMode,
                                 onMusicDuckingModeChanged = viewModel::onMusicDuckingModeChanged,
                             )
+                            SettingsCategory.Other -> OtherSettingsContent(
+                                closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
+                                onCloseCompanionOnQuitEnabledChanged = viewModel::onCloseCompanionOnQuitEnabledChanged,
+                            )
                         }
                     }
                 }
@@ -650,6 +654,57 @@ private fun VideoAudioSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> U
             ) {
                 Text(
                     text = "Enable video audio",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OtherSettingsContent(
+    closeCompanionOnQuitEnabled: Boolean,
+    onCloseCompanionOnQuitEnabledChanged: (Boolean) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        CloseCompanionOnQuitSetting(
+            enabled = closeCompanionOnQuitEnabled,
+            onEnabledChanged = onCloseCompanionOnQuitEnabledChanged,
+        )
+    }
+}
+
+@Composable
+private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Close Companion App on ES-DE Quit",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Close ES-DE Companion when ES-DE quits",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )

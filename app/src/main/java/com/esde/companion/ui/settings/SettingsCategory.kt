@@ -33,4 +33,8 @@ enum class SettingsCategory(val title: String, val description: String) {
         title = "Setup",
         description = "ES-DE and media folder locations",
     ),
+    Other(
+        title = "Other Settings",
+        description = "Miscellaneous companion app behavior",
+    ),
 }

@@ -215,6 +215,13 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it.remove(CUSTOM_MUSIC_FOLDER_PATH_KEY) }
     }
 
+    override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[CLOSE_COMPANION_ON_QUIT_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[CLOSE_COMPANION_ON_QUIT_ENABLED_KEY] ?: false }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -239,5 +246,6 @@ class FileOnboardingRepository(
         val MUSIC_DUCKING_MODE_KEY = stringPreferencesKey("music_ducking_mode")
         val OVERLAY_OPACITY_KEY = intPreferencesKey("overlay_opacity_percent")
         val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
+        val CLOSE_COMPANION_ON_QUIT_ENABLED_KEY = booleanPreferencesKey("close_companion_on_quit_enabled")
     }
 }

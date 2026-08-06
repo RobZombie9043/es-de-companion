@@ -46,6 +46,7 @@ import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
+import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
@@ -53,6 +54,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
+import com.esde.companion.domain.usecase.ObserveEsdeQuitEventUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
@@ -83,6 +85,7 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
@@ -222,6 +225,7 @@ class AppContainer(context: Context) {
     val observeAppStateUseCase = ObserveAppStateUseCase(logRepository, applicationScope)
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)
     val observeEsdeLogActivityUseCase = ObserveEsdeLogActivityUseCase(logRepository)
+    val observeEsdeQuitEventUseCase = ObserveEsdeQuitEventUseCase(logRepository)
     val resolveGameMediaUseCase = ResolveGameMediaUseCase(gameMediaRepository)
     val resolveGameDescriptionUseCase = ResolveGameDescriptionUseCase(gameDescriptionRepository)
     val resolveRandomSystemMediaUseCase = ResolveRandomSystemMediaUseCase(systemMediaRepository)
@@ -265,6 +269,9 @@ class AppContainer(context: Context) {
     // setting rather than a separate one per surface. See OnboardingRepository's kdoc.
     val observeOverlayOpacityUseCase = ObserveOverlayOpacityUseCase(onboardingRepository)
     val setOverlayOpacityUseCase = SetOverlayOpacityUseCase(onboardingRepository)
+
+    val observeCloseCompanionOnQuitEnabledUseCase = ObserveCloseCompanionOnQuitEnabledUseCase(onboardingRepository)
+    val setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository)
 
     val musicPlaybackCoordinator = MusicPlaybackCoordinator(
         observeConnectionState = observeConnectionStateUseCase,

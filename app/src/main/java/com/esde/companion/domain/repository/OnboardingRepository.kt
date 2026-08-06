@@ -114,4 +114,12 @@ interface OnboardingRepository {
     suspend fun saveCustomMusicFolderPath(path: String)
     fun observeCustomMusicFolderPath(): Flow<String?>
     suspend fun clearCustomMusicFolderPath()
+
+    /**
+     * Settings > Other Settings: whether ES-DE Companion should close itself when ES-DE
+     * fires a quit event. Defaults to false - opt-in, since this app is normally expected
+     * to keep running continuously on the secondary display regardless of ES-DE's state.
+     */
+    suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean)
+    fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean>
 }

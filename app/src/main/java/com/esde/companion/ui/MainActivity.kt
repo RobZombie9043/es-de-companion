@@ -249,6 +249,20 @@ class MainActivity : ComponentActivity() {
                                 appContainer.observeOverlayOpacityUseCase().collect { value = it }
                             }
 
+                            // Settings > Other Settings: close this app when ES-DE fires
+                            // a quit event. Keyed on the toggle itself so flipping it off
+                            // cancels the collection rather than leaving it running.
+                            val closeCompanionOnQuitEnabled by produceState(initialValue = false) {
+                                appContainer.observeCloseCompanionOnQuitEnabledUseCase().collect { value = it }
+                            }
+                            LaunchedEffect(closeCompanionOnQuitEnabled) {
+                                if (closeCompanionOnQuitEnabled) {
+                                    appContainer.observeEsdeQuitEventUseCase().collect {
+                                        finishAndRemoveTask()
+                                    }
+                                }
+                            }
+
                             // Tapping the FAB toggles this; the timer alone controls
                             // dismissal - it must not be re-derived from musicPlaybackState,
                             // since tapping the panel's own Pause button flips
