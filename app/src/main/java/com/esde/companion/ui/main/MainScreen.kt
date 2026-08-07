@@ -114,6 +114,7 @@ fun MainScreen(
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
+    onLongPressMenuOpenChanged: (Boolean) -> Unit = {},
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
 ) {
     MainScreenContent(
@@ -126,6 +127,7 @@ fun MainScreen(
         onOpenEditWidgets = onOpenEditWidgets,
         onToggleBlankScreen = onToggleBlankScreen,
         onDrawerOpenChanged = onDrawerOpenChanged,
+        onLongPressMenuOpenChanged = onLongPressMenuOpenChanged,
         topStartOverlay = topStartOverlay,
     )
 }
@@ -150,6 +152,7 @@ private fun MainScreenContent(
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
+    onLongPressMenuOpenChanged: (Boolean) -> Unit,
     topStartOverlay: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -165,10 +168,25 @@ private fun MainScreenContent(
         val musicEnabled by viewModel.musicEnabled.collectAsStateWithLifecycle()
         val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
 
-        // Long-press popup offering Settings/Edit Widgets - see the Popup below. Local
-        // state (not lifted to MainActivity) since nothing outside this screen needs to
-        // know about it, same as openFraction.
+        // Long-press popup offering Settings/Edit Widgets - see the Popup below. Owned
+        // locally (same as openFraction), but also reported up via
+        // onLongPressMenuOpenChanged so MainActivity can blur the widget backdrop behind
+        // it - that content lives outside this composable entirely (a sibling in
+        // MainActivity's own Box, see WidgetOverlay), so it can't be blurred from here.
         var longPressMenuOpen by remember { mutableStateOf(false) }
+
+        // Reports synchronously rather than via a LaunchedEffect(longPressMenuOpen) - the
+        // Settings/Edit Widgets menu items close the menu AND swap MainScreen out of
+        // composition (via onOpenSettings/onOpenEditWidgets) in the same click handler.
+        // A LaunchedEffect scheduled for the "now false" key never got a chance to run in
+        // that case, since MainScreen itself was torn down first - MainActivity's copy of
+        // the flag stayed stuck true, leaving the blur applied to Settings/Edit Widgets
+        // permanently. A direct call has no such race: it runs before onOpenSettings/
+        // onOpenEditWidgets even get called.
+        fun setLongPressMenuOpen(open: Boolean) {
+            longPressMenuOpen = open
+            onLongPressMenuOpenChanged(open)
+        }
 
         // 0f = fully closed, 1f = fully open. Tracked as a fraction rather than raw
         // pixels so it stays meaningful across recomposition even if maxHeight changes
@@ -188,7 +206,7 @@ private fun MainScreenContent(
         // is itself gated on the drawer being closed, see the long-press handler below.
         BackHandler(enabled = true) {
             when {
-                longPressMenuOpen -> longPressMenuOpen = false
+                longPressMenuOpen -> setLongPressMenuOpen(false)
                 openFraction.value > 0f -> {
                     coroutineScope.launch {
                         openFraction.animateTo(
@@ -285,7 +303,7 @@ private fun MainScreenContent(
                         onLongPress = {
                             if (openFraction.value == 0f) {
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                longPressMenuOpen = true
+                                setLongPressMenuOpen(true)
                             }
                         },
                         onDoubleTap = {
@@ -331,7 +349,7 @@ private fun MainScreenContent(
             if (longPressMenuOpen) {
                 Popup(
                     alignment = Alignment.Center,
-                    onDismissRequest = { longPressMenuOpen = false },
+                    onDismissRequest = { setLongPressMenuOpen(false) },
                     properties = PopupProperties(focusable = true),
                 ) {
                     // Entrance-only scale+fade, matching the app's existing spring-based
@@ -370,7 +388,7 @@ private fun MainScreenContent(
                                     )
                                 },
                                 onClick = {
-                                    longPressMenuOpen = false
+                                    setLongPressMenuOpen(false)
                                     onOpenSettings()
                                 },
                             )
@@ -386,7 +404,7 @@ private fun MainScreenContent(
                                     )
                                 },
                                 onClick = {
-                                    longPressMenuOpen = false
+                                    setLongPressMenuOpen(false)
                                     onOpenEditWidgets()
                                 },
                             )

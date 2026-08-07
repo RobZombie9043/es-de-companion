@@ -3,6 +3,7 @@ package com.esde.companion.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -114,6 +116,12 @@ private val MUSIC_OVERLAY_GAP = 12.dp
 // CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE - no guessing needed.
 private val SETTINGS_BUTTON_RESERVED_WIDTH = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE
 
+// How strongly the widget backdrop/MainScreen chrome blurs behind the long-press menu -
+// see longPressMenuOpen below. Modifier.blur() only actually renders a blur on API 31+
+// (backed by RenderEffect); on this app's minSdk 29/30 it's a harmless no-op, so those
+// devices simply don't get the blur rather than crashing or looking broken.
+private val LONG_PRESS_MENU_BLUR_RADIUS = 8.dp
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -200,6 +208,12 @@ class MainActivity : ComponentActivity() {
                             // Dim/Black cover never shows over anything but the plain
                             // main screen.
                             var drawerOpen by remember { mutableStateOf(false) }
+
+                            // Reported by MainScreen via onLongPressMenuOpenChanged - used
+                            // below to blur WidgetOverlay while the long-press menu is open,
+                            // since that content is a sibling of MainScreen here, not a
+                            // descendant it could blur itself.
+                            var longPressMenuOpen by remember { mutableStateOf(false) }
 
                             val mainScreenActive = !showSettings && !showEditWidgets && !drawerOpen
 
@@ -388,7 +402,23 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            // Blurs everything behind the long-press menu (the widget
+                            // backdrop, and MainScreen's own dock/corner buttons) while it's
+                            // open - animated rather than snapping, so it settles in step
+                            // with the menu's own entrance animation. The menu itself is
+                            // unaffected: Popup renders in its own platform window, entirely
+                            // outside this Box's render tree, so blurring this Box can never
+                            // blur it too.
+                            val longPressMenuBlurRadius by animateDpAsState(
+                                targetValue = if (longPressMenuOpen) LONG_PRESS_MENU_BLUR_RADIUS else 0.dp,
+                                label = "longPressMenuBlur",
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(longPressMenuBlurRadius),
+                            ) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
                                 when {
@@ -427,6 +457,7 @@ class MainActivity : ComponentActivity() {
                                             onOpenEditWidgets = { showEditWidgets = true },
                                             onToggleBlankScreen = { isBlanked = !isBlanked },
                                             onDrawerOpenChanged = { drawerOpen = it },
+                                            onLongPressMenuOpenChanged = { longPressMenuOpen = it },
                                             topStartOverlay = musicFab,
                                         )
                                     }

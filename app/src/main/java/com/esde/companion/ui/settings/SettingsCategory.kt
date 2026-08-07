@@ -25,12 +25,12 @@ enum class SettingsCategory(val title: String, val description: String) {
         title = "Background Music",
         description = "Background music and video-playback ducking",
     ),
-    Setup(
-        title = "Setup",
-        description = "ES-DE and media folder locations",
-    ),
     Other(
         title = "Other Settings",
         description = "Miscellaneous companion app behavior",
+    ),
+    Setup(
+        title = "Setup",
+        description = "ES-DE and media folder locations",
     ),
 }
