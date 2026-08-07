@@ -268,7 +268,7 @@ The app drawer provides full access to all installed Android apps directly from 
 **Launching apps:**
 - **Single tap** launches the app at whichever screen it last launched on (defaults to "this screen" the first time).
 - **Double tap** launches it on the *other* screen than the single-tap default, and remembers that as the new preference. If no secondary display is available, this just launches on the current screen instead, without changing the saved preference.
-- **Long-press** opens a menu: "Launch on this screen," "Launch on other screen," "App Info," and "Hide App."
+- **Long-press** opens a menu: "Launch on this screen," "Launch on other screen," "App Info," "Add to Folder" (or "Remove from Folder" for an app already inside one — see [Folders](#folders)), and "Hide App."
 
 Launching any app automatically closes the drawer.
 
@@ -277,6 +277,20 @@ There is no search box in the drawer — it lists every visible installed app in
 ### Managing App Visibility
 
 Go to **Settings → App Drawer and Dock → Manage Apps** to see every installed app with a checkbox — unchecking an app hides it from the drawer (and from the dock's add-app picker). There's no in-drawer "unhide" option; that's done from this same Settings screen.
+
+### Folders
+
+Group related apps into a named folder that collapses to a single tile in the grid.
+
+- **Create a folder:** long-press an app → **Add to Folder** → **New Folder**, then name it. The app is added to the new folder immediately.
+- **Add more apps:** long-press any other app → **Add to Folder** → pick an existing folder from the list.
+- **Open a folder:** tap its tile. It shows a mosaic preview of up to 4 member app icons (or a plain folder glyph if empty) and opens a small popup grid with its contents over a blurred backdrop.
+- **Launch from inside a folder:** the same single tap / double tap / long-press behavior as the top-level drawer applies to apps inside a folder — see [Using the App Drawer](#using-the-app-drawer).
+- **Remove an app from a folder:** long-press it (while inside the folder popup) → **Remove from Folder**. This puts it back in the main grid as an ordinary app; it doesn't hide or uninstall it. A folder emptied this way closes its popup automatically and disappears from the grid.
+- **Rename a folder:** long-press its title bar while the folder popup is open.
+- **Ordering is fully automatic** — there's no manual drag-to-reorder. Folders sort alphabetically by name among themselves, and apps (whether ungrouped or inside a folder) sort alphabetically by label among themselves. Whether folders are grouped ahead of ungrouped apps, or interleaved with them in one alphabetical list, is controlled by the **Sort folders on top of apps** setting (Settings → App Drawer and Dock, on by default) — see [Settings Reference](#settings-reference).
+- An app can belong to at most one folder at a time.
+- A hidden or uninstalled app is dropped from its folder automatically, the same as it would be from the top-level grid.
 
 ---
 
@@ -374,9 +388,12 @@ Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — th
 |---|---|---|---|
 | Manage Apps | Opens a checklist of every installed app | Checked = visible in App Drawer | All visible |
 | Grid columns | Slider | 3-6 | 5 |
+| Sort folders on top of apps | Toggle | On/Off | On |
 | Enable Dock | Toggle | On/Off | Off |
 | Maximum dock apps | Slider (shown only if dock enabled) | 2-5 | 5 |
 | Dock size | Segmented control (shown only if dock enabled) | Small / Medium / Large | Medium |
+
+`Sort folders on top of apps`: when on, folders are grouped ahead of all ungrouped apps; when off, folders and apps are interleaved into one alphabetical list by name/label. See [Folders](#folders).
 
 ### Video Playback
 

@@ -73,6 +73,7 @@ _A full Android app launcher accessible from the companion screen, plus an optio
 - Customizable grid layout (3-6 columns)
 - App visibility control (hide unwanted apps)
 - Per-app display preferences (launch on this screen or the other screen)
+- Group apps into named, renameable folders that collapse to a mosaic tile, with an optional "sort folders on top" toggle
 
 **Dock Features (optional, off by default):**
 - A persistent row of pinned apps at the bottom of the screen

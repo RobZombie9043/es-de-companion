@@ -180,6 +180,10 @@ The App Dock is an optional, persistent row of pinned apps at the bottom of the 
 
 Yes — the Dock's add-app picker offers a special "App Drawer" entry at the top of the list. Pin it into a slot like any other app; tapping or double-tapping it opens the App Drawer instead of launching anything. Its long-press menu only offers Move Left/Move Right/Remove from Dock, since "Launch on this/other screen" and "App Info" don't apply to it.
 
+### Can I group apps into folders in the App Drawer?
+
+Yes: long-press an app → **Add to Folder** → either pick an existing folder or create a new one. A folder collapses to a single mosaic tile in the grid; tap it to open a popup with its contents. Long-press an app inside the popup to remove it from the folder, or long-press the folder's title bar to rename it. There's no manual reordering — folders and apps both sort alphabetically by name, and the **Sort folders on top of apps** setting (Settings → App Drawer and Dock, on by default) controls whether folders are grouped ahead of ungrouped apps or interleaved with them.
+
 ## Background Music
 
 ### Why isn't background music playing even though I turned it on?
