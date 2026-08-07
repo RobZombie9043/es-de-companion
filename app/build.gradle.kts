@@ -1,10 +1,13 @@
 import java.util.Properties
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -109,4 +112,31 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:core:1.7.0")
+
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${libs.versions.detekt.get()}")
+}
+
+ktlint {
+    android.set(true)
+    ignoreFailures.set(false)
+    baseline.set(file("$rootDir/config/ktlint/baseline.xml"))
+    reporters {
+        reporter(ReporterType.PLAIN)
+        reporter(ReporterType.CHECKSTYLE)
+    }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    baseline = file("$rootDir/config/detekt/baseline.xml")
+    source.setFrom(files("src/main/java", "src/test/java"))
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = "17"
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
+    jvmTarget = "17"
 }

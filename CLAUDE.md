@@ -54,7 +54,7 @@ Keep this a **single Gradle module** with package-based layering (`domain/`, `da
 - **Coroutines + Flow for all async work** — no callbacks, no `AsyncTask`, no `LiveData`. `StateFlow` for observable state, `SharedFlow`/`Channel` for one-off events.
 - **Dependency injection, consistently applied.** Either Hilt or a hand-rolled composition root — pick one deliberately and use it everywhere; don't mix DI approaches or fall back to ad-hoc singletons partway through the codebase.
 - **Testability is a design constraint, not an afterthought.** If a class is hard to unit test, that's usually a sign it's reaching across layers it shouldn't, or mixing concerns. Prefer constructor injection of dependencies (including things like a `Clock`/time source, or a `FileSystem` abstraction) so tests can substitute fakes.
-- **Consistent formatting, enforced by tooling, not convention.** `ktlint`/`detekt` (or equivalent) run as part of the build, not as a manual habit.
+- **Consistent formatting, enforced by tooling, not convention.** `ktlint`/`detekt` run as part of the build (`org.jlleitschuh.gradle.ktlint` and `io.gitlab.arturbosch.detekt`, applied in `app/build.gradle.kts`), not as a manual habit. Both are baselined (`config/ktlint/baseline.xml`, `config/detekt/baseline.xml`) against the pre-tooling codebase, so `ktlintCheck`/`detekt` only fail on *newly introduced* violations — don't regenerate a baseline to silence a violation in code you're actively touching; fix it instead. Regenerating (`ktlintGenerateBaseline`/`detektBaseline`) is only appropriate when deliberately doing a repo-wide reformat pass.
 
 ## What This Rebuild Explicitly Removes
 
