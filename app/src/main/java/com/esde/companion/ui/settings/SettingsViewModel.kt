@@ -22,6 +22,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUse
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
+import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
@@ -40,6 +41,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
+import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
@@ -66,6 +68,8 @@ class SettingsViewModel(
     private val setOverlayOpacityUseCase: SetOverlayOpacityUseCase,
     private val observeGridColumnsUseCase: ObserveGridColumnsUseCase,
     private val setGridColumnsUseCase: SetGridColumnsUseCase,
+    private val observeSortFoldersOnTopUseCase: ObserveSortFoldersOnTopUseCase,
+    private val setSortFoldersOnTopUseCase: SetSortFoldersOnTopUseCase,
     private val observeDockEnabledUseCase: ObserveDockEnabledUseCase,
     private val setDockEnabledUseCase: SetDockEnabledUseCase,
     private val observeDockMaxAppsUseCase: ObserveDockMaxAppsUseCase,
@@ -115,6 +119,7 @@ class SettingsViewModel(
             val themePreference = observeThemePreferenceUseCase().first()
             val overlayOpacityPercent = observeOverlayOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
+            val sortFoldersOnTop = observeSortFoldersOnTopUseCase().first()
             val dockEnabled = observeDockEnabledUseCase().first()
             val dockMaxApps = observeDockMaxAppsUseCase().first()
             val dockSize = observeDockSizeUseCase().first()
@@ -139,6 +144,7 @@ class SettingsViewModel(
                 themePreference = themePreference,
                 overlayOpacityPercent = overlayOpacityPercent,
                 gridColumns = gridColumns,
+                sortFoldersOnTop = sortFoldersOnTop,
                 dockEnabled = dockEnabled,
                 dockMaxApps = dockMaxApps,
                 dockSize = dockSize,
@@ -273,6 +279,11 @@ class SettingsViewModel(
     fun onGridColumnsChanged(columns: Int) {
         _uiState.value = _uiState.value.copy(gridColumns = columns)
         viewModelScope.launch { setGridColumnsUseCase(columns) }
+    }
+
+    fun onSortFoldersOnTopChanged(sortOnTop: Boolean) {
+        _uiState.value = _uiState.value.copy(sortFoldersOnTop = sortOnTop)
+        viewModelScope.launch { setSortFoldersOnTopUseCase(sortOnTop) }
     }
 
     fun onDockEnabledChanged(enabled: Boolean) {

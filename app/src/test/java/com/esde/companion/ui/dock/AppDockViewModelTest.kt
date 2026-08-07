@@ -74,6 +74,8 @@ class AppDockViewModelTest {
         override fun observeGridColumns(): Flow<Int> = flowOf(4)
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { otherScreenLaunchApps.value = packageNames }
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = otherScreenLaunchApps
+        override suspend fun setSortFoldersOnTop(sortOnTop: Boolean) {}
+        override fun observeSortFoldersOnTop(): Flow<Boolean> = flowOf(true)
     }
 
     private class FakeOnboardingRepository : OnboardingRepository {

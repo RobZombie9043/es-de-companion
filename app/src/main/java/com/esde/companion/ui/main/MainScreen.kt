@@ -103,6 +103,7 @@ fun MainScreen(
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
     onLongPressMenuOpenChanged: (Boolean) -> Unit = {},
+    onFolderOpenChanged: (Boolean) -> Unit = {},
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
 ) {
     MainScreenContent(
@@ -116,6 +117,7 @@ fun MainScreen(
         onToggleBlankScreen = onToggleBlankScreen,
         onDrawerOpenChanged = onDrawerOpenChanged,
         onLongPressMenuOpenChanged = onLongPressMenuOpenChanged,
+        onFolderOpenChanged = onFolderOpenChanged,
         topStartOverlay = topStartOverlay,
     )
 }
@@ -141,6 +143,7 @@ private fun MainScreenContent(
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
     onLongPressMenuOpenChanged: (Boolean) -> Unit,
+    onFolderOpenChanged: (Boolean) -> Unit,
     topStartOverlay: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -432,6 +435,8 @@ private fun MainScreenContent(
                 AppDrawer(
                     viewModel = appDrawerViewModel,
                     onAppLaunched = { closeDrawer() },
+                    onFolderOpenChanged = onFolderOpenChanged,
+                    isDrawerOpen = drawerOpen,
                 )
 
                 // Anchored to the top edge of this same offset Box (which is the App

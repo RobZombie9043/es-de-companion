@@ -228,7 +228,17 @@ class MainActivity : ComponentActivity() {
                             // used to, before that was retired in favor of this popup.
                             var longPressMenuOpen by remember { mutableStateOf(false) }
 
-                            val mainScreenActive = !longPressMenuOpen && !showEditWidgets && !drawerOpen
+                            // Reported by MainScreen (via AppDrawer) through
+                            // onFolderOpenChanged - an open App Drawer folder popup needs
+                            // the exact same backdrop blur as the long-press menu, for the
+                            // same structural reason: it's a Popup, so it can't blur
+                            // itself. Kept as its own flag rather than folded into
+                            // longPressMenuOpen since the two are conceptually different
+                            // states (drawer folder vs. settings menu), even though they
+                            // drive identical blur/active behavior below.
+                            var folderOpen by remember { mutableStateOf(false) }
+
+                            val mainScreenActive = !longPressMenuOpen && !showEditWidgets && !drawerOpen && !folderOpen
 
                             // Settings > UI Settings: how the main screen should react
                             // while a game is playing / the screensaver is active.
@@ -423,7 +433,7 @@ class MainActivity : ComponentActivity() {
                             // outside this Box's render tree, so blurring this Box can never
                             // blur it too.
                             val longPressMenuBlurRadius by animateDpAsState(
-                                targetValue = if (longPressMenuOpen) LONG_PRESS_MENU_BLUR_RADIUS else 0.dp,
+                                targetValue = if (longPressMenuOpen || folderOpen) LONG_PRESS_MENU_BLUR_RADIUS else 0.dp,
                                 label = "longPressMenuBlur",
                             )
 
@@ -459,6 +469,7 @@ class MainActivity : ComponentActivity() {
                                             onToggleBlankScreen = { isBlanked = !isBlanked },
                                             onDrawerOpenChanged = { drawerOpen = it },
                                             onLongPressMenuOpenChanged = { longPressMenuOpen = it },
+                                            onFolderOpenChanged = { folderOpen = it },
                                             topStartOverlay = musicFab,
                                         )
                                     }

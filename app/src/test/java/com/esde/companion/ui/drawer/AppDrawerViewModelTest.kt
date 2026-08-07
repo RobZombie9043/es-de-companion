@@ -1,5 +1,7 @@
 package com.esde.companion.ui.drawer
 
+import com.esde.companion.domain.model.AppFolder
+import com.esde.companion.domain.model.DrawerItem
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.LogFolderValidation
@@ -8,13 +10,17 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
+import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import kotlinx.coroutines.Dispatchers
@@ -42,10 +48,12 @@ class AppDrawerViewModelTest {
         initialHiddenApps: Set<String> = emptySet(),
         initialColumns: Int = 4,
         initialOtherScreenLaunchApps: Set<String> = emptySet(),
+        initialSortFoldersOnTop: Boolean = true,
     ) : AppDrawerSettingsRepository {
         val hiddenApps = MutableStateFlow(initialHiddenApps)
         val columns = MutableStateFlow(initialColumns)
         val otherScreenLaunchApps = MutableStateFlow(initialOtherScreenLaunchApps)
+        val sortFoldersOnTop = MutableStateFlow(initialSortFoldersOnTop)
 
         override suspend fun setHiddenApps(packageNames: Set<String>) { hiddenApps.value = packageNames }
         override fun observeHiddenApps(): Flow<Set<String>> = hiddenApps
@@ -53,6 +61,15 @@ class AppDrawerViewModelTest {
         override fun observeGridColumns(): Flow<Int> = columns
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { otherScreenLaunchApps.value = packageNames }
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = otherScreenLaunchApps
+        override suspend fun setSortFoldersOnTop(sortOnTop: Boolean) { sortFoldersOnTop.value = sortOnTop }
+        override fun observeSortFoldersOnTop(): Flow<Boolean> = sortFoldersOnTop
+    }
+
+    private class FakeAppFolderRepository(initialFolders: List<AppFolder> = emptyList()) : AppFolderRepository {
+        val folders = MutableStateFlow(initialFolders)
+
+        override suspend fun setFolders(folders: List<AppFolder>) { this.folders.value = folders }
+        override fun observeFolders(): Flow<List<AppFolder>> = folders
     }
 
     private class FakeOnboardingRepository(initialOverlayOpacity: Int = 80) : OnboardingRepository {
@@ -129,6 +146,7 @@ class AppDrawerViewModelTest {
         apps: List<InstalledApp> = allApps,
         settingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
+        folderRepository: FakeAppFolderRepository = FakeAppFolderRepository(),
     ): AppDrawerViewModel {
         val installedAppsRepository = FakeInstalledAppsRepository(flowOf(apps))
         return AppDrawerViewModel(
@@ -139,46 +157,155 @@ class AppDrawerViewModelTest {
             setOtherScreenLaunchApps = SetOtherScreenLaunchAppsUseCase(settingsRepository),
             observeOverlayOpacity = ObserveOverlayOpacityUseCase(onboardingRepository),
             observeGridColumns = ObserveGridColumnsUseCase(settingsRepository),
+            observeAppFolders = ObserveAppFoldersUseCase(folderRepository),
+            setAppFolders = SetAppFoldersUseCase(folderRepository),
+            observeSortFoldersOnTop = ObserveSortFoldersOnTopUseCase(settingsRepository),
         )
     }
 
     @Test
-    fun `installedApps excludes hidden packages`() = runTest(testDispatcher) {
+    fun `drawerItems excludes hidden packages`() = runTest(testDispatcher) {
         val settingsRepository = FakeAppDrawerSettingsRepository(initialHiddenApps = setOf("com.example.b"))
         val viewModel = buildViewModel(settingsRepository = settingsRepository)
 
-        val collectJob = launch { viewModel.installedApps.collect {} }
+        val collectJob = launch { viewModel.drawerItems.collect {} }
         advanceUntilIdle()
 
-        assertEquals(listOf(allApps[0], allApps[2]), viewModel.installedApps.value)
+        assertEquals(listOf(DrawerItem.App(allApps[0]), DrawerItem.App(allApps[2])), viewModel.drawerItems.value)
         collectJob.cancel()
     }
 
     @Test
-    fun `installedApps includes everything when nothing is hidden`() = runTest(testDispatcher) {
+    fun `drawerItems includes everything when nothing is hidden`() = runTest(testDispatcher) {
         val viewModel = buildViewModel()
 
-        val collectJob = launch { viewModel.installedApps.collect {} }
+        val collectJob = launch { viewModel.drawerItems.collect {} }
         advanceUntilIdle()
 
-        assertEquals(allApps, viewModel.installedApps.value)
+        assertEquals(allApps.map(DrawerItem::App), viewModel.drawerItems.value)
         collectJob.cancel()
     }
 
     @Test
-    fun `installedApps updates when hidden apps change`() = runTest(testDispatcher) {
+    fun `drawerItems updates when hidden apps change`() = runTest(testDispatcher) {
         val settingsRepository = FakeAppDrawerSettingsRepository()
         val viewModel = buildViewModel(settingsRepository = settingsRepository)
 
-        val collectJob = launch { viewModel.installedApps.collect {} }
+        val collectJob = launch { viewModel.drawerItems.collect {} }
         advanceUntilIdle()
-        assertEquals(allApps, viewModel.installedApps.value)
+        assertEquals(allApps.map(DrawerItem::App), viewModel.drawerItems.value)
 
         settingsRepository.hiddenApps.value = setOf("com.example.a")
         advanceUntilIdle()
 
-        assertEquals(listOf(allApps[1], allApps[2]), viewModel.installedApps.value)
+        assertEquals(listOf(DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2])), viewModel.drawerItems.value)
         collectJob.cancel()
+    }
+
+    @Test
+    fun `drawerItems groups an app into its folder instead of showing it ungrouped`() = runTest(testDispatcher) {
+        val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a"))
+        val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
+        val viewModel = buildViewModel(folderRepository = folderRepository)
+
+        val collectJob = launch { viewModel.drawerItems.collect {} }
+        advanceUntilIdle()
+
+        // sortFoldersOnTop defaults to true, so the folder comes first regardless of
+        // where "Group" would otherwise fall alphabetically among "App B"/"App C".
+        assertEquals(
+            listOf(DrawerItem.Folder(folder, listOf(allApps[0])), DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2])),
+            viewModel.drawerItems.value,
+        )
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `drawerItems fully interleaves folders and apps when sortFoldersOnTop is false`() = runTest(testDispatcher) {
+        val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a"))
+        val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
+        val settingsRepository = FakeAppDrawerSettingsRepository(initialSortFoldersOnTop = false)
+        val viewModel = buildViewModel(settingsRepository = settingsRepository, folderRepository = folderRepository)
+
+        val collectJob = launch { viewModel.drawerItems.collect {} }
+        advanceUntilIdle()
+
+        // "App B"/"App C" sort before "Group" (the folder's name) alphabetically.
+        assertEquals(
+            listOf(DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2]), DrawerItem.Folder(folder, listOf(allApps[0]))),
+            viewModel.drawerItems.value,
+        )
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `createFolderAndAddApp persists a new folder with a single member`() = runTest(testDispatcher) {
+        val folderRepository = FakeAppFolderRepository()
+        val viewModel = buildViewModel(folderRepository = folderRepository)
+
+        viewModel.createFolderAndAddApp("Games", "com.example.a")
+        advanceUntilIdle()
+
+        val created = folderRepository.folders.value.single()
+        assertEquals("Games", created.name)
+        assertEquals(setOf("com.example.a"), created.memberPackageNames)
+    }
+
+    @Test
+    fun `addAppToFolder adds to the target folder and strips membership from every other folder`() = runTest(testDispatcher) {
+        val target = AppFolder(id = "target", name = "Target", memberPackageNames = emptySet())
+        val other = AppFolder(id = "other", name = "Other", memberPackageNames = setOf("com.example.a"))
+        val folderRepository = FakeAppFolderRepository(initialFolders = listOf(target, other))
+        val viewModel = buildViewModel(folderRepository = folderRepository)
+
+        viewModel.addAppToFolder("target", "com.example.a")
+        advanceUntilIdle()
+
+        val updated = folderRepository.folders.value.associateBy { it.id }
+        assertEquals(setOf("com.example.a"), updated.getValue("target").memberPackageNames)
+        assertEquals(emptySet<String>(), updated.getValue("other").memberPackageNames)
+    }
+
+    @Test
+    fun `removeAppFromFolder shrinks a multi-member folder without deleting it`() = runTest(testDispatcher) {
+        val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a", "com.example.b"))
+        val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
+        val viewModel = buildViewModel(folderRepository = folderRepository)
+
+        viewModel.removeAppFromFolder("folder-1", "com.example.a")
+        advanceUntilIdle()
+
+        val remaining = folderRepository.folders.value.single()
+        assertEquals(setOf("com.example.b"), remaining.memberPackageNames)
+    }
+
+    @Test
+    fun `removeAppFromFolder deletes the folder once it hits zero members`() = runTest(testDispatcher) {
+        val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a"))
+        val otherFolder = AppFolder(id = "folder-2", name = "Other", memberPackageNames = setOf("com.example.b"))
+        val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder, otherFolder))
+        val viewModel = buildViewModel(folderRepository = folderRepository)
+
+        viewModel.removeAppFromFolder("folder-1", "com.example.a")
+        advanceUntilIdle()
+
+        assertEquals(listOf(otherFolder), folderRepository.folders.value)
+    }
+
+    @Test
+    fun `renameFolder updates only the target folder's name`() = runTest(testDispatcher) {
+        val target = AppFolder(id = "target", name = "Old Name", memberPackageNames = setOf("com.example.a"))
+        val other = AppFolder(id = "other", name = "Other", memberPackageNames = setOf("com.example.b"))
+        val folderRepository = FakeAppFolderRepository(initialFolders = listOf(target, other))
+        val viewModel = buildViewModel(folderRepository = folderRepository)
+
+        viewModel.renameFolder("target", "New Name")
+        advanceUntilIdle()
+
+        val updated = folderRepository.folders.value.associateBy { it.id }
+        assertEquals("New Name", updated.getValue("target").name)
+        assertEquals(setOf("com.example.a"), updated.getValue("target").memberPackageNames)
+        assertEquals(other, updated.getValue("other"))
     }
 
     @Test

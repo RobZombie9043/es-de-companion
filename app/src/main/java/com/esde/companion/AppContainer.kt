@@ -15,6 +15,7 @@ import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
+import com.esde.companion.data.settings.FileAppFolderRepository
 import com.esde.companion.data.settings.FileDockSettingsRepository
 import com.esde.companion.data.settings.FileEsdeInstallationRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
@@ -26,6 +27,7 @@ import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.music.MusicPlaybackCoordinator
 import com.esde.companion.domain.repository.ActivityVisibilityRepository
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
+import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.BundledSystemLogoRepository
 import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
@@ -45,6 +47,7 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
+import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
@@ -71,6 +74,7 @@ import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
+import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
@@ -85,6 +89,7 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -104,6 +109,7 @@ import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
+import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
@@ -204,6 +210,15 @@ class AppContainer(context: Context) {
 
     val observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository)
     val setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository)
+
+    val observeSortFoldersOnTopUseCase = ObserveSortFoldersOnTopUseCase(appDrawerSettingsRepository)
+    val setSortFoldersOnTopUseCase = SetSortFoldersOnTopUseCase(appDrawerSettingsRepository)
+
+    // App Drawer folders - structured data, so its own repository/DataStore rather than
+    // folded into appDrawerSettingsRepository above. See AppFolderRepository.
+    private val appFolderRepository: AppFolderRepository = FileAppFolderRepository(appContext)
+    val observeAppFoldersUseCase = ObserveAppFoldersUseCase(appFolderRepository)
+    val setAppFoldersUseCase = SetAppFoldersUseCase(appFolderRepository)
 
     // App Dock settings (enabled, max apps, size, opacity, pinned apps) - its own
     // repository/DataStore, though it reuses appDrawerSettingsRepository's

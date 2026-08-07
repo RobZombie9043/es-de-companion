@@ -23,6 +23,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUse
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
+import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
@@ -41,6 +42,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
+import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
@@ -130,8 +132,10 @@ class SettingsViewModelTest {
 
     private class FakeAppDrawerSettingsRepository(
         initialColumns: Int = 4,
+        initialSortFoldersOnTop: Boolean = true,
     ) : AppDrawerSettingsRepository {
         val columns = MutableStateFlow(initialColumns)
+        val sortFoldersOnTop = MutableStateFlow(initialSortFoldersOnTop)
 
         override suspend fun setHiddenApps(packageNames: Set<String>) {}
         override fun observeHiddenApps(): Flow<Set<String>> = flowOf(emptySet())
@@ -139,6 +143,8 @@ class SettingsViewModelTest {
         override fun observeGridColumns(): Flow<Int> = columns
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) {}
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = flowOf(emptySet())
+        override suspend fun setSortFoldersOnTop(sortOnTop: Boolean) { sortFoldersOnTop.value = sortOnTop }
+        override fun observeSortFoldersOnTop(): Flow<Boolean> = sortFoldersOnTop
     }
 
     private class FakeDockSettingsRepository(
@@ -197,6 +203,8 @@ class SettingsViewModelTest {
             setOverlayOpacityUseCase = SetOverlayOpacityUseCase(onboardingRepository),
             observeGridColumnsUseCase = ObserveGridColumnsUseCase(appDrawerSettingsRepository),
             setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository),
+            observeSortFoldersOnTopUseCase = ObserveSortFoldersOnTopUseCase(appDrawerSettingsRepository),
+            setSortFoldersOnTopUseCase = SetSortFoldersOnTopUseCase(appDrawerSettingsRepository),
             observeDockEnabledUseCase = ObserveDockEnabledUseCase(dockSettingsRepository),
             setDockEnabledUseCase = SetDockEnabledUseCase(dockSettingsRepository),
             observeDockMaxAppsUseCase = ObserveDockMaxAppsUseCase(dockSettingsRepository),
@@ -260,5 +268,20 @@ class SettingsViewModelTest {
 
         advanceUntilIdle()
         assertEquals(6, appDrawerSettingsRepository.columns.value)
+    }
+
+    @Test
+    fun `onSortFoldersOnTopChanged updates ui state immediately and persists`() = runTest(testDispatcher) {
+        val (viewModel, appDrawerSettingsRepository) = buildViewModel(
+            appDrawerSettingsRepository = FakeAppDrawerSettingsRepository(initialSortFoldersOnTop = true),
+        )
+        advanceUntilIdle()
+
+        viewModel.onSortFoldersOnTopChanged(false)
+
+        assertEquals(false, viewModel.uiState.value.sortFoldersOnTop)
+
+        advanceUntilIdle()
+        assertEquals(false, appDrawerSettingsRepository.sortFoldersOnTop.value)
     }
 }

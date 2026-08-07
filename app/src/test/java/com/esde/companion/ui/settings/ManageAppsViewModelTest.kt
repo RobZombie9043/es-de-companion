@@ -38,6 +38,8 @@ class ManageAppsViewModelTest {
         override fun observeGridColumns(): Flow<Int> = MutableStateFlow(4)
         override suspend fun setOtherScreenLaunchApps(packageNames: Set<String>) { /* not under test */ }
         override fun observeOtherScreenLaunchApps(): Flow<Set<String>> = MutableStateFlow(emptySet())
+        override suspend fun setSortFoldersOnTop(sortOnTop: Boolean) { /* not under test */ }
+        override fun observeSortFoldersOnTop(): Flow<Boolean> = MutableStateFlow(true)
     }
 
     private val testDispatcher = StandardTestDispatcher()

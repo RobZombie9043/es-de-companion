@@ -28,6 +28,8 @@ class SettingsViewModelFactory(
             setOverlayOpacityUseCase = appContainer.setOverlayOpacityUseCase,
             observeGridColumnsUseCase = appContainer.observeGridColumnsUseCase,
             setGridColumnsUseCase = appContainer.setGridColumnsUseCase,
+            observeSortFoldersOnTopUseCase = appContainer.observeSortFoldersOnTopUseCase,
+            setSortFoldersOnTopUseCase = appContainer.setSortFoldersOnTopUseCase,
             observeDockEnabledUseCase = appContainer.observeDockEnabledUseCase,
             setDockEnabledUseCase = appContainer.setDockEnabledUseCase,
             observeDockMaxAppsUseCase = appContainer.observeDockMaxAppsUseCase,
