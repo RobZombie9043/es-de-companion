@@ -56,6 +56,8 @@ class SettingsViewModelFactory(
             setCloseCompanionOnQuitEnabledUseCase = appContainer.setCloseCompanionOnQuitEnabledUseCase,
             observeSettingsFabVisibleUseCase = appContainer.observeSettingsFabVisibleUseCase,
             setSettingsFabVisibleUseCase = appContainer.setSettingsFabVisibleUseCase,
+            observeLaunchEsdeOnStartEnabledUseCase = appContainer.observeLaunchEsdeOnStartEnabledUseCase,
+            setLaunchEsdeOnStartEnabledUseCase = appContainer.setLaunchEsdeOnStartEnabledUseCase,
         ) as T
     }
 }

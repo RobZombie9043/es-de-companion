@@ -158,6 +158,7 @@ fun AppDrawer(
 
     var folderPickerState by remember { mutableStateOf<FolderPickerState?>(null) }
     var openFolderId by remember { mutableStateOf<String?>(null) }
+    var renamingFolder by remember { mutableStateOf<AppFolder?>(null) }
 
     val openFolder = drawerItems.filterIsInstance<DrawerItem.Folder>().find { it.folder.id == openFolderId }
     // Auto-close if the open folder disappears entirely (emptied via explicit removal,
@@ -172,6 +173,7 @@ fun AppDrawer(
         if (!isDrawerOpen) {
             openFolderId = null
             folderPickerState = null
+            renamingFolder = null
         }
     }
 
@@ -253,6 +255,7 @@ fun AppDrawer(
                         folder = item.folder,
                         apps = item.apps,
                         onClick = { openFolderId = item.folder.id },
+                        onLongClick = { renamingFolder = item.folder },
                     )
                 }
             }
@@ -284,6 +287,19 @@ fun AppDrawer(
             )
         }
         null -> Unit
+    }
+
+    renamingFolder?.let { folder ->
+        FolderNameDialog(
+            title = "Rename folder",
+            initialName = folder.name,
+            confirmLabel = "Rename",
+            onConfirm = { newName ->
+                viewModel.renameFolder(folder.id, newName)
+                renamingFolder = null
+            },
+            onDismiss = { renamingFolder = null },
+        )
     }
 
     // Kept composed slightly past openFolderId flipping null so the exit animation below
@@ -517,15 +533,30 @@ internal fun AppLongPressMenu(
 }
 
 /** A folder tile: a mosaic of up to [MAX_MOSAIC_ICONS] member icons collapsed into one
- * grid cell, plus the folder's name. Plain [Modifier.clickable] - deliberately no
- * `combinedClickable`/double-tap/long-press, since folders aren't launchable and don't
- * participate in this-screen/other-screen semantics the way an app does. */
+ * grid cell, plus the folder's name. `combinedClickable` rather than plain [Modifier.clickable] -
+ * folders aren't launchable and don't participate in this-screen/other-screen semantics the
+ * way an app does, so there's no double-click, but long-press opens the same rename dialog
+ * [FolderContentsPopup] already offers via its title, just reachable without opening the
+ * folder first. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FolderDrawerItem(folder: AppFolder, apps: List<InstalledApp>, onClick: () -> Unit) {
+private fun FolderDrawerItem(
+    folder: AppFolder,
+    apps: List<InstalledApp>,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val hapticFeedback = LocalHapticFeedback.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {

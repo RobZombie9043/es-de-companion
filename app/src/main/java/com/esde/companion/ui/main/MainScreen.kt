@@ -101,6 +101,7 @@ fun MainScreen(
     overlayOpacityPercent: Int,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
+    onQuitClick: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
     onLongPressMenuOpenChanged: (Boolean) -> Unit = {},
     onFolderOpenChanged: (Boolean) -> Unit = {},
@@ -115,6 +116,7 @@ fun MainScreen(
         overlayOpacityPercent = overlayOpacityPercent,
         onOpenEditWidgets = onOpenEditWidgets,
         onToggleBlankScreen = onToggleBlankScreen,
+        onQuitClick = onQuitClick,
         onDrawerOpenChanged = onDrawerOpenChanged,
         onLongPressMenuOpenChanged = onLongPressMenuOpenChanged,
         onFolderOpenChanged = onFolderOpenChanged,
@@ -141,6 +143,7 @@ private fun MainScreenContent(
     overlayOpacityPercent: Int,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
+    onQuitClick: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
     onLongPressMenuOpenChanged: (Boolean) -> Unit,
     onFolderOpenChanged: (Boolean) -> Unit,
@@ -398,6 +401,7 @@ private fun MainScreenContent(
                                 setLongPressMenuOpen(false)
                                 onOpenEditWidgets()
                             },
+                            onQuitClick = onQuitClick,
                             onDismiss = { setLongPressMenuOpen(false) },
                             modifier = Modifier.fillMaxSize(),
                         )

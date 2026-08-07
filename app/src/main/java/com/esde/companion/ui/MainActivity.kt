@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -45,6 +46,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.esde.companion.CompanionApplication
+import com.esde.companion.data.apps.AppLauncher
+import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
@@ -124,6 +127,11 @@ private val SETTINGS_BUTTON_RESERVED_WIDTH = CORNER_BUTTON_EDGE_PADDING + CORNER
 // (backed by RenderEffect); on this app's minSdk 29/30 it's a harmless no-op, so those
 // devices simply don't get the blur rather than crashing or looking broken.
 private val LONG_PRESS_MENU_BLUR_RADIUS = 4.dp
+
+// Settings > Other Settings: "Launch ES-DE on Companion App Start". ES-DE's package name
+// isn't referenced anywhere else in this codebase (apps are identified via the installed
+// apps list, not a hardcoded constant) - this is the one call site that needs it.
+private const val ESDE_PACKAGE_NAME = "org.es_de.frontend"
 
 class MainActivity : ComponentActivity() {
 
@@ -293,6 +301,23 @@ class MainActivity : ComponentActivity() {
                                     appContainer.observeEsdeQuitEventUseCase().collect {
                                         finishAndRemoveTask()
                                     }
+                                }
+                            }
+
+                            // Settings > Other Settings: launch ES-DE on the other display
+                            // as soon as Companion starts up. LaunchedEffect(Unit) - a
+                            // one-shot check, not a continuous collection - since this
+                            // should only fire once when this MAIN destination first
+                            // composes (cold start, or right after onboarding finishes),
+                            // not on every settings change.
+                            val esdeLaunchContext = LocalContext.current
+                            LaunchedEffect(Unit) {
+                                if (appContainer.observeLaunchEsdeOnStartEnabledUseCase().first()) {
+                                    AppLauncher.launch(
+                                        context = esdeLaunchContext,
+                                        packageName = ESDE_PACKAGE_NAME,
+                                        displayId = SecondaryDisplayResolver.secondaryDisplayId(esdeLaunchContext),
+                                    )
                                 }
                             }
 
@@ -467,6 +492,7 @@ class MainActivity : ComponentActivity() {
                                             overlayOpacityPercent = overlayOpacityPercent,
                                             onOpenEditWidgets = { showEditWidgets = true },
                                             onToggleBlankScreen = { isBlanked = !isBlanked },
+                                            onQuitClick = { finishAndRemoveTask() },
                                             onDrawerOpenChanged = { drawerOpen = it },
                                             onLongPressMenuOpenChanged = { longPressMenuOpen = it },
                                             onFolderOpenChanged = { folderOpen = it },

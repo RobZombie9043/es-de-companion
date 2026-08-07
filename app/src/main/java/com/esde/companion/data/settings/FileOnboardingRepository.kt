@@ -229,6 +229,13 @@ class FileOnboardingRepository(
     override fun observeSettingsFabVisible(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[SETTINGS_FAB_VISIBLE_KEY] ?: true }
 
+    override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[LAUNCH_ESDE_ON_START_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[LAUNCH_ESDE_ON_START_ENABLED_KEY] ?: false }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -255,5 +262,6 @@ class FileOnboardingRepository(
         val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
         val CLOSE_COMPANION_ON_QUIT_ENABLED_KEY = booleanPreferencesKey("close_companion_on_quit_enabled")
         val SETTINGS_FAB_VISIBLE_KEY = booleanPreferencesKey("settings_fab_visible")
+        val LAUNCH_ESDE_ON_START_ENABLED_KEY = booleanPreferencesKey("launch_esde_on_start_enabled")
     }
 }

@@ -73,6 +73,10 @@ ES-DE Companion's own Settings → Other Settings category (not ES-DE's own "Oth
 
 Yes: Settings → Other Settings → "Close Companion App on ES-DE Quit," off by default. Turn it on and the companion app closes itself when it sees ES-DE's quit event.
 
+### Can Companion launch ES-DE for me automatically?
+
+Yes: Settings → Other Settings → "Launch ES-DE on Companion App Start," off by default. Turn it on and Companion launches ES-DE on the other display as soon as it starts up — combined with Companion's own boot auto-start, this brings both apps up together with no manual step.
+
 ## Widget System
 
 ### How do I create widgets?

@@ -14,6 +14,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -33,6 +34,7 @@ import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -96,6 +98,8 @@ class SettingsViewModel(
     private val setCloseCompanionOnQuitEnabledUseCase: SetCloseCompanionOnQuitEnabledUseCase,
     private val observeSettingsFabVisibleUseCase: ObserveSettingsFabVisibleUseCase,
     private val setSettingsFabVisibleUseCase: SetSettingsFabVisibleUseCase,
+    private val observeLaunchEsdeOnStartEnabledUseCase: ObserveLaunchEsdeOnStartEnabledUseCase,
+    private val setLaunchEsdeOnStartEnabledUseCase: SetLaunchEsdeOnStartEnabledUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -133,6 +137,7 @@ class SettingsViewModel(
             val musicDuckingMode = observeMusicDuckingModeUseCase().first()
             val closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first()
             val settingsFabVisible = observeSettingsFabVisibleUseCase().first()
+            val launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
@@ -158,6 +163,7 @@ class SettingsViewModel(
                 musicDuckingMode = musicDuckingMode,
                 closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
                 settingsFabVisible = settingsFabVisible,
+                launchEsdeOnStartEnabled = launchEsdeOnStartEnabled,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -245,6 +251,11 @@ class SettingsViewModel(
     fun onSettingsFabVisibleChanged(visible: Boolean) {
         _uiState.value = _uiState.value.copy(settingsFabVisible = visible)
         viewModelScope.launch { setSettingsFabVisibleUseCase(visible) }
+    }
+
+    fun onLaunchEsdeOnStartEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(launchEsdeOnStartEnabled = enabled)
+        viewModelScope.launch { setLaunchEsdeOnStartEnabledUseCase(enabled) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

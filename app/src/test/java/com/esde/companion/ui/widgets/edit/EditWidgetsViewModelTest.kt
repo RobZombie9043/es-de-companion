@@ -203,6 +203,8 @@ class EditWidgetsViewModelTest {
         override suspend fun clearCustomMusicFolderPath() {}
         override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) {}
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(false)
+        override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {}
+        override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> = flowOf(false)
         override suspend fun setSettingsFabVisible(visible: Boolean) {}
         override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
     }

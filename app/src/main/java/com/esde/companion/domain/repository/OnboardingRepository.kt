@@ -131,4 +131,12 @@ interface OnboardingRepository {
      */
     suspend fun setSettingsFabVisible(visible: Boolean)
     fun observeSettingsFabVisible(): Flow<Boolean>
+
+    /**
+     * Settings > Other Settings: whether ES-DE Companion should launch ES-DE itself, on
+     * the other display, as soon as Companion starts up. Defaults to false - opt-in, same
+     * reasoning as [setCloseCompanionOnQuitEnabled].
+     */
+    suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean)
+    fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean>
 }

@@ -15,6 +15,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -34,6 +35,7 @@ import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -80,6 +82,7 @@ class SettingsViewModelTest {
         var overlayOpacityPercent = 80
         var closeCompanionOnQuitEnabled = false
         var settingsFabVisible = true
+        var launchEsdeOnStartEnabled = false
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -128,6 +131,8 @@ class SettingsViewModelTest {
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(closeCompanionOnQuitEnabled)
         override suspend fun setSettingsFabVisible(visible: Boolean) { settingsFabVisible = visible }
         override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(settingsFabVisible)
+        override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) { launchEsdeOnStartEnabled = enabled }
+        override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> = flowOf(launchEsdeOnStartEnabled)
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -225,6 +230,8 @@ class SettingsViewModelTest {
             setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
             observeSettingsFabVisibleUseCase = ObserveSettingsFabVisibleUseCase(onboardingRepository),
             setSettingsFabVisibleUseCase = SetSettingsFabVisibleUseCase(onboardingRepository),
+            observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
+            setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
         )
         return viewModel to appDrawerSettingsRepository
     }
@@ -255,6 +262,21 @@ class SettingsViewModelTest {
 
         advanceUntilIdle()
         assertEquals(85, onboardingRepository.overlayOpacityPercent)
+    }
+
+    @Test
+    fun `onLaunchEsdeOnStartEnabledChanged updates ui state immediately and persists`() = runTest(testDispatcher) {
+        val onboardingRepository = FakeOnboardingRepository()
+        val (viewModel, _) = buildViewModel(onboardingRepository = onboardingRepository)
+        advanceUntilIdle()
+
+        viewModel.onLaunchEsdeOnStartEnabledChanged(true)
+
+        // ui state updates synchronously, before the persistence coroutine runs.
+        assertEquals(true, viewModel.uiState.value.launchEsdeOnStartEnabled)
+
+        advanceUntilIdle()
+        assertEquals(true, onboardingRepository.launchEsdeOnStartEnabled)
     }
 
     @Test

@@ -375,10 +375,10 @@ Tapping this category in the Settings popup jumps straight to the widget editor 
 |---|---|---|---|
 | Theme | Segmented control | Auto / Light / Dark | Auto |
 | Overlay Opacity | Slider | 0-100% | 80% — applies to the App Drawer, App Dock, and other overlay surfaces |
-| Game Playing Screen Behavior | Segmented control | On / Dimmed / Off / Manual | On |
-| Screensaver Screen Behavior | Segmented control | On / Dimmed / Off | On |
+| Game Playing Screen Behavior | Segmented control | On / Dim / Off / Manual | On |
+| Screensaver Screen Behavior | Segmented control | On / Dim / Off | On |
 
-`Screen Behavior` options: **On** leaves the screen as normal; **Dimmed** overlays a translucent black scrim (touches still pass through); **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
+`Screen Behavior` options: **On** leaves the screen as normal; **Dim** overlays a translucent black scrim (touches still pass through); **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
 
 Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — they're configured per widget from the Configure Widget dialog. See [Per-Widget Configuration](#per-widget-configuration).
 
@@ -420,9 +420,10 @@ Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — th
 | Setting | Control | Default |
 |---|---|---|
 | Close Companion App on ES-DE Quit | Toggle | Off |
+| Launch ES-DE on Companion App Start | Toggle | Off |
 | Show Settings Button | Toggle | On |
 
-**Close Companion App on ES-DE Quit** closes ES-DE Companion when ES-DE fires its quit event. **Show Settings Button** controls whether the Settings gear icon appears on the main screen — turning it off doesn't reduce what's reachable, since Settings stays available via long-press regardless (see [Screen Gestures](#screen-gestures)).
+**Close Companion App on ES-DE Quit** closes ES-DE Companion when ES-DE fires its quit event. **Launch ES-DE on Companion App Start** launches ES-DE on the other display as soon as Companion starts up — useful alongside Companion's own boot auto-start for bringing both apps up together with no manual step. **Show Settings Button** controls whether the Settings gear icon appears on the main screen — turning it off doesn't reduce what's reachable, since Settings stays available via long-press regardless (see [Screen Gestures](#screen-gestures)).
 
 ### Setup
 

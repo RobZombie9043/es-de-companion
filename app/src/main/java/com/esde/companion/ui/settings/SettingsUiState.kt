@@ -43,4 +43,5 @@ data class SettingsUiState(
     val isValidatingCustomMusicFolder: Boolean = false,
     val closeCompanionOnQuitEnabled: Boolean = false,
     val settingsFabVisible: Boolean = true,
+    val launchEsdeOnStartEnabled: Boolean = false,
 )

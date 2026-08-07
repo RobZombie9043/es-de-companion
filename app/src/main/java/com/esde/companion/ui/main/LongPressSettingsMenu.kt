@@ -58,6 +58,7 @@ import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.OtherSettingsContent
 import com.esde.companion.ui.settings.SettingsCategory
 import com.esde.companion.ui.settings.SettingsCategoryRow
+import com.esde.companion.ui.settings.SettingsQuitRow
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SetupSettingsContent
 import com.esde.companion.ui.settings.SoundSettingsContent
@@ -136,10 +137,15 @@ fun LongPressSettingsMenu(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
     onEditWidgetsClick: () -> Unit,
+    onQuitClick: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Named locally so passing it into OtherSettingsContent below doesn't push that call's
+    // line over the max line length - the callback name is already the longest in the file.
+    val onLaunchEsdeOnStartEnabledChanged = settingsViewModel::onLaunchEsdeOnStartEnabledChanged
 
     val currentOnRefresh = rememberUpdatedState(settingsViewModel::refreshPermissionState)
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -227,6 +233,7 @@ fun LongPressSettingsMenu(
                         MenuPage.Home -> SettingsMenuHome(
                             onCategorySelected = { page = MenuPage.Category(it) },
                             onEditWidgetsClick = onEditWidgetsClick,
+                            onQuitClick = onQuitClick,
                             onEasterEggUnlocked = onEasterEggUnlocked,
                         )
 
@@ -292,6 +299,8 @@ fun LongPressSettingsMenu(
                                 onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
                                 settingsFabVisible = uiState.settingsFabVisible,
                                 onSettingsFabVisibleChanged = settingsViewModel::onSettingsFabVisibleChanged,
+                                launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
+                                onLaunchEsdeOnStartEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
                             )
                             SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
                         }
@@ -345,6 +354,7 @@ private fun SettingsMenuHeader(title: String, onBack: () -> Unit) {
 private fun SettingsMenuHome(
     onCategorySelected: (SettingsCategory) -> Unit,
     onEditWidgetsClick: () -> Unit,
+    onQuitClick: () -> Unit,
     onEasterEggUnlocked: () -> Unit,
 ) {
     Column(
@@ -365,6 +375,8 @@ private fun SettingsMenuHome(
                 },
             )
         }
+
+        SettingsQuitRow(onClick = onQuitClick)
 
         Spacer(modifier = Modifier.height(8.dp))
 

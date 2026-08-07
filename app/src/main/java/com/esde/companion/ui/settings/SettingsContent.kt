@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
@@ -101,6 +102,41 @@ internal fun SettingsCategoryRow(category: SettingsCategory, onClick: () -> Unit
                 Text(text = category.description, style = MaterialTheme.typography.bodySmall)
             }
             Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
+        }
+    }
+}
+
+/**
+ * Bottom-of-menu row that closes the app outright (see [MainActivity][com.esde.companion.ui.MainActivity]'s
+ * `finishAndRemoveTask` call, the same one "Close Companion App on ES-DE Quit" uses).
+ * Styled in the error color, distinct from [SettingsCategoryRow], so it doesn't read as
+ * just another drill-down category - tapping it is terminal, not navigation.
+ */
+@Composable
+internal fun SettingsQuitRow(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PowerSettingsNew,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = "Quit Companion App",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }
@@ -403,6 +439,8 @@ internal fun OtherSettingsContent(
     onCloseCompanionOnQuitEnabledChanged: (Boolean) -> Unit,
     settingsFabVisible: Boolean,
     onSettingsFabVisibleChanged: (Boolean) -> Unit,
+    launchEsdeOnStartEnabled: Boolean,
+    onLaunchEsdeOnStartEnabledChanged: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -414,6 +452,10 @@ internal fun OtherSettingsContent(
         CloseCompanionOnQuitSetting(
             enabled = closeCompanionOnQuitEnabled,
             onEnabledChanged = onCloseCompanionOnQuitEnabledChanged,
+        )
+        LaunchEsdeOnStartSetting(
+            enabled = launchEsdeOnStartEnabled,
+            onEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
         )
         SettingsFabVisibleSetting(
             enabled = settingsFabVisible,
@@ -446,6 +488,45 @@ private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boo
             ) {
                 Text(
                     text = "Close ES-DE Companion when ES-DE quits",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEnabledChanged(it)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LaunchEsdeOnStartSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Launch ES-DE on Companion App Start",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Launch ES-DE on the other display when Companion App starts",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -560,7 +641,7 @@ private val ScreenBehavior.icon: ImageVector
 private val ScreenBehavior.label: String
     get() = when (this) {
         ScreenBehavior.Nothing -> "On"
-        ScreenBehavior.Dim -> "Dimmed"
+        ScreenBehavior.Dim -> "Dim"
         ScreenBehavior.Black -> "Off"
         ScreenBehavior.GameManual -> "Manual"
     }

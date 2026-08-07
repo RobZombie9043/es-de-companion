@@ -64,6 +64,7 @@ import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
+import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -100,6 +101,7 @@ import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.SetLastSystemShortNameUseCase
+import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -287,6 +289,8 @@ class AppContainer(context: Context) {
     val setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository)
     val observeSettingsFabVisibleUseCase = ObserveSettingsFabVisibleUseCase(onboardingRepository)
     val setSettingsFabVisibleUseCase = SetSettingsFabVisibleUseCase(onboardingRepository)
+    val observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
+    val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
 
     val musicPlaybackCoordinator = MusicPlaybackCoordinator(
         observeConnectionState = observeConnectionStateUseCase,
