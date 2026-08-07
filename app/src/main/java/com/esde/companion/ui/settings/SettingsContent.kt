@@ -569,6 +569,8 @@ private val ScreenBehavior.label: String
 internal fun AppDrawerSettingsContent(
     gridColumns: Int,
     onGridColumnsChanged: (Int) -> Unit,
+    sortFoldersOnTop: Boolean,
+    onSortFoldersOnTopChanged: (Boolean) -> Unit,
     onManageAppsClick: () -> Unit,
     dockEnabled: Boolean,
     onDockEnabledChanged: (Boolean) -> Unit,
@@ -586,10 +588,48 @@ internal fun AppDrawerSettingsContent(
     ) {
         ManageAppsEntry(onClick = onManageAppsClick)
         GridColumnsSetting(columns = gridColumns, onColumnsChanged = onGridColumnsChanged)
+        SortFoldersOnTopSetting(enabled = sortFoldersOnTop, onEnabledChanged = onSortFoldersOnTopChanged)
         DockEnabledSetting(enabled = dockEnabled, onEnabledChanged = onDockEnabledChanged)
         if (dockEnabled) {
             DockMaxAppsSetting(maxApps = dockMaxApps, onMaxAppsChanged = onDockMaxAppsChanged)
             DockSizeSetting(size = dockSize, onSizeChanged = onDockSizeChanged)
+        }
+    }
+}
+
+@Composable
+private fun SortFoldersOnTopSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Sort folders on top of apps",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "Group folders ahead of ungrouped apps instead of sorting them in alphabetically",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnabledChanged(it)
+                },
+            )
         }
     }
 }

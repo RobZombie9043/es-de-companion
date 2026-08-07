@@ -2,15 +2,21 @@ package com.esde.companion.ui.drawer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.esde.companion.domain.model.InstalledApp
+import com.esde.companion.domain.model.AppFolder
+import com.esde.companion.domain.model.DrawerItem
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.domain.model.buildDrawerItems
+import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
+import java.util.UUID
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -26,14 +32,33 @@ class AppDrawerViewModel(
     private val setOtherScreenLaunchApps: SetOtherScreenLaunchAppsUseCase,
     observeOverlayOpacity: ObserveOverlayOpacityUseCase,
     observeGridColumns: ObserveGridColumnsUseCase,
+    private val observeAppFolders: ObserveAppFoldersUseCase,
+    private val setAppFolders: SetAppFoldersUseCase,
+    observeSortFoldersOnTop: ObserveSortFoldersOnTopUseCase,
 ) : ViewModel() {
 
-    // Only the apps the user hasn't hidden - see ManageAppsViewModel for the unfiltered
-    // list used by the Settings management screen.
-    val installedApps: StateFlow<List<InstalledApp>> =
-        combine(observeInstalledApps(), observeHiddenApps()) { apps, hidden ->
-            apps.filterNot { hidden.contains(it.packageName) }
-        }.stateIn(
+    // Merges installed apps (minus hidden ones) with persisted folders into the flat
+    // grid - see buildDrawerItems for the actual merge/filter/sort logic, and
+    // ObserveSortFoldersOnTopUseCase for the App Drawer setting that picks between
+    // folders-first and fully-interleaved-alphabetical ordering.
+    val drawerItems: StateFlow<List<DrawerItem>> =
+        combine(
+            observeInstalledApps(),
+            observeHiddenApps(),
+            observeAppFolders(),
+            observeSortFoldersOnTop(),
+            ::buildDrawerItems,
+        ).stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+            initialValue = emptyList(),
+        )
+
+    /** Raw folder list (id/name/membership) - feeds the "add to folder" picker, kept
+     * separate from [drawerItems] rather than derived via filterIsInstance since it's the
+     * natural shape for that one caller. */
+    val folders: StateFlow<List<AppFolder>> = observeAppFolders()
+        .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = emptyList(),
@@ -79,6 +104,52 @@ class AppDrawerViewModel(
         viewModelScope.launch {
             val current = observeHiddenApps().first()
             setHiddenApps(current + packageName)
+        }
+    }
+
+    fun createFolderAndAddApp(name: String, packageName: String) {
+        viewModelScope.launch {
+            val newFolder = AppFolder(id = UUID.randomUUID().toString(), name = name, memberPackageNames = setOf(packageName))
+            setAppFolders(observeAppFolders().first() + newFolder)
+        }
+    }
+
+    /** Enforces single-folder membership: adding to [folderId] strips [packageName] out
+     * of every other folder first, so an app can never silently belong to two folders at
+     * once - see AppFolder's kdoc on this being a ViewModel-level invariant. */
+    fun addAppToFolder(folderId: String, packageName: String) {
+        viewModelScope.launch {
+            val updated = observeAppFolders().first().map { folder ->
+                if (folder.id == folderId) {
+                    folder.copy(memberPackageNames = folder.memberPackageNames + packageName)
+                } else {
+                    folder.copy(memberPackageNames = folder.memberPackageNames - packageName)
+                }
+            }
+            setAppFolders(updated)
+        }
+    }
+
+    /** Explicit removal that empties a folder deletes it outright - unlike hiding/
+     * uninstalling its last member, which is filtered at display time only (see
+     * buildDrawerItems) and never mutates storage. */
+    fun removeAppFromFolder(folderId: String, packageName: String) {
+        viewModelScope.launch {
+            val updated = observeAppFolders().first().mapNotNull { folder ->
+                if (folder.id != folderId) return@mapNotNull folder
+                val remaining = folder.memberPackageNames - packageName
+                remaining.ifEmpty { null }?.let { folder.copy(memberPackageNames = it) }
+            }
+            setAppFolders(updated)
+        }
+    }
+
+    fun renameFolder(folderId: String, newName: String) {
+        viewModelScope.launch {
+            val updated = observeAppFolders().first().map { folder ->
+                if (folder.id == folderId) folder.copy(name = newName) else folder
+            }
+            setAppFolders(updated)
         }
     }
 }

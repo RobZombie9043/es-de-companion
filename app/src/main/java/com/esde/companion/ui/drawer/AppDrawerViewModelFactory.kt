@@ -21,6 +21,9 @@ class AppDrawerViewModelFactory(
             setOtherScreenLaunchApps = appContainer.setOtherScreenLaunchAppsUseCase,
             observeOverlayOpacity = appContainer.observeOverlayOpacityUseCase,
             observeGridColumns = appContainer.observeGridColumnsUseCase,
+            observeAppFolders = appContainer.observeAppFoldersUseCase,
+            setAppFolders = appContainer.setAppFoldersUseCase,
+            observeSortFoldersOnTop = appContainer.observeSortFoldersOnTopUseCase,
         ) as T
     }
 }

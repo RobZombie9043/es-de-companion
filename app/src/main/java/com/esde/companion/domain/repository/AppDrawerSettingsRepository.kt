@@ -30,4 +30,9 @@ interface AppDrawerSettingsRepository {
      */
     suspend fun setOtherScreenLaunchApps(packageNames: Set<String>)
     fun observeOtherScreenLaunchApps(): Flow<Set<String>>
+
+    /** Whether folders are grouped ahead of ungrouped apps in the drawer grid, rather
+     * than interleaved alphabetically with them - see buildDrawerItems. Defaults to true. */
+    suspend fun setSortFoldersOnTop(sortOnTop: Boolean)
+    fun observeSortFoldersOnTop(): Flow<Boolean>
 }
