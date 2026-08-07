@@ -522,7 +522,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                AnimatedVisibility(visible = showVideoOverlay, enter = fadeIn(), exit = fadeOut()) {
+                                if (showVideoOverlay) {
                                     VideoOverlayScreen(
                                         videoPath = videoPath!!,
                                         delaySeconds = videoDelaySeconds,

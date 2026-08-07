@@ -8,12 +8,12 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-0.7.0--alpha-blue)
+![Version](https://img.shields.io/badge/version-0.7.0--beta-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 ES-DE Companion is a companion application for [ES-DE](https://es-de.org) that enhances your gaming experience by transforming dual-screen Android devices into immersive retro gaming setups. The app displays beautiful game artwork, videos, and customizable overlay widgets on a secondary screen while you browse and play games in ES-DE.
 
-> **Note**: ES-DE Companion is currently in an early alpha rebuild (v0.7.0-alpha). The app was rebuilt from the ground up with a new architecture and a new integration mechanism (see [How It Works](#how-it-works)) — core features work end-to-end, but expect rough edges.
+> **Note**: ES-DE Companion is currently in an early beta rebuild (v0.7.0-beta). The app was rebuilt from the ground up with a new architecture and a new integration mechanism (see [How It Works](#how-it-works)) — core features work end-to-end, but expect rough edges.
 
 The goal of this companion app is to provide a high-quality second-screen experience that seamlessly integrates with ES-DE, requires minimal setup, and offers extensive customization options for your gaming display.
 

@@ -26,7 +26,7 @@ ES-DE Companion is free and open source. The full source code is available on Gi
 
 ### Is this app finished?
 
-The app is a ground-up rebuild and is currently at v0.7.0-alpha — an early pre-release. Core features (log sync, widgets, app drawer/dock, video, music) all work, but expect some rough edges.
+The app is a ground-up rebuild and is currently at v0.7.0-beta — an early pre-release. Core features (log sync, widgets, app drawer/dock, video, music) all work, but expect some rough edges.
 
 ## Setup and Installation
 
