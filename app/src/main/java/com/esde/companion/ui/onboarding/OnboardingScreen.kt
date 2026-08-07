@@ -4,6 +4,13 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +47,20 @@ import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
+
+/** Fixed position in the wizard's forward order (see OnboardingStep's kdoc) - used purely
+ * to pick the step-transition slide direction below, since [OnboardingStep] is a sealed
+ * class (no built-in ordinal) and some steps are conditionally skipped, so adjacent steps
+ * in a given run aren't always adjacent here. */
+private val OnboardingStep.order: Int
+    get() = when (this) {
+        OnboardingStep.Permission -> 0
+        OnboardingStep.EsdeFolder -> 1
+        OnboardingStep.MediaFolder -> 2
+        OnboardingStep.LegacyScripts -> 3
+        OnboardingStep.EventScriptSettings -> 4
+        OnboardingStep.LiveLogCheck -> 5
+    }
 
 /** Onboarding text renders directly over the themed fallback background image rather than
  * an opaque Material surface, so it can't rely on colorScheme.onBackground/onSurface for
@@ -99,58 +120,79 @@ fun OnboardingScreen(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
                 )
                 Box(modifier = Modifier.weight(1f)) {
-                    when (uiState.step) {
-                        OnboardingStep.Permission -> PermissionStep(
-                            granted = uiState.permissionGranted,
-                            onBack = onBack,
-                            onNext = { viewModel.onPermissionResult(uiState.permissionGranted) },
-                        )
+                    // Slide direction mirrors the step's position in the linear wizard
+                    // sequence (see OnboardingStep.order above) - moving forward slides
+                    // in from the right, going back (via onBack) slides in from the
+                    // left, same drill-down idiom LongPressSettingsMenu's AnimatedContent
+                    // uses for its category subpages.
+                    AnimatedContent(
+                        targetState = uiState.step,
+                        transitionSpec = {
+                            val movingForward = targetState.order > initialState.order
+                            val slideDistance = { width: Int -> width / 3 }
+                            if (movingForward) {
+                                (slideInHorizontally(tween(220)) { slideDistance(it) } + fadeIn(tween(220)))
+                                    .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                            } else {
+                                (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
+                                    .togetherWith(slideOutHorizontally(tween(220)) { slideDistance(it) } + fadeOut(tween(150)))
+                            }
+                        },
+                        label = "onboardingStepContent",
+                    ) { step ->
+                        when (step) {
+                            OnboardingStep.Permission -> PermissionStep(
+                                granted = uiState.permissionGranted,
+                                onBack = onBack,
+                                onNext = { viewModel.onPermissionResult(uiState.permissionGranted) },
+                            )
 
-                        OnboardingStep.EsdeFolder -> EsdeFolderStep(
-                            path = uiState.logFolderPath,
-                            validation = uiState.logFolderValidation,
-                            isValidating = uiState.isValidatingLogFolder,
-                            isCheckingInstallation = uiState.isCheckingInstallation,
-                            onPickFolder = { uri ->
-                                SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
-                            },
-                            onBack = onBack,
-                            onNext = viewModel::onEsdeFolderConfirmed,
-                        )
+                            OnboardingStep.EsdeFolder -> EsdeFolderStep(
+                                path = uiState.logFolderPath,
+                                validation = uiState.logFolderValidation,
+                                isValidating = uiState.isValidatingLogFolder,
+                                isCheckingInstallation = uiState.isCheckingInstallation,
+                                onPickFolder = { uri ->
+                                    SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
+                                },
+                                onBack = onBack,
+                                onNext = viewModel::onEsdeFolderConfirmed,
+                            )
 
-                        OnboardingStep.MediaFolder -> MediaFolderStep(
-                            path = uiState.mediaFolderPath,
-                            validation = uiState.mediaFolderValidation,
-                            isValidating = uiState.isValidatingMediaFolder,
-                            autoDetected = uiState.mediaFolderAutoDetected,
-                            onPickFolder = { uri ->
-                                SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
-                            },
-                            onBack = onBack,
-                            onNext = viewModel::onMediaFolderConfirmed,
-                        )
+                            OnboardingStep.MediaFolder -> MediaFolderStep(
+                                path = uiState.mediaFolderPath,
+                                validation = uiState.mediaFolderValidation,
+                                isValidating = uiState.isValidatingMediaFolder,
+                                autoDetected = uiState.mediaFolderAutoDetected,
+                                onPickFolder = { uri ->
+                                    SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
+                                },
+                                onBack = onBack,
+                                onNext = viewModel::onMediaFolderConfirmed,
+                            )
 
-                        OnboardingStep.LegacyScripts -> LegacyScriptsStep(
-                            scriptFiles = uiState.legacyScriptFiles,
-                            isDeleting = uiState.isDeletingLegacyScripts,
-                            onDelete = viewModel::onDeleteLegacyScriptFiles,
-                            onBack = onBack,
-                            onNext = viewModel::onLegacyScriptsConfirmed,
-                        )
+                            OnboardingStep.LegacyScripts -> LegacyScriptsStep(
+                                scriptFiles = uiState.legacyScriptFiles,
+                                isDeleting = uiState.isDeletingLegacyScripts,
+                                onDelete = viewModel::onDeleteLegacyScriptFiles,
+                                onBack = onBack,
+                                onNext = viewModel::onLegacyScriptsConfirmed,
+                            )
 
-                        OnboardingStep.EventScriptSettings -> EventScriptSettingsStep(
-                            settings = uiState.eventScriptSettings,
-                            onBack = onBack,
-                            onNext = viewModel::onEventScriptSettingsConfirmed,
-                        )
+                            OnboardingStep.EventScriptSettings -> EventScriptSettingsStep(
+                                settings = uiState.eventScriptSettings,
+                                onBack = onBack,
+                                onNext = viewModel::onEventScriptSettingsConfirmed,
+                            )
 
-                        OnboardingStep.LiveLogCheck -> LiveLogCheckStep(
-                            connectionState = uiState.connectionState,
-                            passed = uiState.liveCheckPassed,
-                            isCompleting = uiState.isCompleting,
-                            onBack = onBack,
-                            onNext = viewModel::onFinishSetup,
-                        )
+                            OnboardingStep.LiveLogCheck -> LiveLogCheckStep(
+                                connectionState = uiState.connectionState,
+                                passed = uiState.liveCheckPassed,
+                                isCompleting = uiState.isCompleting,
+                                onBack = onBack,
+                                onNext = viewModel::onFinishSetup,
+                            )
+                        }
                     }
                 }
             }

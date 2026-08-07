@@ -36,12 +36,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -85,6 +87,7 @@ fun GameManualScreen(
 
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    val hapticFeedback = LocalHapticFeedback.current
 
     var controlsVisible by remember { mutableStateOf(true) }
 
@@ -170,7 +173,12 @@ fun GameManualScreen(
                         // Separate tap-only detector for revealing/hiding controls - kept
                         // independent of the transform/drag detectors above so a plain
                         // tap (no pan, no drag past threshold) isn't swallowed by either.
-                        detectTapGestures(onTap = { controlsVisible = !controlsVisible })
+                        detectTapGestures(
+                            onTap = {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                controlsVisible = !controlsVisible
+                            },
+                        )
                     },
             )
         }

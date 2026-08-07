@@ -96,15 +96,40 @@ private val EasterEggMessages = listOf(
 )
 
 /**
+ * The menu's single navigation state - Home (the [SettingsCategory] list), a drilled-into
+ * [Category] subpage, or [ManageApps] (reachable only from the AppDrawer category, hence
+ * it carries [ManageApps.fromCategory] so back-navigation returns to that same subpage
+ * rather than jumping all the way to Home). Replaces the old separate
+ * `selectedCategory`/`showManageApps` booleans with one state so all three pages can share
+ * a single [AnimatedContent] transition below instead of ManageApps being a plain
+ * un-animated `if` sitting beside it.
+ */
+private sealed interface MenuPage {
+    data object Home : MenuPage
+    data class Category(val category: SettingsCategory) : MenuPage
+    data class ManageApps(val fromCategory: SettingsCategory) : MenuPage
+}
+
+/** Home = 0, a Category subpage = 1, ManageApps = 2 - used purely to pick the
+ * [AnimatedContent] slide direction below (drilling deeper slides in from the right,
+ * stepping back slides in from the left), the same "how many levels deep" comparison the
+ * old two-state version made with a plain boolean. */
+private val MenuPage.depth: Int
+    get() = when (this) {
+        MenuPage.Home -> 0
+        is MenuPage.Category -> 1
+        is MenuPage.ManageApps -> 2
+    }
+
+/**
  * Full body of the long-press popup - everything that used to be the standalone
  * `SettingsScreen` destination, now hosted inside `MainScreen`'s `Popup` instead. Shows a
  * home page (the [SettingsCategory] list) and drills into a subpage for whichever category
- * is selected, exactly the same two-state (`selectedCategory`/`showManageApps`) navigation
- * `SettingsScreen` used - just with [onDismiss] as the terminal "back" step instead of
- * leaving a full-screen destination. `selectedCategory`/`showManageApps` are plain
- * `remember`, not `rememberSaveable`: this composable is only ever part of composition
- * while the popup is open, so it's naturally torn down (and its state reset to "home")
- * every time the popup closes and reopens.
+ * is selected, exactly the same navigation `SettingsScreen` used - just with [onDismiss] as
+ * the terminal "back" step instead of leaving a full-screen destination. [MenuPage] is
+ * plain `remember`, not `rememberSaveable`: this composable is only ever part of
+ * composition while the popup is open, so it's naturally torn down (and its state reset to
+ * [MenuPage.Home]) every time the popup closes and reopens.
  */
 @Composable
 fun LongPressSettingsMenu(
@@ -128,8 +153,7 @@ fun LongPressSettingsMenu(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var selectedCategory by remember { mutableStateOf<SettingsCategory?>(null) }
-    var showManageApps by remember { mutableStateOf(false) }
+    var page by remember { mutableStateOf<MenuPage>(MenuPage.Home) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -142,10 +166,10 @@ fun LongPressSettingsMenu(
     // step. Shared by the hardware BackHandler below and the header's back arrow, same as
     // SettingsScreen's single onBack was reused by both its BackHandler and its TopAppBar.
     val onBack: () -> Unit = {
-        when {
-            showManageApps -> showManageApps = false
-            selectedCategory != null -> selectedCategory = null
-            else -> onDismiss()
+        when (val current = page) {
+            is MenuPage.ManageApps -> page = MenuPage.Category(current.fromCategory)
+            is MenuPage.Category -> page = MenuPage.Home
+            MenuPage.Home -> onDismiss()
         }
     }
 
@@ -158,7 +182,11 @@ fun LongPressSettingsMenu(
     // Always shown, unlike a plain drill-down title - the top level reads "Settings" (the
     // popup's own identity) rather than having no header at all, matching how
     // SettingsScreen's TopAppBar looked before it was retired.
-    val title = if (showManageApps) "Manage Apps" else selectedCategory?.title ?: "Settings"
+    val title = when (val current = page) {
+        MenuPage.Home -> "Settings"
+        is MenuPage.Category -> current.category.title
+        is MenuPage.ManageApps -> "Manage Apps"
+    }
 
     Box(modifier = modifier) {
         // Same fallback background image SettingsScreen used to render behind its
@@ -175,34 +203,36 @@ fun LongPressSettingsMenu(
             SettingsMenuHeader(title = title, onBack = onBack)
 
             Box(modifier = Modifier.weight(1f)) {
-                if (showManageApps) {
-                    ManageAppsScreen(viewModel = manageAppsViewModel)
-                } else {
-                    AnimatedContent(
-                        targetState = selectedCategory,
-                        transitionSpec = {
-                            // Drilling into a subpage slides in from the right; returning
-                            // to the list slides in from the left - mirrors typical
-                            // drill-down navigation even though this isn't nav-compose
-                            // under the hood.
-                            val enteringSubpage = targetState != null
-                            val slideDistance = { width: Int -> width / 3 }
-                            if (enteringSubpage) {
-                                (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
-                                    .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
-                            } else {
-                                (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
-                                    .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
-                            }
-                        },
-                        label = "longPressSettingsContent",
-                    ) { category ->
-                        when (category) {
-                            null -> SettingsMenuHome(
-                                onCategorySelected = { selectedCategory = it },
-                                onEditWidgetsClick = onEditWidgetsClick,
-                                onEasterEggUnlocked = onEasterEggUnlocked,
-                            )
+                AnimatedContent(
+                    targetState = page,
+                    transitionSpec = {
+                        // Drilling deeper (Home -> Category -> ManageApps) slides in from
+                        // the right; stepping back slides in from the left - mirrors
+                        // typical drill-down navigation even though this isn't
+                        // nav-compose under the hood. ManageApps now shares this same
+                        // transition rather than swapping in via a plain unanimated `if`.
+                        val enteringDeeper = targetState.depth > initialState.depth
+                        val slideDistance = { width: Int -> width / 3 }
+                        if (enteringDeeper) {
+                            (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
+                                .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                        } else {
+                            (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
+                                .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
+                        }
+                    },
+                    label = "longPressSettingsContent",
+                ) { targetPage ->
+                    when (targetPage) {
+                        MenuPage.Home -> SettingsMenuHome(
+                            onCategorySelected = { page = MenuPage.Category(it) },
+                            onEditWidgetsClick = onEditWidgetsClick,
+                            onEasterEggUnlocked = onEasterEggUnlocked,
+                        )
+
+                        is MenuPage.ManageApps -> ManageAppsScreen(viewModel = manageAppsViewModel)
+
+                        is MenuPage.Category -> when (targetPage.category) {
                             SettingsCategory.Setup -> SetupSettingsContent(
                                 uiState = uiState,
                                 onLogFolderPicked = settingsViewModel::onLogFolderPicked,
@@ -235,7 +265,7 @@ fun LongPressSettingsMenu(
                             SettingsCategory.AppDrawer -> AppDrawerSettingsContent(
                                 gridColumns = uiState.gridColumns,
                                 onGridColumnsChanged = settingsViewModel::onGridColumnsChanged,
-                                onManageAppsClick = { showManageApps = true },
+                                onManageAppsClick = { page = MenuPage.ManageApps(fromCategory = targetPage.category) },
                                 dockEnabled = uiState.dockEnabled,
                                 onDockEnabledChanged = settingsViewModel::onDockEnabledChanged,
                                 dockMaxApps = uiState.dockMaxApps,

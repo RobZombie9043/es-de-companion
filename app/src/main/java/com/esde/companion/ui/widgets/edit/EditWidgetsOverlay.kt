@@ -4,8 +4,11 @@ import android.graphics.Rect
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -77,8 +80,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -215,6 +220,8 @@ fun EditWidgetsOverlay(
             onDispose { view.systemGestureExclusionRects = emptyList() }
         }
 
+        val hapticFeedback = LocalHapticFeedback.current
+
         Box(modifier = Modifier.fillMaxSize()) {
             val widgets by viewModel.widgets.collectAsStateWithLifecycle()
             val previewContent by viewModel.previewContent.collectAsStateWithLifecycle()
@@ -286,7 +293,7 @@ fun EditWidgetsOverlay(
                 val cellHeight = maxHeight / grid.rows
                 val gridLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
 
-                if (widgets.isEmpty()) {
+                AnimatedVisibility(visible = widgets.isEmpty(), enter = fadeIn(), exit = fadeOut()) {
                     Text(text = "No widgets yet - open options to add one", modifier = Modifier.padding(24.dp))
                 }
 
@@ -507,6 +514,7 @@ fun EditWidgetsOverlay(
                             text = { Text("Remove Widget") },
                             leadingIcon = { Icon(imageVector = Icons.Filled.Delete, contentDescription = null) },
                             onClick = {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                 viewModel.removeWidget(selectedWidgetId!!)
                                 menuExpanded = false
                             },
@@ -597,6 +605,7 @@ private fun PlaceholderWidgetBox(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
+    val hapticFeedback = LocalHapticFeedback.current
     val currentWidget by rememberUpdatedState(widget)
     val isPlaceholder = content == WidgetContent.Empty
 
@@ -649,6 +658,7 @@ private fun PlaceholderWidgetBox(
                                 maxRow = (grid.rows - liveWidget.rowSpan).coerceAtLeast(0)
                                 accumX = 0f
                                 accumY = 0f
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onDragStateChanged(true)
                             },
                             onDragEnd = {
@@ -668,10 +678,21 @@ private fun PlaceholderWidgetBox(
                             val rowDelta = (accumY / cellHeightPx).toInt()
 
                             if (columnDelta != 0 || rowDelta != 0) {
+                                val previousColumn = currentColumn
+                                val previousRow = currentRow
                                 currentColumn = (currentColumn + columnDelta).coerceIn(0, maxColumn)
                                 currentRow = (currentRow + rowDelta).coerceIn(0, maxRow)
                                 accumX -= columnDelta * cellWidthPx
                                 accumY -= rowDelta * cellHeightPx
+                                // Fires once at the moment the drag is clamped onto a grid
+                                // boundary (a real transition, not every tick spent pinned
+                                // against it) - same "hit the wall" feedback as the resize
+                                // handles' edge-snap below.
+                                val hitBoundary = (currentColumn != previousColumn && (currentColumn == 0 || currentColumn == maxColumn)) ||
+                                    (currentRow != previousRow && (currentRow == 0 || currentRow == maxRow))
+                                if (hitBoundary) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
                                 onMove(widget.id, currentColumn, currentRow)
                             }
                         }
@@ -746,6 +767,7 @@ private fun ResizeHandle(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
+    val hapticFeedback = LocalHapticFeedback.current
     val currentWidget by rememberUpdatedState(widget)
     val isColumnAxis = edge == ResizeEdge.Left || edge == ResizeEdge.Right
     // Right/Bottom: the anchor is this widget's own near/start edge (gridColumn/gridRow),
@@ -796,6 +818,7 @@ private fun ResizeHandle(
                         initialStartPx = start * cellPx
                         accum = 0f
                         totalDrag = 0f
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         onDragStateChanged(true)
                     },
                     onDragEnd = {
@@ -821,6 +844,7 @@ private fun ResizeHandle(
                         if (nearGridBoundary && span != maxSpan) {
                             span = maxSpan
                             changed = true
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         } else if (!nearGridBoundary) {
                             val cellDelta = (accum / cellPx).toInt()
                             if (cellDelta != 0) {
@@ -838,6 +862,7 @@ private fun ResizeHandle(
                             start = 0
                             span = maxSpan
                             changed = true
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         } else if (!nearGridBoundary) {
                             val cellDelta = (accum / cellPx).toInt()
                             if (cellDelta != 0) {
@@ -916,6 +941,7 @@ private fun AddWidgetDialog(
     onPick: (WidgetType) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Widget") },
@@ -927,7 +953,10 @@ private fun AddWidgetDialog(
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onPick(widgetType) }
+                            .clickable {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onPick(widgetType)
+                            }
                             .padding(vertical = 12.dp),
                     )
                 }
@@ -1289,6 +1318,7 @@ private fun ColorBackgroundConfig(
     current: WidgetType.ColorBackground,
     onChange: (WidgetType.ColorBackground) -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = "Color", style = MaterialTheme.typography.titleSmall)
@@ -1306,7 +1336,10 @@ private fun ColorBackgroundConfig(
                                     Modifier
                                 },
                             )
-                            .clickable { onChange(current.copy(colorArgb = colorArgb)) },
+                            .clickable {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onChange(current.copy(colorArgb = colorArgb))
+                            },
                     )
                 }
             }
@@ -1328,6 +1361,7 @@ private fun GameDescriptionConfig(
     current: WidgetType.GameDescription,
     onChange: (WidgetType.GameDescription) -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
@@ -1353,7 +1387,10 @@ private fun GameDescriptionConfig(
                                     Modifier
                                 },
                             )
-                            .clickable { onChange(current.copy(textColorArgb = colorArgb)) },
+                            .clickable {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onChange(current.copy(textColorArgb = colorArgb))
+                            },
                     )
                 }
             }
@@ -1375,7 +1412,10 @@ private fun GameDescriptionConfig(
                                     Modifier
                                 },
                             )
-                            .clickable { onChange(current.copy(backgroundColorArgb = colorArgb)) },
+                            .clickable {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onChange(current.copy(backgroundColorArgb = colorArgb))
+                            },
                     )
                 }
             }

@@ -43,6 +43,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.DockSize
@@ -235,6 +237,7 @@ internal fun WidgetsSettingsContent(onEditWidgetsClick: () -> Unit) {
  */
 @Composable
 private fun OverlayOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -253,6 +256,7 @@ private fun OverlayOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit)
             Slider(
                 value = percent.toFloat(),
                 onValueChange = { onPercentChanged(it.roundToInt()) },
+                onValueChangeFinished = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) },
                 valueRange = 0f..100f,
             )
         }
@@ -285,6 +289,7 @@ internal fun VideoPlaybackSettingsContent(
 
 @Composable
 private fun VideoPlaybackEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -309,7 +314,13 @@ private fun VideoPlaybackEnabledSetting(enabled: Boolean, onEnabledChanged: (Boo
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEnabledChanged(it)
+                    },
+                )
             }
         }
     }
@@ -317,6 +328,7 @@ private fun VideoPlaybackEnabledSetting(enabled: Boolean, onEnabledChanged: (Boo
 
 @Composable
 private fun VideoDelaySetting(delaySeconds: Int, onDelaySecondsChanged: (Int) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -338,6 +350,7 @@ private fun VideoDelaySetting(delaySeconds: Int, onDelaySecondsChanged: (Int) ->
             Slider(
                 value = delaySeconds.toFloat(),
                 onValueChange = { onDelaySecondsChanged(it.roundToInt()) },
+                onValueChangeFinished = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) },
                 valueRange = 0f..10f,
                 steps = 9,
             )
@@ -347,6 +360,7 @@ private fun VideoDelaySetting(delaySeconds: Int, onDelaySecondsChanged: (Int) ->
 
 @Composable
 private fun VideoAudioSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -371,7 +385,13 @@ private fun VideoAudioSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> U
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEnabledChanged(it)
+                    },
+                )
             }
         }
     }
@@ -404,6 +424,7 @@ internal fun OtherSettingsContent(
 
 @Composable
 private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -428,7 +449,13 @@ private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boo
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEnabledChanged(it)
+                    },
+                )
             }
         }
     }
@@ -436,6 +463,7 @@ private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boo
 
 @Composable
 private fun SettingsFabVisibleSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -460,7 +488,13 @@ private fun SettingsFabVisibleSetting(enabled: Boolean, onEnabledChanged: (Boole
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEnabledChanged(it)
+                    },
+                )
             }
         }
     }
@@ -562,6 +596,7 @@ internal fun AppDrawerSettingsContent(
 
 @Composable
 private fun DockEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -585,13 +620,20 @@ private fun DockEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> 
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnabledChanged(it)
+                },
+            )
         }
     }
 }
 
 @Composable
 private fun DockMaxAppsSetting(maxApps: Int, onMaxAppsChanged: (Int) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -610,6 +652,7 @@ private fun DockMaxAppsSetting(maxApps: Int, onMaxAppsChanged: (Int) -> Unit) {
             Slider(
                 value = maxApps.toFloat(),
                 onValueChange = { onMaxAppsChanged(it.roundToInt()) },
+                onValueChangeFinished = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) },
                 valueRange = 2f..5f,
                 steps = 2,
             )
@@ -689,6 +732,7 @@ private fun ManageAppsEntry(onClick: () -> Unit) {
 
 @Composable
 private fun GridColumnsSetting(columns: Int, onColumnsChanged: (Int) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -707,6 +751,7 @@ private fun GridColumnsSetting(columns: Int, onColumnsChanged: (Int) -> Unit) {
             Slider(
                 value = columns.toFloat(),
                 onValueChange = { onColumnsChanged(it.roundToInt()) },
+                onValueChangeFinished = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) },
                 valueRange = 3f..6f,
                 steps = 2,
             )
@@ -756,6 +801,7 @@ internal fun SoundSettingsContent(
 
 @Composable
 private fun MusicEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -780,7 +826,13 @@ private fun MusicEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) ->
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEnabledChanged(it)
+                    },
+                )
             }
         }
     }
@@ -788,6 +840,7 @@ private fun MusicEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) ->
 
 @Composable
 private fun MusicPlayWhileBrowsingSystemsSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -806,13 +859,20 @@ private fun MusicPlayWhileBrowsingSystemsSetting(enabled: Boolean, onEnabledChan
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
-            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnabledChanged(it)
+                },
+            )
         }
     }
 }
 
 @Composable
 private fun MusicPlayWhileBrowsingGamesSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -831,13 +891,20 @@ private fun MusicPlayWhileBrowsingGamesSetting(enabled: Boolean, onEnabledChange
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
-            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnabledChanged(it)
+                },
+            )
         }
     }
 }
 
 @Composable
 private fun MusicPlayDuringScreensaverSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -856,7 +923,13 @@ private fun MusicPlayDuringScreensaverSetting(enabled: Boolean, onEnabledChanged
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
-            Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnabledChanged(it)
+                },
+            )
         }
     }
 }

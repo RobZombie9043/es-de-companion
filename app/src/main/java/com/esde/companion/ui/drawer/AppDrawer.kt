@@ -38,7 +38,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -172,6 +174,7 @@ private fun AppDrawerItem(
         value = AppIconLoader.loadIcon(context, app.packageName)
     }
     var menuExpanded by remember { mutableStateOf(false) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -183,7 +186,10 @@ private fun AppDrawerItem(
                 .combinedClickable(
                     onClick = onClick,
                     onDoubleClick = onDoubleClick,
-                    onLongClick = { menuExpanded = true },
+                    onLongClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        menuExpanded = true
+                    },
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -245,6 +251,7 @@ private fun AppLongPressMenu(
     onAppInfo: () -> Unit,
     onHideApp: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
@@ -287,7 +294,11 @@ private fun AppLongPressMenu(
         DropdownMenuItem(
             text = { Text("Hide App") },
             leadingIcon = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
-            onClick = { onDismiss(); onHideApp() },
+            onClick = {
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                onDismiss()
+                onHideApp()
+            },
         )
     }
 }

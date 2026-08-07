@@ -3,6 +3,9 @@
 package com.esde.companion.ui.video
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -91,7 +94,7 @@ fun VideoOverlayScreen(
         }
     }
 
-    if (isPlaying) {
+    AnimatedVisibility(visible = isPlaying, enter = fadeIn(), exit = fadeOut()) {
         Box(modifier = modifier.background(Color.Black)) {
             AndroidView(
                 factory = { ctx ->

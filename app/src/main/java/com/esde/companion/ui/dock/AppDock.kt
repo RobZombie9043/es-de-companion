@@ -46,7 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -339,6 +341,7 @@ private fun FilledDockSlot(
     onRemove: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     Box(contentAlignment = Alignment.Center) {
         Box(
@@ -347,7 +350,10 @@ private fun FilledDockSlot(
                 .combinedClickable(
                     onClick = onClick,
                     onDoubleClick = onDoubleClick,
-                    onLongClick = { menuExpanded = true },
+                    onLongClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        menuExpanded = true
+                    },
                 ),
         ) {
             if (isAppDrawerShortcut) {
@@ -400,11 +406,18 @@ private fun FilledDockSlot(
 @Composable
 private fun EmptyDockSlot(iconDp: Dp, onAddApp: () -> Unit) {
     val tint = dockContentColor()
+    val hapticFeedback = LocalHapticFeedback.current
     Box(
         modifier = Modifier
             .size(iconDp)
             .border(width = 1.dp, color = tint, shape = CircleShape)
-            .combinedClickable(onClick = {}, onLongClick = onAddApp),
+            .combinedClickable(
+                onClick = {},
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onAddApp()
+                },
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -439,6 +452,7 @@ private fun DockItemMenu(
     onMoveRight: () -> Unit,
     onRemove: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
@@ -498,7 +512,11 @@ private fun DockItemMenu(
         DropdownMenuItem(
             text = { Text("Remove from Dock") },
             leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },
-            onClick = { onDismiss(); onRemove() },
+            onClick = {
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                onDismiss()
+                onRemove()
+            },
         )
     }
 }

@@ -18,7 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -54,11 +56,15 @@ private fun ManageAppsRow(row: AppVisibilityRow, onToggle: (hidden: Boolean) -> 
         value = AppIconLoader.loadIcon(context, row.app.packageName)
     }
     val isVisible = !row.isHidden
+    val hapticFeedback = LocalHapticFeedback.current
 
     Surface(
         // Tapping anywhere in the row toggles, same as the Checkbox - new hidden state
         // is simply the current visible state (a flip).
-        onClick = { onToggle(isVisible) },
+        onClick = {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+            onToggle(isVisible)
+        },
         modifier = Modifier.fillMaxWidth(),
         // Matches the same translucency every other settings card uses (see
         // SettingsContent.kt's SETTINGS_PANEL_ALPHA) so this reads as one consistent set
@@ -84,7 +90,10 @@ private fun ManageAppsRow(row: AppVisibilityRow, onToggle: (hidden: Boolean) -> 
             )
             Checkbox(
                 checked = isVisible,
-                onCheckedChange = { checked -> onToggle(!checked) },
+                onCheckedChange = { checked ->
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggle(!checked)
+                },
             )
         }
     }

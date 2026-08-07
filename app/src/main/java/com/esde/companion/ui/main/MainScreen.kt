@@ -218,6 +218,7 @@ private fun MainScreenContent(
                 velocityFraction < -FLING_VELOCITY_THRESHOLD -> false
                 else -> openFraction.value > positionThreshold
             }
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
             coroutineScope.launch {
                 openFraction.animateTo(
                     targetValue = if (towardOpen) 1f else 0f,
@@ -299,6 +300,7 @@ private fun MainScreenContent(
                         },
                         onDoubleTap = {
                             if (openFraction.value == 0f) {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onToggleBlankScreen()
                             }
                         },
@@ -339,20 +341,35 @@ private fun MainScreenContent(
             // the anchor-relative version of this same idiom. Sized as a large fraction
             // of the screen (not the small fixed width this used to be) since it now has
             // to hold everything a full settings screen would.
-            if (longPressMenuOpen) {
+            // Kept composed slightly past longPressMenuOpen flipping false so the exit
+            // animation below (revealProgress back to 0) actually gets to play - a plain
+            // `if (longPressMenuOpen)` would tear the Popup's window down immediately,
+            // same as EditWidgetsOverlay's dialogs, leaving no chance for a symmetric close.
+            var popupVisible by remember { mutableStateOf(false) }
+            LaunchedEffect(longPressMenuOpen) {
+                if (longPressMenuOpen) popupVisible = true
+            }
+
+            if (popupVisible) {
                 Popup(
                     alignment = Alignment.Center,
                     onDismissRequest = { setLongPressMenuOpen(false) },
                     properties = PopupProperties(focusable = true),
                 ) {
-                    // Entrance-only scale+fade, matching the app's existing spring-based
-                    // motion (see DRAWER_SETTLE_SPRING) rather than snapping straight to
-                    // full size the way a plain Popup does by default. No exit animation -
-                    // Popup tears its window down immediately once longPressMenuOpen flips
-                    // false, same as EditWidgetsOverlay's dialogs.
+                    // Scale+fade in both directions, matching the app's existing
+                    // spring-based motion (see DRAWER_SETTLE_SPRING) rather than snapping
+                    // straight to full size / disappearing instantly the way a plain
+                    // Popup does by default. Closing animates revealProgress back to 0
+                    // before flipping popupVisible false (the thing that actually tears
+                    // the Popup's window down), so entrance and exit read as mirror images.
                     val revealProgress = remember { Animatable(0f) }
-                    LaunchedEffect(Unit) {
-                        revealProgress.animateTo(targetValue = 1f, animationSpec = LONG_PRESS_MENU_REVEAL_SPRING)
+                    LaunchedEffect(longPressMenuOpen) {
+                        if (longPressMenuOpen) {
+                            revealProgress.animateTo(targetValue = 1f, animationSpec = LONG_PRESS_MENU_REVEAL_SPRING)
+                        } else {
+                            revealProgress.animateTo(targetValue = 0f, animationSpec = LONG_PRESS_MENU_REVEAL_SPRING)
+                            popupVisible = false
+                        }
                     }
 
                     Surface(

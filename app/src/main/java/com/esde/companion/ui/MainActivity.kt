@@ -3,7 +3,11 @@ package com.esde.companion.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -390,7 +394,7 @@ class MainActivity : ComponentActivity() {
                                             Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
                                         }
 
-                                        if (musicControlsRevealed) {
+                                        AnimatedVisibility(visible = musicControlsRevealed, enter = fadeIn(), exit = fadeOut()) {
                                             val overlayStart = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP
                                             val overlayMaxWidth = maxWidth - overlayStart - SETTINGS_BUTTON_RESERVED_WIDTH
                                             MusicControlsOverlay(
@@ -430,35 +434,41 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
-                                if (showEditWidgets) {
-                                    val editWidgetsViewModel: EditWidgetsViewModel =
-                                        viewModel(factory = EditWidgetsViewModelFactory(appContainer))
-                                    EditWidgetsOverlay(
-                                        viewModel = editWidgetsViewModel,
-                                        initialCanvas = editWidgetsInitialCanvas,
-                                        onDone = { showEditWidgets = false },
-                                    )
-                                } else {
-                                    MainScreen(
-                                        appDrawerViewModel = appDrawerViewModel,
-                                        dockViewModel = dockViewModel,
-                                        settingsViewModel = settingsViewModel,
-                                        manageAppsViewModel = manageAppsViewModel,
-                                        showSettingsFab = settingsFabVisible,
-                                        overlayOpacityPercent = overlayOpacityPercent,
-                                        onOpenEditWidgets = { showEditWidgets = true },
-                                        onToggleBlankScreen = { isBlanked = !isBlanked },
-                                        onDrawerOpenChanged = { drawerOpen = it },
-                                        onLongPressMenuOpenChanged = { longPressMenuOpen = it },
-                                        topStartOverlay = musicFab,
-                                    )
+                                // Full-content swap (not an overlay appearing over
+                                // existing content), so Crossfade rather than
+                                // AnimatedVisibility - a hard cut here read jarringly
+                                // different from every other menu transition in the app.
+                                Crossfade(targetState = showEditWidgets, label = "editWidgetsSwap") { isEditing ->
+                                    if (isEditing) {
+                                        val editWidgetsViewModel: EditWidgetsViewModel =
+                                            viewModel(factory = EditWidgetsViewModelFactory(appContainer))
+                                        EditWidgetsOverlay(
+                                            viewModel = editWidgetsViewModel,
+                                            initialCanvas = editWidgetsInitialCanvas,
+                                            onDone = { showEditWidgets = false },
+                                        )
+                                    } else {
+                                        MainScreen(
+                                            appDrawerViewModel = appDrawerViewModel,
+                                            dockViewModel = dockViewModel,
+                                            settingsViewModel = settingsViewModel,
+                                            manageAppsViewModel = manageAppsViewModel,
+                                            showSettingsFab = settingsFabVisible,
+                                            overlayOpacityPercent = overlayOpacityPercent,
+                                            onOpenEditWidgets = { showEditWidgets = true },
+                                            onToggleBlankScreen = { isBlanked = !isBlanked },
+                                            onDrawerOpenChanged = { drawerOpen = it },
+                                            onLongPressMenuOpenChanged = { longPressMenuOpen = it },
+                                            topStartOverlay = musicFab,
+                                        )
+                                    }
                                 }
 
                                 // Automatic Dim (Settings > UI Settings: Game Playing /
                                 // Screensaver Behavior). Purely visual - no clickable or
                                 // pointerInput, so touches pass straight through to
                                 // whatever's underneath, unlike the Black cover below.
-                                if (isDimmed && mainScreenActive) {
+                                AnimatedVisibility(visible = isDimmed && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -481,7 +491,7 @@ class MainActivity : ComponentActivity() {
                                 // MainScreen's long-press-to-edit, widget taps - receives
                                 // input while blanked. "Blanked" should mean genuinely
                                 // unreachable, not just visually covered.
-                                if (isBlanked && mainScreenActive) {
+                                AnimatedVisibility(visible = isBlanked && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -504,7 +514,7 @@ class MainActivity : ComponentActivity() {
                                 // its own branch rather than reusing isBlanked, since it
                                 // renders interactive content (paged/zoomable PDF) rather
                                 // than a plain cover.
-                                if (showGameManual && mainScreenActive) {
+                                AnimatedVisibility(visible = showGameManual && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
                                     GameManualScreen(
                                         viewModel = gameManualViewModel,
                                         onExit = { manualDismissed = true },
@@ -512,7 +522,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                if (showVideoOverlay) {
+                                AnimatedVisibility(visible = showVideoOverlay, enter = fadeIn(), exit = fadeOut()) {
                                     VideoOverlayScreen(
                                         videoPath = videoPath!!,
                                         delaySeconds = videoDelaySeconds,
