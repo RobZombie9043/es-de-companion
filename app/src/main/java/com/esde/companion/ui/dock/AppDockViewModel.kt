@@ -2,6 +2,8 @@ package com.esde.companion.ui.dock
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.esde.companion.domain.model.APP_DRAWER_SHORTCUT_PACKAGE_NAME
+import com.esde.companion.domain.model.AppDrawerShortcut
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
@@ -64,11 +66,15 @@ class AppDockViewModel(
      * anything from storage, it just shows fewer slots (see DockSettingsRepository). An
      * entry for an app that's since been uninstalled is silently skipped rather than
      * shown as a broken row; it reappears in its slot if the app is reinstalled, since
-     * nothing was removed from storage. */
+     * nothing was removed from storage. [APP_DRAWER_SHORTCUT_PACKAGE_NAME] resolves to
+     * the synthetic [AppDrawerShortcut] entry instead of an installed-app lookup, since
+     * it's never actually present in [observeInstalledApps]. */
     val dockItems: StateFlow<List<InstalledApp>> =
         combine(observeDockApps(), observeInstalledApps(), observeDockMaxApps()) { pinned, installed, max ->
             val byPackageName = installed.associateBy { it.packageName }
-            pinned.take(max).mapNotNull { byPackageName[it] }
+            pinned.take(max).mapNotNull { pkg ->
+                if (pkg == APP_DRAWER_SHORTCUT_PACKAGE_NAME) AppDrawerShortcut else byPackageName[pkg]
+            }
         }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptyList())
 
     /** Packages whose last-used launch location is the other screen - same set the App
@@ -77,10 +83,13 @@ class AppDockViewModel(
         .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptySet())
 
     /** Installed apps not already pinned - the candidate list for the "add app to
-     * dock" picker opened by long-pressing an empty slot. */
+     * dock" picker opened by long-pressing an empty slot. [AppDrawerShortcut] is
+     * prepended at the top whenever it isn't already pinned, so it's always the first
+     * thing offered rather than sorted in among real apps. */
     val availableApps: StateFlow<List<InstalledApp>> =
         combine(observeInstalledApps(), observeDockApps()) { installed, pinned ->
-            installed.filterNot { it.packageName in pinned }
+            val realApps = installed.filterNot { it.packageName in pinned }
+            if (APP_DRAWER_SHORTCUT_PACKAGE_NAME in pinned) realApps else listOf(AppDrawerShortcut) + realApps
         }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptyList())
 
     fun recordLaunchLocation(packageName: String, location: LaunchLocation) {

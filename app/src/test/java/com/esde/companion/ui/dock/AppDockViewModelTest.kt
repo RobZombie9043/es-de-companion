@@ -1,5 +1,6 @@
 package com.esde.companion.ui.dock
 
+import com.esde.companion.domain.model.AppDrawerShortcut
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
@@ -285,7 +286,9 @@ class AppDockViewModelTest {
         val collectJob = launch { viewModel.availableApps.collect {} }
         advanceUntilIdle()
 
-        assertEquals(listOf(allApps[1], allApps[2]), viewModel.availableApps.value)
+        // AppDrawerShortcut is prepended whenever it isn't itself already pinned - see
+        // AppDockViewModel.availableApps's kdoc.
+        assertEquals(listOf(AppDrawerShortcut, allApps[1], allApps[2]), viewModel.availableApps.value)
         collectJob.cancel()
     }
 }

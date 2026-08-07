@@ -18,6 +18,9 @@ class MainViewModelFactory(
             observeGamePlayingBehavior = appContainer.observeGamePlayingBehaviorUseCase,
             observeScreensaverBehavior = appContainer.observeScreensaverBehaviorUseCase,
             observeVideoPlaybackEnabled = appContainer.observeVideoPlaybackEnabledUseCase,
+            setVideoPlaybackEnabled = appContainer.setVideoPlaybackEnabledUseCase,
+            observeMusicEnabled = appContainer.observeMusicEnabledUseCase,
+            setMusicEnabled = appContainer.setMusicEnabledUseCase,
         ) as T
     }
 }

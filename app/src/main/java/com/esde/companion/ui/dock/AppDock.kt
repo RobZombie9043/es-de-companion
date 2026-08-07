@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -54,6 +55,7 @@ import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.apps.AppLauncher
 import com.esde.companion.data.apps.SecondaryDisplayResolver
+import com.esde.companion.domain.model.APP_DRAWER_SHORTCUT_PACKAGE_NAME
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
@@ -81,6 +83,15 @@ private fun dockBackgroundColor(): Color =
 private fun dockContentColor(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.3f)
 
+/** Same inverse-of-[dockBackgroundColor] logic as [dockContentColor], full opacity - for
+ * the App Drawer shortcut's glyph (Icons.Filled.Apps), which - unlike a real app's own
+ * AsyncImage icon - has no built-in color of its own and needs an explicit tint to read
+ * clearly against the dock's forced black/white background rather than whatever the
+ * ambient content color happens to be. */
+@Composable
+private fun appDrawerShortcutIconTint(): Color =
+    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+
 private fun DockSize.iconDp(): Dp = when (this) {
     DockSize.Small -> 40.dp
     DockSize.Medium -> 48.dp
@@ -105,9 +116,14 @@ fun dockBarHeight(size: DockSize): Dp = size.iconDp() + VERTICAL_PADDING * 2
  * for launch-location/reorder/remove options (see [DockItemMenu]), long-press an empty
  * slot to pin a new app. There is no separate "Manage Dock" Settings screen - all
  * editing happens here, on the live dock.
+ *
+ * One pinnable slot is special: [APP_DRAWER_SHORTCUT_PACKAGE_NAME] (offered at the top of
+ * the "add app to dock" list, see AppDockViewModel.availableApps) isn't a real app - a tap
+ * calls [onOpenAppDrawer] instead of [AppLauncher.launch], and its long-press menu skips
+ * the launch-location/App Info rows that don't apply to it (see [DockItemMenu]).
  */
 @Composable
-fun AppDock(viewModel: AppDockViewModel, modifier: Modifier = Modifier) {
+fun AppDock(viewModel: AppDockViewModel, onOpenAppDrawer: () -> Unit, modifier: Modifier = Modifier) {
     val dockEnabled by viewModel.dockEnabled.collectAsStateWithLifecycle()
     val dockSize by viewModel.dockSize.collectAsStateWithLifecycle()
     val dockOpacityPercent by viewModel.dockOpacityPercent.collectAsStateWithLifecycle()
@@ -147,10 +163,28 @@ fun AppDock(viewModel: AppDockViewModel, modifier: Modifier = Modifier) {
                 val app = dockItems.getOrNull(index)
                 if (app == null) {
                     EmptyDockSlot(iconDp = iconDp, onAddApp = { showAddAppDialog = true })
+                } else if (app.packageName == APP_DRAWER_SHORTCUT_PACKAGE_NAME) {
+                    FilledDockSlot(
+                        app = app,
+                        iconDp = iconDp,
+                        isAppDrawerShortcut = true,
+                        isOtherScreenPreferred = false,
+                        isLeftmost = index == 0,
+                        isRightmost = index == dockItems.lastIndex,
+                        onClick = onOpenAppDrawer,
+                        onDoubleClick = onOpenAppDrawer,
+                        onLaunchThisScreen = onOpenAppDrawer,
+                        onLaunchOtherScreen = onOpenAppDrawer,
+                        onAppInfo = {},
+                        onMoveLeft = { viewModel.moveLeft(app.packageName) },
+                        onMoveRight = { viewModel.moveRight(app.packageName) },
+                        onRemove = { viewModel.removeFromDock(app.packageName) },
+                    )
                 } else {
                     FilledDockSlot(
                         app = app,
                         iconDp = iconDp,
+                        isAppDrawerShortcut = false,
                         isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName),
                         isLeftmost = index == 0,
                         isRightmost = index == dockItems.lastIndex,
@@ -253,6 +287,15 @@ fun DockPreview(
 
 @Composable
 private fun FilledDockSlotPreview(app: InstalledApp, iconDp: Dp) {
+    if (app.packageName == APP_DRAWER_SHORTCUT_PACKAGE_NAME) {
+        Icon(
+            imageVector = Icons.Filled.Apps,
+            contentDescription = app.label,
+            tint = appDrawerShortcutIconTint(),
+            modifier = Modifier.size(iconDp),
+        )
+        return
+    }
     val context = LocalContext.current
     val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
         value = AppIconLoader.loadIcon(context, app.packageName)
@@ -282,6 +325,7 @@ private fun EmptyDockSlotPreview(iconDp: Dp) {
 private fun FilledDockSlot(
     app: InstalledApp,
     iconDp: Dp,
+    isAppDrawerShortcut: Boolean,
     isOtherScreenPreferred: Boolean,
     isLeftmost: Boolean,
     isRightmost: Boolean,
@@ -294,10 +338,6 @@ private fun FilledDockSlot(
     onMoveRight: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
-        value = AppIconLoader.loadIcon(context, app.packageName)
-    }
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box(contentAlignment = Alignment.Center) {
@@ -310,11 +350,24 @@ private fun FilledDockSlot(
                     onLongClick = { menuExpanded = true },
                 ),
         ) {
-            AsyncImage(
-                model = icon,
-                contentDescription = app.label,
-                modifier = Modifier.size(iconDp),
-            )
+            if (isAppDrawerShortcut) {
+                Icon(
+                    imageVector = Icons.Filled.Apps,
+                    contentDescription = app.label,
+                    tint = appDrawerShortcutIconTint(),
+                    modifier = Modifier.size(iconDp),
+                )
+            } else {
+                val context = LocalContext.current
+                val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
+                    value = AppIconLoader.loadIcon(context, app.packageName)
+                }
+                AsyncImage(
+                    model = icon,
+                    contentDescription = app.label,
+                    modifier = Modifier.size(iconDp),
+                )
+            }
             if (isOtherScreenPreferred) {
                 Box(
                     modifier = Modifier
@@ -328,6 +381,7 @@ private fun FilledDockSlot(
         DockItemMenu(
             expanded = menuExpanded,
             appLabel = app.label,
+            isAppDrawerShortcut = isAppDrawerShortcut,
             isOtherScreenPreferred = isOtherScreenPreferred,
             isLeftmost = isLeftmost,
             isRightmost = isRightmost,
@@ -365,11 +419,15 @@ private fun EmptyDockSlot(iconDp: Dp, onAddApp: () -> Unit) {
  * Long-press context menu for a pinned dock item - same shape as App Drawer's
  * AppLongPressMenu (this/other screen, App Info) plus dock-specific reordering/removal
  * in place of "Hide App", per the user's request that the dock's menu skip that option.
+ * [isAppDrawerShortcut] skips the launch-location and App Info rows entirely - neither
+ * concept applies to the App Drawer shortcut (see AppDock's kdoc), leaving just reorder/
+ * remove.
  */
 @Composable
 private fun DockItemMenu(
     expanded: Boolean,
     appLabel: String,
+    isAppDrawerShortcut: Boolean,
     isOtherScreenPreferred: Boolean,
     isLeftmost: Boolean,
     isRightmost: Boolean,
@@ -394,33 +452,35 @@ private fun DockItemMenu(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
-        DropdownMenuItem(
-            text = { Text("Launch on this screen") },
-            leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
-            trailingIcon = {
-                if (!isOtherScreenPreferred) {
-                    Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                }
-            },
-            onClick = { onDismiss(); onLaunchThisScreen() },
-        )
-        DropdownMenuItem(
-            text = { Text("Launch on other screen") },
-            leadingIcon = { Icon(Icons.Filled.OpenInNew, contentDescription = null) },
-            trailingIcon = {
-                if (isOtherScreenPreferred) {
-                    Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                }
-            },
-            onClick = { onDismiss(); onLaunchOtherScreen() },
-        )
-        HorizontalDivider()
-        DropdownMenuItem(
-            text = { Text("App Info") },
-            leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
-            onClick = { onDismiss(); onAppInfo() },
-        )
-        HorizontalDivider()
+        if (!isAppDrawerShortcut) {
+            DropdownMenuItem(
+                text = { Text("Launch on this screen") },
+                leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                trailingIcon = {
+                    if (!isOtherScreenPreferred) {
+                        Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                onClick = { onDismiss(); onLaunchThisScreen() },
+            )
+            DropdownMenuItem(
+                text = { Text("Launch on other screen") },
+                leadingIcon = { Icon(Icons.Filled.OpenInNew, contentDescription = null) },
+                trailingIcon = {
+                    if (isOtherScreenPreferred) {
+                        Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                onClick = { onDismiss(); onLaunchOtherScreen() },
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("App Info") },
+                leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                onClick = { onDismiss(); onAppInfo() },
+            )
+            HorizontalDivider()
+        }
         if (!isLeftmost) {
             DropdownMenuItem(
                 text = { Text("Move Left") },
@@ -475,10 +535,7 @@ private fun AddAppDialog(
 
 @Composable
 private fun AddAppRow(app: InstalledApp, onClick: () -> Unit) {
-    val context = LocalContext.current
-    val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
-        value = AppIconLoader.loadIcon(context, app.packageName)
-    }
+    val isAppDrawerShortcut = app.packageName == APP_DRAWER_SHORTCUT_PACKAGE_NAME
 
     Row(
         modifier = Modifier
@@ -488,7 +545,20 @@ private fun AddAppRow(app: InstalledApp, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(40.dp))
+        if (isAppDrawerShortcut) {
+            Icon(
+                imageVector = Icons.Filled.Apps,
+                contentDescription = null,
+                tint = appDrawerShortcutIconTint(),
+                modifier = Modifier.size(40.dp),
+            )
+        } else {
+            val context = LocalContext.current
+            val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
+                value = AppIconLoader.loadIcon(context, app.packageName)
+            }
+            AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(40.dp))
+        }
         Text(
             text = app.label,
             style = MaterialTheme.typography.bodyLarge,

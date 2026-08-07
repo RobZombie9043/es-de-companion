@@ -6,11 +6,13 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,9 +24,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.MusicOff
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -99,6 +108,7 @@ fun MainScreen(
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
 ) {
     MainScreenContent(
+        viewModel = viewModel,
         appDrawerViewModel = appDrawerViewModel,
         dockViewModel = dockViewModel,
         showSettingsFab = showSettingsFab,
@@ -122,6 +132,7 @@ fun MainScreen(
 // composable only owns the gesture that toggles it, via onToggleBlankScreen.
 @Composable
 private fun MainScreenContent(
+    viewModel: MainViewModel,
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
     showSettingsFab: Boolean,
@@ -138,6 +149,12 @@ private fun MainScreenContent(
         val coroutineScope = rememberCoroutineScope()
         val dockSize by dockViewModel.dockSize.collectAsStateWithLifecycle()
         val hapticFeedback = LocalHapticFeedback.current
+
+        // Master on/off state for the long-press menu's quick toggles below - every
+        // other music/video setting still lives in Settings > Background Music /
+        // Video Playback, untouched from here.
+        val musicEnabled by viewModel.musicEnabled.collectAsStateWithLifecycle()
+        val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
 
         // Long-press popup offering Settings/Edit Widgets - see the Popup below. Local
         // state (not lifted to MainActivity) since nothing outside this screen needs to
@@ -198,6 +215,15 @@ private fun MainScreenContent(
         fun closeDrawer() {
             coroutineScope.launch {
                 openFraction.animateTo(targetValue = 0f, animationSpec = DRAWER_SETTLE_SPRING)
+            }
+        }
+
+        // Unconditional open - used by the App Dock's App Drawer shortcut, same
+        // reasoning as closeDrawer() above (a deliberate tap, not a drag release, so
+        // there's no velocity/position ambiguity for settle() to resolve).
+        fun openDrawer() {
+            coroutineScope.launch {
+                openFraction.animateTo(targetValue = 1f, animationSpec = DRAWER_SETTLE_SPRING)
             }
         }
 
@@ -338,6 +364,36 @@ private fun MainScreenContent(
                                     onOpenEditWidgets()
                                 },
                             )
+                            HorizontalDivider()
+                            // Master on/off quick toggles - Settings > Background Music /
+                            // Video Playback own every other knob for each, this is only
+                            // ever the top-level enable/disable. Deliberately don't close
+                            // the menu on tap (unlike Settings/Edit Widgets above, which
+                            // navigate away) - toggling one shouldn't force reopening the
+                            // menu to also toggle the other.
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                            ) {
+                                QuickToggleButton(
+                                    onIcon = Icons.Filled.MusicNote,
+                                    offIcon = Icons.Filled.MusicOff,
+                                    enabled = musicEnabled,
+                                    onLabel = "Turn off background music",
+                                    offLabel = "Turn on background music",
+                                    onClick = viewModel::toggleMusicEnabled,
+                                )
+                                QuickToggleButton(
+                                    onIcon = Icons.Filled.Videocam,
+                                    offIcon = Icons.Filled.VideocamOff,
+                                    enabled = videoPlaybackEnabled,
+                                    onLabel = "Turn off video playback",
+                                    offLabel = "Turn on video playback",
+                                    onClick = viewModel::toggleVideoPlaybackEnabled,
+                                )
+                            }
                         }
                     }
                 }
@@ -384,6 +440,7 @@ private fun MainScreenContent(
                 // same offset means no separate animation/fraction math is needed here.
                 AppDock(
                     viewModel = dockViewModel,
+                    onOpenAppDrawer = { openDrawer() },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .offset(y = -dockBarHeight(dockSize)),
@@ -415,5 +472,32 @@ private fun MainScreenContent(
                 )
             }
         }
+    }
+}
+
+/**
+ * One quick-toggle button in the long-press menu's bottom row. On/off is communicated two
+ * ways: which icon is shown ([offIcon] is the standard Material "-Off" variant, with a
+ * diagonal slash built into the glyph itself - stronger and more legible at this size than
+ * color alone) and its tint (the theme's accent color when [enabled], a muted variant when
+ * not). Both colors come from MaterialTheme (not hardcoded black/white), so contrast holds
+ * in light and dark color schemes alike.
+ */
+@Composable
+private fun QuickToggleButton(
+    onIcon: ImageVector,
+    offIcon: ImageVector,
+    enabled: Boolean,
+    onLabel: String,
+    offLabel: String,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = if (enabled) onIcon else offIcon,
+            contentDescription = if (enabled) onLabel else offLabel,
+            tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(LONG_PRESS_MENU_ICON_SIZE),
+        )
     }
 }
