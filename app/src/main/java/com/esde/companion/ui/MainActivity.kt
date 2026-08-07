@@ -67,7 +67,6 @@ import com.esde.companion.ui.onboarding.OnboardingViewModel
 import com.esde.companion.ui.onboarding.OnboardingViewModelFactory
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModelFactory
-import com.esde.companion.ui.settings.SettingsScreen
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SettingsViewModelFactory
 import com.esde.companion.ui.theme.EsdeCompanionTheme
@@ -120,7 +119,7 @@ private val SETTINGS_BUTTON_RESERVED_WIDTH = CORNER_BUTTON_EDGE_PADDING + CORNER
 // see longPressMenuOpen below. Modifier.blur() only actually renders a blur on API 31+
 // (backed by RenderEffect); on this app's minSdk 29/30 it's a harmless no-op, so those
 // devices simply don't get the blur rather than crashing or looking broken.
-private val LONG_PRESS_MENU_BLUR_RADIUS = 8.dp
+private val LONG_PRESS_MENU_BLUR_RADIUS = 4.dp
 
 class MainActivity : ComponentActivity() {
 
@@ -180,7 +179,13 @@ class MainActivity : ComponentActivity() {
                             val viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(appContainer))
                             val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))
                             val dockViewModel: AppDockViewModel = viewModel(factory = AppDockViewModelFactory(appContainer))
-                            var showSettings by rememberSaveable { mutableStateOf(false) }
+                            // Constructed unconditionally now, rather than only while
+                            // Settings was showing - the long-press popup that hosts this
+                            // content is a child of MainScreen, which is always in
+                            // composition (unlike the old standalone SettingsScreen
+                            // destination it replaced).
+                            val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
+                            val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
                             var showEditWidgets by rememberSaveable { mutableStateOf(false) }
 
                             // Whichever StateGroup is live right now - read fresh on every
@@ -204,7 +209,7 @@ class MainActivity : ComponentActivity() {
 
                             // Whether the App Drawer is currently open - reported by
                             // MainScreen via onDrawerOpenChanged. Combined with
-                            // showSettings/showEditWidgets below so the automatic
+                            // longPressMenuOpen/showEditWidgets below so the automatic
                             // Dim/Black cover never shows over anything but the plain
                             // main screen.
                             var drawerOpen by remember { mutableStateOf(false) }
@@ -212,10 +217,14 @@ class MainActivity : ComponentActivity() {
                             // Reported by MainScreen via onLongPressMenuOpenChanged - used
                             // below to blur WidgetOverlay while the long-press menu is open,
                             // since that content is a sibling of MainScreen here, not a
-                            // descendant it could blur itself.
+                            // descendant it could blur itself. Also folded into
+                            // mainScreenActive below: the popup now hosts the entire
+                            // settings hierarchy (not just a couple of menu items), so it
+                            // represents "the user is in Settings" the same way showSettings
+                            // used to, before that was retired in favor of this popup.
                             var longPressMenuOpen by remember { mutableStateOf(false) }
 
-                            val mainScreenActive = !showSettings && !showEditWidgets && !drawerOpen
+                            val mainScreenActive = !longPressMenuOpen && !showEditWidgets && !drawerOpen
 
                             // Settings > UI Settings: how the main screen should react
                             // while a game is playing / the screensaver is active.
@@ -357,9 +366,9 @@ class MainActivity : ComponentActivity() {
                             // App Drawer, silently loses every touch to MainScreen's
                             // full-screen drag/tap detectors - Compose only gives a
                             // descendant the touch-priority edge, not a same-level
-                            // sibling). Still gated on showSettings/showEditWidgets isn't
-                            // needed here since this is only ever passed to the `else`
-                            // branch of the `when` below, where both are already false.
+                            // sibling). Still gating on showEditWidgets isn't needed here
+                            // since this is only ever passed to the `else` branch below,
+                            // where it's already false.
                             val musicFab: @Composable BoxScope.() -> Unit = {
                                 if (!isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
                                     // BoxWithConstraints (not a plain fillMaxSize Box) so
@@ -421,46 +430,28 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
-                                when {
-                                    showEditWidgets -> {
-                                        val editWidgetsViewModel: EditWidgetsViewModel =
-                                            viewModel(factory = EditWidgetsViewModelFactory(appContainer))
-                                        EditWidgetsOverlay(
-                                            viewModel = editWidgetsViewModel,
-                                            initialCanvas = editWidgetsInitialCanvas,
-                                            onDone = { showEditWidgets = false },
-                                        )
-                                    }
-
-                                    showSettings -> {
-                                        val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
-                                        val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
-                                        SettingsScreen(
-                                            viewModel = settingsViewModel,
-                                            manageAppsViewModel = manageAppsViewModel,
-                                            onDone = { showSettings = false },
-                                            onEditWidgetsClick = {
-                                                showSettings = false
-                                                showEditWidgets = true
-                                            },
-                                        )
-                                    }
-
-                                    else -> {
-                                        MainScreen(
-                                            viewModel = viewModel,
-                                            appDrawerViewModel = appDrawerViewModel,
-                                            dockViewModel = dockViewModel,
-                                            showSettingsFab = settingsFabVisible,
-                                            overlayOpacityPercent = overlayOpacityPercent,
-                                            onOpenSettings = { showSettings = true },
-                                            onOpenEditWidgets = { showEditWidgets = true },
-                                            onToggleBlankScreen = { isBlanked = !isBlanked },
-                                            onDrawerOpenChanged = { drawerOpen = it },
-                                            onLongPressMenuOpenChanged = { longPressMenuOpen = it },
-                                            topStartOverlay = musicFab,
-                                        )
-                                    }
+                                if (showEditWidgets) {
+                                    val editWidgetsViewModel: EditWidgetsViewModel =
+                                        viewModel(factory = EditWidgetsViewModelFactory(appContainer))
+                                    EditWidgetsOverlay(
+                                        viewModel = editWidgetsViewModel,
+                                        initialCanvas = editWidgetsInitialCanvas,
+                                        onDone = { showEditWidgets = false },
+                                    )
+                                } else {
+                                    MainScreen(
+                                        appDrawerViewModel = appDrawerViewModel,
+                                        dockViewModel = dockViewModel,
+                                        settingsViewModel = settingsViewModel,
+                                        manageAppsViewModel = manageAppsViewModel,
+                                        showSettingsFab = settingsFabVisible,
+                                        overlayOpacityPercent = overlayOpacityPercent,
+                                        onOpenEditWidgets = { showEditWidgets = true },
+                                        onToggleBlankScreen = { isBlanked = !isBlanked },
+                                        onDrawerOpenChanged = { drawerOpen = it },
+                                        onLongPressMenuOpenChanged = { longPressMenuOpen = it },
+                                        topStartOverlay = musicFab,
+                                    )
                                 }
 
                                 // Automatic Dim (Settings > UI Settings: Game Playing /

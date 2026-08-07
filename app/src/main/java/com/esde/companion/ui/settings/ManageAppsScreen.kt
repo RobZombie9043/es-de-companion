@@ -60,7 +60,10 @@ private fun ManageAppsRow(row: AppVisibilityRow, onToggle: (hidden: Boolean) -> 
         // is simply the current visible state (a flip).
         onClick = { onToggle(isVisible) },
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        // Matches the same translucency every other settings card uses (see
+        // SettingsContent.kt's SETTINGS_PANEL_ALPHA) so this reads as one consistent set
+        // of cards with the rest of the settings UI.
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
     ) {
         Row(
             modifier = Modifier

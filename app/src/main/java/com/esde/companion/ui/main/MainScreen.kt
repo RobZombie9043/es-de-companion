@@ -6,36 +6,21 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.MusicOff
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -47,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
@@ -67,14 +51,18 @@ import com.esde.companion.ui.dock.dockBarHeight
 import com.esde.companion.ui.drawer.AppDrawer
 import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
+import com.esde.companion.ui.settings.ManageAppsViewModel
+import com.esde.companion.ui.settings.SettingsViewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private val LONG_PRESS_MENU_SHAPE = RoundedCornerShape(16.dp)
-private val LONG_PRESS_MENU_WIDTH = 280.dp
-private val LONG_PRESS_MENU_ITEM_MIN_HEIGHT = 72.dp
-private val LONG_PRESS_MENU_ITEM_PADDING = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
-private val LONG_PRESS_MENU_ICON_SIZE = 32.dp
+
+// The popup now hosts the entire settings hierarchy (see LongPressSettingsMenu), not just
+// a couple of menu items, so it's sized as a large panel - a fraction of the available
+// screen size - rather than the small fixed 280dp width it used to be.
+private const val LONG_PRESS_MENU_WIDTH_FRACTION = 0.8f
+private const val LONG_PRESS_MENU_HEIGHT_FRACTION = 0.85f
 
 // Entrance scale+fade for the long-press menu - starts at 85% size/transparent and
 // springs up to full size, same damping/stiffness family as DRAWER_SETTLE_SPRING.
@@ -105,12 +93,12 @@ private val DRAWER_SETTLE_SPRING = spring<Float>(
 
 @Composable
 fun MainScreen(
-    viewModel: MainViewModel,
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
+    settingsViewModel: SettingsViewModel,
+    manageAppsViewModel: ManageAppsViewModel,
     showSettingsFab: Boolean,
     overlayOpacityPercent: Int,
-    onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
@@ -118,12 +106,12 @@ fun MainScreen(
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
 ) {
     MainScreenContent(
-        viewModel = viewModel,
         appDrawerViewModel = appDrawerViewModel,
         dockViewModel = dockViewModel,
+        settingsViewModel = settingsViewModel,
+        manageAppsViewModel = manageAppsViewModel,
         showSettingsFab = showSettingsFab,
         overlayOpacityPercent = overlayOpacityPercent,
-        onOpenSettings = onOpenSettings,
         onOpenEditWidgets = onOpenEditWidgets,
         onToggleBlankScreen = onToggleBlankScreen,
         onDrawerOpenChanged = onDrawerOpenChanged,
@@ -143,12 +131,12 @@ fun MainScreen(
 // composable only owns the gesture that toggles it, via onToggleBlankScreen.
 @Composable
 private fun MainScreenContent(
-    viewModel: MainViewModel,
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
+    settingsViewModel: SettingsViewModel,
+    manageAppsViewModel: ManageAppsViewModel,
     showSettingsFab: Boolean,
     overlayOpacityPercent: Int,
-    onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
     onDrawerOpenChanged: (Boolean) -> Unit,
@@ -159,30 +147,32 @@ private fun MainScreenContent(
         val density = LocalDensity.current
         val drawerHeightPx = with(density) { maxHeight.toPx() }
         val coroutineScope = rememberCoroutineScope()
+
+        // Captured as local vals rather than read directly inside the Popup below -
+        // BoxWithConstraintsScope's maxWidth/maxHeight aren't implicitly resolvable from
+        // inside Popup's content lambda (a non-inline function boundary), so the compiler
+        // needs an explicit capture here regardless.
+        val longPressMenuWidth = maxWidth * LONG_PRESS_MENU_WIDTH_FRACTION
+        val longPressMenuHeight = maxHeight * LONG_PRESS_MENU_HEIGHT_FRACTION
         val dockSize by dockViewModel.dockSize.collectAsStateWithLifecycle()
         val hapticFeedback = LocalHapticFeedback.current
 
-        // Master on/off state for the long-press menu's quick toggles below - every
-        // other music/video setting still lives in Settings > Background Music /
-        // Video Playback, untouched from here.
-        val musicEnabled by viewModel.musicEnabled.collectAsStateWithLifecycle()
-        val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
-
-        // Long-press popup offering Settings/Edit Widgets - see the Popup below. Owned
-        // locally (same as openFraction), but also reported up via
-        // onLongPressMenuOpenChanged so MainActivity can blur the widget backdrop behind
-        // it - that content lives outside this composable entirely (a sibling in
-        // MainActivity's own Box, see WidgetOverlay), so it can't be blurred from here.
+        // Long-press popup hosting the entire settings hierarchy - see the Popup below
+        // and LongPressSettingsMenu. Owned locally (same as openFraction), but also
+        // reported up via onLongPressMenuOpenChanged so MainActivity can blur the widget
+        // backdrop behind it - that content lives outside this composable entirely (a
+        // sibling in MainActivity's own Box, see WidgetOverlay), so it can't be blurred
+        // from here.
         var longPressMenuOpen by remember { mutableStateOf(false) }
 
         // Reports synchronously rather than via a LaunchedEffect(longPressMenuOpen) - the
-        // Settings/Edit Widgets menu items close the menu AND swap MainScreen out of
-        // composition (via onOpenSettings/onOpenEditWidgets) in the same click handler.
-        // A LaunchedEffect scheduled for the "now false" key never got a chance to run in
+        // Widgets category's Edit Widgets entry closes the menu AND swaps MainScreen out
+        // of composition (via onOpenEditWidgets) in the same click handler. A
+        // LaunchedEffect scheduled for the "now false" key never got a chance to run in
         // that case, since MainScreen itself was torn down first - MainActivity's copy of
-        // the flag stayed stuck true, leaving the blur applied to Settings/Edit Widgets
-        // permanently. A direct call has no such race: it runs before onOpenSettings/
-        // onOpenEditWidgets even get called.
+        // the flag stayed stuck true, leaving the blur applied to Edit Widgets
+        // permanently. A direct call has no such race: it runs before onOpenEditWidgets
+        // even gets called.
         fun setLongPressMenuOpen(open: Boolean) {
             longPressMenuOpen = open
             onLongPressMenuOpenChanged(open)
@@ -200,20 +190,21 @@ private fun MainScreenContent(
         LaunchedEffect(drawerOpen) { onDrawerOpenChanged(drawerOpen) }
 
         // System/hardware back must never exit this app - it's meant to run continuously on
-        // the second display. Undoes the most local thing first: the long-press menu (if
-        // open), then the App Drawer (if open); otherwise the event is simply consumed and
-        // does nothing. The menu and drawer can't both be open at once - opening the menu
-        // is itself gated on the drawer being closed, see the long-press handler below.
+        // the second display. Undoes the App Drawer (if open); otherwise the event is
+        // simply consumed and does nothing. There's no case here for the long-press menu -
+        // LongPressSettingsMenu registers its own BackHandler for as long as it's part of
+        // composition (i.e. while the popup is open), and Compose dispatches back presses
+        // LIFO by composition order, so that handler always intercepts first and this one
+        // never even sees the event while the popup is showing. The menu and drawer can't
+        // both be open at once - opening the menu is itself gated on the drawer being
+        // closed, see the long-press handler below.
         BackHandler(enabled = true) {
-            when {
-                longPressMenuOpen -> setLongPressMenuOpen(false)
-                openFraction.value > 0f -> {
-                    coroutineScope.launch {
-                        openFraction.animateTo(
-                            targetValue = 0f,
-                            animationSpec = DRAWER_SETTLE_SPRING,
-                        )
-                    }
+            if (openFraction.value > 0f) {
+                coroutineScope.launch {
+                    openFraction.animateTo(
+                        targetValue = 0f,
+                        animationSpec = DRAWER_SETTLE_SPRING,
+                    )
                 }
             }
         }
@@ -325,10 +316,12 @@ private fun MainScreenContent(
             // Scaffold+TopAppBar (with an otherwise-unused empty content slot) just to
             // reach a vertical centering that never actually matched the FAB's. Hidden
             // entirely when showSettingsFab is off (Settings > Other Settings) - Settings
-            // stays reachable regardless, via the long-press menu below.
+            // stays reachable regardless, via the long-press menu below. Opens the same
+            // popup the long-press gesture does (setLongPressMenuOpen), not a separate
+            // full-screen Settings destination - there is no such destination anymore.
             if (showSettingsFab) {
                 CornerFab(
-                    onClick = onOpenSettings,
+                    onClick = { setLongPressMenuOpen(true) },
                     opacityPercent = overlayOpacityPercent,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -338,14 +331,14 @@ private fun MainScreenContent(
                 }
             }
 
-            // Fixed-center popup opened by the long-press gesture above, offering the
-            // two destinations otherwise reached via the (optional) Settings FAB and the
-            // Settings > UI Settings > Edit Widgets entry. Built from a plain Popup +
-            // Surface, not DropdownMenu, since DropdownMenu positions itself relative to
-            // its anchor rather than centering on it - see EditWidgetsOverlay's "options"
-            // menu for the anchor-relative version of this same idiom. Items are sized up
-            // from DropdownMenuItem's defaults (larger min height/padding/text/icon) since
-            // this menu is meant to be comfortably reachable at a glance, not a dense list.
+            // Fixed-center popup opened by the long-press gesture above (and by the
+            // Settings FAB), now hosting the entire settings hierarchy - see
+            // LongPressSettingsMenu. Built from a plain Popup + Surface, not
+            // DropdownMenu, since DropdownMenu positions itself relative to its anchor
+            // rather than centering on it - see EditWidgetsOverlay's "options" menu for
+            // the anchor-relative version of this same idiom. Sized as a large fraction
+            // of the screen (not the small fixed width this used to be) since it now has
+            // to hold everything a full settings screen would.
             if (longPressMenuOpen) {
                 Popup(
                     alignment = Alignment.Center,
@@ -363,82 +356,31 @@ private fun MainScreenContent(
                     }
 
                     Surface(
-                        modifier = Modifier.graphicsLayer {
-                            val scale = LONG_PRESS_MENU_REVEAL_START_SCALE +
-                                (1f - LONG_PRESS_MENU_REVEAL_START_SCALE) * revealProgress.value
-                            scaleX = scale
-                            scaleY = scale
-                            alpha = revealProgress.value
-                        },
+                        modifier = Modifier
+                            .width(longPressMenuWidth)
+                            .height(longPressMenuHeight)
+                            .graphicsLayer {
+                                val scale = LONG_PRESS_MENU_REVEAL_START_SCALE +
+                                    (1f - LONG_PRESS_MENU_REVEAL_START_SCALE) * revealProgress.value
+                                scaleX = scale
+                                scaleY = scale
+                                alpha = revealProgress.value
+                            },
                         shape = LONG_PRESS_MENU_SHAPE,
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         tonalElevation = 3.dp,
                         shadowElevation = 3.dp,
                     ) {
-                        Column(modifier = Modifier.width(LONG_PRESS_MENU_WIDTH)) {
-                            DropdownMenuItem(
-                                modifier = Modifier.heightIn(min = LONG_PRESS_MENU_ITEM_MIN_HEIGHT),
-                                contentPadding = LONG_PRESS_MENU_ITEM_PADDING,
-                                text = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Filled.Settings,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(LONG_PRESS_MENU_ICON_SIZE),
-                                    )
-                                },
-                                onClick = {
-                                    setLongPressMenuOpen(false)
-                                    onOpenSettings()
-                                },
-                            )
-                            DropdownMenuItem(
-                                modifier = Modifier.heightIn(min = LONG_PRESS_MENU_ITEM_MIN_HEIGHT),
-                                contentPadding = LONG_PRESS_MENU_ITEM_PADDING,
-                                text = { Text("Edit Widgets", style = MaterialTheme.typography.titleLarge) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Filled.Edit,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(LONG_PRESS_MENU_ICON_SIZE),
-                                    )
-                                },
-                                onClick = {
-                                    setLongPressMenuOpen(false)
-                                    onOpenEditWidgets()
-                                },
-                            )
-                            HorizontalDivider()
-                            // Master on/off quick toggles - Settings > Background Music /
-                            // Video Playback own every other knob for each, this is only
-                            // ever the top-level enable/disable. Deliberately don't close
-                            // the menu on tap (unlike Settings/Edit Widgets above, which
-                            // navigate away) - toggling one shouldn't force reopening the
-                            // menu to also toggle the other.
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                            ) {
-                                QuickToggleButton(
-                                    onIcon = Icons.Filled.MusicNote,
-                                    offIcon = Icons.Filled.MusicOff,
-                                    enabled = musicEnabled,
-                                    onLabel = "Turn off background music",
-                                    offLabel = "Turn on background music",
-                                    onClick = viewModel::toggleMusicEnabled,
-                                )
-                                QuickToggleButton(
-                                    onIcon = Icons.Filled.Videocam,
-                                    offIcon = Icons.Filled.VideocamOff,
-                                    enabled = videoPlaybackEnabled,
-                                    onLabel = "Turn off video playback",
-                                    offLabel = "Turn on video playback",
-                                    onClick = viewModel::toggleVideoPlaybackEnabled,
-                                )
-                            }
-                        }
+                        LongPressSettingsMenu(
+                            settingsViewModel = settingsViewModel,
+                            manageAppsViewModel = manageAppsViewModel,
+                            onEditWidgetsClick = {
+                                setLongPressMenuOpen(false)
+                                onOpenEditWidgets()
+                            },
+                            onDismiss = { setLongPressMenuOpen(false) },
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     }
                 }
             }
@@ -516,32 +458,5 @@ private fun MainScreenContent(
                 )
             }
         }
-    }
-}
-
-/**
- * One quick-toggle button in the long-press menu's bottom row. On/off is communicated two
- * ways: which icon is shown ([offIcon] is the standard Material "-Off" variant, with a
- * diagonal slash built into the glyph itself - stronger and more legible at this size than
- * color alone) and its tint (the theme's accent color when [enabled], a muted variant when
- * not). Both colors come from MaterialTheme (not hardcoded black/white), so contrast holds
- * in light and dark color schemes alike.
- */
-@Composable
-private fun QuickToggleButton(
-    onIcon: ImageVector,
-    offIcon: ImageVector,
-    enabled: Boolean,
-    onLabel: String,
-    offLabel: String,
-    onClick: () -> Unit,
-) {
-    IconButton(onClick = onClick) {
-        Icon(
-            imageVector = if (enabled) onIcon else offIcon,
-            contentDescription = if (enabled) onLabel else offLabel,
-            tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(LONG_PRESS_MENU_ICON_SIZE),
-        )
     }
 }
