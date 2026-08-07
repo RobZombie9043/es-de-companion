@@ -8,14 +8,15 @@ This comprehensive guide covers everything you need to know about ES-DE Companio
 
 1. [Getting Started](#getting-started)
 2. [Onboarding Wizard](#onboarding-wizard)
-3. [Widget Overlay System](#widget-overlay-system)
-4. [App Drawer](#app-drawer)
-5. [App Dock](#app-dock)
-6. [Video & Music](#video--music)
-7. [Settings Reference](#settings-reference)
-8. [File Structure](#file-structure)
-9. [How Log Events Work](#how-log-events-work)
-10. [Advanced Topics](#advanced-topics)
+3. [Screen Gestures](#screen-gestures)
+4. [Widget Overlay System](#widget-overlay-system)
+5. [App Drawer](#app-drawer)
+6. [App Dock](#app-dock)
+7. [Video & Music](#video--music)
+8. [Settings Reference](#settings-reference)
+9. [File Structure](#file-structure)
+10. [How Log Events Work](#how-log-events-work)
+11. [Advanced Topics](#advanced-topics)
 
 ---
 
@@ -139,6 +140,20 @@ In the revoked-permission case, onboarding restarts at the permission step but p
 
 ---
 
+## Screen Gestures
+
+Three gestures work anywhere on the main companion screen (when the App Drawer is closed):
+
+| Gesture | Result |
+|---|---|
+| **Swipe up** | Opens the [App Drawer](#app-drawer) |
+| **Long-press** (or tap the Settings gear, if shown) | Opens the Settings/Widgets popup menu — see [Widget Edit Mode](#widget-edit-mode) and [Settings Reference](#settings-reference) |
+| **Double-tap** | Manually blanks the screen to black; double-tap again to restore |
+
+The double-tap blank gesture is always available, independent of the automatic Game Playing/Screensaver Screen Behavior settings (see [Settings Reference](#settings-reference)) — it uses the same black cover, so it also restores with a double-tap when triggered automatically by a Screen Behavior set to "Off."
+
+---
+
 ## Widget Overlay System
 
 Widgets are customizable overlay elements that display game and system artwork.
@@ -186,25 +201,32 @@ While ES-DE Companion hasn't seen any activity yet (idle), no widget canvas is s
 
 ### Per-Widget Configuration
 
-Configuration options depend on the widget type:
+Configuration options depend on the widget type, shown in this order in the Configure Widget dialog:
 
-- **Image-backed widgets** (System Logo, System Image, Random Fanart/Screenshot, all Game View media widgets, Custom Image): **Image Scaling** (Contain, showing the whole image, or Cover, cropping to fill the frame), plus **Blur** and **Darken** sliders (0-100% each).
-- **Color Background**: 8 preset swatches or a free-form hex color, plus a **Transparency** slider (0-100%).
-- **Description**: **Text Size** (10-36sp), **Text Color**, **Background Color**, and **Background Transparency**.
+- **Image Scaling** — every image-backed widget (System Logo, System Image, Random Fanart/Screenshot, all Game View media widgets, Custom Image): **Contain** (shows the whole image, letterboxed) or **Cover** (crops to fill the frame).
+- **Transitions** — one of two pickers, depending on widget style, both hidden when they'd have no effect:
+  - **Logo Transitions** (**None**/**Slide**/**Scale**, no Fade) — logo-style widgets only: System Logo, and Marquee media widgets.
+  - **Image Transitions** (**None**/**Fade**) — backdrop-style widgets (System Image, Custom Image, and non-Marquee media widgets), hidden entirely when the widget is Contain-scaled (a letterboxed swap would read as a hard cut anyway) or when it's a box-art type — Box Cover, 3D Box, Mix Image, Back Cover, Physical Media always snap in instantly, since a cross-dissolve between two unrelated pieces of box art looks like a smear rather than a clean cut.
+- **Logo Glint** — an independent on/off toggle shown alongside Logo Transitions, on the same logo-style widgets. Adds a periodic light sweep across the widget; it runs alongside whichever transition is selected, not in place of it.
+- **Pan & Zoom** — an independent on/off toggle for eligible Cover-scaled backdrop widgets (System Image, Custom Image, Fan Art, Screenshot, Title Screen). Slowly zooms and pans across the image while it's displayed. Never available on logos, Color Background, or Description.
+- **Blur** and **Darken** sliders (0-100% each) — every image-backed widget.
+- **Color Background** (its own widget type, no image options): 8 preset swatches or a free-form hex color, plus a **Transparency** slider (0-100%).
+- **Description** (its own widget type): **Text Size** (10-36sp), **Text Color**, **Background Color**, and **Background Transparency**.
+
+All of the above is set per widget instance, from that widget's own Configure Widget dialog — there's no global transitions/glint/pan-and-zoom setting in Settings. A freshly-added System Logo or Marquee widget starts with the Slide transition and Logo Glint on; a freshly-added System Image or Fan Art background starts with Pan & Zoom on and 10% darken.
 
 ### Widget Edit Mode
 
-Widgets are locked by default to prevent accidental changes during normal use.
-
 **To enter edit mode:**
-1. Long-press anywhere on the companion screen
-2. Edit mode opens, showing the last system/game you browsed as a preview (not necessarily what's live right now)
+1. Long-press anywhere on the companion screen (or tap the Settings gear, if shown) to open the Settings popup
+2. Tap **Widgets** at the top of the list — this jumps straight into the widget editor rather than showing a subpage, since there's nothing else in that category
+3. Edit mode opens, showing the last system/game you browsed as a preview (not necessarily what's live right now)
 
-**If long-press does nothing:** check Settings → Widgets → "Lock widget editing" — while that's on, edit mode can't be entered at all.
+There's no lock setting gating this — widget editing is always reachable this way.
 
 ### The Options Menu
 
-A small corner button (⋮) opens the edit-mode menu:
+Once you're inside the editor, a small corner button (⋮) opens a separate edit-mode menu — distinct from the long-press popup that got you here:
 
 1. **System View / Game View** — switch which canvas you're editing
 2. **Add Widget** — pick a widget type from the canvas's catalog; it's placed centered on the grid, sized to fit, and auto-selected
@@ -273,6 +295,10 @@ The App Dock is an optional, persistent row of pinned apps at the bottom of the 
 - **Long-press a filled slot** to open a menu: "Launch on this screen," "Launch on other screen," "App Info," "Move Left," "Move Right," "Remove from Dock." (There's no "Hide App" option here — hiding is managed from the App Drawer's Manage Apps screen.)
 - **Single tap** and **double tap** on a dock icon behave the same way as in the App Drawer (last-used screen, or the other screen).
 
+### App Drawer Shortcut
+
+The add-app picker also offers a special **App Drawer** entry at the top of the list (as long as it isn't already pinned) — pin it into a slot like any other app for one-tap drawer access alongside your pinned apps. Tapping or double-tapping it opens the App Drawer instead of launching anything. Its long-press menu only offers **Move Left**, **Move Right**, and **Remove from Dock** — "Launch on this/other screen" and "App Info" don't apply to it.
+
 ### Dock Settings
 
 Configured in **Settings → App Drawer and Dock**:
@@ -319,17 +345,15 @@ Configured in **Settings → Background Music** (plus the Custom Music Folder, w
 
 ## Settings Reference
 
-This section describes every setting in ES-DE Companion, organized by the category it appears under in Settings.
+Settings isn't a dedicated screen — it's a popup reached by long-pressing anywhere on the main screen (or tapping the Settings gear, if shown; see [Screen Gestures](#screen-gestures)). This section describes every setting, organized by the category it appears under in that popup, in the order they're listed there.
 
-### Setup
+### Widgets
 
 | Setting | Control | Default |
 |---|---|---|
-| ES-DE folder | Required folder picker | `/storage/emulated/0/ES-DE` |
-| Media folder | Required folder picker | `/storage/emulated/0/ES-DE/downloaded_media` |
-| Custom System Images Folder | Optional folder picker | Not set |
-| Custom Logos Folder | Optional folder picker | Not set |
-| Custom Music Folder | Optional folder picker | Not set |
+| Edit Widgets | Opens the widget editor | n/a |
+
+Tapping this category in the Settings popup jumps straight to the widget editor rather than showing a subpage, since there's nothing else here. Per-widget options (scale mode, transitions, glint, pan & zoom, blur/darken, colors, text size) are configured from inside the editor itself, not from this Settings category — see [Widget Overlay System](#widget-overlay-system).
 
 ### UI Settings
 
@@ -337,21 +361,12 @@ This section describes every setting in ES-DE Companion, organized by the catego
 |---|---|---|---|
 | Theme | Segmented control | Auto / Light / Dark | Auto |
 | Overlay Opacity | Slider | 0-100% | 80% — applies to the App Drawer, App Dock, and other overlay surfaces |
-| Image Transitions | Segmented control | None / Fade | Fade |
-| Logo Transitions | Segmented control | None / Slide / Scale | Slide |
-| Game Playing Screen Behavior | Segmented control | Nothing / Dimmed / Black / Game Manual | Nothing |
-| Screensaver Screen Behavior | Segmented control | Nothing / Dimmed / Black | Nothing |
+| Game Playing Screen Behavior | Segmented control | On / Dimmed / Off / Manual | On |
+| Screensaver Screen Behavior | Segmented control | On / Dimmed / Off | On |
 
-`Screen Behavior` options: **Nothing** leaves the screen as normal; **Dimmed** overlays a translucent black scrim (touches still pass through); **Black** shows an opaque black cover and blocks touches except a double-tap to restore; **Game Manual** (Game Playing only) shows the game's manual PDF instead.
+`Screen Behavior` options: **On** leaves the screen as normal; **Dimmed** overlays a translucent black scrim (touches still pass through); **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
 
-### Widgets
-
-| Setting | Control | Default |
-|---|---|---|
-| Edit Widgets | Opens the widget editor | n/a |
-| Lock widget editing | Toggle | Off |
-
-Per-widget options (scale mode, blur/darken, colors, text size) are configured from inside Edit Widgets, not from this Settings category — see [Widget Overlay System](#widget-overlay-system).
+Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — they're configured per widget from the Configure Widget dialog. See [Per-Widget Configuration](#per-widget-configuration).
 
 ### App Drawer and Dock
 
@@ -382,6 +397,25 @@ Per-widget options (scale mode, blur/darken, colors, text size) are configured f
 | During Video Playback | Segmented control (shown only if enabled) | Unchanged / Lower volume / Pause | Lower volume |
 
 > **Note:** With Background Music enabled but no Custom Music Folder set (Settings → Setup), nothing will play. See [Video & Music](#video--music).
+
+### Other Settings
+
+| Setting | Control | Default |
+|---|---|---|
+| Close Companion App on ES-DE Quit | Toggle | Off |
+| Show Settings Button | Toggle | On |
+
+**Close Companion App on ES-DE Quit** closes ES-DE Companion when ES-DE fires its quit event. **Show Settings Button** controls whether the Settings gear icon appears on the main screen — turning it off doesn't reduce what's reachable, since Settings stays available via long-press regardless (see [Screen Gestures](#screen-gestures)).
+
+### Setup
+
+| Setting | Control | Default |
+|---|---|---|
+| ES-DE folder | Required folder picker | `/storage/emulated/0/ES-DE` |
+| Media folder | Required folder picker | `/storage/emulated/0/ES-DE/downloaded_media` |
+| Custom System Images Folder | Optional folder picker | Not set |
+| Custom Logos Folder | Optional folder picker | Not set |
+| Custom Music Folder | Optional folder picker | Not set |
 
 ---
 
@@ -429,7 +463,7 @@ Custom System Images, Custom Logos, and Custom Music folders are wherever you po
 | `backcovers/` | Back box covers | Box Back Cover |
 | `physicalmedia/` | Disc/cartridge art | Physical Media |
 | `videos/` | Game videos | (video playback, not a widget) |
-| `manuals/` | Game manual PDFs | Used by the "Game Manual" screen behavior option, not a widget |
+| `manuals/` | Game manual PDFs | Used by the "Manual" Game Playing Screen Behavior option, not a widget |
 
 ### Custom Media
 

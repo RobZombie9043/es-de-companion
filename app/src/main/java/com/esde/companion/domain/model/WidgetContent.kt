@@ -79,10 +79,11 @@ val WidgetType.isLogoStyle: Boolean
     }
 
 /** Game-view box-art-style media where each new game's art should snap in instantly
- * rather than fade, even when Settings > UI Settings has the global image transition set
- * to Fade - these read as "flipping" to a different game's box art, not a scene changing,
- * so a cross-dissolve between two unrelated pieces of box art looks like a smear rather
- * than a clean cut the way a fade between full-bleed fanart/screenshots does. */
+ * rather than fade, even when the widget's own per-widget imageTransitionMode (Configure
+ * Widget dialog) is set to Fade - these read as "flipping" to a different game's box art,
+ * not a scene changing, so a cross-dissolve between two unrelated pieces of box art looks
+ * like a smear rather than a clean cut the way a fade between full-bleed fanart/screenshots
+ * does. */
 private val INSTANT_ONLY_MEDIA_TYPES = setOf(
     MediaType.Covers,
     MediaType.ThreeDBoxes,
@@ -93,9 +94,9 @@ private val INSTANT_ONLY_MEDIA_TYPES = setOf(
 
 /**
  * Whether this widget type must always render with an instant (no-fade) transition,
- * overriding the global ImageTransitionMode - see [INSTANT_ONLY_MEDIA_TYPES]. Checked by
- * WidgetContentView before applying imageTransitionMode's fade duration to a non-logo-style
- * [WidgetContent.Image].
+ * overriding the widget's own per-widget imageTransitionMode - see [INSTANT_ONLY_MEDIA_TYPES].
+ * Checked by WidgetContentView before applying imageTransitionMode's fade duration to a
+ * non-logo-style [WidgetContent.Image].
  */
 val WidgetType.forcesInstantImageTransition: Boolean
     get() = this is WidgetType.GameMedia && mediaType in INSTANT_ONLY_MEDIA_TYPES

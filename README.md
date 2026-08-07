@@ -48,7 +48,7 @@ _The companion screen automatically updates as you browse games in ES-DE, showin
 - Optional video playback while browsing games, with a configurable start delay and an audio toggle
 - Optional background music tied to what you're browsing, with volume ducking or pause while a video plays
 - System logo display (207 built-in logos + custom logo overrides)
-- Configurable image and logo transitions
+- Per-widget image/logo transitions, Logo Glint, and Pan & Zoom
 - Per-widget blur and darken effects
 
 ### Widget Overlay System
@@ -61,7 +61,8 @@ _Create fully customizable overlay widgets to display game artwork - marquees, b
 - Drag-and-drop positioning and resizing, snapped to a grid
 - Independent Left/Right/Top/Bottom resize handles with edge-snapping near the screen boundary
 - Layer ordering (move forward/backward)
-- Lockable to prevent accidental changes during normal use
+- Per-widget transitions (Slide/Scale for logos and marquees, Fade for backdrop images), an optional Logo Glint sweep, and a Pan & Zoom effect on full-bleed backgrounds — all configured per widget, not globally
+- Reached anytime via long-press anywhere on the screen (or the optional Settings gear) — no lock setting to fight with
 
 ### App Drawer & App Dock
 
@@ -77,6 +78,7 @@ _A full Android app launcher accessible from the companion screen, plus an optio
 - A persistent row of pinned apps at the bottom of the screen
 - 2-5 slots, three size presets
 - Same this-screen/other-screen launch preferences as the App Drawer
+- A pinnable App Drawer shortcut slot for one-tap drawer access alongside your apps
 
 ### Easy Setup
 
@@ -87,16 +89,17 @@ _The built-in onboarding wizard guides you through configuration on first launch
 - Auto-detects your ES-DE and media folders where possible
 - Watches ES-DE's own settings file to confirm the three required toggles are enabled
 - Live confirmation step that waits for real activity from ES-DE before finishing
+- Afterward, Settings and the widget editor are both one long-press away — long-press anywhere on the screen (or tap the optional gear icon) to open a popup menu; there's no separate Settings screen to hunt for
 
 ### Visual Customization
 
 _Extensive customization options let you tailor the companion display to your preferences._
 
 **Customization Options:**
-- Independent image and logo transition styles
+- Per-widget image/logo transitions, Logo Glint, and Pan & Zoom — set individually per widget from its own Configure Widget dialog, not a global toggle
 - Per-widget blur and darken effects
 - Custom system images, system logos, and background music folders
-- Screen behavior control during gameplay and the screensaver (normal, dimmed, black, or the game's manual)
+- Screen behavior control during gameplay and the screensaver (on, dimmed, off, or the game's manual) — plus a manual double-tap-anywhere gesture to blank/unblank the screen at any time
 - Adjustable overlay opacity shared across the App Drawer, App Dock, and other overlay surfaces
 
 ## Requirements

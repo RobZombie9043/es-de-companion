@@ -90,8 +90,9 @@ private val GLINT_TILT_TAN = tan(GLINT_TILT_RADIANS)
  * swapped in, so even [LogoTransitionMode.None] avoids a blank-frame flash on cache
  * misses - a small improvement over the plain AsyncImage this replaces.
  *
- * [glintEnabled] (Settings > UI Settings > Logo Glint) is an independent ambient loop - a
- * periodic diagonal light-sweep - orthogonal to [mode]: it can run alongside any entrance
+ * [glintEnabled] (this widget's own per-widget Logo Glint toggle, Configure Widget dialog) is
+ * an independent ambient loop - a periodic diagonal light-sweep - orthogonal to [mode]: it
+ * can run alongside any entrance
  * transition, since it isn't triggered by content changes the way [mode] is. Its pause/sweep
  * cycle restarts on every content change (keyed on [model]'s identity, not just
  * [glintEnabled]), so each freshly-shown image gets its own first sweep rather than picking

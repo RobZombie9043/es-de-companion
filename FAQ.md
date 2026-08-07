@@ -65,20 +65,29 @@ Check these in order:
 2. **Wrong ES-DE folder**: Settings → Setup → ES-DE folder must be the exact folder ES-DE itself is configured to use — the app looks for `settings/es_settings.xml` and `logs/es_log.txt` inside it
 3. **Wrong media folder**: Settings → Setup → Media folder must match ES-DE's downloaded media location
 
+### How do I hide the Settings gear icon?
+
+ES-DE Companion's own Settings → Other Settings category (not ES-DE's own "Other Settings" menu — see above) has a "Show Settings Button" toggle, on by default. Turning it off just hides the gear icon on the main screen — Settings stays reachable via long-press regardless.
+
+### Can ES-DE Companion close itself when I quit ES-DE?
+
+Yes: Settings → Other Settings → "Close Companion App on ES-DE Quit," off by default. Turn it on and the companion app closes itself when it sees ES-DE's quit event.
+
 ## Widget System
 
 ### How do I create widgets?
 
-1. Long-press anywhere on the companion screen to enter edit mode
-2. Tap the ⋮ menu button in the corner
-3. Tap "Add Widget"
-4. Choose a widget type from the list — it's placed centered on the grid and auto-selected
-5. Drag to move it, or use the edge handles to resize it
-6. Tap "Done" in the menu when finished
+1. Long-press anywhere on the companion screen (or tap the Settings gear, if shown) to open the Settings popup
+2. Tap "Widgets" at the top of the list — this jumps straight into the widget editor
+3. Tap the ⋮ menu button in the corner
+4. Tap "Add Widget"
+5. Choose a widget type from the list — it's placed centered on the grid and auto-selected
+6. Drag to move it, or use the edge handles to resize it
+7. Tap "Done" in the menu when finished
 
 ### Why can't I move or resize widgets?
 
-Check Settings → Widgets → "Lock widget editing." While that's on, long-pressing the companion screen won't open edit mode at all. Turn it off, then long-press to enter edit mode.
+There's no lock setting anymore — widget editing is always reachable. If long-press/the gear icon isn't opening the Settings popup at all, or the popup opens but tapping "Widgets" doesn't land you in the editor, that's worth reporting as a bug (see [How do I report a bug?](#how-do-i-report-a-bug)).
 
 ### What's the difference between System View and Game View widgets?
 
@@ -90,7 +99,7 @@ Each has its own separate layout, so you can design each context differently.
 
 ### How do I delete a widget?
 
-1. Enter edit mode (long-press the screen)
+1. Enter edit mode (long-press the screen, then tap "Widgets")
 2. Tap the widget to select it
 3. Open the ⋮ menu and tap "Remove Widget" — this happens immediately, with no confirmation prompt
 
@@ -112,6 +121,14 @@ See the [User Guide](USERGUIDE.md#widget-overlay-system) for what each one does 
 
 All widget placement is grid-snapped by design — there's no separate toggle, and no free/pixel-level placement. A faint grid line overlay is always visible in edit mode.
 
+### What are Logo Glint and Pan & Zoom?
+
+Two optional per-widget animation effects, each an independent on/off toggle in that widget's Configure Widget dialog:
+- **Logo Glint**: a periodic light sweep across the widget. Available on logo-style widgets only (System Logo, Marquee), and it runs alongside whichever transition is selected — not instead of it.
+- **Pan & Zoom**: slowly zooms and pans across the image while it's displayed. Available on eligible Cover-scaled backdrop widgets (System Image, Custom Image, Fan Art, Screenshot, Title Screen).
+
+Image/logo transitions (None/Fade for backdrops, None/Slide/Scale for logos) are also configured this way — per widget, not as a global Settings toggle. See [Per-Widget Configuration](USERGUIDE.md#per-widget-configuration) in the User Guide for the full breakdown.
+
 ## Display and Media
 
 ### Why don't I see any images?
@@ -120,6 +137,10 @@ Common causes:
 1. **Media not scraped**: You need to scrape game media in ES-DE first
 2. **Wrong media folder**: Check Settings → Setup → Media folder matches ES-DE's downloaded media location
 3. **Permissions**: Verify "All files access" is granted (Settings → Setup shows a warning banner if it's missing)
+
+### How do I quickly blank the screen?
+
+Double-tap anywhere on the main companion screen — this manually blanks it to black, independent of the Game Playing/Screensaver Screen Behavior settings. Double-tap again to restore. It uses the same black cover that a Screen Behavior set to "Off" triggers automatically, so it also works to restore the screen in that case.
 
 ### Can I use custom backgrounds?
 
@@ -154,6 +175,10 @@ If no secondary display is connected, this just launches on the current screen i
 ### What's the App Dock, and how is it different from the App Drawer?
 
 The App Dock is an optional, persistent row of pinned apps at the bottom of the screen — it's always visible (while the drawer is closed) rather than needing a swipe to open. It's off by default; turn it on in Settings → App Drawer and Dock. Long-press an empty slot to pin an app, or a filled slot to reorder/remove it or change its launch screen. Unlike the drawer, it has no "Hide App" option in its own menu — visibility is managed from the drawer's Manage Apps screen.
+
+### Can I put a shortcut to the App Drawer in the Dock?
+
+Yes — the Dock's add-app picker offers a special "App Drawer" entry at the top of the list. Pin it into a slot like any other app; tapping or double-tapping it opens the App Drawer instead of launching anything. Its long-press menu only offers Move Left/Move Right/Remove from Dock, since "Launch on this/other screen" and "App Info" don't apply to it.
 
 ## Background Music
 
