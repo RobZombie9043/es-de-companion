@@ -74,7 +74,6 @@ class EditWidgetsViewModelTest {
      */
     private class FakeWidgetLayoutRepository : WidgetLayoutRepository {
         private val canvases = mutableMapOf<StateGroup, MutableStateFlow<SavedWidgetCanvas>>()
-        val locked = MutableStateFlow(false)
         var lastSaved: Pair<StateGroup, List<PlacedWidget>>? = null
 
         /** [grid] defaults to null - "matches whatever grid it's loaded under", same as
@@ -93,9 +92,6 @@ class EditWidgetsViewModelTest {
             lastSaved = stateGroup to widgets
             flowFor(stateGroup).value = SavedWidgetCanvas(grid, widgets)
         }
-
-        override fun observeWidgetsLocked(): Flow<Boolean> = locked
-        override suspend fun setWidgetsLocked(locked: Boolean) { this.locked.value = locked }
     }
 
     private class FakeGameMediaRepository(
@@ -207,6 +203,8 @@ class EditWidgetsViewModelTest {
         override suspend fun clearCustomMusicFolderPath() {}
         override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) {}
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(false)
+        override suspend fun setSettingsFabVisible(visible: Boolean) {}
+        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
     }
 
     private class FakeDockSettingsRepository(

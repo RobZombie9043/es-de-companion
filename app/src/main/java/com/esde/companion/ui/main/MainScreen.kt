@@ -9,28 +9,45 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
 import com.esde.companion.ui.CornerFab
@@ -42,6 +59,12 @@ import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+
+private val LONG_PRESS_MENU_SHAPE = RoundedCornerShape(16.dp)
+private val LONG_PRESS_MENU_WIDTH = 280.dp
+private val LONG_PRESS_MENU_ITEM_MIN_HEIGHT = 72.dp
+private val LONG_PRESS_MENU_ITEM_PADDING = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
+private val LONG_PRESS_MENU_ICON_SIZE = 32.dp
 
 /** Position-based fallback threshold for the whole-screen (opening) gesture - used only
  * when the release wasn't a decisive fling (see FLING_VELOCITY_THRESHOLD). */
@@ -67,7 +90,7 @@ fun MainScreen(
     viewModel: MainViewModel,
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
-    widgetsLocked: Boolean,
+    showSettingsFab: Boolean,
     overlayOpacityPercent: Int,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
@@ -78,7 +101,7 @@ fun MainScreen(
     MainScreenContent(
         appDrawerViewModel = appDrawerViewModel,
         dockViewModel = dockViewModel,
-        widgetsLocked = widgetsLocked,
+        showSettingsFab = showSettingsFab,
         overlayOpacityPercent = overlayOpacityPercent,
         onOpenSettings = onOpenSettings,
         onOpenEditWidgets = onOpenEditWidgets,
@@ -101,7 +124,7 @@ fun MainScreen(
 private fun MainScreenContent(
     appDrawerViewModel: AppDrawerViewModel,
     dockViewModel: AppDockViewModel,
-    widgetsLocked: Boolean,
+    showSettingsFab: Boolean,
     overlayOpacityPercent: Int,
     onOpenSettings: () -> Unit,
     onOpenEditWidgets: () -> Unit,
@@ -114,6 +137,12 @@ private fun MainScreenContent(
         val drawerHeightPx = with(density) { maxHeight.toPx() }
         val coroutineScope = rememberCoroutineScope()
         val dockSize by dockViewModel.dockSize.collectAsStateWithLifecycle()
+        val hapticFeedback = LocalHapticFeedback.current
+
+        // Long-press popup offering Settings/Edit Widgets - see the Popup below. Local
+        // state (not lifted to MainActivity) since nothing outside this screen needs to
+        // know about it, same as openFraction.
+        var longPressMenuOpen by remember { mutableStateOf(false) }
 
         // 0f = fully closed, 1f = fully open. Tracked as a fraction rather than raw
         // pixels so it stays meaningful across recomposition even if maxHeight changes
@@ -127,15 +156,20 @@ private fun MainScreenContent(
         LaunchedEffect(drawerOpen) { onDrawerOpenChanged(drawerOpen) }
 
         // System/hardware back must never exit this app - it's meant to run continuously on
-        // the second display. If the App Drawer is open, back closes it first; otherwise the
-        // event is simply consumed and does nothing.
+        // the second display. Undoes the most local thing first: the long-press menu (if
+        // open), then the App Drawer (if open); otherwise the event is simply consumed and
+        // does nothing. The menu and drawer can't both be open at once - opening the menu
+        // is itself gated on the drawer being closed, see the long-press handler below.
         BackHandler(enabled = true) {
-            if (openFraction.value > 0f) {
-                coroutineScope.launch {
-                    openFraction.animateTo(
-                        targetValue = 0f,
-                        animationSpec = DRAWER_SETTLE_SPRING,
-                    )
+            when {
+                longPressMenuOpen -> longPressMenuOpen = false
+                openFraction.value > 0f -> {
+                    coroutineScope.launch {
+                        openFraction.animateTo(
+                            targetValue = 0f,
+                            animationSpec = DRAWER_SETTLE_SPRING,
+                        )
+                    }
                 }
             }
         }
@@ -197,25 +231,26 @@ private fun MainScreenContent(
                         onVerticalDrag(dragAmount)
                     }
                 }
-                // Long-press-to-edit-widgets and double-tap-to-blank, layered alongside
-                // the drag gesture above rather than replacing it. These coexist safely
+                // Long-press-to-open-menu and double-tap-to-blank, layered alongside the
+                // drag gesture above rather than replacing it. These coexist safely
                 // because of how Compose's gesture consumption works:
                 // detectVerticalDragGestures only consumes once real movement exceeds
                 // touch slop, so a stationary hold/tap never gets consumed and this
                 // detector's gestures fire normally; a genuine swipe does get consumed
                 // by the drag detector, which cancels this detector's recognition. So a
-                // still finger reaches edit mode/blank-toggle and a moving finger opens
+                // still finger reaches the menu/blank-toggle and a moving finger opens
                 // the drawer, without any manual disambiguation logic - but this is
                 // exactly the kind of gesture composition worth confirming feels right
                 // on a real device, not just reasoning about in code.
                 // Double-tap-to-blank is always available now (Settings > UI Settings
                 // no longer gates it - see MainActivity for the automatic Dim/Black
                 // behavior that now lives there instead).
-                .pointerInput(widgetsLocked) {
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = {
-                            if (!widgetsLocked && openFraction.value == 0f) {
-                                onOpenEditWidgets()
+                            if (openFraction.value == 0f) {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                longPressMenuOpen = true
                             }
                         },
                         onDoubleTap = {
@@ -235,15 +270,77 @@ private fun MainScreenContent(
             // so all three stay vertically aligned by construction. Previously lived in a
             // Material3 TopAppBar purely to get a corner button; that added a whole
             // Scaffold+TopAppBar (with an otherwise-unused empty content slot) just to
-            // reach a vertical centering that never actually matched the FAB's.
-            CornerFab(
-                onClick = onOpenSettings,
-                opacityPercent = overlayOpacityPercent,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(CORNER_BUTTON_EDGE_PADDING),
-            ) {
-                Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
+            // reach a vertical centering that never actually matched the FAB's. Hidden
+            // entirely when showSettingsFab is off (Settings > Other Settings) - Settings
+            // stays reachable regardless, via the long-press menu below.
+            if (showSettingsFab) {
+                CornerFab(
+                    onClick = onOpenSettings,
+                    opacityPercent = overlayOpacityPercent,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(CORNER_BUTTON_EDGE_PADDING),
+                ) {
+                    Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
+                }
+            }
+
+            // Fixed-center popup opened by the long-press gesture above, offering the
+            // two destinations otherwise reached via the (optional) Settings FAB and the
+            // Settings > UI Settings > Edit Widgets entry. Built from a plain Popup +
+            // Surface, not DropdownMenu, since DropdownMenu positions itself relative to
+            // its anchor rather than centering on it - see EditWidgetsOverlay's "options"
+            // menu for the anchor-relative version of this same idiom. Items are sized up
+            // from DropdownMenuItem's defaults (larger min height/padding/text/icon) since
+            // this menu is meant to be comfortably reachable at a glance, not a dense list.
+            if (longPressMenuOpen) {
+                Popup(
+                    alignment = Alignment.Center,
+                    onDismissRequest = { longPressMenuOpen = false },
+                    properties = PopupProperties(focusable = true),
+                ) {
+                    Surface(
+                        shape = LONG_PRESS_MENU_SHAPE,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        tonalElevation = 3.dp,
+                        shadowElevation = 3.dp,
+                    ) {
+                        Column(modifier = Modifier.width(LONG_PRESS_MENU_WIDTH)) {
+                            DropdownMenuItem(
+                                modifier = Modifier.heightIn(min = LONG_PRESS_MENU_ITEM_MIN_HEIGHT),
+                                contentPadding = LONG_PRESS_MENU_ITEM_PADDING,
+                                text = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.Settings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(LONG_PRESS_MENU_ICON_SIZE),
+                                    )
+                                },
+                                onClick = {
+                                    longPressMenuOpen = false
+                                    onOpenSettings()
+                                },
+                            )
+                            DropdownMenuItem(
+                                modifier = Modifier.heightIn(min = LONG_PRESS_MENU_ITEM_MIN_HEIGHT),
+                                contentPadding = LONG_PRESS_MENU_ITEM_PADDING,
+                                text = { Text("Edit Widgets", style = MaterialTheme.typography.titleLarge) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.Edit,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(LONG_PRESS_MENU_ICON_SIZE),
+                                    )
+                                },
+                                onClick = {
+                                    longPressMenuOpen = false
+                                    onOpenEditWidgets()
+                                },
+                            )
+                        }
+                    }
+                }
             }
 
             // Rendered as a genuine child of this same gesture-handling Box - not a

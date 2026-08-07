@@ -34,8 +34,6 @@ class SettingsViewModelFactory(
             setDockMaxAppsUseCase = appContainer.setDockMaxAppsUseCase,
             observeDockSizeUseCase = appContainer.observeDockSizeUseCase,
             setDockSizeUseCase = appContainer.setDockSizeUseCase,
-            observeWidgetsLockedUseCase = appContainer.observeWidgetsLockedUseCase,
-            setWidgetsLockedUseCase = appContainer.setWidgetsLockedUseCase,
             observeVideoPlaybackEnabledUseCase = appContainer.observeVideoPlaybackEnabledUseCase,
             setVideoPlaybackEnabledUseCase = appContainer.setVideoPlaybackEnabledUseCase,
             observeVideoDelaySecondsUseCase = appContainer.observeVideoDelaySecondsUseCase,
@@ -54,6 +52,8 @@ class SettingsViewModelFactory(
             setMusicDuckingModeUseCase = appContainer.setMusicDuckingModeUseCase,
             observeCloseCompanionOnQuitEnabledUseCase = appContainer.observeCloseCompanionOnQuitEnabledUseCase,
             setCloseCompanionOnQuitEnabledUseCase = appContainer.setCloseCompanionOnQuitEnabledUseCase,
+            observeSettingsFabVisibleUseCase = appContainer.observeSettingsFabVisibleUseCase,
+            setSettingsFabVisibleUseCase = appContainer.setSettingsFabVisibleUseCase,
         ) as T
     }
 }

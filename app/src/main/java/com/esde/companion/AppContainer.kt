@@ -70,12 +70,12 @@ import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
-import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
@@ -103,11 +103,11 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
-import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -182,8 +182,6 @@ class AppContainer(context: Context) {
 
     val observeWidgetCanvasUseCase = ObserveWidgetCanvasUseCase(widgetLayoutRepository)
     val saveWidgetCanvasUseCase = SaveWidgetCanvasUseCase(widgetLayoutRepository)
-    val observeWidgetsLockedUseCase = ObserveWidgetsLockedUseCase(widgetLayoutRepository)
-    val setWidgetsLockedUseCase = SetWidgetsLockedUseCase(widgetLayoutRepository)
 
     // Tracks the most recently browsed system/game, independent of live AppState - used
     // by the widget edit-mode preview so it has something real to show even when Idle or
@@ -272,6 +270,8 @@ class AppContainer(context: Context) {
 
     val observeCloseCompanionOnQuitEnabledUseCase = ObserveCloseCompanionOnQuitEnabledUseCase(onboardingRepository)
     val setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository)
+    val observeSettingsFabVisibleUseCase = ObserveSettingsFabVisibleUseCase(onboardingRepository)
+    val setSettingsFabVisibleUseCase = SetSettingsFabVisibleUseCase(onboardingRepository)
 
     val musicPlaybackCoordinator = MusicPlaybackCoordinator(
         observeConnectionState = observeConnectionStateUseCase,

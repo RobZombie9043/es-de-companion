@@ -286,6 +286,7 @@ fun SettingsScreen(
                                 onGamePlayingBehaviorChanged = viewModel::onGamePlayingBehaviorChanged,
                                 screensaverBehavior = uiState.screensaverBehavior,
                                 onScreensaverBehaviorChanged = viewModel::onScreensaverBehaviorChanged,
+                                onEditWidgetsClick = onEditWidgetsClick,
                             )
                             SettingsCategory.VideoPlayback -> VideoPlaybackSettingsContent(
                                 videoPlaybackEnabled = uiState.videoPlaybackEnabled,
@@ -294,11 +295,6 @@ fun SettingsScreen(
                                 onVideoDelaySecondsChanged = viewModel::onVideoDelaySecondsChanged,
                                 videoAudioEnabled = uiState.videoAudioEnabled,
                                 onVideoAudioEnabledChanged = viewModel::onVideoAudioEnabledChanged,
-                            )
-                            SettingsCategory.Widgets -> WidgetsSettingsContent(
-                                widgetsLocked = uiState.widgetsLocked,
-                                onWidgetsLockedChanged = viewModel::onWidgetsLockedChanged,
-                                onEditWidgetsClick = onEditWidgetsClick,
                             )
                             SettingsCategory.AppDrawer -> AppDrawerSettingsContent(
                                 gridColumns = uiState.gridColumns,
@@ -326,6 +322,8 @@ fun SettingsScreen(
                             SettingsCategory.Other -> OtherSettingsContent(
                                 closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
                                 onCloseCompanionOnQuitEnabledChanged = viewModel::onCloseCompanionOnQuitEnabledChanged,
+                                settingsFabVisible = uiState.settingsFabVisible,
+                                onSettingsFabVisibleChanged = viewModel::onSettingsFabVisibleChanged,
                             )
                         }
                     }
@@ -488,6 +486,7 @@ private fun UISettingsContent(
     onGamePlayingBehaviorChanged: (ScreenBehavior) -> Unit,
     screensaverBehavior: ScreenBehavior,
     onScreensaverBehaviorChanged: (ScreenBehavior) -> Unit,
+    onEditWidgetsClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -510,6 +509,7 @@ private fun UISettingsContent(
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
         )
+        EditWidgetsEntry(onClick = onEditWidgetsClick)
     }
 }
 
@@ -667,6 +667,8 @@ private fun VideoAudioSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> U
 private fun OtherSettingsContent(
     closeCompanionOnQuitEnabled: Boolean,
     onCloseCompanionOnQuitEnabledChanged: (Boolean) -> Unit,
+    settingsFabVisible: Boolean,
+    onSettingsFabVisibleChanged: (Boolean) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -678,6 +680,10 @@ private fun OtherSettingsContent(
         CloseCompanionOnQuitSetting(
             enabled = closeCompanionOnQuitEnabled,
             onEnabledChanged = onCloseCompanionOnQuitEnabledChanged,
+        )
+        SettingsFabVisibleSetting(
+            enabled = settingsFabVisible,
+            onEnabledChanged = onSettingsFabVisibleChanged,
         )
     }
 }
@@ -705,6 +711,38 @@ private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boo
             ) {
                 Text(
                     text = "Close ES-DE Companion when ES-DE quits",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = enabled, onCheckedChange = onEnabledChanged)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsFabVisibleSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "Show Settings Button",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Show the Settings gear on the main screen. It's always reachable via the long-press menu regardless of this setting.",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -1227,24 +1265,6 @@ private val ThemePreference.label: String
     }
 
 @Composable
-private fun WidgetsSettingsContent(
-    widgetsLocked: Boolean,
-    onWidgetsLockedChanged: (Boolean) -> Unit,
-    onEditWidgetsClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        EditWidgetsEntry(onClick = onEditWidgetsClick)
-        WidgetsLockToggle(locked = widgetsLocked, onLockedChange = onWidgetsLockedChanged)
-    }
-}
-
-@Composable
 private fun EditWidgetsEntry(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
@@ -1275,37 +1295,6 @@ private fun EditWidgetsEntry(onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun WidgetsLockToggle(locked: Boolean, onLockedChange: (Boolean) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Lock widget editing",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Prevent long-press from opening the widget editor",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(checked = locked, onCheckedChange = onLockedChange)
-            }
-        }
-    }
-}
 @Composable
 private fun FolderSetting(
     label: String,

@@ -122,4 +122,13 @@ interface OnboardingRepository {
      */
     suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean)
     fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean>
+
+    /**
+     * Settings > Other Settings: whether the Settings gear (CornerFab) is shown on the
+     * main screen. Defaults to true - this replaces what was previously always-on
+     * behavior. Settings stays reachable regardless of this setting via the main
+     * screen's long-press menu.
+     */
+    suspend fun setSettingsFabVisible(visible: Boolean)
+    fun observeSettingsFabVisible(): Flow<Boolean>
 }

@@ -4,16 +4,11 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
-import com.esde.companion.domain.model.GridDimensions
-import com.esde.companion.domain.model.PlacedWidget
-import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
-import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
-import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
@@ -27,11 +22,11 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
@@ -45,11 +40,11 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
-import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +77,7 @@ class SettingsViewModelTest {
         var musicDuckingMode = MusicDuckingMode.LowerVolume
         var overlayOpacityPercent = 80
         var closeCompanionOnQuitEnabled = false
+        var settingsFabVisible = true
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
@@ -128,6 +124,8 @@ class SettingsViewModelTest {
         override suspend fun clearCustomMusicFolderPath() {}
         override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) { closeCompanionOnQuitEnabled = enabled }
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(closeCompanionOnQuitEnabled)
+        override suspend fun setSettingsFabVisible(visible: Boolean) { settingsFabVisible = visible }
+        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(settingsFabVisible)
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -162,18 +160,6 @@ class SettingsViewModelTest {
         override fun observeDockApps(): Flow<List<String>> = flowOf(emptyList())
     }
 
-    private class FakeWidgetLayoutRepository(
-        initialLocked: Boolean = false,
-    ) : WidgetLayoutRepository {
-        val locked = MutableStateFlow(initialLocked)
-
-        override fun observeCanvas(stateGroup: StateGroup): Flow<SavedWidgetCanvas> =
-            flowOf(SavedWidgetCanvas(grid = null, widgets = emptyList()))
-        override suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions) { /* not under test */ }
-        override fun observeWidgetsLocked(): Flow<Boolean> = locked
-        override suspend fun setWidgetsLocked(locked: Boolean) { this.locked.value = locked }
-    }
-
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -190,7 +176,6 @@ class SettingsViewModelTest {
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
-        widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
         val viewModel = SettingsViewModel(
             onboardingRepository = onboardingRepository,
@@ -218,8 +203,6 @@ class SettingsViewModelTest {
             setDockMaxAppsUseCase = SetDockMaxAppsUseCase(dockSettingsRepository),
             observeDockSizeUseCase = ObserveDockSizeUseCase(dockSettingsRepository),
             setDockSizeUseCase = SetDockSizeUseCase(dockSettingsRepository),
-            observeWidgetsLockedUseCase = ObserveWidgetsLockedUseCase(widgetLayoutRepository),
-            setWidgetsLockedUseCase = SetWidgetsLockedUseCase(widgetLayoutRepository),
             observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository),
             setMusicEnabledUseCase = SetMusicEnabledUseCase(onboardingRepository),
             observeMusicPlayWhileBrowsingSystemsUseCase = ObserveMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository),
@@ -232,6 +215,8 @@ class SettingsViewModelTest {
             setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository),
             observeCloseCompanionOnQuitEnabledUseCase = ObserveCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
             setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
+            observeSettingsFabVisibleUseCase = ObserveSettingsFabVisibleUseCase(onboardingRepository),
+            setSettingsFabVisibleUseCase = SetSettingsFabVisibleUseCase(onboardingRepository),
         )
         return viewModel to appDrawerSettingsRepository
     }
@@ -275,19 +260,5 @@ class SettingsViewModelTest {
 
         advanceUntilIdle()
         assertEquals(6, appDrawerSettingsRepository.columns.value)
-    }
-
-    @Test
-    fun `onWidgetsLockedChanged updates ui state immediately and persists`() = runTest(testDispatcher) {
-        val widgetLayoutRepository = FakeWidgetLayoutRepository()
-        val (viewModel, _) = buildViewModel(widgetLayoutRepository = widgetLayoutRepository)
-        advanceUntilIdle()
-
-        viewModel.onWidgetsLockedChanged(true)
-
-        assertEquals(true, viewModel.uiState.value.widgetsLocked)
-
-        advanceUntilIdle()
-        assertEquals(true, widgetLayoutRepository.locked.value)
     }
 }

@@ -28,15 +28,3 @@ class SaveWidgetCanvasUseCase(
     suspend operator fun invoke(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions) =
         repository.saveCanvas(stateGroup, widgets, grid)
 }
-
-class ObserveWidgetsLockedUseCase(
-    private val repository: WidgetLayoutRepository,
-) {
-    operator fun invoke(): Flow<Boolean> = repository.observeWidgetsLocked()
-}
-
-class SetWidgetsLockedUseCase(
-    private val repository: WidgetLayoutRepository,
-) {
-    suspend operator fun invoke(locked: Boolean) = repository.setWidgetsLocked(locked)
-}

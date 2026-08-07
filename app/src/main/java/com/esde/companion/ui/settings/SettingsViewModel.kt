@@ -21,11 +21,11 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
@@ -39,11 +39,11 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
-import com.esde.companion.domain.usecase.SetWidgetsLockedUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,8 +72,6 @@ class SettingsViewModel(
     private val setDockMaxAppsUseCase: SetDockMaxAppsUseCase,
     private val observeDockSizeUseCase: ObserveDockSizeUseCase,
     private val setDockSizeUseCase: SetDockSizeUseCase,
-    private val observeWidgetsLockedUseCase: ObserveWidgetsLockedUseCase,
-    private val setWidgetsLockedUseCase: SetWidgetsLockedUseCase,
     private val observeVideoPlaybackEnabledUseCase: ObserveVideoPlaybackEnabledUseCase,
     private val setVideoPlaybackEnabledUseCase: SetVideoPlaybackEnabledUseCase,
     private val observeVideoDelaySecondsUseCase: ObserveVideoDelaySecondsUseCase,
@@ -92,6 +90,8 @@ class SettingsViewModel(
     private val setMusicDuckingModeUseCase: SetMusicDuckingModeUseCase,
     private val observeCloseCompanionOnQuitEnabledUseCase: ObserveCloseCompanionOnQuitEnabledUseCase,
     private val setCloseCompanionOnQuitEnabledUseCase: SetCloseCompanionOnQuitEnabledUseCase,
+    private val observeSettingsFabVisibleUseCase: ObserveSettingsFabVisibleUseCase,
+    private val setSettingsFabVisibleUseCase: SetSettingsFabVisibleUseCase,
 ) : ViewModel() {
 
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -118,7 +118,6 @@ class SettingsViewModel(
             val dockEnabled = observeDockEnabledUseCase().first()
             val dockMaxApps = observeDockMaxAppsUseCase().first()
             val dockSize = observeDockSizeUseCase().first()
-            val widgetsLocked = observeWidgetsLockedUseCase().first()
             val videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first()
             val videoDelaySeconds = observeVideoDelaySecondsUseCase().first()
             val videoAudioEnabled = observeVideoAudioEnabledUseCase().first()
@@ -128,6 +127,7 @@ class SettingsViewModel(
             val musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first()
             val musicDuckingMode = observeMusicDuckingModeUseCase().first()
             val closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first()
+            val settingsFabVisible = observeSettingsFabVisibleUseCase().first()
             _uiState.value = _uiState.value.copy(
                 logFolderPath = logPath,
                 mediaFolderPath = mediaPath,
@@ -142,7 +142,6 @@ class SettingsViewModel(
                 dockEnabled = dockEnabled,
                 dockMaxApps = dockMaxApps,
                 dockSize = dockSize,
-                widgetsLocked = widgetsLocked,
                 videoPlaybackEnabled = videoPlaybackEnabled,
                 videoDelaySeconds = videoDelaySeconds,
                 videoAudioEnabled = videoAudioEnabled,
@@ -152,6 +151,7 @@ class SettingsViewModel(
                 musicPlayDuringScreensaver = musicPlayDuringScreensaver,
                 musicDuckingMode = musicDuckingMode,
                 closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
+                settingsFabVisible = settingsFabVisible,
             )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -236,6 +236,11 @@ class SettingsViewModel(
         viewModelScope.launch { setCloseCompanionOnQuitEnabledUseCase(enabled) }
     }
 
+    fun onSettingsFabVisibleChanged(visible: Boolean) {
+        _uiState.value = _uiState.value.copy(settingsFabVisible = visible)
+        viewModelScope.launch { setSettingsFabVisibleUseCase(visible) }
+    }
+
     fun onCustomMusicFolderPicked(path: String) {
         _uiState.value = _uiState.value.copy(customMusicFolderPath = path)
         viewModelScope.launch {
@@ -253,11 +258,6 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = true)
         val result = validateMediaFolderUseCase(path)
         _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = false, customMusicFolderValidation = result)
-    }
-
-    fun onWidgetsLockedChanged(locked: Boolean) {
-        _uiState.value = _uiState.value.copy(widgetsLocked = locked)
-        viewModelScope.launch { setWidgetsLockedUseCase(locked) }
     }
 
     fun onThemePreferenceChanged(preference: ThemePreference) {

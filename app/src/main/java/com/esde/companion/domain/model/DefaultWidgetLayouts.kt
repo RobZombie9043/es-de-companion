@@ -18,12 +18,20 @@ fun defaultCanvas(stateGroup: StateGroup, grid: GridDimensions): List<PlacedWidg
         StateGroup.System -> listOf(
             PlacedWidget(
                 id = "default-system-fanart",
-                widgetType = WidgetType.SystemImage(ScaleMode.Fill, ImageEffects(darkenAmount = DEFAULT_FANART_DARKEN)),
+                widgetType = WidgetType.SystemImage(
+                    ScaleMode.Fill,
+                    ImageEffects(darkenAmount = DEFAULT_FANART_DARKEN),
+                    panZoomEnabled = true,
+                ),
                 gridColumn = 0, gridRow = 0, columnSpan = grid.columns, rowSpan = grid.rows, zIndex = 0,
             ),
             PlacedWidget(
                 id = "default-system-logo",
-                widgetType = WidgetType.SystemLogo(ScaleMode.Fit),
+                widgetType = WidgetType.SystemLogo(
+                    ScaleMode.Fit,
+                    logoTransitionMode = LogoTransitionMode.Slide,
+                    glintEnabled = true,
+                ),
                 gridColumn = logoColumn, gridRow = logoRow, columnSpan = logoColumnSpan, rowSpan = logoRowSpan, zIndex = 1,
             ),
         )
@@ -31,12 +39,22 @@ fun defaultCanvas(stateGroup: StateGroup, grid: GridDimensions): List<PlacedWidg
         StateGroup.Playing -> listOf(
             PlacedWidget(
                 id = "default-playing-fanart",
-                widgetType = WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill, ImageEffects(darkenAmount = DEFAULT_FANART_DARKEN)),
+                widgetType = WidgetType.GameMedia(
+                    MediaType.FanArt,
+                    ScaleMode.Fill,
+                    ImageEffects(darkenAmount = DEFAULT_FANART_DARKEN),
+                    panZoomEnabled = true,
+                ),
                 gridColumn = 0, gridRow = 0, columnSpan = grid.columns, rowSpan = grid.rows, zIndex = 0,
             ),
             PlacedWidget(
                 id = "default-playing-marquee",
-                widgetType = WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
+                widgetType = WidgetType.GameMedia(
+                    MediaType.Marquees,
+                    ScaleMode.Fit,
+                    logoTransitionMode = LogoTransitionMode.Slide,
+                    glintEnabled = true,
+                ),
                 gridColumn = logoColumn, gridRow = logoRow, columnSpan = logoColumnSpan, rowSpan = logoRowSpan, zIndex = 1,
             ),
         )

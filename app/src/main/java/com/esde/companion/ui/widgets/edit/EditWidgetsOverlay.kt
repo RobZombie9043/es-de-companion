@@ -977,48 +977,39 @@ private fun ConfigureWidgetDialog(
 
                     is WidgetType.SystemImage -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
+                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
-                        }
-                        if (widgetType.supportsImageTransition) {
-                            ImageTransitionPicker(
-                                current = widgetType.imageTransitionMode,
-                                allowsFade = widgetType.allowsFadeTransition,
-                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
                     is WidgetType.SystemMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
-                        if (widgetType.supportsPanZoom) {
-                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
-                        }
                         if (widgetType.isLogoStyle) {
                             LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
                             GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
-                        } else if (widgetType.supportsImageTransition) {
-                            ImageTransitionPicker(
-                                current = widgetType.imageTransitionMode,
-                                allowsFade = widgetType.allowsFadeTransition,
-                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        } else if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
+                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
+                        if (widgetType.supportsPanZoom) {
+                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
                     is WidgetType.GameMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
-                        if (widgetType.supportsPanZoom) {
-                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
-                        }
                         if (widgetType.isLogoStyle) {
                             LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
                             GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
-                        } else if (widgetType.supportsImageTransition) {
-                            ImageTransitionPicker(
-                                current = widgetType.imageTransitionMode,
-                                allowsFade = widgetType.allowsFadeTransition,
-                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        } else if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
+                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
+                        if (widgetType.supportsPanZoom) {
+                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
@@ -1026,14 +1017,11 @@ private fun ConfigureWidgetDialog(
                     is WidgetType.CustomImage -> {
                         CustomImageConfig(current = widgetType, onChange = onChange)
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
+                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                        }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
-                        }
-                        if (widgetType.supportsImageTransition) {
-                            ImageTransitionPicker(
-                                current = widgetType.imageTransitionMode,
-                                allowsFade = widgetType.allowsFadeTransition,
-                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
@@ -1171,32 +1159,26 @@ private fun PanZoomConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
 }
 
 /**
- * Only shown when [WidgetType.supportsImageTransition] is true for the widget being
- * configured (opaque/backdrop-style image widgets, not logo-style or permanently-instant
- * box-art-style GameMedia - see its kdoc). [allowsFade] gates whether Fade itself is
- * offered within the picker - false whenever [current]'s widget has ScaleMode.Fit selected
- * (see [WidgetType.allowsFadeTransition]), in which case only None is shown as an option.
- * [displaySelected] rather than [current] directly decides which segment highlights, so a
- * stale Fade value left over from before a Fit switch doesn't render as "nothing selected"
- * - it just displays as None until Fill is reselected and Fade becomes available again,
- * without needing to actively clear the stored value (same reasoning as panZoomActive's
- * defense-in-depth re-check rather than mutating stale config away).
+ * Only shown when [WidgetType.supportsImageTransition] AND [WidgetType.allowsFadeTransition]
+ * are both true for the widget being configured (opaque/backdrop-style image widgets, not
+ * logo-style or permanently-instant box-art-style GameMedia - see supportsImageTransition's
+ * kdoc). allowsFadeTransition is false whenever the widget has ScaleMode.Fit selected, in
+ * which case Fade is the only entry that would matter and None is fixed anyway - hidden
+ * entirely rather than shown as a locked one-option row, same reasoning as
+ * [WidgetType.supportsPanZoom] hiding rather than graying out.
  */
 @Composable
-private fun ImageTransitionPicker(current: ImageTransitionMode, allowsFade: Boolean, onSelected: (ImageTransitionMode) -> Unit) {
-    val options = if (allowsFade) ImageTransitionMode.entries else listOf(ImageTransitionMode.None)
-    val displaySelected = if (allowsFade) current else ImageTransitionMode.None
-
+private fun ImageTransitionPicker(current: ImageTransitionMode, onSelected: (ImageTransitionMode) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "Image Transitions", style = MaterialTheme.typography.titleSmall)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            options.forEachIndexed { index, mode ->
+            ImageTransitionMode.entries.forEachIndexed { index, mode ->
                 SegmentedButton(
-                    selected = mode == displaySelected,
+                    selected = mode == current,
                     onClick = { onSelected(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = ImageTransitionMode.entries.size),
                     icon = {
-                        SegmentedButtonDefaults.Icon(active = mode == displaySelected) {
+                        SegmentedButtonDefaults.Icon(active = mode == current) {
                             Icon(
                                 imageVector = mode.icon(),
                                 contentDescription = null,
@@ -1207,13 +1189,6 @@ private fun ImageTransitionPicker(current: ImageTransitionMode, allowsFade: Bool
                     label = { Text(mode.displayLabel()) },
                 )
             }
-        }
-        if (!allowsFade) {
-            Text(
-                text = "Fade isn't available while Image Scaling is set to Contain",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

@@ -27,7 +27,6 @@ data class SettingsUiState(
     val dockEnabled: Boolean = false,
     val dockMaxApps: Int = 5,
     val dockSize: DockSize = DockSize.Medium,
-    val widgetsLocked: Boolean = false,
     val gamePlayingBehavior: ScreenBehavior = ScreenBehavior.Nothing,
     val screensaverBehavior: ScreenBehavior = ScreenBehavior.Nothing,
     val videoPlaybackEnabled: Boolean = false,
@@ -42,4 +41,5 @@ data class SettingsUiState(
     val customMusicFolderValidation: MediaFolderValidation? = null,
     val isValidatingCustomMusicFolder: Boolean = false,
     val closeCompanionOnQuitEnabled: Boolean = false,
+    val settingsFabVisible: Boolean = true,
 )

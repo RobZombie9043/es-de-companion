@@ -1,7 +1,6 @@
 package com.esde.companion.data.settings
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.esde.companion.domain.model.GridDimensions
@@ -45,16 +44,5 @@ class FileWidgetLayoutRepository(
             SavedWidgetCanvas(grid = null, widgets = Json.decodeFromString<List<PlacedWidgetDto>>(json).toDomainList())
         }
 
-    override fun observeWidgetsLocked(): Flow<Boolean> =
-        context.widgetLayoutDataStore.data.map { it[WIDGETS_LOCKED_KEY] ?: false }
-
-    override suspend fun setWidgetsLocked(locked: Boolean) {
-        context.widgetLayoutDataStore.edit { it[WIDGETS_LOCKED_KEY] = locked }
-    }
-
     private fun canvasKey(stateGroup: StateGroup) = stringPreferencesKey("canvas_${stateGroup.name}")
-
-    private companion object {
-        val WIDGETS_LOCKED_KEY = booleanPreferencesKey("widgets_locked")
-    }
 }

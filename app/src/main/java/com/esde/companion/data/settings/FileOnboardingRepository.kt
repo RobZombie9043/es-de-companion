@@ -222,6 +222,13 @@ class FileOnboardingRepository(
     override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[CLOSE_COMPANION_ON_QUIT_ENABLED_KEY] ?: false }
 
+    override suspend fun setSettingsFabVisible(visible: Boolean) {
+        context.onboardingDataStore.edit { it[SETTINGS_FAB_VISIBLE_KEY] = visible }
+    }
+
+    override fun observeSettingsFabVisible(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[SETTINGS_FAB_VISIBLE_KEY] ?: true }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -247,5 +254,6 @@ class FileOnboardingRepository(
         val OVERLAY_OPACITY_KEY = intPreferencesKey("overlay_opacity_percent")
         val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
         val CLOSE_COMPANION_ON_QUIT_ENABLED_KEY = booleanPreferencesKey("close_companion_on_quit_enabled")
+        val SETTINGS_FAB_VISIBLE_KEY = booleanPreferencesKey("settings_fab_visible")
     }
 }

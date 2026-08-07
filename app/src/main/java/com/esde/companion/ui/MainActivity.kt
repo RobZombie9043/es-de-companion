@@ -184,10 +184,6 @@ class MainActivity : ComponentActivity() {
                             val editWidgetsInitialCanvas = (connectionState as? EsdeConnectionState.Connected)
                                 ?.appState?.stateGroup() ?: StateGroup.System
 
-                            val widgetsLocked by produceState(initialValue = false) {
-                                appContainer.observeWidgetsLockedUseCase().collect { value = it }
-                            }
-
                             // Momentary "is the screen currently blanked" state - local,
                             // not persisted. Double-tap-to-blank is always available (no
                             // longer gated by a Settings toggle), and this same flag also
@@ -261,6 +257,13 @@ class MainActivity : ComponentActivity() {
                                         finishAndRemoveTask()
                                     }
                                 }
+                            }
+
+                            // Settings > Other Settings: whether the Settings gear shows
+                            // on the main screen. Settings stays reachable regardless via
+                            // the long-press menu - see MainScreen.
+                            val settingsFabVisible by produceState(initialValue = true) {
+                                appContainer.observeSettingsFabVisibleUseCase().collect { value = it }
                             }
 
                             // Tapping the FAB toggles this; the timer alone controls
@@ -418,7 +421,7 @@ class MainActivity : ComponentActivity() {
                                             viewModel = viewModel,
                                             appDrawerViewModel = appDrawerViewModel,
                                             dockViewModel = dockViewModel,
-                                            widgetsLocked = widgetsLocked,
+                                            showSettingsFab = settingsFabVisible,
                                             overlayOpacityPercent = overlayOpacityPercent,
                                             onOpenSettings = { showSettings = true },
                                             onOpenEditWidgets = { showEditWidgets = true },
