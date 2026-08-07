@@ -46,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -74,6 +75,14 @@ private val LONG_PRESS_MENU_WIDTH = 280.dp
 private val LONG_PRESS_MENU_ITEM_MIN_HEIGHT = 72.dp
 private val LONG_PRESS_MENU_ITEM_PADDING = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
 private val LONG_PRESS_MENU_ICON_SIZE = 32.dp
+
+// Entrance scale+fade for the long-press menu - starts at 85% size/transparent and
+// springs up to full size, same damping/stiffness family as DRAWER_SETTLE_SPRING.
+private const val LONG_PRESS_MENU_REVEAL_START_SCALE = 0.85f
+private val LONG_PRESS_MENU_REVEAL_SPRING = spring<Float>(
+    dampingRatio = Spring.DampingRatioMediumBouncy,
+    stiffness = Spring.StiffnessMedium,
+)
 
 /** Position-based fallback threshold for the whole-screen (opening) gesture - used only
  * when the release wasn't a decisive fling (see FLING_VELOCITY_THRESHOLD). */
@@ -325,7 +334,24 @@ private fun MainScreenContent(
                     onDismissRequest = { longPressMenuOpen = false },
                     properties = PopupProperties(focusable = true),
                 ) {
+                    // Entrance-only scale+fade, matching the app's existing spring-based
+                    // motion (see DRAWER_SETTLE_SPRING) rather than snapping straight to
+                    // full size the way a plain Popup does by default. No exit animation -
+                    // Popup tears its window down immediately once longPressMenuOpen flips
+                    // false, same as EditWidgetsOverlay's dialogs.
+                    val revealProgress = remember { Animatable(0f) }
+                    LaunchedEffect(Unit) {
+                        revealProgress.animateTo(targetValue = 1f, animationSpec = LONG_PRESS_MENU_REVEAL_SPRING)
+                    }
+
                     Surface(
+                        modifier = Modifier.graphicsLayer {
+                            val scale = LONG_PRESS_MENU_REVEAL_START_SCALE +
+                                (1f - LONG_PRESS_MENU_REVEAL_START_SCALE) * revealProgress.value
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = revealProgress.value
+                        },
                         shape = LONG_PRESS_MENU_SHAPE,
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         tonalElevation = 3.dp,
