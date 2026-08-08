@@ -1,155 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
-    <file name="src/main/java/com/esde/companion/data/settings/FileWidgetLayoutRepository.kt">
-        <error line="46" column="18" source="standard:parameter-list-wrapping" />
-        <error line="46" column="75" source="standard:parameter-list-wrapping" />
-    </file>
     <file name="src/main/java/com/esde/companion/domain/model/WidgetContentResolver.kt">
         <error line="24" column="1" source="standard:max-line-length" />
         <error line="32" column="1" source="standard:max-line-length" />
     </file>
-    <file name="src/main/java/com/esde/companion/domain/parser/GameListDescriptionParser.kt">
-        <error line="39" column="22" source="standard:parameter-list-wrapping" />
-        <error line="39" column="95" source="standard:parameter-list-wrapping" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/CornerButtonMetrics.kt">
-        <error line="44" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/dock/AppDock.kt">
-        <error line="127" column="5" source="standard:function-naming" />
-        <error line="264" column="5" source="standard:function-naming" />
-        <error line="297" column="13" source="standard:function-naming" />
-        <error line="318" column="13" source="standard:function-naming" />
-        <error line="337" column="13" source="standard:function-naming" />
-        <error line="419" column="13" source="standard:function-naming" />
-        <error line="456" column="13" source="standard:function-naming" />
-        <error line="556" column="13" source="standard:function-naming" />
-        <error line="586" column="13" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/drawer/AppDrawer.kt">
-        <error line="152" column="5" source="standard:function-naming" />
-        <error line="416" column="14" source="standard:function-naming" />
-        <error line="511" column="14" source="standard:function-naming" />
-        <error line="619" column="13" source="standard:function-naming" />
-        <error line="668" column="13" source="standard:function-naming" />
-        <error line="701" column="13" source="standard:function-naming" />
-        <error line="710" column="13" source="standard:function-naming" />
-        <error line="740" column="13" source="standard:function-naming" />
-        <error line="756" column="13" source="standard:function-naming" />
-        <error line="785" column="14" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/drawer/AppDrawerHandle.kt">
-        <error line="23" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/drawer/FolderContentsPopup.kt">
-        <error line="63" column="5" source="standard:function-naming" />
-    </file>
     <file name="src/main/java/com/esde/companion/ui/main/CrossfadeAsyncImage.kt">
         <error line="60" column="1" source="standard:no-consecutive-comments" />
-        <error line="68" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/main/LongPressSettingsMenu.kt">
-        <error line="140" column="5" source="standard:function-naming" />
-        <error line="354" column="13" source="standard:function-naming" />
-        <error line="373" column="13" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/main/MainScreen.kt">
-        <error line="97" column="5" source="standard:function-naming" />
-        <error line="139" column="13" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/manual/GameManualScreen.kt">
-        <error line="79" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/music/MusicControlsOverlay.kt">
-        <error line="68" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/onboarding/OnboardingScreen.kt">
-        <error line="74" column="5" source="standard:function-naming" />
-        <error line="211" column="13" source="standard:function-naming" />
-        <error line="243" column="13" source="standard:function-naming" />
-        <error line="290" column="13" source="standard:function-naming" />
-        <error line="328" column="13" source="standard:function-naming" />
-        <error line="358" column="13" source="standard:function-naming" />
-        <error line="396" column="13" source="standard:function-naming" />
-        <error line="424" column="13" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/settings/ManageAppsScreen.kt">
-        <error line="35" column="5" source="standard:function-naming" />
-        <error line="56" column="13" source="standard:function-naming" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/settings/SettingsContent.kt">
-        <error line="117" column="14" source="standard:function-naming" />
-        <error line="156" column="14" source="standard:function-naming" />
-        <error line="190" column="14" source="standard:function-naming" />
-        <error line="220" column="14" source="standard:function-naming" />
-        <error line="293" column="14" source="standard:function-naming" />
-        <error line="336" column="14" source="standard:function-naming" />
-        <error line="356" column="13" source="standard:function-naming" />
-        <error line="383" column="14" source="standard:function-naming" />
-        <error line="408" column="13" source="standard:function-naming" />
-        <error line="446" column="13" source="standard:function-naming" />
-        <error line="477" column="13" source="standard:function-naming" />
-        <error line="515" column="14" source="standard:function-naming" />
-        <error line="547" column="13" source="standard:function-naming" />
-        <error line="585" column="13" source="standard:function-naming" />
-        <error line="623" column="13" source="standard:function-naming" />
         <error line="644" column="1" source="standard:max-line-length" />
-        <error line="662" column="13" source="standard:function-naming" />
-        <error line="726" column="14" source="standard:function-naming" />
-        <error line="759" column="13" source="standard:function-naming" />
-        <error line="796" column="13" source="standard:function-naming" />
-        <error line="833" column="13" source="standard:function-naming" />
-        <error line="862" column="13" source="standard:function-naming" />
-        <error line="900" column="13" source="standard:function-naming" />
-        <error line="928" column="13" source="standard:function-naming" />
-        <error line="957" column="14" source="standard:function-naming" />
-        <error line="997" column="13" source="standard:function-naming" />
-        <error line="1035" column="13" source="standard:function-naming" />
-        <error line="1070" column="13" source="standard:function-naming" />
-        <error line="1105" column="13" source="standard:function-naming" />
-        <error line="1141" column="13" source="standard:function-naming" />
-        <error line="1201" column="13" source="standard:function-naming" />
-        <error line="1261" column="13" source="standard:function-naming" />
-        <error line="1296" column="13" source="standard:function-naming" />
-        <error line="1345" column="13" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/theme/Theme.kt">
-        <error line="23" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/video/VideoOverlayScreen.kt">
-        <error line="45" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/widgets/AnimatedLogoImage.kt">
-        <error line="107" column="5" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/widgets/ScrollingText.kt">
-        <error line="48" column="5" source="standard:function-naming" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/widgets/WidgetCanvas.kt">
-        <error line="50" column="5" source="standard:function-naming" />
-        <error line="140" column="14" source="standard:function-naming" />
         <error line="215" column="1" source="standard:max-line-length" />
-        <error line="244" column="13" source="standard:function-naming" />
-    </file>
-    <file name="src/main/java/com/esde/companion/ui/widgets/WidgetOverlay.kt">
-        <error line="32" column="5" source="standard:function-naming" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/widgets/WidgetsViewModel.kt">
         <error line="185" column="78" source="standard:discouraged-comment-location" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/widgets/edit/EditWidgetsOverlay.kt">
-        <error line="209" column="5" source="standard:function-naming" />
-        <error line="611" column="13" source="standard:function-naming" />
-        <error line="778" column="13" source="standard:function-naming" />
-        <error line="965" column="13" source="standard:function-naming" />
-        <error line="1010" column="13" source="standard:function-naming" />
-        <error line="1118" column="13" source="standard:function-naming" />
-        <error line="1154" column="13" source="standard:function-naming" />
-        <error line="1191" column="13" source="standard:function-naming" />
-        <error line="1221" column="13" source="standard:function-naming" />
-        <error line="1252" column="13" source="standard:function-naming" />
-        <error line="1298" column="13" source="standard:function-naming" />
-        <error line="1346" column="13" source="standard:function-naming" />
         <error line="1372" column="22" source="standard:discouraged-comment-location" />
         <error line="1373" column="22" source="standard:discouraged-comment-location" />
         <error line="1374" column="22" source="standard:discouraged-comment-location" />
@@ -158,9 +25,6 @@
         <error line="1377" column="22" source="standard:discouraged-comment-location" />
         <error line="1378" column="22" source="standard:discouraged-comment-location" />
         <error line="1379" column="22" source="standard:discouraged-comment-location" />
-        <error line="1383" column="13" source="standard:function-naming" />
-        <error line="1427" column="13" source="standard:function-naming" />
-        <error line="1519" column="13" source="standard:function-naming" />
     </file>
     <file name="src/test/java/com/esde/companion/data/log/EsdeLogFileRepositoryTest.kt">
         <error line="87" column="1" source="standard:max-line-length" />
