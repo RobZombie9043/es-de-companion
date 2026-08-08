@@ -303,6 +303,40 @@ class DebugFileLoggerTest {
         }
 
     @Test
+    fun `logPlaybackStarted logs the tag and path`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val logFile = File(tempFolder.root, "logs/esde_companion_log.txt")
+            val logger = loggerFor(logFile, FakeOnboardingRepository(debugLoggingEnabled = MutableStateFlow(true)))
+
+            logger.logPlaybackStarted("Music", "/music/general/1.mp3")
+            logger.logPlaybackStarted("Video", "/media/gc/videos/game.mp4")
+
+            val musicLine = logFile.readLines().single { it.contains("Music:") }
+            assertTrue(musicLine.contains("playing /music/general/1.mp3"))
+            val videoLine = logFile.readLines().single { it.contains("Video:") }
+            assertTrue(videoLine.contains("playing /media/gc/videos/game.mp4"))
+        }
+
+    @Test
+    fun `logPlaybackError includes the path when one is known, and works with none`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val logFile = File(tempFolder.root, "logs/esde_companion_log.txt")
+            val logger = loggerFor(logFile, FakeOnboardingRepository(debugLoggingEnabled = MutableStateFlow(true)))
+
+            logger.logPlaybackError("Music", "/music/general/1.mp3", "unreadable file")
+            logger.logPlaybackError("Music", null, "no track loaded")
+            logger.logPlaybackError("Video", "/media/gc/videos/game.mp4", "decoder init failed")
+
+            val musicLines = logFile.readLines().filter { it.contains("Music:") }
+            assertEquals(2, musicLines.size)
+            assertTrue(musicLines[0].contains("error playing /music/general/1.mp3: unreadable file"))
+            assertTrue(musicLines[1].contains("error: no track loaded"))
+
+            val videoLine = logFile.readLines().single { it.contains("Video:") }
+            assertTrue(videoLine.contains("error playing /media/gc/videos/game.mp4: decoder init failed"))
+        }
+
+    @Test
     fun `toggling disabled mid-process does not re-truncate on the next enable`() =
         runTest(UnconfinedTestDispatcher()) {
             val logFile = File(tempFolder.root, "logs/esde_companion_log.txt")

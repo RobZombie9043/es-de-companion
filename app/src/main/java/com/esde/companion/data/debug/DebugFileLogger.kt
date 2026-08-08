@@ -107,6 +107,32 @@ class DebugFileLogger(
         }
     }
 
+    /**
+     * Logged once a music track or video overlay actually starts playing - see
+     * [MusicPlaybackCoordinator][com.esde.companion.domain.music.MusicPlaybackCoordinator]
+     * (tag "Music") and VideoOverlayScreen's Player.Listener.onIsPlayingChanged (tag
+     * "Video"). A single pair of started/error functions covering both media kinds, rather
+     * than four near-identical ones, keeps this class's function count from ballooning for
+     * what's really the same shape of event twice.
+     */
+    fun logPlaybackStarted(
+        tag: String,
+        path: String,
+    ) = log { listOf(tag to "playing $path") }
+
+    /**
+     * Logged when a music or video player reports it couldn't play something - see
+     * [MusicPlayerController.observePlaybackError][com.esde.companion.domain.repository.MusicPlayerController.observePlaybackError]
+     * and VideoOverlayScreen's Player.Listener.onPlayerError. [path] is whatever the caller
+     * believed was current at the time, for context - it can be null if the error arrives
+     * with nothing loaded (music only; a video overlay always has a path).
+     */
+    fun logPlaybackError(
+        tag: String,
+        path: String?,
+        message: String,
+    ) = log { listOf(tag to "error${path?.let { " playing $it" } ?: ""}: $message") }
+
     // A type with only one valid extension (e.g. Manuals -> pdf) has no real ambiguity
     // about what would have matched, so show it directly rather than a wildcard.
     private fun notFoundLocation(

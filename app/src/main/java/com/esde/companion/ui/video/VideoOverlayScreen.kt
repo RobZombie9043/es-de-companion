@@ -40,6 +40,11 @@ import java.io.File
  * A new [videoPath] recreates [player] via remember(videoPath), which also resets
  * [isPlaying] back to false - so switching games correctly drops back to "show widgets"
  * for the new delay window rather than carrying over the previous video's playing state.
+ *
+ * [onPlaybackEvent] reports [VideoPlaybackEvent.PlayingChanged] on every
+ * onIsPlayingChanged, [VideoPlaybackEvent.Started] additionally whenever it becomes true -
+ * including a resume after a mid-video rebuffer, not just the very first frame - and
+ * [VideoPlaybackEvent.Error] on a player error.
  */
 @Composable
 fun VideoOverlayScreen(
@@ -47,7 +52,7 @@ fun VideoOverlayScreen(
     delaySeconds: Int,
     audioEnabled: Boolean,
     modifier: Modifier = Modifier,
-    onIsPlayingChanged: (Boolean) -> Unit = {},
+    onPlaybackEvent: (VideoPlaybackEvent) -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -60,11 +65,12 @@ fun VideoOverlayScreen(
                     object : Player.Listener {
                         override fun onIsPlayingChanged(playing: Boolean) {
                             isPlaying = playing
-                            onIsPlayingChanged(playing)
+                            onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(playing))
+                            if (playing) onPlaybackEvent(VideoPlaybackEvent.Started)
                         }
 
                         override fun onPlayerError(error: PlaybackException) {
-                            android.util.Log.e("VideoDebug", "playback error for $videoPath", error)
+                            onPlaybackEvent(VideoPlaybackEvent.Error(error.message ?: error.toString()))
                         }
                     },
                 )
@@ -89,7 +95,7 @@ fun VideoOverlayScreen(
             // this explicit call a video that becomes ineligible mid-playback (context
             // change, app backgrounded) could leave the last "true" stuck, permanently
             // ducking background music.
-            onIsPlayingChanged(false)
+            onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(false))
             player.release()
         }
     }

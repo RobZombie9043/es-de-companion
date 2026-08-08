@@ -186,6 +186,7 @@ class MusicPlaybackCoordinatorTest {
         var pauseCallCount = 0
         var resumeCallCount = 0
         private val completions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        private val errors = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
         override fun playTrack(track: MusicTrack) {
             playedTracks += track
@@ -205,7 +206,11 @@ class MusicPlaybackCoordinatorTest {
 
         override fun observeTrackCompletion(): Flow<Unit> = completions
 
+        override fun observePlaybackError(): Flow<String> = errors
+
         suspend fun completeCurrentTrack() = completions.emit(Unit)
+
+        suspend fun emitError(message: String) = errors.emit(message)
     }
 
     private class FakeActivityVisibilityRepository : ActivityVisibilityRepository {
@@ -236,6 +241,8 @@ class MusicPlaybackCoordinatorTest {
         activityVisibilityRepository: FakeActivityVisibilityRepository = FakeActivityVisibilityRepository(),
         videoPlaybackStateRepository: FakeVideoPlaybackStateRepository = FakeVideoPlaybackStateRepository(),
         scope: CoroutineScope,
+        onTrackStarted: (MusicTrack) -> Unit = {},
+        onPlaybackError: (MusicTrack?, String) -> Unit = { _, _ -> },
     ): MusicPlaybackCoordinator {
         val logRepository = FakeEsdeLogRepository(events)
         val observeConnectionState = ObserveConnectionStateUseCase(logRepository, ObserveAppStateUseCase(logRepository, scope))
@@ -251,6 +258,8 @@ class MusicPlaybackCoordinatorTest {
             musicLibraryRepository = musicLibraryRepository,
             musicPlayerController = musicPlayerController,
             applicationScope = scope,
+            onTrackStarted = onTrackStarted,
+            onPlaybackError = onPlaybackError,
         )
     }
 
@@ -496,5 +505,75 @@ class MusicPlaybackCoordinatorTest {
 
             assertEquals(2, controller.playedTracks.size)
             assertNotEquals(controller.playedTracks[0], controller.playedTracks[1])
+        }
+
+    @Test
+    fun `onTrackStarted fires every time a track is handed to the player`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
+            val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+                )
+            val controller = FakeMusicPlayerController()
+            val events = MutableSharedFlow<EsdeEvent>()
+            val startedTracks = mutableListOf<MusicTrack>()
+            val coordinator =
+                buildCoordinator(
+                    events,
+                    library,
+                    controller,
+                    scope = backgroundScope,
+                    onTrackStarted = { startedTracks += it },
+                )
+
+            coordinator.playbackState.test {
+                awaitItem() // Stopped
+                events.emit(EsdeEvent.SystemSelect("a", "System A", "/roms/a"))
+                awaitItem()
+
+                controller.completeCurrentTrack()
+                awaitItem()
+
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(controller.playedTracks, startedTracks)
+        }
+
+    @Test
+    fun `onPlaybackError fires with the current track when the player reports an error`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
+                    generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+                )
+            val controller = FakeMusicPlayerController()
+            val events = MutableSharedFlow<EsdeEvent>()
+            val errors = mutableListOf<Pair<MusicTrack?, String>>()
+            val coordinator =
+                buildCoordinator(
+                    events,
+                    library,
+                    controller,
+                    scope = backgroundScope,
+                    onPlaybackError = { track, message -> errors += track to message },
+                )
+
+            coordinator.playbackState.test {
+                awaitItem() // Stopped
+                events.emit(EsdeEvent.SystemSelect("a", "System A", "/roms/a"))
+                awaitItem()
+
+                controller.emitError("unreadable file")
+
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(listOf(trackA1 to "unreadable file"), errors)
         }
 }

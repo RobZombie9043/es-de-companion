@@ -53,6 +53,12 @@ import kotlinx.coroutines.launch
  * the same vars against the Default-dispatcher collector. Routing them through [userActions]
  * closes that gap the same way: there is now genuinely only one place these vars are ever
  * touched.
+ *
+ * [onTrackStarted]/[onPlaybackError] are optional callbacks, not a direct dependency on
+ * [com.esde.companion.data.debug.DebugFileLogger] - this class stays plain Kotlin (see
+ * CLAUDE.md's layering rules) by having the composition root (AppContainer) pass the
+ * logger's methods in as function references, the same pattern ObserveAppStateUseCase's
+ * reducer callback already uses for state-transition logging.
  */
 class MusicPlaybackCoordinator(
     observeConnectionState: ObserveConnectionStateUseCase,
@@ -66,6 +72,8 @@ class MusicPlaybackCoordinator(
     private val musicLibraryRepository: MusicLibraryRepository,
     private val musicPlayerController: MusicPlayerController,
     applicationScope: CoroutineScope,
+    private val onTrackStarted: (MusicTrack) -> Unit = {},
+    private val onPlaybackError: (MusicTrack?, String) -> Unit = { _, _ -> },
 ) {
     private val _playbackState = MutableStateFlow<MusicPlaybackState>(MusicPlaybackState.Stopped)
     val playbackState: StateFlow<MusicPlaybackState> = _playbackState.asStateFlow()
@@ -121,11 +129,15 @@ class MusicPlaybackCoordinator(
         val trackCompletionFlow =
             musicPlayerController.observeTrackCompletion().map { CoordinatorEvent.TrackCompleted }
 
+        val playbackErrorFlow =
+            musicPlayerController.observePlaybackError().map { CoordinatorEvent.PlaybackErrored(it) }
+
         applicationScope.launch {
-            merge(snapshotFlow, trackCompletionFlow, userActions).collect { event ->
+            merge(snapshotFlow, trackCompletionFlow, playbackErrorFlow, userActions).collect { event ->
                 when (event) {
                     is CoordinatorEvent.SnapshotUpdated -> handleSnapshot(event.snapshot)
                     CoordinatorEvent.TrackCompleted -> handleTrackCompletion()
+                    is CoordinatorEvent.PlaybackErrored -> onPlaybackError(currentTrack, event.message)
                     CoordinatorEvent.PlayPauseToggled -> {
                         userPaused = !userPaused
                         applyCachedAction()
@@ -145,7 +157,10 @@ class MusicPlaybackCoordinator(
 
     private fun handleTrackCompletion() {
         advanceToNextTrack()
-        currentTrack?.let(musicPlayerController::playTrack)
+        currentTrack?.let {
+            musicPlayerController.playTrack(it)
+            onTrackStarted(it)
+        }
         applyCachedAction()
     }
 
@@ -173,7 +188,10 @@ class MusicPlaybackCoordinator(
             return
         }
         val track = pickRandomTrack(contents.tracks, excluding = currentTrack)
-        track?.let(musicPlayerController::playTrack)
+        track?.let {
+            musicPlayerController.playTrack(it)
+            onTrackStarted(it)
+        }
         loadedPool = contents.pool
         loadedTracks = contents.tracks
         currentTrack = track
@@ -236,6 +254,8 @@ class MusicPlaybackCoordinator(
         data class SnapshotUpdated(val snapshot: Snapshot) : CoordinatorEvent()
 
         data object TrackCompleted : CoordinatorEvent()
+
+        data class PlaybackErrored(val message: String) : CoordinatorEvent()
 
         data object PlayPauseToggled : CoordinatorEvent()
     }

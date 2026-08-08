@@ -84,6 +84,7 @@ import com.esde.companion.ui.update.WhatsNewDialog
 import com.esde.companion.ui.video.VideoOverlayScreen
 import com.esde.companion.ui.video.VideoOverlayViewModel
 import com.esde.companion.ui.video.VideoOverlayViewModelFactory
+import com.esde.companion.ui.video.VideoPlaybackEvent
 import com.esde.companion.ui.widgets.WidgetOverlay
 import com.esde.companion.ui.widgets.WidgetsViewModel
 import com.esde.companion.ui.widgets.WidgetsViewModelFactory
@@ -389,14 +390,6 @@ class MainActivity : ComponentActivity() {
                                     mainScreenActive &&
                                     isActivityVisible
 
-                            LaunchedEffect(videoPlaybackEnabled, videoPath, isBrowsingGame, mainScreenActive, isActivityVisible) {
-                                android.util.Log.d(
-                                    "VideoDebug",
-                                    "enabled=$videoPlaybackEnabled path=$videoPath browsing=$isBrowsingGame " +
-                                        "mainScreenActive=$mainScreenActive visible=$isActivityVisible -> show=$showVideoOverlay",
-                                )
-                            }
-
                             // GameManual selected but no manual resolved for this game, or
                             // the user tapped exit on it -> falls through to the plain
                             // main screen, same as ScreenBehavior.Nothing.
@@ -586,12 +579,23 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 if (showVideoOverlay) {
+                                    val resolvedVideoPath = videoPath!!
+                                    val videoPlaybackStateRepository = appContainer.videoPlaybackStateRepository
                                     VideoOverlayScreen(
-                                        videoPath = videoPath!!,
+                                        videoPath = resolvedVideoPath,
                                         delaySeconds = videoDelaySeconds,
                                         audioEnabled = videoAudioEnabled,
                                         modifier = Modifier.fillMaxSize(),
-                                        onIsPlayingChanged = appContainer.videoPlaybackStateRepository::setIsPlaying,
+                                        onPlaybackEvent = { event ->
+                                            when (event) {
+                                                is VideoPlaybackEvent.PlayingChanged ->
+                                                    videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
+                                                VideoPlaybackEvent.Started ->
+                                                    appContainer.logVideoPlaybackStarted(resolvedVideoPath)
+                                                is VideoPlaybackEvent.Error ->
+                                                    appContainer.logVideoPlaybackError(resolvedVideoPath, event.message)
+                                            }
+                                        },
                                     )
                                 }
 

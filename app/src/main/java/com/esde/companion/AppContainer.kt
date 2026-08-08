@@ -172,6 +172,15 @@ class AppContainer(context: Context) {
             clock = Clock.systemDefaultZone(),
         )
 
+    // Video-overlay playback events (VideoOverlayScreen) are reported from a Compose/
+    // ExoPlayer callback, not through a use case - exposed as plain function references
+    // (rather than the DebugFileLogger type itself) so MainActivity, which already wires
+    // other domain-typed callbacks like videoPlaybackStateRepository::setIsPlaying down
+    // into VideoOverlayScreen, can do the same here without reaching into the data layer.
+    val logVideoPlaybackStarted: (String) -> Unit = { path -> debugFileLogger.logPlaybackStarted("Video", path) }
+    val logVideoPlaybackError: (String, String) -> Unit =
+        { path, message -> debugFileLogger.logPlaybackError("Video", path, message) }
+
     private val logRepository: EsdeLogRepository =
         SharedEsdeLogRepository(
             inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
@@ -359,6 +368,8 @@ class AppContainer(context: Context) {
             musicLibraryRepository = musicLibraryRepository,
             musicPlayerController = musicPlayerController,
             applicationScope = applicationScope,
+            onTrackStarted = { track -> debugFileLogger.logPlaybackStarted("Music", track.filePath) },
+            onPlaybackError = { track, message -> debugFileLogger.logPlaybackError("Music", track?.filePath, message) },
         )
 
     init {

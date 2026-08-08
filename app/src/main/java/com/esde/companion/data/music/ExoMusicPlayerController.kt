@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.esde.companion.domain.model.MusicTrack
@@ -37,6 +38,7 @@ class ExoMusicPlayerController(context: Context) : MusicPlayerController {
         }
 
     private val trackCompletions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val playbackErrors = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     init {
         player.addListener(
@@ -45,6 +47,10 @@ class ExoMusicPlayerController(context: Context) : MusicPlayerController {
                     if (playbackState == Player.STATE_ENDED) {
                         trackCompletions.tryEmit(Unit)
                     }
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    playbackErrors.tryEmit(error.message ?: error.toString())
                 }
             },
         )
@@ -71,4 +77,6 @@ class ExoMusicPlayerController(context: Context) : MusicPlayerController {
     }
 
     override fun observeTrackCompletion(): Flow<Unit> = trackCompletions.asSharedFlow()
+
+    override fun observePlaybackError(): Flow<String> = playbackErrors.asSharedFlow()
 }

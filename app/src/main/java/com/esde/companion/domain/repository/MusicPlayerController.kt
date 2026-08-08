@@ -13,4 +13,8 @@ interface MusicPlayerController {
     fun setVolume(fraction: Float)
 
     fun observeTrackCompletion(): Flow<Unit>
+
+    /** Emits a human-readable message each time the underlying player fails to play the
+     * current track (e.g. an unreadable/corrupt file). */
+    fun observePlaybackError(): Flow<String>
 }

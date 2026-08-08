@@ -14,6 +14,7 @@ class GameManualViewModelFactory(
         }
         return GameManualViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
+            observeGamePlayingBehavior = appContainer.observeGamePlayingBehaviorUseCase,
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
         ) as T
     }

@@ -4,16 +4,19 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.pdf.PdfManualRenderer
+import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
-import com.esde.companion.domain.model.currentGameReference
+import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -27,15 +30,26 @@ import kotlinx.coroutines.launch
  * [pdfPath] being null - no manual found for this game - is what MainActivity checks to
  * decide whether the GameManual cover applies at all; it falls through to the plain main
  * screen in that case, same as ScreenBehavior.Nothing.
+ *
+ * Manual media is only ever resolved (and therefore only ever shows up in the opt-in
+ * debug log - see LoggingGameMediaRepository) while AppState is exactly
+ * AppState.PlayingGame AND the Game Playing Behavior setting is GameManual - deliberately
+ * narrower than currentGameReference() (which also covers BrowsingGame/Screensaver),
+ * since a manual is never actually displayed in either of those cases (see MainActivity's
+ * showGameManual).
  */
 class GameManualViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
+    observeGamePlayingBehavior: ObserveGamePlayingBehaviorUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
 ) : ViewModel() {
     private val currentGameReference: Flow<GameReference?> =
-        observeConnectionState()
-            .map { connection -> (connection as? EsdeConnectionState.Connected)?.appState?.currentGameReference() }
-            .distinctUntilChanged()
+        combine(observeConnectionState(), observeGamePlayingBehavior()) { connection, behavior ->
+            val appState = (connection as? EsdeConnectionState.Connected)?.appState
+            (appState as? AppState.PlayingGame)
+                .takeIf { behavior == ScreenBehavior.GameManual }
+                ?.let { GameReference(it.systemShortName, it.romPath) }
+        }.distinctUntilChanged()
 
     val pdfPath: StateFlow<String?> =
         currentGameReference
