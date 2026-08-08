@@ -119,7 +119,9 @@ Checks that the following are enabled in ES-DE itself (Main Menu → Other Setti
 
 The wizard watches ES-DE's settings file live and auto-confirms this step the moment all three are enabled — note that ES-DE only writes its settings file when you back **out** of its settings menu, not while it's still open.
 
-**Skipped entirely if:** all three are already enabled when this step is reached.
+**Skipped entirely if:** all three are already enabled, and the `DebugSkipInputLogging` warning below doesn't apply, when this step is reached.
+
+If ES-DE's `settings/es_settings.xml` has `DebugSkipInputLogging` set to `true` — a debug flag not exposed anywhere in ES-DE's own settings menu — this step also shows a warning: the companion app won't be able to tell which direction you're navigating, so widget slide animations won't play correctly. This isn't required to fix, and doesn't block continuing — if you want to fix it, edit `es_settings.xml` directly and set it back to `false`.
 
 ### Step 6: Confirm It's Working
 
@@ -287,7 +289,7 @@ Group related apps into a named folder that collapses to a single tile in the gr
 - **Open a folder:** tap its tile. It shows a mosaic preview of up to 4 member app icons (or a plain folder glyph if empty) and opens a small popup grid with its contents over a blurred backdrop.
 - **Launch from inside a folder:** the same single tap / double tap / long-press behavior as the top-level drawer applies to apps inside a folder — see [Using the App Drawer](#using-the-app-drawer).
 - **Remove an app from a folder:** long-press it (while inside the folder popup) → **Remove from Folder**. This puts it back in the main grid as an ordinary app; it doesn't hide or uninstall it. A folder emptied this way closes its popup automatically and disappears from the grid.
-- **Rename a folder:** long-press its title bar while the folder popup is open.
+- **Rename a folder:** long-press its tile directly in the grid, or long-press its title bar while the folder popup is open — either works.
 - **Ordering is fully automatic** — there's no manual drag-to-reorder. Folders sort alphabetically by name among themselves, and apps (whether ungrouped or inside a folder) sort alphabetically by label among themselves. Whether folders are grouped ahead of ungrouped apps, or interleaved with them in one alphabetical list, is controlled by the **Sort folders on top of apps** setting (Settings → App Drawer and Dock, on by default) — see [Settings Reference](#settings-reference).
 - An app can belong to at most one folder at a time.
 - A hidden or uninstalled app is dropped from its folder automatically, the same as it would be from the top-level grid.
@@ -360,6 +362,8 @@ Configured in **Settings → Background Music** (plus the Custom Music Folder, w
 ## Settings Reference
 
 Settings isn't a dedicated screen — it's a popup reached by long-pressing anywhere on the main screen (or tapping the Settings gear, if shown; see [Screen Gestures](#screen-gestures)). This section describes every setting, organized by the category it appears under in that popup, in the order they're listed there.
+
+Below the category list itself, a **Quit Companion App** row closes the app outright (equivalent to what "Close Companion App on ES-DE Quit" does automatically — see [Other Settings](#other-settings)) — useful if you want to exit manually without waiting for ES-DE to quit.
 
 ### Widgets
 

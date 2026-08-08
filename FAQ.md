@@ -26,7 +26,7 @@ ES-DE Companion is free and open source. The full source code is available on Gi
 
 ### Is this app finished?
 
-The app is a ground-up rebuild and is currently at v0.7.0-beta — an early pre-release. Core features (log sync, widgets, app drawer/dock, video, music) all work, but expect some rough edges.
+The app is a ground-up rebuild and is currently at v0.7.0-RC1 — a release candidate. Core features (log sync, widgets, app drawer/dock, video, music) all work, but expect some rough edges.
 
 ## Setup and Installation
 
@@ -54,6 +54,10 @@ That step watches ES-DE's own `settings/es_settings.xml` file and only advances 
 - You toggled the settings but haven't backed out of ES-DE's settings menu yet — ES-DE only writes the file on exit, not while the menu is open
 - The ES-DE folder configured in the wizard doesn't match the one ES-DE is actually using
 
+### Onboarding is warning me about "DebugSkipInputLogging" — is that a problem?
+
+Not a blocker — it's advisory only, and it doesn't stop onboarding from finishing. If that debug flag is set to `true` in ES-DE's `settings/es_settings.xml`, the companion app can't tell which direction you're navigating, so widget slide animations won't play correctly (other functionality is unaffected). That flag isn't in ES-DE's own settings menu, so fixing it means editing `es_settings.xml` directly and setting it back to `false`.
+
 ### How do I redo setup / change my folders later?
 
 Folder paths can be changed any time from Settings → Setup — there's no need to redo the whole wizard. There's no manual "redo setup" button; the onboarding wizard only reappears automatically if "All files access" gets revoked, in which case it restarts with your previous folder choices already filled in.
@@ -76,6 +80,10 @@ Yes: Settings → Other Settings → "Close Companion App on ES-DE Quit," off by
 ### Can Companion launch ES-DE for me automatically?
 
 Yes: Settings → Other Settings → "Launch ES-DE on Companion App Start," off by default. Turn it on and Companion launches ES-DE on the other display as soon as it starts up — combined with Companion's own boot auto-start, this brings both apps up together with no manual step.
+
+### Can I quit Companion manually?
+
+Yes: the Settings popup has a "Quit Companion App" row below the category list that closes the app immediately — no need to wait for "Close Companion App on ES-DE Quit" to trigger.
 
 ## Widget System
 
@@ -186,7 +194,7 @@ Yes — the Dock's add-app picker offers a special "App Drawer" entry at the top
 
 ### Can I group apps into folders in the App Drawer?
 
-Yes: long-press an app → **Add to Folder** → either pick an existing folder or create a new one. A folder collapses to a single mosaic tile in the grid; tap it to open a popup with its contents. Long-press an app inside the popup to remove it from the folder, or long-press the folder's title bar to rename it. There's no manual reordering — folders and apps both sort alphabetically by name, and the **Sort folders on top of apps** setting (Settings → App Drawer and Dock, on by default) controls whether folders are grouped ahead of ungrouped apps or interleaved with them.
+Yes: long-press an app → **Add to Folder** → either pick an existing folder or create a new one. A folder collapses to a single mosaic tile in the grid; tap it to open a popup with its contents. Long-press an app inside the popup to remove it from the folder, and long-press the folder's own tile (in the grid) or its title bar (inside the open popup) to rename it. There's no manual reordering — folders and apps both sort alphabetically by name, and the **Sort folders on top of apps** setting (Settings → App Drawer and Dock, on by default) controls whether folders are grouped ahead of ungrouped apps or interleaved with them.
 
 ## Background Music
 
