@@ -14,6 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.BrandingWatermark
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Brightness7
@@ -21,13 +26,30 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Dock
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Opacity
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -40,12 +62,16 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.DockSize
@@ -54,6 +80,7 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.ui.theme.LocalIsDarkTheme
 import kotlin.math.roundToInt
 
 /**
@@ -63,12 +90,58 @@ import kotlin.math.roundToInt
  */
 internal val SettingsItemShape = RoundedCornerShape(16.dp)
 
+/** Shared opacity for every settings item's background - fully opaque, not translucent. */
+private const val SETTINGS_PANEL_ALPHA = 1f
+
+/** Corner radius of the accent-colored square drawn behind each [SettingsLabel] icon. */
+private val SettingsLabelIconShape = RoundedCornerShape(8.dp)
+
+/** Thickness of the accent-colored border surrounding each [SettingsLabel] icon. */
+private val SettingsLabelIconBorderWidth = 8.dp
+
 /**
- * Shared translucency for every settings item's background - lets the fallback background
- * image behind the long-press popup's content (see LongPressSettingsMenu) show through the
- * cards rather than being fully hidden behind an opaque surface color.
+ * The two accent-square colors [SettingsLabel] swaps between light/dark mode - deliberately
+ * the *other* theme's default primary tone (dark theme's in light mode and vice versa)
+ * rather than [MaterialTheme.colorScheme.primary] directly, per design request.
  */
-private const val SETTINGS_PANEL_ALPHA = 0.8f
+private val SettingsLabelBorderColorInLightMode = darkColorScheme().primary
+private val SettingsLabelBorderColorInDarkMode = lightColorScheme().primary
+
+/**
+ * Name row shared by every settings category and every individual setting: an icon in an
+ * accent-colored (purple), rounded-corner square, followed by the name itself. The icon and
+ * text share one color that resolves to black in light mode / white in dark mode (see
+ * [LocalIsDarkTheme]).
+ */
+@Composable
+internal fun SettingsLabel(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.titleMedium,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val labelColor = if (isDark) Color.White else Color.Black
+    val borderColor = if (isDark) SettingsLabelBorderColorInDarkMode else SettingsLabelBorderColorInLightMode
+    val iconSize = style.fontSize.value.dp
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(shape = SettingsLabelIconShape, color = borderColor) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = labelColor,
+                modifier = Modifier
+                    .padding(SettingsLabelIconBorderWidth)
+                    .size(iconSize),
+            )
+        }
+        Text(text = text, style = style, color = labelColor)
+    }
+}
 
 /**
  * Per-category settings content, one composable per [SettingsCategory] plus the shared
@@ -94,11 +167,7 @@ internal fun SettingsCategoryRow(category: SettingsCategory, onClick: () -> Unit
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = category.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                SettingsLabel(icon = category.icon, text = category.title)
                 Text(text = category.description, style = MaterialTheme.typography.bodySmall)
             }
             Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
@@ -168,44 +237,42 @@ internal fun SetupSettingsContent(
         }
 
         FolderSetting(
-            label = "ES-DE folder",
+            label = { SettingsLabel(icon = Icons.Filled.Folder, text = "ES-DE folder") },
             path = uiState.logFolderPath,
-            isValidating = uiState.isValidatingLogFolder,
-            statusText = uiState.logFolderValidation.toStatusText(),
+            statusText = uiState.logFolderValidation.toStatusText().unlessValidating(uiState.isValidatingLogFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onLogFolderPicked) },
         )
 
         FolderSetting(
-            label = "Media folder",
+            label = { SettingsLabel(icon = Icons.Filled.PermMedia, text = "Media folder") },
             path = uiState.mediaFolderPath,
-            isValidating = uiState.isValidatingMediaFolder,
-            statusText = uiState.mediaFolderValidation.toStatusText(),
+            statusText = uiState.mediaFolderValidation.toStatusText().unlessValidating(uiState.isValidatingMediaFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onMediaFolderPicked) },
         )
 
         OptionalFolderSetting(
-            label = "Custom System Images Folder",
+            label = { SettingsLabel(icon = Icons.Filled.Image, text = "Custom System Images Folder") },
             path = uiState.customSystemImagesFolderPath,
-            isValidating = uiState.isValidatingCustomSystemImagesFolder,
-            statusText = uiState.customSystemImagesFolderValidation.toStatusText(),
+            statusText = uiState.customSystemImagesFolderValidation.toStatusText()
+                .unlessValidating(uiState.isValidatingCustomSystemImagesFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomSystemImagesFolderPicked) },
             onClear = onCustomSystemImagesFolderCleared,
         )
 
         OptionalFolderSetting(
-            label = "Custom Logos Folder",
+            label = { SettingsLabel(icon = Icons.AutoMirrored.Filled.BrandingWatermark, text = "Custom Logos Folder") },
             path = uiState.customLogosFolderPath,
-            isValidating = uiState.isValidatingCustomLogosFolder,
-            statusText = uiState.customLogosFolderValidation.toStatusText(),
+            statusText = uiState.customLogosFolderValidation.toStatusText()
+                .unlessValidating(uiState.isValidatingCustomLogosFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomLogosFolderPicked) },
             onClear = onCustomLogosFolderCleared,
         )
 
         OptionalFolderSetting(
-            label = "Custom Music Folder",
+            label = { SettingsLabel(icon = Icons.Filled.MusicNote, text = "Custom Music Folder") },
             path = uiState.customMusicFolderPath,
-            isValidating = uiState.isValidatingCustomMusicFolder,
-            statusText = uiState.customMusicFolderValidation.toStatusText(),
+            statusText = uiState.customMusicFolderValidation.toStatusText()
+                .unlessValidating(uiState.isValidatingCustomMusicFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomMusicFolderPicked) },
             onClear = onCustomMusicFolderCleared,
         )
@@ -234,12 +301,14 @@ internal fun UISettingsContent(
         OverlayOpacitySetting(percent = overlayOpacityPercent, onPercentChanged = onOverlayOpacityChanged)
         ScreenBehaviorPicker(
             title = "Game Playing Screen Behavior",
+            icon = Icons.Filled.SportsEsports,
             options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual),
             selected = gamePlayingBehavior,
             onSelected = onGamePlayingBehaviorChanged,
         )
         ScreenBehaviorPicker(
             title = "Screensaver Screen Behavior",
+            icon = Icons.Filled.Nightlight,
             options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black),
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
@@ -283,11 +352,7 @@ private fun OverlayOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit)
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Overlay Opacity",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.Opacity, text = "Overlay Opacity")
             Text(text = "$percent%", style = MaterialTheme.typography.bodyMedium)
             Slider(
                 value = percent.toFloat(),
@@ -335,11 +400,7 @@ private fun VideoPlaybackEnabledSetting(enabled: Boolean, onEnabledChanged: (Boo
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Background Video",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.Videocam, text = "Background Video")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -374,11 +435,7 @@ private fun VideoDelaySetting(delaySeconds: Int, onDelaySecondsChanged: (Int) ->
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Video Start Delay",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.Timer, text = "Video Start Delay")
             Text(
                 text = if (delaySeconds == 0) "Off" else "${delaySeconds}s",
                 style = MaterialTheme.typography.bodyMedium,
@@ -406,11 +463,7 @@ private fun VideoAudioSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> U
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Video Audio",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.VolumeUp, text = "Video Audio")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -476,11 +529,7 @@ private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boo
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Close Companion App on ES-DE Quit",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.AutoMirrored.Filled.ExitToApp, text = "Close Companion App on ES-DE Quit")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -515,11 +564,7 @@ private fun LaunchEsdeOnStartSetting(enabled: Boolean, onEnabledChanged: (Boolea
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Launch ES-DE on Companion App Start",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.RocketLaunch, text = "Launch ES-DE on Companion App Start")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -554,11 +599,7 @@ private fun SettingsFabVisibleSetting(enabled: Boolean, onEnabledChanged: (Boole
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Show Settings Button",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.Settings, text = "Show Settings Button")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -585,6 +626,7 @@ private fun SettingsFabVisibleSetting(enabled: Boolean, onEnabledChanged: (Boole
 @Composable
 private fun ScreenBehaviorPicker(
     title: String,
+    icon: ImageVector,
     options: List<ScreenBehavior>,
     selected: ScreenBehavior,
     onSelected: (ScreenBehavior) -> Unit,
@@ -598,11 +640,7 @@ private fun ScreenBehaviorPicker(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = icon, text = title)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 options.forEachIndexed { index, behavior ->
                     SegmentedButton(
@@ -694,11 +732,7 @@ private fun SortFoldersOnTopSetting(enabled: Boolean, onEnabledChanged: (Boolean
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Sort folders on top of apps",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                SettingsLabel(icon = Icons.AutoMirrored.Filled.Sort, text = "Sort folders on top of apps")
                 Text(
                     text = "Group folders ahead of ungrouped apps instead of sorting them in alphabetically",
                     style = MaterialTheme.typography.bodySmall,
@@ -731,11 +765,7 @@ private fun DockEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> 
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Enable Dock",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                SettingsLabel(icon = Icons.Filled.Dock, text = "Enable Dock")
                 Text(
                     text = "A row of pinned apps at the bottom of the main screen",
                     style = MaterialTheme.typography.bodySmall,
@@ -764,11 +794,7 @@ private fun DockMaxAppsSetting(maxApps: Int, onMaxAppsChanged: (Int) -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Maximum dock apps",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.FormatListNumbered, text = "Maximum dock apps")
             Text(text = "$maxApps apps", style = MaterialTheme.typography.bodyMedium)
             Slider(
                 value = maxApps.toFloat(),
@@ -793,11 +819,7 @@ private fun DockSizeSetting(size: DockSize, onSizeChanged: (DockSize) -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Dock size",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.AspectRatio, text = "Dock size")
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 DockSize.entries.forEachIndexed { index, entry ->
                     SegmentedButton(
@@ -836,11 +858,7 @@ private fun ManageAppsEntry(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Manage Apps",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                SettingsLabel(icon = Icons.Filled.Apps, text = "Manage Apps")
                 Text(
                     text = "Choose which apps appear in the App Drawer",
                     style = MaterialTheme.typography.bodySmall,
@@ -863,11 +881,7 @@ private fun GridColumnsSetting(columns: Int, onColumnsChanged: (Int) -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Grid columns",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.GridView, text = "Grid columns")
             Text(text = "$columns columns", style = MaterialTheme.typography.bodyMedium)
             Slider(
                 value = columns.toFloat(),
@@ -932,11 +946,7 @@ private fun MusicEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) ->
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = "Background Music",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.MusicNote, text = "Background Music")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -974,10 +984,9 @@ private fun MusicPlayWhileBrowsingSystemsSetting(enabled: Boolean, onEnabledChan
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            SettingsLabel(
+                icon = Icons.Filled.Devices,
                 text = "Play while browsing systems",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
             Switch(
@@ -1006,10 +1015,9 @@ private fun MusicPlayWhileBrowsingGamesSetting(enabled: Boolean, onEnabledChange
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            SettingsLabel(
+                icon = Icons.Filled.SportsEsports,
                 text = "Play while browsing games",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
             Switch(
@@ -1038,10 +1046,9 @@ private fun MusicPlayDuringScreensaverSetting(enabled: Boolean, onEnabledChanged
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            SettingsLabel(
+                icon = Icons.Filled.Nightlight,
                 text = "Play during screensaver",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
             Switch(
@@ -1067,11 +1074,7 @@ private fun MusicDuckingModeSetting(selected: MusicDuckingMode, onSelected: (Mus
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = "During Video Playback",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.Movie, text = "Volume During Video Playback")
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 MusicDuckingMode.entries.forEachIndexed { index, mode ->
                     SegmentedButton(
@@ -1109,7 +1112,7 @@ private val MusicDuckingMode.icon: ImageVector
 private val MusicDuckingMode.label: String
     get() = when (this) {
         MusicDuckingMode.Unchanged -> "Unchanged"
-        MusicDuckingMode.LowerVolume -> "Lower volume"
+        MusicDuckingMode.LowerVolume -> "Lower"
         MusicDuckingMode.Pause -> "Pause"
     }
 
@@ -1125,11 +1128,7 @@ private fun ThemePicker(selected: ThemePreference, onSelected: (ThemePreference)
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = "Theme",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            SettingsLabel(icon = Icons.Filled.Palette, text = "Theme")
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 ThemePreference.entries.forEachIndexed { index, theme ->
                     SegmentedButton(
@@ -1188,11 +1187,7 @@ private fun EditWidgetsEntry(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Edit Widgets",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                SettingsLabel(icon = Icons.Filled.Widgets, text = "Edit Widgets")
                 Text(
                     text = "Add, move, and resize widgets on the main screen",
                     style = MaterialTheme.typography.bodySmall,
@@ -1203,12 +1198,18 @@ private fun EditWidgetsEntry(onClick: () -> Unit) {
     }
 }
 
+/**
+ * [FolderSetting] and [OptionalFolderSetting] take their name as a `label` slot (rather
+ * than a plain `String` + `ImageVector` pair) and fold `isValidating`/`statusText` into one
+ * nullable `statusText` (null means "still validating") purely to stay under detekt's
+ * `LongParameterList` threshold once an icon joined the parameter list - not a design this
+ * pair otherwise needed.
+ */
 @Composable
 private fun FolderSetting(
-    label: String,
+    label: @Composable () -> Unit,
     path: String,
-    isValidating: Boolean,
-    statusText: String,
+    statusText: String?,
     onPick: (Uri) -> Unit,
 ) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -1224,11 +1225,7 @@ private fun FolderSetting(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            label()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1247,7 +1244,7 @@ private fun FolderSetting(
                     )
                 }
             }
-            if (isValidating) {
+            if (statusText == null) {
                 CircularProgressIndicator()
             } else {
                 Text(text = statusText, style = MaterialTheme.typography.bodySmall)
@@ -1258,10 +1255,9 @@ private fun FolderSetting(
 
 @Composable
 private fun OptionalFolderSetting(
-    label: String,
+    label: @Composable () -> Unit,
     path: String?,
-    isValidating: Boolean,
-    statusText: String,
+    statusText: String?,
     onPick: (Uri) -> Unit,
     onClear: () -> Unit,
 ) {
@@ -1278,11 +1274,7 @@ private fun OptionalFolderSetting(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            label()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1311,7 +1303,7 @@ private fun OptionalFolderSetting(
                 }
             }
             if (path != null) {
-                if (isValidating) {
+                if (statusText == null) {
                     CircularProgressIndicator()
                 } else {
                     Text(text = statusText, style = MaterialTheme.typography.bodySmall)
@@ -1320,6 +1312,12 @@ private fun OptionalFolderSetting(
         }
     }
 }
+
+/**
+ * Null while still validating (see [FolderSetting]/[OptionalFolderSetting]'s `statusText`),
+ * the computed text otherwise.
+ */
+private fun String.unlessValidating(isValidating: Boolean): String? = if (isValidating) null else this
 
 private fun LogFolderValidation?.toStatusText(): String = when (this) {
     null -> ""
