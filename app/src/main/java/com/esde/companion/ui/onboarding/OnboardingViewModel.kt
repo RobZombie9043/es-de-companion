@@ -139,7 +139,7 @@ class OnboardingViewModel(
     }
 
     fun onLegacyScriptsConfirmed() {
-        if (_uiState.value.eventScriptSettings?.allEnabled != true) {
+        if (_uiState.value.eventScriptSettings?.needsAttention != false) {
             enterEventScriptSettingsCheck()
         } else {
             enterLiveLogCheck()
@@ -235,7 +235,7 @@ class OnboardingViewModel(
         val current = _uiState.value
         when {
             current.legacyScriptFiles.isNotEmpty() -> advanceTo(OnboardingStep.LegacyScripts)
-            current.eventScriptSettings?.allEnabled != true -> enterEventScriptSettingsCheck()
+            current.eventScriptSettings?.needsAttention != false -> enterEventScriptSettingsCheck()
             else -> enterLiveLogCheck()
         }
     }

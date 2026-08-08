@@ -389,6 +389,16 @@ private fun EventScriptSettingsStep(
                     "this will be detected automatically.",
             )
         }
+
+        if (settings?.debugSkipInputLogging == true) {
+            Text(
+                "Warning: \"DebugSkipInputLogging\" is enabled in es_settings.xml. ES-DE " +
+                    "Companion won't be able to detect which direction you're navigating, so " +
+                    "slide animations won't work correctly. This isn't required to fix - if " +
+                    "you'd like to, this option isn't in ES-DE's settings menu, so edit " +
+                    "es_settings.xml directly and set it back to false.",
+            )
+        }
     }
 }
 

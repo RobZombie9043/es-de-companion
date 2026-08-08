@@ -175,6 +175,7 @@ class OnboardingViewModelTest {
                 customEventScripts = true,
                 customEventScriptsBrowsing = true,
                 debugMode = true,
+                debugSkipInputLogging = false,
             )
         var legacyScriptFiles: List<String> = emptyList()
         var deleteCalled = false
@@ -401,6 +402,7 @@ class OnboardingViewModelTest {
                             customEventScripts = false,
                             customEventScriptsBrowsing = true,
                             debugMode = true,
+                            debugSkipInputLogging = false,
                         )
                 }
             val viewModel = buildViewModel(installationRepository = installationRepo)
@@ -429,6 +431,7 @@ class OnboardingViewModelTest {
                             customEventScripts = false,
                             customEventScriptsBrowsing = true,
                             debugMode = true,
+                            debugSkipInputLogging = false,
                         )
                 }
             val viewModel = buildViewModel(installationRepository = installationRepo)
@@ -449,12 +452,46 @@ class OnboardingViewModelTest {
                     customEventScripts = true,
                     customEventScriptsBrowsing = true,
                     debugMode = true,
+                    debugSkipInputLogging = false,
                 ),
             )
             advanceUntilIdle()
 
             assertTrue(viewModel.uiState.value.eventScriptSettings?.allEnabled == true)
             assertEquals(OnboardingStep.EventScriptSettings, viewModel.uiState.value.step)
+
+            viewModel.onEventScriptSettingsConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+        }
+
+    @Test
+    fun `when only DebugSkipInputLogging is on, MediaFolder confirm still shows EventScriptSettings as a warning`() =
+        runTest(testDispatcher) {
+            val installationRepo =
+                FakeEsdeInstallationRepository().apply {
+                    eventScriptSettings =
+                        EsdeEventScriptSettings(
+                            customEventScripts = true,
+                            customEventScriptsBrowsing = true,
+                            debugMode = true,
+                            debugSkipInputLogging = true,
+                        )
+                }
+            val viewModel = buildViewModel(installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
+
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
+
+            // Not a blocker - the three required settings are all enabled, so the step is
+            // reached purely to surface the advisory warning, not to gate progress on it.
+            assertEquals(OnboardingStep.EventScriptSettings, viewModel.uiState.value.step)
+            assertTrue(viewModel.uiState.value.eventScriptSettings?.allEnabled == true)
+            assertTrue(viewModel.uiState.value.eventScriptSettings?.debugSkipInputLogging == true)
 
             viewModel.onEventScriptSettingsConfirmed()
             advanceUntilIdle()

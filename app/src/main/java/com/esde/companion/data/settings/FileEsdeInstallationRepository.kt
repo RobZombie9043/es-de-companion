@@ -88,6 +88,7 @@ class FileEsdeInstallationRepository(
                 customEventScripts = EsdeSettingsParser.findBoolValue(xml, "CustomEventScripts") ?: false,
                 customEventScriptsBrowsing = EsdeSettingsParser.findBoolValue(xml, "CustomEventScriptsBrowsing") ?: false,
                 debugMode = EsdeSettingsParser.findBoolValue(xml, "DebugMode") ?: false,
+                debugSkipInputLogging = EsdeSettingsParser.findBoolValue(xml, "DebugSkipInputLogging") ?: false,
             )
         }
 
