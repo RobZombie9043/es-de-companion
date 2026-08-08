@@ -72,11 +72,12 @@ fun MusicControlsOverlay(
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
 
-    val track = when (val state = playbackState) {
-        is MusicPlaybackState.Playing -> state.track
-        is MusicPlaybackState.Paused -> state.track
-        MusicPlaybackState.Stopped -> null
-    }
+    val track =
+        when (val state = playbackState) {
+            is MusicPlaybackState.Playing -> state.track
+            is MusicPlaybackState.Paused -> state.track
+            MusicPlaybackState.Stopped -> null
+        }
 
     if (track == null) return
 
@@ -97,22 +98,25 @@ fun MusicControlsOverlay(
             val titleStyle = MaterialTheme.typography.bodyMedium
 
             val reservedForIconsAndPadding = ROW_HORIZONTAL_PADDING * 2 + ICON_BUTTON_SIZE * 2 + TITLE_END_PADDING
-            val availableForTitlePx = with(density) {
-                (maxWidth - reservedForIconsAndPadding).toPx().toInt().coerceAtLeast(0)
-            }
+            val availableForTitlePx =
+                with(density) {
+                    (maxWidth - reservedForIconsAndPadding).toPx().toInt().coerceAtLeast(0)
+                }
 
-            val titleLayout = remember(track.title, availableForTitlePx, titleStyle) {
-                textMeasurer.measure(
-                    text = track.title,
-                    style = titleStyle,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = 2,
-                    constraints = Constraints(maxWidth = availableForTitlePx),
-                )
-            }
-            val titleWidth = with(density) {
-                (0 until titleLayout.lineCount).maxOf { titleLayout.getLineRight(it) - titleLayout.getLineLeft(it) }.toDp()
-            }
+            val titleLayout =
+                remember(track.title, availableForTitlePx, titleStyle) {
+                    textMeasurer.measure(
+                        text = track.title,
+                        style = titleStyle,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 2,
+                        constraints = Constraints(maxWidth = availableForTitlePx),
+                    )
+                }
+            val titleWidth =
+                with(density) {
+                    (0 until titleLayout.lineCount).maxOf { titleLayout.getLineRight(it) - titleLayout.getLineLeft(it) }.toDp()
+                }
 
             Row(
                 modifier = Modifier.padding(horizontal = ROW_HORIZONTAL_PADDING, vertical = 4.dp),

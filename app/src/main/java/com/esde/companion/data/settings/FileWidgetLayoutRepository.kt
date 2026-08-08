@@ -11,21 +11,24 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class FileWidgetLayoutRepository(
     private val context: Context,
 ) : WidgetLayoutRepository {
-
     override fun observeCanvas(stateGroup: StateGroup): Flow<SavedWidgetCanvas> =
         context.widgetLayoutDataStore.data.map { prefs ->
             prefs[canvasKey(stateGroup)]?.let { decodeCanvas(it) }
                 ?: SavedWidgetCanvas(grid = null, widgets = emptyList())
         }
 
-    override suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions) {
+    override suspend fun saveCanvas(
+        stateGroup: StateGroup,
+        widgets: List<PlacedWidget>,
+        grid: GridDimensions,
+    ) {
         context.widgetLayoutDataStore.edit {
             it[canvasKey(stateGroup)] = Json.encodeToString(canvasDtoOf(widgets, grid))
         }

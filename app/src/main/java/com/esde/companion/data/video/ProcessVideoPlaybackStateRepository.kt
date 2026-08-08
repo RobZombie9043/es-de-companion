@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * opposite of ActivityVisibilityRepository's default-true.
  */
 class ProcessVideoPlaybackStateRepository : VideoPlaybackStateRepository {
-
     private val isPlaying = MutableStateFlow(false)
 
     override fun observeIsPlaying(): Flow<Boolean> = isPlaying

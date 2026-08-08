@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
  * configured correctly for this app's log pipeline.
  */
 interface EsdeInstallationRepository {
-
     /** The MediaDirectory value from settings/es_settings.xml, or null if the file can't
      * be found/read, or the setting isn't present in it. */
     suspend fun readMediaDirectory(esdeRootPath: String): String?

@@ -5,9 +5,9 @@ import com.esde.companion.domain.model.MusicTrack
 import com.esde.companion.domain.model.musicTrackFromPath
 import com.esde.companion.domain.repository.MusicLibraryRepository
 import com.esde.companion.domain.repository.MusicPoolContents
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 private val MUSIC_EXTENSIONS = setOf("mp3", "ogg", "flac", "wav", "m4a", "aac", "opus")
 private const val SYSTEMS_FOLDER_NAME = "systems"
@@ -21,7 +21,6 @@ private const val SYSTEMS_FOLDER_NAME = "systems"
 class FileMusicLibraryRepository(
     private val musicFolderPath: String,
 ) : MusicLibraryRepository {
-
     override suspend fun loadPool(desired: MusicPool): MusicPoolContents =
         withContext(Dispatchers.IO) {
             when (desired) {

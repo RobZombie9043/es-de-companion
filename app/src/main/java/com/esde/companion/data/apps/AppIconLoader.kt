@@ -13,7 +13,10 @@ import kotlinx.coroutines.withContext
  * routine race with the broadcast-driven refresh, not an error.
  */
 object AppIconLoader {
-    suspend fun loadIcon(context: Context, packageName: String): Drawable? =
+    suspend fun loadIcon(
+        context: Context,
+        packageName: String,
+    ): Drawable? =
         withContext(Dispatchers.IO) {
             runCatching { context.packageManager.getApplicationIcon(packageName) }.getOrNull()
         }

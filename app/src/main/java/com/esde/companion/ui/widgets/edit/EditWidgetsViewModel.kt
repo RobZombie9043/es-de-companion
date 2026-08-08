@@ -30,7 +30,6 @@ import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
-import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +39,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 /** New widgets default to a 4x4 cell footprint (clamped to the grid's actual size on
  * very small/coarse grids), centered on the canvas - a reasonable starting size/position
@@ -93,18 +93,21 @@ class EditWidgetsViewModel(
     observeDockApps: ObserveDockAppsUseCase,
     observeInstalledApps: ObserveInstalledAppsUseCase,
 ) : ViewModel() {
+    val dockEnabled: StateFlow<Boolean> =
+        observeDockEnabled()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)
 
-    val dockEnabled: StateFlow<Boolean> = observeDockEnabled()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), false)
+    val dockSize: StateFlow<DockSize> =
+        observeDockSize()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), DockSize.Medium)
 
-    val dockSize: StateFlow<DockSize> = observeDockSize()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), DockSize.Medium)
+    val dockOpacityPercent: StateFlow<Int> =
+        observeOverlayOpacity()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 80)
 
-    val dockOpacityPercent: StateFlow<Int> = observeOverlayOpacity()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 80)
-
-    val dockMaxApps: StateFlow<Int> = observeDockMaxApps()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 5)
+    val dockMaxApps: StateFlow<Int> =
+        observeDockMaxApps()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 5)
 
     /** Same resolution as AppDockViewModel.dockItems (pinned package names -> InstalledApp,
      * capped to maxApps, with APP_DRAWER_SHORTCUT_PACKAGE_NAME resolving to the synthetic
@@ -169,10 +172,15 @@ class EditWidgetsViewModel(
     /** Live preview during a drag - updates the in-memory position only, no persistence,
      * and deliberately does not touch previewContent - content resolution never depends
      * on position/size. */
-    fun updateWidgetPosition(widgetId: String, gridColumn: Int, gridRow: Int) {
-        _widgets.value = _widgets.value.map { widget ->
-            if (widget.id == widgetId) widget.copy(gridColumn = gridColumn, gridRow = gridRow) else widget
-        }
+    fun updateWidgetPosition(
+        widgetId: String,
+        gridColumn: Int,
+        gridRow: Int,
+    ) {
+        _widgets.value =
+            _widgets.value.map { widget ->
+                if (widget.id == widgetId) widget.copy(gridColumn = gridColumn, gridRow = gridRow) else widget
+            }
     }
 
     /** Live preview during a resize - updates the in-memory position and size together,
@@ -181,14 +189,21 @@ class EditWidgetsViewModel(
      * EditWidgetsOverlay's ResizeHandle) moves gridColumn/gridRow to keep the opposite
      * edge anchored - Right/Bottom resizes simply pass through the widget's existing
      * position unchanged. */
-    fun updateWidgetBounds(widgetId: String, gridColumn: Int, gridRow: Int, columnSpan: Int, rowSpan: Int) {
-        _widgets.value = _widgets.value.map { widget ->
-            if (widget.id == widgetId) {
-                widget.copy(gridColumn = gridColumn, gridRow = gridRow, columnSpan = columnSpan, rowSpan = rowSpan)
-            } else {
-                widget
+    fun updateWidgetBounds(
+        widgetId: String,
+        gridColumn: Int,
+        gridRow: Int,
+        columnSpan: Int,
+        rowSpan: Int,
+    ) {
+        _widgets.value =
+            _widgets.value.map { widget ->
+                if (widget.id == widgetId) {
+                    widget.copy(gridColumn = gridColumn, gridRow = gridRow, columnSpan = columnSpan, rowSpan = rowSpan)
+                } else {
+                    widget
+                }
             }
-        }
     }
 
     /**
@@ -200,10 +215,14 @@ class EditWidgetsViewModel(
      * but refreshing unconditionally is cheap and keeps this correct if that ever
      * changes).
      */
-    fun updateWidgetConfig(widgetId: String, widgetType: WidgetType) {
-        _widgets.value = _widgets.value.map { widget ->
-            if (widget.id == widgetId) widget.copy(widgetType = widgetType) else widget
-        }
+    fun updateWidgetConfig(
+        widgetId: String,
+        widgetType: WidgetType,
+    ) {
+        _widgets.value =
+            _widgets.value.map { widget ->
+                if (widget.id == widgetId) widget.copy(widgetType = widgetType) else widget
+            }
         persistWidgets()
         refreshPreviewContent()
     }
@@ -223,15 +242,16 @@ class EditWidgetsViewModel(
         val gridRow = ((grid.rows - rowSpan) / 2).coerceAtLeast(0)
         val nextZIndex = (_widgets.value.maxOfOrNull { it.zIndex } ?: -1) + 1
 
-        val newWidget = PlacedWidget(
-            id = UUID.randomUUID().toString(),
-            widgetType = widgetType,
-            gridColumn = gridColumn,
-            gridRow = gridRow,
-            columnSpan = columnSpan,
-            rowSpan = rowSpan,
-            zIndex = nextZIndex,
-        )
+        val newWidget =
+            PlacedWidget(
+                id = UUID.randomUUID().toString(),
+                widgetType = widgetType,
+                gridColumn = gridColumn,
+                gridRow = gridRow,
+                columnSpan = columnSpan,
+                rowSpan = rowSpan,
+                zIndex = nextZIndex,
+            )
 
         _widgets.value = _widgets.value + newWidget
         _selectedWidgetId.value = newWidget.id
@@ -268,13 +288,14 @@ class EditWidgetsViewModel(
 
         val current = sorted[index]
         val next = sorted[index + 1]
-        _widgets.value = _widgets.value.map { widget ->
-            when (widget.id) {
-                current.id -> widget.copy(zIndex = next.zIndex)
-                next.id -> widget.copy(zIndex = current.zIndex)
-                else -> widget
+        _widgets.value =
+            _widgets.value.map { widget ->
+                when (widget.id) {
+                    current.id -> widget.copy(zIndex = next.zIndex)
+                    next.id -> widget.copy(zIndex = current.zIndex)
+                    else -> widget
+                }
             }
-        }
         persistWidgets()
     }
 
@@ -287,13 +308,14 @@ class EditWidgetsViewModel(
 
         val current = sorted[index]
         val previous = sorted[index - 1]
-        _widgets.value = _widgets.value.map { widget ->
-            when (widget.id) {
-                current.id -> widget.copy(zIndex = previous.zIndex)
-                previous.id -> widget.copy(zIndex = current.zIndex)
-                else -> widget
+        _widgets.value =
+            _widgets.value.map { widget ->
+                when (widget.id) {
+                    current.id -> widget.copy(zIndex = previous.zIndex)
+                    previous.id -> widget.copy(zIndex = current.zIndex)
+                    else -> widget
+                }
             }
-        }
         persistWidgets()
     }
 
@@ -309,11 +331,12 @@ class EditWidgetsViewModel(
     private fun reload() {
         val grid = gridDimensions ?: return
         loadJob?.cancel()
-        loadJob = viewModelScope.launch {
-            val loaded = observeWidgetCanvas(_selectedCanvas.value, grid).first()
-            _widgets.value = loaded
-            _previewContent.value = resolvePreviewContent(loaded)
-        }
+        loadJob =
+            viewModelScope.launch {
+                val loaded = observeWidgetCanvas(_selectedCanvas.value, grid).first()
+                _widgets.value = loaded
+                _previewContent.value = resolvePreviewContent(loaded)
+            }
     }
 
     private fun refreshPreviewContent() {
@@ -337,34 +360,55 @@ class EditWidgetsViewModel(
         val gameDescription = lastGameReference?.let { resolveGameDescription(it.systemShortName, it.romPath) }
 
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
-        val neededSystemMediaTypes = (
+        val neededSystemMediaTypes =
+            (
                 widgets.mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType } +
-                        if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
-                ).distinct()
-        val systemMediaByType: Map<MediaType, String?> = lastSystemShortName?.let { shortName ->
-            neededSystemMediaTypes.associateWith { mediaType ->
-                randomSystemMediaCache.getOrPut(shortName to mediaType) { resolveRandomSystemMedia(shortName, mediaType) }
-            }
-        } ?: emptyMap()
+                    if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
+            ).distinct()
+        val systemMediaByType: Map<MediaType, String?> =
+            lastSystemShortName?.let { shortName ->
+                neededSystemMediaTypes.associateWith { mediaType ->
+                    randomSystemMediaCache.getOrPut(shortName to mediaType) { resolveRandomSystemMedia(shortName, mediaType) }
+                }
+            } ?: emptyMap()
 
         val systemLogoAssetPath = lastSystemShortName?.let { resolveBundledSystemLogo(systemLogoAssetName(it)) }
 
         val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
         val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
-        val customSystemLogoPath = if (needsCustomLogo) lastSystemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null
-        val customSystemImagePath = if (needsCustomImage) lastSystemShortName?.let { resolveCustomSystemImage(systemLogoAssetName(it)) } else null
+        val customSystemLogoPath =
+            if (needsCustomLogo) {
+                lastSystemShortName?.let {
+                    resolveCustomSystemLogo(
+                        systemLogoAssetName(it),
+                    )
+                }
+            } else {
+                null
+            }
+        val customSystemImagePath =
+            if (needsCustomImage) {
+                lastSystemShortName?.let {
+                    resolveCustomSystemImage(
+                        systemLogoAssetName(it),
+                    )
+                }
+            } else {
+                null
+            }
 
         return widgets.associate { widget ->
-            widget.id to WidgetContentResolver.resolve(
-                widgetType = widget.widgetType,
-                systemLogoAssetPath = { systemLogoAssetPath },
-                customSystemLogoLookup = { customSystemLogoPath },
-                customSystemImageLookup = { customSystemImagePath },
-                systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
-                gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
-                gameDescriptionLookup = { gameDescription?.text },
-                fallbackBackgroundAssetPath = null,
-            )
+            widget.id to
+                WidgetContentResolver.resolve(
+                    widgetType = widget.widgetType,
+                    systemLogoAssetPath = { systemLogoAssetPath },
+                    customSystemLogoLookup = { customSystemLogoPath },
+                    customSystemImageLookup = { customSystemImagePath },
+                    systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
+                    gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
+                    gameDescriptionLookup = { gameDescription?.text },
+                    fallbackBackgroundAssetPath = null,
+                )
         }
     }
 }

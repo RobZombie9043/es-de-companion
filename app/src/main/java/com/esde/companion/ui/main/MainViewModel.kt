@@ -25,35 +25,38 @@ class MainViewModel(
     observeScreensaverBehavior: ObserveScreensaverBehaviorUseCase,
     observeVideoPlaybackEnabled: ObserveVideoPlaybackEnabledUseCase,
 ) : ViewModel() {
+    val connectionState: StateFlow<EsdeConnectionState> =
+        observeConnectionState()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = EsdeConnectionState.LogFileNotFound,
+            )
 
-    val connectionState: StateFlow<EsdeConnectionState> = observeConnectionState()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = EsdeConnectionState.LogFileNotFound,
-        )
-
-    val videoPlaybackEnabled: StateFlow<Boolean> = observeVideoPlaybackEnabled()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = false,
-        )
+    val videoPlaybackEnabled: StateFlow<Boolean> =
+        observeVideoPlaybackEnabled()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = false,
+            )
 
     // Settings > UI Settings: how the main screen should react while a game is
     // playing / the screensaver is active - see MainActivity, which combines these
     // with connectionState to drive the automatic Dim/Black cover.
-    val gamePlayingBehavior: StateFlow<ScreenBehavior> = observeGamePlayingBehavior()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = ScreenBehavior.Nothing,
-        )
+    val gamePlayingBehavior: StateFlow<ScreenBehavior> =
+        observeGamePlayingBehavior()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = ScreenBehavior.Nothing,
+            )
 
-    val screensaverBehavior: StateFlow<ScreenBehavior> = observeScreensaverBehavior()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = ScreenBehavior.Nothing,
-        )
+    val screensaverBehavior: StateFlow<ScreenBehavior> =
+        observeScreensaverBehavior()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = ScreenBehavior.Nothing,
+            )
 }

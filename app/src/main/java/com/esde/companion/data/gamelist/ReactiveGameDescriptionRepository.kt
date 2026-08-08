@@ -22,14 +22,17 @@ class ReactiveGameDescriptionRepository(
         FileGameDescriptionRepository(esdeRootPath = root)
     },
 ) : GameDescriptionRepository {
-
     @Volatile
     private var cached: Pair<String, GameDescriptionRepository>? = null
 
-    override suspend fun resolveDescription(systemShortName: String, romPath: String): GameDescription {
+    override suspend fun resolveDescription(
+        systemShortName: String,
+        romPath: String,
+    ): GameDescription {
         val root = esdeRootPath.first() ?: return GameDescription(text = null)
-        val repository = cached?.takeIf { it.first == root }?.second
-            ?: repositoryFactory(root).also { cached = root to it }
+        val repository =
+            cached?.takeIf { it.first == root }?.second
+                ?: repositoryFactory(root).also { cached = root to it }
         return repository.resolveDescription(systemShortName, romPath)
     }
 }

@@ -11,11 +11,11 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * DataStore-backed [OnboardingRepository]. Folder existence/log-file checks are plain
@@ -29,7 +29,6 @@ import kotlinx.coroutines.withContext
 class FileOnboardingRepository(
     private val context: Context,
 ) : OnboardingRepository {
-
     override fun defaultLogFolderPath(): String = DEFAULT_ESDE_ROOT
 
     override fun defaultMediaFolderPath(): String = "$DEFAULT_ESDE_ROOT/downloaded_media"
@@ -62,11 +61,9 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[MEDIA_FOLDER_PATH_KEY] = path }
     }
 
-    override fun observeLogFolderPath(): Flow<String?> =
-        context.onboardingDataStore.data.map { it[LOG_FOLDER_PATH_KEY] }
+    override fun observeLogFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[LOG_FOLDER_PATH_KEY] }
 
-    override fun observeMediaFolderPath(): Flow<String?> =
-        context.onboardingDataStore.data.map { it[MEDIA_FOLDER_PATH_KEY] }
+    override fun observeMediaFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[MEDIA_FOLDER_PATH_KEY] }
 
     override suspend fun saveCustomSystemImagesFolderPath(path: String) {
         context.onboardingDataStore.edit { it[CUSTOM_SYSTEM_IMAGES_FOLDER_PATH_KEY] = path }
@@ -83,8 +80,7 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[CUSTOM_LOGOS_FOLDER_PATH_KEY] = path }
     }
 
-    override fun observeCustomLogosFolderPath(): Flow<String?> =
-        context.onboardingDataStore.data.map { it[CUSTOM_LOGOS_FOLDER_PATH_KEY] }
+    override fun observeCustomLogosFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[CUSTOM_LOGOS_FOLDER_PATH_KEY] }
 
     override suspend fun clearCustomLogosFolderPath() {
         context.onboardingDataStore.edit { it.remove(CUSTOM_LOGOS_FOLDER_PATH_KEY) }
@@ -94,8 +90,7 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[ONBOARDING_COMPLETE_KEY] = true }
     }
 
-    override fun observeOnboardingComplete(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[ONBOARDING_COMPLETE_KEY] ?: false }
+    override fun observeOnboardingComplete(): Flow<Boolean> = context.onboardingDataStore.data.map { it[ONBOARDING_COMPLETE_KEY] ?: false }
 
     override suspend fun setThemePreference(preference: ThemePreference) {
         context.onboardingDataStore.edit { it[THEME_PREFERENCE_KEY] = preference.name }
@@ -153,15 +148,13 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[VIDEO_AUDIO_ENABLED_KEY] = enabled }
     }
 
-    override fun observeVideoAudioEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[VIDEO_AUDIO_ENABLED_KEY] ?: true }
+    override fun observeVideoAudioEnabled(): Flow<Boolean> = context.onboardingDataStore.data.map { it[VIDEO_AUDIO_ENABLED_KEY] ?: true }
 
     override suspend fun setMusicEnabled(enabled: Boolean) {
         context.onboardingDataStore.edit { it[MUSIC_ENABLED_KEY] = enabled }
     }
 
-    override fun observeMusicEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[MUSIC_ENABLED_KEY] ?: false }
+    override fun observeMusicEnabled(): Flow<Boolean> = context.onboardingDataStore.data.map { it[MUSIC_ENABLED_KEY] ?: false }
 
     override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {
         context.onboardingDataStore.edit { it[MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY] = enabled }
@@ -208,8 +201,7 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] = path }
     }
 
-    override fun observeCustomMusicFolderPath(): Flow<String?> =
-        context.onboardingDataStore.data.map { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] }
+    override fun observeCustomMusicFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] }
 
     override suspend fun clearCustomMusicFolderPath() {
         context.onboardingDataStore.edit { it.remove(CUSTOM_MUSIC_FOLDER_PATH_KEY) }
@@ -226,8 +218,7 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[SETTINGS_FAB_VISIBLE_KEY] = visible }
     }
 
-    override fun observeSettingsFabVisible(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[SETTINGS_FAB_VISIBLE_KEY] ?: true }
+    override fun observeSettingsFabVisible(): Flow<Boolean> = context.onboardingDataStore.data.map { it[SETTINGS_FAB_VISIBLE_KEY] ?: true }
 
     override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {
         context.onboardingDataStore.edit { it[LAUNCH_ESDE_ON_START_ENABLED_KEY] = enabled }

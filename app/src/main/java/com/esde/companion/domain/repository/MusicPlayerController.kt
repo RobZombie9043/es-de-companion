@@ -5,8 +5,12 @@ import kotlinx.coroutines.flow.Flow
 
 interface MusicPlayerController {
     fun playTrack(track: MusicTrack)
+
     fun pause()
+
     fun resume()
+
     fun setVolume(fraction: Float)
+
     fun observeTrackCompletion(): Flow<Unit>
 }

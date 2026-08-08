@@ -68,18 +68,18 @@ class OnboardingViewModel(
     private val savedLogFolderPath: String? = null,
     private val savedMediaFolderPath: String? = null,
 ) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(
-        run {
-            val permissionGranted = AllFilesAccessPermission.isGranted()
-            OnboardingUiState(
-                step = if (permissionGranted) OnboardingStep.EsdeFolder else OnboardingStep.Permission,
-                permissionGranted = permissionGranted,
-                logFolderPath = savedLogFolderPath ?: onboardingRepository.defaultLogFolderPath(),
-                mediaFolderPath = savedMediaFolderPath ?: onboardingRepository.defaultMediaFolderPath(),
-            )
-        },
-    )
+    private val _uiState =
+        MutableStateFlow(
+            run {
+                val permissionGranted = AllFilesAccessPermission.isGranted()
+                OnboardingUiState(
+                    step = if (permissionGranted) OnboardingStep.EsdeFolder else OnboardingStep.Permission,
+                    permissionGranted = permissionGranted,
+                    logFolderPath = savedLogFolderPath ?: onboardingRepository.defaultLogFolderPath(),
+                    mediaFolderPath = savedMediaFolderPath ?: onboardingRepository.defaultMediaFolderPath(),
+                )
+            },
+        )
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     private val _onboardingComplete = Channel<Unit>(capacity = Channel.CONFLATED)
@@ -192,35 +192,37 @@ class OnboardingViewModel(
      * or points at a folder that doesn't actually exist, so the user can pick one by hand.
      */
     private fun fetchInstallationInfo(esdeRootPath: String) {
-        installationInfoJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isCheckingInstallation = true)
+        installationInfoJob =
+            viewModelScope.launch {
+                _uiState.value = _uiState.value.copy(isCheckingInstallation = true)
 
-            val mediaDirectoryDeferred = async { readEsdeMediaDirectoryUseCase(esdeRootPath) }
-            val eventScriptSettingsDeferred = async { readEsdeEventScriptSettingsUseCase(esdeRootPath) }
-            val legacyScriptFilesDeferred = async { findLegacyScriptFilesUseCase(esdeRootPath) }
+                val mediaDirectoryDeferred = async { readEsdeMediaDirectoryUseCase(esdeRootPath) }
+                val eventScriptSettingsDeferred = async { readEsdeEventScriptSettingsUseCase(esdeRootPath) }
+                val legacyScriptFilesDeferred = async { findLegacyScriptFilesUseCase(esdeRootPath) }
 
-            val mediaDirectory = mediaDirectoryDeferred.await()
-            val mediaFolderValidation = mediaDirectory?.let { validateMediaFolderUseCase(it) }
+                val mediaDirectory = mediaDirectoryDeferred.await()
+                val mediaFolderValidation = mediaDirectory?.let { validateMediaFolderUseCase(it) }
 
-            _uiState.value = _uiState.value.copy(
-                mediaFolderPath = mediaDirectory ?: _uiState.value.mediaFolderPath,
-                mediaFolderAutoDetected = mediaDirectory != null,
-                mediaFolderValidation = mediaFolderValidation,
-                eventScriptSettings = eventScriptSettingsDeferred.await(),
-                legacyScriptFiles = legacyScriptFilesDeferred.await(),
-                isCheckingInstallation = false,
-            )
+                _uiState.value =
+                    _uiState.value.copy(
+                        mediaFolderPath = mediaDirectory ?: _uiState.value.mediaFolderPath,
+                        mediaFolderAutoDetected = mediaDirectory != null,
+                        mediaFolderValidation = mediaFolderValidation,
+                        eventScriptSettings = eventScriptSettingsDeferred.await(),
+                        legacyScriptFiles = legacyScriptFilesDeferred.await(),
+                        isCheckingInstallation = false,
+                    )
 
-            if (mediaDirectory != null && mediaFolderValidation is MediaFolderValidation.FolderFound) {
-                onboardingRepository.saveMediaFolderPath(mediaDirectory)
-                proceedFromMediaFolder()
-            } else {
-                advanceTo(OnboardingStep.MediaFolder)
-                // Auto-detection found nothing - validate the fallback default guess so
-                // the step doesn't land with a blank validation state.
-                if (mediaDirectory == null) validateMediaFolder(_uiState.value.mediaFolderPath)
+                if (mediaDirectory != null && mediaFolderValidation is MediaFolderValidation.FolderFound) {
+                    onboardingRepository.saveMediaFolderPath(mediaDirectory)
+                    proceedFromMediaFolder()
+                } else {
+                    advanceTo(OnboardingStep.MediaFolder)
+                    // Auto-detection found nothing - validate the fallback default guess so
+                    // the step doesn't land with a blank validation state.
+                    if (mediaDirectory == null) validateMediaFolder(_uiState.value.mediaFolderPath)
+                }
             }
-        }
     }
 
     /** Shared by both the auto-skip path in [fetchInstallationInfo] and the manual
@@ -247,11 +249,12 @@ class OnboardingViewModel(
         val esdeRootPath = _uiState.value.logFolderPath
         advanceTo(OnboardingStep.EventScriptSettings)
         eventScriptSettingsJob?.cancel()
-        eventScriptSettingsJob = viewModelScope.launch {
-            observeEsdeEventScriptSettingsUseCase(esdeRootPath).collect { settings ->
-                _uiState.value = _uiState.value.copy(eventScriptSettings = settings)
+        eventScriptSettingsJob =
+            viewModelScope.launch {
+                observeEsdeEventScriptSettingsUseCase(esdeRootPath).collect { settings ->
+                    _uiState.value = _uiState.value.copy(eventScriptSettings = settings)
+                }
             }
-        }
     }
 
     /** Subscribes to two independent streams while this step is showing, both cancelled
@@ -278,18 +281,19 @@ class OnboardingViewModel(
         advanceTo(OnboardingStep.LiveLogCheck)
         _uiState.value = _uiState.value.copy(liveCheckPassed = false)
         liveCheckJob?.cancel()
-        liveCheckJob = viewModelScope.launch {
-            launch {
-                observeConnectionStateUseCase().collect { connectionState ->
-                    _uiState.value = _uiState.value.copy(connectionState = connectionState)
+        liveCheckJob =
+            viewModelScope.launch {
+                launch {
+                    observeConnectionStateUseCase().collect { connectionState ->
+                        _uiState.value = _uiState.value.copy(connectionState = connectionState)
+                    }
+                }
+                launch {
+                    observeEsdeLogActivityUseCase().collect {
+                        _uiState.value = _uiState.value.copy(liveCheckPassed = true)
+                    }
                 }
             }
-            launch {
-                observeEsdeLogActivityUseCase().collect {
-                    _uiState.value = _uiState.value.copy(liveCheckPassed = true)
-                }
-            }
-        }
     }
 
     /** Validates [path] as ES-DE's root folder. [autoConfirmIfValid] is true only when the
@@ -307,7 +311,10 @@ class OnboardingViewModel(
      *
      * Guarded by re-checking step/path once validation resolves, since this runs async and
      * the user may have since picked a different folder or moved on entirely. */
-    private fun validateLogFolder(path: String, autoConfirmIfValid: Boolean = false) {
+    private fun validateLogFolder(
+        path: String,
+        autoConfirmIfValid: Boolean = false,
+    ) {
         _uiState.value = _uiState.value.copy(isValidatingLogFolder = true)
         viewModelScope.launch {
             val result = validateLogFolderUseCase(path)

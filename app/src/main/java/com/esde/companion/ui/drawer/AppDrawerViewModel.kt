@@ -16,13 +16,13 @@ import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
-import java.util.UUID
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class AppDrawerViewModel(
     observeInstalledApps: ObserveInstalledAppsUseCase,
@@ -36,7 +36,6 @@ class AppDrawerViewModel(
     private val setAppFolders: SetAppFoldersUseCase,
     observeSortFoldersOnTop: ObserveSortFoldersOnTopUseCase,
 ) : ViewModel() {
-
     // Merges installed apps (minus hidden ones) with persisted folders into the flat
     // grid - see buildDrawerItems for the actual merge/filter/sort logic, and
     // ObserveSortFoldersOnTopUseCase for the App Drawer setting that picks between
@@ -57,42 +56,49 @@ class AppDrawerViewModel(
     /** Raw folder list (id/name/membership) - feeds the "add to folder" picker, kept
      * separate from [drawerItems] rather than derived via filterIsInstance since it's the
      * natural shape for that one caller. */
-    val folders: StateFlow<List<AppFolder>> = observeAppFolders()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = emptyList(),
-        )
+    val folders: StateFlow<List<AppFolder>> =
+        observeAppFolders()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = emptyList(),
+            )
 
     /** Packages whose last-used launch location is the other screen - drives both the
      * App Drawer's dot indicator and what a plain single-tap does for that app. */
-    val otherScreenLaunchApps: StateFlow<Set<String>> = observeOtherScreenLaunchApps()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = emptySet(),
-        )
+    val otherScreenLaunchApps: StateFlow<Set<String>> =
+        observeOtherScreenLaunchApps()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = emptySet(),
+            )
 
-    val drawerOpacityPercent: StateFlow<Int> = observeOverlayOpacity()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = 80,
-        )
+    val drawerOpacityPercent: StateFlow<Int> =
+        observeOverlayOpacity()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = 80,
+            )
 
-    val gridColumns: StateFlow<Int> = observeGridColumns()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = 4,
-        )
+    val gridColumns: StateFlow<Int> =
+        observeGridColumns()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = 4,
+            )
 
     /** Persists [location] as the new default for [packageName]. Called for every
      * launch action that should update the remembered preference - the long-press
      * menu's explicit choices and the double-tap gesture - but deliberately not for a
      * plain single tap, which just replays the existing preference instead of writing
      * it again. */
-    fun recordLaunchLocation(packageName: String, location: LaunchLocation) {
+    fun recordLaunchLocation(
+        packageName: String,
+        location: LaunchLocation,
+    ) {
         viewModelScope.launch {
             val current = observeOtherScreenLaunchApps().first()
             val updated = if (location == LaunchLocation.OtherScreen) current + packageName else current - packageName
@@ -107,7 +113,10 @@ class AppDrawerViewModel(
         }
     }
 
-    fun createFolderAndAddApp(name: String, packageName: String) {
+    fun createFolderAndAddApp(
+        name: String,
+        packageName: String,
+    ) {
         viewModelScope.launch {
             val newFolder = AppFolder(id = UUID.randomUUID().toString(), name = name, memberPackageNames = setOf(packageName))
             setAppFolders(observeAppFolders().first() + newFolder)
@@ -117,15 +126,19 @@ class AppDrawerViewModel(
     /** Enforces single-folder membership: adding to [folderId] strips [packageName] out
      * of every other folder first, so an app can never silently belong to two folders at
      * once - see AppFolder's kdoc on this being a ViewModel-level invariant. */
-    fun addAppToFolder(folderId: String, packageName: String) {
+    fun addAppToFolder(
+        folderId: String,
+        packageName: String,
+    ) {
         viewModelScope.launch {
-            val updated = observeAppFolders().first().map { folder ->
-                if (folder.id == folderId) {
-                    folder.copy(memberPackageNames = folder.memberPackageNames + packageName)
-                } else {
-                    folder.copy(memberPackageNames = folder.memberPackageNames - packageName)
+            val updated =
+                observeAppFolders().first().map { folder ->
+                    if (folder.id == folderId) {
+                        folder.copy(memberPackageNames = folder.memberPackageNames + packageName)
+                    } else {
+                        folder.copy(memberPackageNames = folder.memberPackageNames - packageName)
+                    }
                 }
-            }
             setAppFolders(updated)
         }
     }
@@ -133,22 +146,30 @@ class AppDrawerViewModel(
     /** Explicit removal that empties a folder deletes it outright - unlike hiding/
      * uninstalling its last member, which is filtered at display time only (see
      * buildDrawerItems) and never mutates storage. */
-    fun removeAppFromFolder(folderId: String, packageName: String) {
+    fun removeAppFromFolder(
+        folderId: String,
+        packageName: String,
+    ) {
         viewModelScope.launch {
-            val updated = observeAppFolders().first().mapNotNull { folder ->
-                if (folder.id != folderId) return@mapNotNull folder
-                val remaining = folder.memberPackageNames - packageName
-                remaining.ifEmpty { null }?.let { folder.copy(memberPackageNames = it) }
-            }
+            val updated =
+                observeAppFolders().first().mapNotNull { folder ->
+                    if (folder.id != folderId) return@mapNotNull folder
+                    val remaining = folder.memberPackageNames - packageName
+                    remaining.ifEmpty { null }?.let { folder.copy(memberPackageNames = it) }
+                }
             setAppFolders(updated)
         }
     }
 
-    fun renameFolder(folderId: String, newName: String) {
+    fun renameFolder(
+        folderId: String,
+        newName: String,
+    ) {
         viewModelScope.launch {
-            val updated = observeAppFolders().first().map { folder ->
-                if (folder.id == folderId) folder.copy(name = newName) else folder
-            }
+            val updated =
+                observeAppFolders().first().map { folder ->
+                    if (folder.id == folderId) folder.copy(name = newName) else folder
+                }
             setAppFolders(updated)
         }
     }

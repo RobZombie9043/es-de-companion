@@ -65,10 +65,11 @@ fun WidgetCanvas(
                     content = content,
                     widgetType = widget.widgetType,
                     navigationDirection = navigationDirection,
-                    modifier = Modifier
-                        .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
-                        .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
-                        .zIndex(widget.zIndex.toFloat()),
+                    modifier =
+                        Modifier
+                            .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
+                            .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
+                            .zIndex(widget.zIndex.toFloat()),
                 )
             }
         }
@@ -144,21 +145,24 @@ internal fun WidgetContentView(
     textUserScrollEnabled: Boolean = true,
 ) {
     if (widgetType.isLogoStyle) {
-        val model: Any? = when (content) {
-            is WidgetContent.Image -> if (content.isAsset) content.path else File(content.path)
-            is WidgetContent.SystemLogoAsset -> content.assetPath
-            else -> null
-        }
-        val scaleMode = when (content) {
-            is WidgetContent.Image -> content.scaleMode
-            is WidgetContent.SystemLogoAsset -> content.scaleMode
-            else -> ScaleMode.Fit
-        }
-        val effects = when (content) {
-            is WidgetContent.Image -> content.effects
-            is WidgetContent.SystemLogoAsset -> content.effects
-            else -> ImageEffects()
-        }
+        val model: Any? =
+            when (content) {
+                is WidgetContent.Image -> if (content.isAsset) content.path else File(content.path)
+                is WidgetContent.SystemLogoAsset -> content.assetPath
+                else -> null
+            }
+        val scaleMode =
+            when (content) {
+                is WidgetContent.Image -> content.scaleMode
+                is WidgetContent.SystemLogoAsset -> content.scaleMode
+                else -> ScaleMode.Fit
+            }
+        val effects =
+            when (content) {
+                is WidgetContent.Image -> content.effects
+                is WidgetContent.SystemLogoAsset -> content.effects
+                else -> ImageEffects()
+            }
 
         Box(modifier = modifier) {
             AnimatedLogoImage(
@@ -200,9 +204,10 @@ internal fun WidgetContentView(
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
                     durationMillis = widgetType.imageTransitionActive.toDurationMillis(),
-                    modifier = Modifier.fillMaxSize()
-                        .applyBlurEffect(content.effects)
-                        .then(rememberPanZoomModifier(enabled = widgetType.panZoomActive, model = model)),
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .applyBlurEffect(content.effects)
+                            .then(rememberPanZoomModifier(enabled = widgetType.panZoomActive, model = model)),
                 )
                 DarkenOverlay(effects = content.effects)
             }
@@ -213,9 +218,10 @@ internal fun WidgetContentView(
 
         is WidgetContent.Text ->
             Box(
-                modifier = modifier.background(
-                    Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
-                ),
+                modifier =
+                    modifier.background(
+                        Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                    ),
             ) {
                 ScrollingText(
                     text = content.text,
@@ -238,23 +244,26 @@ private fun Modifier.applyBlurEffect(effects: ImageEffects): Modifier =
 private fun DarkenOverlay(effects: ImageEffects) {
     if (effects.darkenAmount <= 0f) return
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = effects.darkenAmount)),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = effects.darkenAmount)),
     )
 }
 
-private fun ScaleMode.toContentScale(): ContentScale = when (this) {
-    ScaleMode.Fit -> ContentScale.Fit
-    ScaleMode.Fill -> ContentScale.Crop
-}
+private fun ScaleMode.toContentScale(): ContentScale =
+    when (this) {
+        ScaleMode.Fit -> ContentScale.Fit
+        ScaleMode.Fill -> ContentScale.Crop
+    }
 
 /** Fade duration CrossfadeAsyncImage should use for this mode. durationMillis of 0 makes
  * it snap instead of animate (see its kdoc), which is how ImageTransitionMode.None avoids
  * a visible transition without losing the flash-safe pre-decode. */
-private fun ImageTransitionMode.toDurationMillis(): Int = when (this) {
-    ImageTransitionMode.None -> 0
-    ImageTransitionMode.Fade -> IMAGE_TRANSITION_DURATION_MILLIS
-}
+private fun ImageTransitionMode.toDurationMillis(): Int =
+    when (this) {
+        ImageTransitionMode.None -> 0
+        ImageTransitionMode.Fade -> IMAGE_TRANSITION_DURATION_MILLIS
+    }
 
 private const val IMAGE_TRANSITION_DURATION_MILLIS = 500

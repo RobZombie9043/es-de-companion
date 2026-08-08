@@ -1,5 +1,5 @@
-import java.util.Properties
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -11,11 +11,12 @@ plugins {
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
-val keystoreProperties = Properties().apply {
-    if (keystorePropertiesFile.exists()) {
-        keystorePropertiesFile.inputStream().use { load(it) }
+val keystoreProperties =
+    Properties().apply {
+        if (keystorePropertiesFile.exists()) {
+            keystorePropertiesFile.inputStream().use { load(it) }
+        }
     }
-}
 
 android {
     namespace = "com.esde.companion"
@@ -73,7 +74,7 @@ android {
     applicationVariants.all {
         outputs.forEach { output ->
             (output as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
-                "ES-DE-Companion-v${versionName}.apk"
+                "ES-DE-Companion-v$versionName.apk"
         }
     }
 }

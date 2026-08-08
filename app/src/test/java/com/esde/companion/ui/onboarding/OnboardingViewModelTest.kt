@@ -56,7 +56,6 @@ import org.junit.Test
  * that feature existed - only the dedicated picker tests rely on auto-continue.
  */
 class OnboardingViewModelTest {
-
     private class FakeOnboardingRepository : OnboardingRepository {
         val savedLogPaths = mutableListOf<String>()
         val savedMediaPaths = mutableListOf<String>()
@@ -65,63 +64,118 @@ class OnboardingViewModelTest {
         var mediaFolderValidationResult: MediaFolderValidation = MediaFolderValidation.FolderFound
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
+
         override fun defaultMediaFolderPath() = "/storage/emulated/0/ES-DE/downloaded_media"
+
         override suspend fun validateLogFolder(path: String) = logFolderValidationResult
+
         override suspend fun validateMediaFolder(path: String) = mediaFolderValidationResult
-        override suspend fun saveLogFolderPath(path: String) { savedLogPaths += path }
-        override suspend fun saveMediaFolderPath(path: String) { savedMediaPaths += path }
+
+        override suspend fun saveLogFolderPath(path: String) {
+            savedLogPaths += path
+        }
+
+        override suspend fun saveMediaFolderPath(path: String) {
+            savedMediaPaths += path
+        }
+
         override fun observeLogFolderPath(): Flow<String?> = flowOf(null)
+
         override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun saveCustomSystemImagesFolderPath(path: String) {}
+
         override fun observeCustomSystemImagesFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun clearCustomSystemImagesFolderPath() {}
+
         override suspend fun saveCustomLogosFolderPath(path: String) {}
+
         override fun observeCustomLogosFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun clearCustomLogosFolderPath() {}
-        override suspend fun markOnboardingComplete() { markedComplete = true }
+
+        override suspend fun markOnboardingComplete() {
+            markedComplete = true
+        }
+
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(markedComplete)
+
         override suspend fun setThemePreference(preference: ThemePreference) {}
+
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(ThemePreference.Auto)
+
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
+
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+
         override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {}
+
         override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+
         override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
+
         override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setVideoDelaySeconds(seconds: Int) {}
+
         override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
+
         override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
+
         override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
+
         override suspend fun setMusicEnabled(enabled: Boolean) {}
+
         override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)
+
         override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {}
+
         override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> = flowOf(true)
+
         override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) {}
+
         override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> = flowOf(true)
+
         override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) {}
+
         override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = flowOf(true)
+
         override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {}
+
         override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = flowOf(MusicDuckingMode.LowerVolume)
+
         override suspend fun setOverlayOpacityPercent(percent: Int) {}
+
         override fun observeOverlayOpacityPercent(): Flow<Int> = flowOf(80)
+
         override suspend fun saveCustomMusicFolderPath(path: String) {}
+
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun clearCustomMusicFolderPath() {}
+
         override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) {}
+
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {}
+
         override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setSettingsFabVisible(visible: Boolean) {}
+
         override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
     }
 
     private class FakeEsdeInstallationRepository : EsdeInstallationRepository {
         var mediaDirectory: String? = null
-        var eventScriptSettings: EsdeEventScriptSettings? = EsdeEventScriptSettings(
-            customEventScripts = true,
-            customEventScriptsBrowsing = true,
-            debugMode = true,
-        )
+        var eventScriptSettings: EsdeEventScriptSettings? =
+            EsdeEventScriptSettings(
+                customEventScripts = true,
+                customEventScriptsBrowsing = true,
+                debugMode = true,
+            )
         var legacyScriptFiles: List<String> = emptyList()
         var deleteCalled = false
 
@@ -136,12 +190,17 @@ class OnboardingViewModelTest {
         }
 
         override suspend fun readMediaDirectory(esdeRootPath: String): String? = mediaDirectory
+
         override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? = eventScriptSettings
-        override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> = flow {
-            emit(eventScriptSettings)
-            emitAll(eventScriptSettingsUpdates)
-        }
+
+        override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> =
+            flow {
+                emit(eventScriptSettings)
+                emitAll(eventScriptSettingsUpdates)
+            }
+
         override suspend fun findLegacyScriptFiles(esdeRootPath: String): List<String> = legacyScriptFiles
+
         override suspend fun deleteLegacyScriptFiles(esdeRootPath: String) {
             deleteCalled = true
             legacyScriptFiles = emptyList()
@@ -154,7 +213,9 @@ class OnboardingViewModelTest {
         // collector-subscription timing.
         val events = MutableSharedFlow<EsdeEvent>(extraBufferCapacity = 1)
         val logFileExists = MutableStateFlow(true)
+
         override fun observeEvents(): Flow<EsdeEvent> = events
+
         override fun observeLogFileExists(): Flow<Boolean> = logFileExists
     }
 
@@ -228,132 +289,148 @@ class OnboardingViewModelTest {
         }
 
     @Test
-    fun `picking an invalid folder via the file picker does not auto-continue`() = runTest(testDispatcher) {
-        val onboardingRepo = FakeOnboardingRepository().apply {
-            logFolderValidationResult = LogFolderValidation.FolderNotFound
+    fun `picking an invalid folder via the file picker does not auto-continue`() =
+        runTest(testDispatcher) {
+            val onboardingRepo =
+                FakeOnboardingRepository().apply {
+                    logFolderValidationResult = LogFolderValidation.FolderNotFound
+                }
+            val viewModel = buildViewModel(onboardingRepository = onboardingRepo)
+            advanceUntilIdle()
+
+            viewModel.onEsdeFolderPicked("/storage/emulated/0/WrongFolder")
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
+            assertTrue(onboardingRepo.savedLogPaths.isEmpty())
         }
-        val viewModel = buildViewModel(onboardingRepository = onboardingRepo)
-        advanceUntilIdle()
-
-        viewModel.onEsdeFolderPicked("/storage/emulated/0/WrongFolder")
-        advanceUntilIdle()
-
-        assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
-        assertTrue(onboardingRepo.savedLogPaths.isEmpty())
-    }
 
     @Test
-    fun `media folder confirmed by ES-DE's own settings skips the MediaFolder step entirely`() = runTest(testDispatcher) {
-        val onboardingRepo = FakeOnboardingRepository().apply {
-            mediaFolderValidationResult = MediaFolderValidation.FolderFound
-        }
-        val installationRepo = FakeEsdeInstallationRepository().apply {
-            mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
-        }
-        val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
-        advanceUntilIdle()
-        viewModel.onEsdeFolderConfirmed()
-        advanceUntilIdle()
+    fun `media folder confirmed by ES-DE's own settings skips the MediaFolder step entirely`() =
+        runTest(testDispatcher) {
+            val onboardingRepo =
+                FakeOnboardingRepository().apply {
+                    mediaFolderValidationResult = MediaFolderValidation.FolderFound
+                }
+            val installationRepo =
+                FakeEsdeInstallationRepository().apply {
+                    mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
+                }
+            val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
 
-        assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
-        assertEquals(listOf(installationRepo.mediaDirectory), onboardingRepo.savedMediaPaths)
-        assertTrue(viewModel.uiState.value.mediaFolderAutoDetected)
-    }
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+            assertEquals(listOf(installationRepo.mediaDirectory), onboardingRepo.savedMediaPaths)
+            assertTrue(viewModel.uiState.value.mediaFolderAutoDetected)
+        }
 
     @Test
-    fun `media folder named in settings but missing on disk still shows MediaFolder for manual pick`() = runTest(testDispatcher) {
-        val onboardingRepo = FakeOnboardingRepository().apply {
-            mediaFolderValidationResult = MediaFolderValidation.FolderNotFound
-        }
-        val installationRepo = FakeEsdeInstallationRepository().apply {
-            mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
-        }
-        val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
-        advanceUntilIdle()
-        viewModel.onEsdeFolderConfirmed()
-        advanceUntilIdle()
+    fun `media folder named in settings but missing on disk still shows MediaFolder for manual pick`() =
+        runTest(testDispatcher) {
+            val onboardingRepo =
+                FakeOnboardingRepository().apply {
+                    mediaFolderValidationResult = MediaFolderValidation.FolderNotFound
+                }
+            val installationRepo =
+                FakeEsdeInstallationRepository().apply {
+                    mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
+                }
+            val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
 
-        assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
-        assertTrue(onboardingRepo.savedMediaPaths.isEmpty())
-        assertEquals(MediaFolderValidation.FolderNotFound, viewModel.uiState.value.mediaFolderValidation)
-    }
+            assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
+            assertTrue(onboardingRepo.savedMediaPaths.isEmpty())
+            assertEquals(MediaFolderValidation.FolderNotFound, viewModel.uiState.value.mediaFolderValidation)
+        }
 
     @Test
-    fun `when nothing needs fixing, MediaFolder confirm skips straight to LiveLogCheck`() = runTest(testDispatcher) {
-        val installationRepo = FakeEsdeInstallationRepository()
-        val viewModel = buildViewModel(installationRepository = installationRepo)
-        advanceUntilIdle()
-        viewModel.onEsdeFolderConfirmed()
-        advanceUntilIdle()
+    fun `when nothing needs fixing, MediaFolder confirm skips straight to LiveLogCheck`() =
+        runTest(testDispatcher) {
+            val installationRepo = FakeEsdeInstallationRepository()
+            val viewModel = buildViewModel(installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
 
-        viewModel.onMediaFolderConfirmed()
-        advanceUntilIdle()
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
 
-        assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
-    }
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+        }
 
     @Test
-    fun `when legacy scripts are found, MediaFolder confirm shows LegacyScripts, and deleting clears them`() = runTest(testDispatcher) {
-        val installationRepo = FakeEsdeInstallationRepository().apply {
-            legacyScriptFiles = listOf("/roms/ES-DE/scripts/game-end/esdecompanion-game-end.sh")
+    fun `when legacy scripts are found, MediaFolder confirm shows LegacyScripts, and deleting clears them`() =
+        runTest(testDispatcher) {
+            val installationRepo =
+                FakeEsdeInstallationRepository().apply {
+                    legacyScriptFiles = listOf("/roms/ES-DE/scripts/game-end/esdecompanion-game-end.sh")
+                }
+            val viewModel = buildViewModel(installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.LegacyScripts, viewModel.uiState.value.step)
+            assertEquals(1, viewModel.uiState.value.legacyScriptFiles.size)
+
+            viewModel.onDeleteLegacyScriptFiles()
+            advanceUntilIdle()
+
+            assertTrue(installationRepo.deleteCalled)
+            assertTrue(viewModel.uiState.value.legacyScriptFiles.isEmpty())
+
+            viewModel.onLegacyScriptsConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
         }
-        val viewModel = buildViewModel(installationRepository = installationRepo)
-        advanceUntilIdle()
-        viewModel.onEsdeFolderConfirmed()
-        advanceUntilIdle()
-        viewModel.onMediaFolderConfirmed()
-        advanceUntilIdle()
-
-        assertEquals(OnboardingStep.LegacyScripts, viewModel.uiState.value.step)
-        assertEquals(1, viewModel.uiState.value.legacyScriptFiles.size)
-
-        viewModel.onDeleteLegacyScriptFiles()
-        advanceUntilIdle()
-
-        assertTrue(installationRepo.deleteCalled)
-        assertTrue(viewModel.uiState.value.legacyScriptFiles.isEmpty())
-
-        viewModel.onLegacyScriptsConfirmed()
-        advanceUntilIdle()
-
-        assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
-    }
 
     @Test
-    fun `when an ES-DE setting is disabled, MediaFolder confirm shows EventScriptSettings`() = runTest(testDispatcher) {
-        val installationRepo = FakeEsdeInstallationRepository().apply {
-            eventScriptSettings = EsdeEventScriptSettings(
-                customEventScripts = false,
-                customEventScriptsBrowsing = true,
-                debugMode = true,
-            )
+    fun `when an ES-DE setting is disabled, MediaFolder confirm shows EventScriptSettings`() =
+        runTest(testDispatcher) {
+            val installationRepo =
+                FakeEsdeInstallationRepository().apply {
+                    eventScriptSettings =
+                        EsdeEventScriptSettings(
+                            customEventScripts = false,
+                            customEventScriptsBrowsing = true,
+                            debugMode = true,
+                        )
+                }
+            val viewModel = buildViewModel(installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
+
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.EventScriptSettings, viewModel.uiState.value.step)
+
+            viewModel.onEventScriptSettingsConfirmed()
+            advanceUntilIdle()
+
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
         }
-        val viewModel = buildViewModel(installationRepository = installationRepo)
-        advanceUntilIdle()
-        viewModel.onEsdeFolderConfirmed()
-        advanceUntilIdle()
-
-        viewModel.onMediaFolderConfirmed()
-        advanceUntilIdle()
-
-        assertEquals(OnboardingStep.EventScriptSettings, viewModel.uiState.value.step)
-
-        viewModel.onEventScriptSettingsConfirmed()
-        advanceUntilIdle()
-
-        assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
-    }
 
     @Test
     fun `EventScriptSettings updates as es_settings xml changes are detected, without needing a manual re-check`() =
         runTest(testDispatcher) {
-            val installationRepo = FakeEsdeInstallationRepository().apply {
-                eventScriptSettings = EsdeEventScriptSettings(
-                    customEventScripts = false,
-                    customEventScriptsBrowsing = true,
-                    debugMode = true,
-                )
-            }
+            val installationRepo =
+                FakeEsdeInstallationRepository().apply {
+                    eventScriptSettings =
+                        EsdeEventScriptSettings(
+                            customEventScripts = false,
+                            customEventScriptsBrowsing = true,
+                            debugMode = true,
+                        )
+                }
             val viewModel = buildViewModel(installationRepository = installationRepo)
             advanceUntilIdle()
             viewModel.onEsdeFolderConfirmed()
@@ -386,20 +463,21 @@ class OnboardingViewModelTest {
         }
 
     @Test
-    fun `back navigation skips over steps that were skipped going forward`() = runTest(testDispatcher) {
-        val installationRepo = FakeEsdeInstallationRepository()
-        val viewModel = buildViewModel(installationRepository = installationRepo)
-        advanceUntilIdle()
-        viewModel.onEsdeFolderConfirmed()
-        advanceUntilIdle()
-        viewModel.onMediaFolderConfirmed()
-        advanceUntilIdle()
-        assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
+    fun `back navigation skips over steps that were skipped going forward`() =
+        runTest(testDispatcher) {
+            val installationRepo = FakeEsdeInstallationRepository()
+            val viewModel = buildViewModel(installationRepository = installationRepo)
+            advanceUntilIdle()
+            viewModel.onEsdeFolderConfirmed()
+            advanceUntilIdle()
+            viewModel.onMediaFolderConfirmed()
+            advanceUntilIdle()
+            assertEquals(OnboardingStep.LiveLogCheck, viewModel.uiState.value.step)
 
-        viewModel.onBack()
+            viewModel.onBack()
 
-        assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
-    }
+            assertEquals(OnboardingStep.MediaFolder, viewModel.uiState.value.step)
+        }
 
     @Test
     fun `Finish stays disabled until an event is observed`() {

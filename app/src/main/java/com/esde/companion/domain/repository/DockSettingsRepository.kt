@@ -14,17 +14,19 @@ import kotlinx.coroutines.flow.Flow
  * and the Dock rather than tracked twice.
  */
 interface DockSettingsRepository {
-
     /** Whether the dock is shown on the main screen. Defaults to false. */
     suspend fun setDockEnabled(enabled: Boolean)
+
     fun observeDockEnabled(): Flow<Boolean>
 
     /** Number of slots in the dock, 2-5. Defaults to 5. */
     suspend fun setDockMaxApps(maxApps: Int)
+
     fun observeDockMaxApps(): Flow<Int>
 
     /** Icon/bar size. Defaults to [DockSize.Medium]. */
     suspend fun setDockSize(size: DockSize)
+
     fun observeDockSize(): Flow<DockSize>
 
     /**
@@ -34,5 +36,6 @@ interface DockSettingsRepository {
      * Defaults to empty.
      */
     suspend fun setDockApps(packageNames: List<String>)
+
     fun observeDockApps(): Flow<List<String>>
 }

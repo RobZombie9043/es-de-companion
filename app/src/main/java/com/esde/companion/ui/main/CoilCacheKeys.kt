@@ -13,8 +13,7 @@ import java.io.File
  * once. Anything else (bundled asset path strings, which are never mutated at a fixed
  * path) is used as-is.
  */
-internal fun identityKeyOf(model: Any?): Any? =
-    if (model is File) "${model.path}_${model.lastModified()}" else model
+internal fun identityKeyOf(model: Any?): Any? = if (model is File) "${model.path}_${model.lastModified()}" else model
 
 /**
  * Builds the actual Coil request for [model]. `rememberAsyncImagePainter`/`AsyncImage`/
@@ -24,7 +23,10 @@ internal fun identityKeyOf(model: Any?): Any? =
  * us also set `memoryCacheKey` to [identityKeyOf], so a content-changed File gets a
  * fresh cache entry instead of resolving to Coil's default (path-only) key.
  */
-internal fun requestFor(context: Context, model: Any?): ImageRequest =
+internal fun requestFor(
+    context: Context,
+    model: Any?,
+): ImageRequest =
     ImageRequest.Builder(context)
         .data(model)
         .apply {

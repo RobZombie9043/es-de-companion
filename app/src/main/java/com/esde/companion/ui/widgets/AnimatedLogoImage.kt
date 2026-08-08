@@ -150,10 +150,11 @@ fun AnimatedLogoImage(
         // A model that fails to load (e.g. a system with no bundled logo asset) resolves
         // to null here, same as a genuinely absent model - so a missing logo clears to
         // blank instead of leaving the previous system/game's logo stuck on screen.
-        val resolvedModel = model?.takeIf {
-            val result = context.imageLoader.execute(requestFor(context, it))
-            result is SuccessResult
-        }
+        val resolvedModel =
+            model?.takeIf {
+                val result = context.imageLoader.execute(requestFor(context, it))
+                result is SuccessResult
+            }
 
         currentModel = resolvedModel
 
@@ -200,53 +201,58 @@ fun AnimatedLogoImage(
     }
 
     Box(
-        modifier = modifier
-            .onSizeChanged { boxSize = it }
-            .clipToBounds(),
+        modifier =
+            modifier
+                .onSizeChanged { boxSize = it }
+                .clipToBounds(),
     ) {
         currentModel?.let { curModel ->
             key(identityKeyOf(curModel)) {
-                val painter = rememberAsyncImagePainter(
-                    model = requestFor(context, curModel),
-                    contentScale = contentScale,
-                )
+                val painter =
+                    rememberAsyncImagePainter(
+                        model = requestFor(context, curModel),
+                        contentScale = contentScale,
+                    )
                 Image(
                     painter = painter,
                     contentDescription = contentDescription,
                     contentScale = contentScale,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            translationX = offsetX.value
-                            translationY = offsetY.value
-                            scaleX = scale.value
-                            scaleY = scale.value
-                            // Offscreen compositing is required so the glint gradient below
-                            // composites against this layer's own drawn alpha (the logo's
-                            // actual opaque pixel shape) via BlendMode.SrcAtop, rather than
-                            // against whatever's already drawn behind it in the window.
-                            if (glintEnabled) compositingStrategy = CompositingStrategy.Offscreen
-                        }
-                        .drawWithContent {
-                            drawContent()
-                            if (glintEnabled) {
-                                val (start, end) = glintBandOffsets(glintProgress.value, size)
-                                drawRect(
-                                    brush = Brush.linearGradient(
-                                        colorStops = arrayOf(
-                                            0f to Color.Transparent,
-                                            0.35f to Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
-                                            0.5f to Color.White.copy(alpha = GLINT_PEAK_ALPHA),
-                                            0.65f to Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
-                                            1f to Color.Transparent,
-                                        ),
-                                        start = start,
-                                        end = end,
-                                    ),
-                                    blendMode = BlendMode.SrcAtop,
-                                )
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                translationX = offsetX.value
+                                translationY = offsetY.value
+                                scaleX = scale.value
+                                scaleY = scale.value
+                                // Offscreen compositing is required so the glint gradient below
+                                // composites against this layer's own drawn alpha (the logo's
+                                // actual opaque pixel shape) via BlendMode.SrcAtop, rather than
+                                // against whatever's already drawn behind it in the window.
+                                if (glintEnabled) compositingStrategy = CompositingStrategy.Offscreen
                             }
-                        },
+                            .drawWithContent {
+                                drawContent()
+                                if (glintEnabled) {
+                                    val (start, end) = glintBandOffsets(glintProgress.value, size)
+                                    drawRect(
+                                        brush =
+                                            Brush.linearGradient(
+                                                colorStops =
+                                                    arrayOf(
+                                                        0f to Color.Transparent,
+                                                        0.35f to Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
+                                                        0.5f to Color.White.copy(alpha = GLINT_PEAK_ALPHA),
+                                                        0.65f to Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
+                                                        1f to Color.Transparent,
+                                                    ),
+                                                start = start,
+                                                end = end,
+                                            ),
+                                        blendMode = BlendMode.SrcAtop,
+                                    )
+                                }
+                            },
                 )
             }
         }
@@ -258,7 +264,10 @@ fun AnimatedLogoImage(
  * Only called once [direction] is known to be non-null - see the null fallback to a
  * scale-in in the caller above. Extracted as a plain function (no Composable/Compose
  * types beyond IntSize) so it's unit-testable without a Compose test environment. */
-internal fun slideStartOffset(direction: NavigationDirection, boxSize: IntSize): Pair<Float, Float> =
+internal fun slideStartOffset(
+    direction: NavigationDirection,
+    boxSize: IntSize,
+): Pair<Float, Float> =
     when (direction) {
         NavigationDirection.Left -> -boxSize.width.toFloat() to 0f
         NavigationDirection.Right -> boxSize.width.toFloat() to 0f
@@ -297,7 +306,10 @@ internal fun slideStartOffset(direction: NavigationDirection, boxSize: IntSize):
  * unit test). [GLINT_OVERSHOOT_SAFETY_MARGIN_PX] pads this further so Float rounding at the
  * exact t=1 boundary can't nudge a corner back inside [0, 1].
  */
-internal fun glintBandOffsets(progress: Float, size: Size): Pair<Offset, Offset> {
+internal fun glintBandOffsets(
+    progress: Float,
+    size: Size,
+): Pair<Offset, Offset> {
     val halfBand = GLINT_BAND_WIDTH_PX / 2f
     val overshoot = halfBand / GLINT_TILT_COS + (size.height / 2f) * GLINT_TILT_TAN + GLINT_OVERSHOOT_SAFETY_MARGIN_PX
     val travel = size.width + 2 * overshoot

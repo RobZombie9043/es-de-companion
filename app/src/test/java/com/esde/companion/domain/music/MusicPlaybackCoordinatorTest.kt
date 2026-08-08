@@ -37,11 +37,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MusicPlaybackCoordinatorTest {
-
     private class FakeEsdeLogRepository(
         private val events: Flow<EsdeEvent>,
     ) : EsdeLogRepository {
         override fun observeEvents(): Flow<EsdeEvent> = events
+
         override fun observeLogFileExists(): Flow<Boolean> = flowOf(true)
     }
 
@@ -53,53 +53,111 @@ class MusicPlaybackCoordinatorTest {
         val musicDuckingMode = MutableStateFlow(MusicDuckingMode.LowerVolume)
 
         override fun defaultLogFolderPath() = ""
+
         override fun defaultMediaFolderPath() = ""
+
         override suspend fun validateLogFolder(path: String) = LogFolderValidation.FolderNotFound
+
         override suspend fun validateMediaFolder(path: String) = MediaFolderValidation.FolderNotFound
+
         override suspend fun saveLogFolderPath(path: String) {}
+
         override suspend fun saveMediaFolderPath(path: String) {}
+
         override fun observeLogFolderPath(): Flow<String?> = flowOf(null)
+
         override fun observeMediaFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun saveCustomSystemImagesFolderPath(path: String) {}
+
         override fun observeCustomSystemImagesFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun clearCustomSystemImagesFolderPath() {}
+
         override suspend fun saveCustomLogosFolderPath(path: String) {}
+
         override fun observeCustomLogosFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun clearCustomLogosFolderPath() {}
+
         override suspend fun markOnboardingComplete() {}
+
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(true)
+
         override suspend fun setThemePreference(preference: ThemePreference) {}
+
         override fun observeThemePreference(): Flow<ThemePreference> = flowOf(ThemePreference.Auto)
+
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
+
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+
         override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {}
+
         override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+
         override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
+
         override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setVideoDelaySeconds(seconds: Int) {}
+
         override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
+
         override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
+
         override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-        override suspend fun setMusicEnabled(enabled: Boolean) { musicEnabled.value = enabled }
+
+        override suspend fun setMusicEnabled(enabled: Boolean) {
+            musicEnabled.value = enabled
+        }
+
         override fun observeMusicEnabled(): Flow<Boolean> = musicEnabled
-        override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) { musicPlayWhileBrowsingSystems.value = enabled }
+
+        override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {
+            musicPlayWhileBrowsingSystems.value = enabled
+        }
+
         override fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean> = musicPlayWhileBrowsingSystems
-        override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) { musicPlayWhileBrowsingGames.value = enabled }
+
+        override suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean) {
+            musicPlayWhileBrowsingGames.value = enabled
+        }
+
         override fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean> = musicPlayWhileBrowsingGames
-        override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) { musicPlayDuringScreensaver.value = enabled }
+
+        override suspend fun setMusicPlayDuringScreensaver(enabled: Boolean) {
+            musicPlayDuringScreensaver.value = enabled
+        }
+
         override fun observeMusicPlayDuringScreensaver(): Flow<Boolean> = musicPlayDuringScreensaver
-        override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) { musicDuckingMode.value = mode }
+
+        override suspend fun setMusicDuckingMode(mode: MusicDuckingMode) {
+            musicDuckingMode.value = mode
+        }
+
         override fun observeMusicDuckingMode(): Flow<MusicDuckingMode> = musicDuckingMode
+
         override suspend fun setOverlayOpacityPercent(percent: Int) {}
+
         override fun observeOverlayOpacityPercent(): Flow<Int> = flowOf(80)
+
         override suspend fun saveCustomMusicFolderPath(path: String) {}
+
         override fun observeCustomMusicFolderPath(): Flow<String?> = flowOf(null)
+
         override suspend fun clearCustomMusicFolderPath() {}
+
         override suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean) {}
+
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {}
+
         override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setSettingsFabVisible(visible: Boolean) {}
+
         override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
     }
 
@@ -125,10 +183,22 @@ class MusicPlaybackCoordinatorTest {
         var resumeCallCount = 0
         private val completions = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-        override fun playTrack(track: MusicTrack) { playedTracks += track }
-        override fun pause() { pauseCallCount++ }
-        override fun resume() { resumeCallCount++ }
-        override fun setVolume(fraction: Float) { volumeCalls += fraction }
+        override fun playTrack(track: MusicTrack) {
+            playedTracks += track
+        }
+
+        override fun pause() {
+            pauseCallCount++
+        }
+
+        override fun resume() {
+            resumeCallCount++
+        }
+
+        override fun setVolume(fraction: Float) {
+            volumeCalls += fraction
+        }
+
         override fun observeTrackCompletion(): Flow<Unit> = completions
 
         suspend fun completeCurrentTrack() = completions.emit(Unit)
@@ -136,14 +206,22 @@ class MusicPlaybackCoordinatorTest {
 
     private class FakeActivityVisibilityRepository : ActivityVisibilityRepository {
         val isVisible = MutableStateFlow(true)
+
         override fun observeIsVisible(): Flow<Boolean> = isVisible
-        override fun setVisible(visible: Boolean) { isVisible.value = visible }
+
+        override fun setVisible(visible: Boolean) {
+            isVisible.value = visible
+        }
     }
 
     private class FakeVideoPlaybackStateRepository : VideoPlaybackStateRepository {
         val isPlaying = MutableStateFlow(false)
+
         override fun observeIsPlaying(): Flow<Boolean> = isPlaying
-        override fun setIsPlaying(playing: Boolean) { isPlaying.value = playing }
+
+        override fun setIsPlaying(playing: Boolean) {
+            isPlaying.value = playing
+        }
     }
 
     private fun buildCoordinator(
@@ -177,10 +255,11 @@ class MusicPlaybackCoordinatorTest {
         runTest(UnconfinedTestDispatcher()) {
             val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
             val trackGeneral = MusicTrack("/music/general.mp3", "general")
-            val library = FakeMusicLibraryRepository(
-                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
-                generalPool = MusicPoolContents(MusicPool.General, listOf(trackGeneral)),
-            )
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
+                    generalPool = MusicPoolContents(MusicPool.General, listOf(trackGeneral)),
+                )
             val controller = FakeMusicPlayerController()
             val events = MutableSharedFlow<EsdeEvent>()
             val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)
@@ -209,10 +288,11 @@ class MusicPlaybackCoordinatorTest {
     fun `eligibility loss pauses in place and regaining eligibility resumes the same track`() =
         runTest(UnconfinedTestDispatcher()) {
             val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
-            val library = FakeMusicLibraryRepository(
-                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
-                generalPool = MusicPoolContents(MusicPool.General, emptyList()),
-            )
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
+                    generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+                )
             val controller = FakeMusicPlayerController()
             val events = MutableSharedFlow<EsdeEvent>()
             val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)
@@ -257,10 +337,11 @@ class MusicPlaybackCoordinatorTest {
     fun `a per-system pool with no tracks resolves to General, not an empty PerSystem pool`() =
         runTest(UnconfinedTestDispatcher()) {
             val trackGeneral = MusicTrack("/music/general.mp3", "general")
-            val library = FakeMusicLibraryRepository(
-                poolsByRequestedSystem = emptyMap(),
-                generalPool = MusicPoolContents(MusicPool.General, listOf(trackGeneral)),
-            )
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = emptyMap(),
+                    generalPool = MusicPoolContents(MusicPool.General, listOf(trackGeneral)),
+                )
             val controller = FakeMusicPlayerController()
             val events = MutableSharedFlow<EsdeEvent>()
             val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)
@@ -283,20 +364,22 @@ class MusicPlaybackCoordinatorTest {
     fun `ducking toggles volume without changing the current track`() =
         runTest(UnconfinedTestDispatcher()) {
             val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
-            val library = FakeMusicLibraryRepository(
-                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
-                generalPool = MusicPoolContents(MusicPool.General, emptyList()),
-            )
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
+                    generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+                )
             val controller = FakeMusicPlayerController()
             val events = MutableSharedFlow<EsdeEvent>()
             val videoPlaybackStateRepository = FakeVideoPlaybackStateRepository()
-            val coordinator = buildCoordinator(
-                events,
-                library,
-                controller,
-                videoPlaybackStateRepository = videoPlaybackStateRepository,
-                scope = backgroundScope,
-            )
+            val coordinator =
+                buildCoordinator(
+                    events,
+                    library,
+                    controller,
+                    videoPlaybackStateRepository = videoPlaybackStateRepository,
+                    scope = backgroundScope,
+                )
 
             coordinator.playbackState.test {
                 awaitItem() // Stopped
@@ -323,10 +406,11 @@ class MusicPlaybackCoordinatorTest {
     fun `togglePlayPause pauses in place and resumes the same track`() =
         runTest(UnconfinedTestDispatcher()) {
             val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
-            val library = FakeMusicLibraryRepository(
-                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
-                generalPool = MusicPoolContents(MusicPool.General, emptyList()),
-            )
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1))),
+                    generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+                )
             val controller = FakeMusicPlayerController()
             val events = MutableSharedFlow<EsdeEvent>()
             val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)
@@ -355,10 +439,11 @@ class MusicPlaybackCoordinatorTest {
         runTest(UnconfinedTestDispatcher()) {
             val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
-            val library = FakeMusicLibraryRepository(
-                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
-                generalPool = MusicPoolContents(MusicPool.General, emptyList()),
-            )
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+                )
             val controller = FakeMusicPlayerController()
             val events = MutableSharedFlow<EsdeEvent>()
             val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)
@@ -384,10 +469,11 @@ class MusicPlaybackCoordinatorTest {
         runTest(UnconfinedTestDispatcher()) {
             val trackA1 = MusicTrack("/music/systems/a/1.mp3", "1")
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
-            val library = FakeMusicLibraryRepository(
-                poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
-                generalPool = MusicPoolContents(MusicPool.General, emptyList()),
-            )
+            val library =
+                FakeMusicLibraryRepository(
+                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    generalPool = MusicPoolContents(MusicPool.General, emptyList()),
+                )
             val controller = FakeMusicPlayerController()
             val events = MutableSharedFlow<EsdeEvent>()
             val coordinator = buildCoordinator(events, library, controller, scope = backgroundScope)

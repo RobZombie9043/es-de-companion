@@ -17,7 +17,6 @@ class ReactiveMusicLibraryRepository(
         FileMusicLibraryRepository(musicFolderPath = folder)
     },
 ) : MusicLibraryRepository {
-
     override suspend fun loadPool(desired: MusicPool): MusicPoolContents {
         val folder = musicFolderPath.first() ?: return MusicPoolContents(desired, emptyList())
         return repositoryFactory(folder).loadPool(desired)

@@ -10,7 +10,6 @@ import com.esde.companion.domain.model.NavigationDirection
  * EsdeEventParser - unit testable directly against fixture log lines.
  */
 object NavigationDirectionParser {
-
     /** Cheap check for whether [rawLine] is a controller-input line at all, independent of
      * whether it's well-formed or a directional press - see NavigationDirectionTracker,
      * which needs to tell "not an input line" (leave tracked state alone) apart from both
@@ -22,8 +21,7 @@ object NavigationDirectionParser {
      * or truncated (e.g. cut off mid-line at a tail-window boundary) - the tracker treats
      * that as unparseable noise, not a definitive "no direction" signal, and leaves
      * whatever direction was already tracked untouched. */
-    fun isWellFormedInputLine(rawLine: String): Boolean =
-        isLogInputLine(rawLine) && BUTTON_REGEX.containsMatchIn(rawLine)
+    fun isWellFormedInputLine(rawLine: String): Boolean = isLogInputLine(rawLine) && BUTTON_REGEX.containsMatchIn(rawLine)
 
     /**
      * Returns the pressed direction for a well-formed directional button *press* line

@@ -55,7 +55,6 @@ class WidgetsViewModel(
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
 ) : ViewModel() {
-
     /** Caches the current system's random picks (per media type), reused as long as
      * [randomSystemMediaCacheSystem] still matches the system being resolved for - so a
      * flatMapLatest restart that doesn't correspond to an actual system change (e.g.
@@ -69,7 +68,10 @@ class WidgetsViewModel(
     private var randomSystemMediaCacheSystem: String? = null
     private val randomSystemMediaCache = mutableMapOf<MediaType, String?>()
 
-    private suspend fun resolveRandomSystemMediaCached(systemShortName: String, mediaType: MediaType): String? {
+    private suspend fun resolveRandomSystemMediaCached(
+        systemShortName: String,
+        mediaType: MediaType,
+    ): String? {
         if (randomSystemMediaCacheSystem != systemShortName) {
             randomSystemMediaCache.clear()
             randomSystemMediaCacheSystem = systemShortName
@@ -89,25 +91,27 @@ class WidgetsViewModel(
     // (or the documented spurious game-select re-fire after game-start) still retriggers
     // flatMapLatest below, cancelling an in-flight resolution/decode and restarting the
     // whole chain - under a burst of same-target events that never converges quickly.
-    private val contentIdentity: Flow<ContentIdentity?> = observeConnectionState()
-        .map { connection ->
-            val appState = (connection as? EsdeConnectionState.Connected)?.appState ?: return@map null
-            val group = appState.stateGroup() ?: return@map null
-            ContentIdentity(
-                stateGroup = group,
-                gameRef = appState.currentGameReference(),
-                systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
-                systemFullName = (appState as? AppState.BrowsingSystem)?.systemFullName,
-                gameName = when (appState) {
-                    is AppState.BrowsingGame -> appState.gameName
-                    is AppState.PlayingGame -> appState.gameName
-                    is AppState.Screensaver -> appState.currentGame?.gameName
-                    is AppState.Idle, is AppState.BrowsingSystem -> null
-                },
-                navigationDirection = appState.navigationDirection(),
-            )
-        }
-        .distinctUntilChanged()
+    private val contentIdentity: Flow<ContentIdentity?> =
+        observeConnectionState()
+            .map { connection ->
+                val appState = (connection as? EsdeConnectionState.Connected)?.appState ?: return@map null
+                val group = appState.stateGroup() ?: return@map null
+                ContentIdentity(
+                    stateGroup = group,
+                    gameRef = appState.currentGameReference(),
+                    systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
+                    systemFullName = (appState as? AppState.BrowsingSystem)?.systemFullName,
+                    gameName =
+                        when (appState) {
+                            is AppState.BrowsingGame -> appState.gameName
+                            is AppState.PlayingGame -> appState.gameName
+                            is AppState.Screensaver -> appState.currentGame?.gameName
+                            is AppState.Idle, is AppState.BrowsingSystem -> null
+                        },
+                    navigationDirection = appState.navigationDirection(),
+                )
+            }
+            .distinctUntilChanged()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val canvasState: StateFlow<WidgetCanvasState> =
@@ -133,40 +137,55 @@ class WidgetsViewModel(
      * synchronous (see its kdoc), rather than each widget independently triggering a
      * suspend media lookup.
      */
-    private suspend fun resolveContent(widgets: List<PlacedWidget>, identity: ContentIdentity): Map<String, WidgetContent> {
+    private suspend fun resolveContent(
+        widgets: List<PlacedWidget>,
+        identity: ContentIdentity,
+    ): Map<String, WidgetContent> {
         val gameMedia = identity.gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath) }
         val gameDescription = identity.gameRef?.let { resolveGameDescription(it.systemShortName, it.romPath) }
         val systemShortName = identity.systemShortName
 
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
-        val neededSystemMediaTypes = (
+        val neededSystemMediaTypes =
+            (
                 widgets.mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType } +
-                        if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
-                ).distinct()
-        val systemMediaByType: Map<MediaType, String?> = systemShortName?.let { shortName ->
-            neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMediaCached(shortName, mediaType) }
-        } ?: emptyMap()
+                    if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
+            ).distinct()
+        val systemMediaByType: Map<MediaType, String?> =
+            systemShortName?.let { shortName ->
+                neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMediaCached(shortName, mediaType) }
+            } ?: emptyMap()
 
         val systemLogoAssetPath = systemShortName?.let { resolveBundledSystemLogo(systemLogoAssetName(it)) }
 
         val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
         val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
         val customSystemLogoPath = if (needsCustomLogo) systemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null
-        val customSystemImagePath = if (needsCustomImage) systemShortName?.let { resolveCustomSystemImage(systemLogoAssetName(it)) } else null
+        val customSystemImagePath =
+            if (needsCustomImage) {
+                systemShortName?.let {
+                    resolveCustomSystemImage(
+                        systemLogoAssetName(it),
+                    )
+                }
+            } else {
+                null
+            }
 
         return widgets.associate { widget ->
-            widget.id to WidgetContentResolver.resolve(
-                widgetType = widget.widgetType,
-                systemLogoAssetPath = { systemLogoAssetPath },
-                customSystemLogoLookup = { customSystemLogoPath },
-                customSystemImageLookup = { customSystemImagePath },
-                systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
-                gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
-                gameDescriptionLookup = { gameDescription?.text },
-                fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET, // null in EditWidgetsViewModel, as today
-                systemNameLookup = { identity.systemFullName },
-                gameNameLookup = { identity.gameName },
-            )
+            widget.id to
+                WidgetContentResolver.resolve(
+                    widgetType = widget.widgetType,
+                    systemLogoAssetPath = { systemLogoAssetPath },
+                    customSystemLogoLookup = { customSystemLogoPath },
+                    customSystemImageLookup = { customSystemImagePath },
+                    systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
+                    gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
+                    gameDescriptionLookup = { gameDescription?.text },
+                    fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET, // null in EditWidgetsViewModel, as today
+                    systemNameLookup = { identity.systemFullName },
+                    gameNameLookup = { identity.gameName },
+                )
         }
     }
 

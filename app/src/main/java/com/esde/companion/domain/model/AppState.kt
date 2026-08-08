@@ -10,7 +10,6 @@ package com.esde.companion.domain.model
  * closed set of variants that a `when` block can exhaustively handle.
  */
 sealed class AppState {
-
     /** No events observed yet, or ES-DE's current activity is not known. */
     data object Idle : AppState()
 

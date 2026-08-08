@@ -18,7 +18,6 @@ import android.provider.DocumentsContract
  * treat that as "ask the user to try again" rather than silently falling back to a guess.
  */
 object SafPathResolver {
-
     fun resolvePath(treeUri: Uri): String? {
         val docId = runCatching { DocumentsContract.getTreeDocumentId(treeUri) }.getOrNull() ?: return null
         return resolveFromDocumentId(docId)
@@ -42,11 +41,12 @@ object SafPathResolver {
         val volumeId = docId.substring(0, separatorIndex)
         val relativePath = docId.substring(separatorIndex + 1)
 
-        val root = if (volumeId.equals("primary", ignoreCase = true)) {
-            Environment.getExternalStorageDirectory().absolutePath
-        } else {
-            "/storage/$volumeId"
-        }
+        val root =
+            if (volumeId.equals("primary", ignoreCase = true)) {
+                Environment.getExternalStorageDirectory().absolutePath
+            } else {
+                "/storage/$volumeId"
+            }
 
         return if (relativePath.isEmpty()) root else "$root/$relativePath"
     }

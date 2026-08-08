@@ -5,15 +5,14 @@ import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.state.AppStateReducer
-import java.io.File
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 
 class EsdeLogFileRepositoryTest {
-
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -33,7 +32,10 @@ class EsdeLogFileRepositoryTest {
      * intermittent failure in "startup skips replay when the file predates the current
      * boot" before this seam existed.
      */
-    private fun repositoryFor(logFile: File, bootTimeMillis: () -> Long = { 0L }): EsdeLogFileRepository =
+    private fun repositoryFor(
+        logFile: File,
+        bootTimeMillis: () -> Long = { 0L },
+    ): EsdeLogFileRepository =
         EsdeLogFileRepository(
             logFilePath = logFile.absolutePath,
             bootTimeMillis = bootTimeMillis,
@@ -42,227 +44,240 @@ class EsdeLogFileRepositoryTest {
 
     private object NoOpDirectoryWatcher : DirectoryWatcher {
         override fun startWatching() = Unit
+
         override fun stopWatching() = Unit
     }
 
     @Test
-    fun `startup replays from the last anchor event so screensaver-end resolves to the real prior state`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            """
-            Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select "psx" "Sony PlayStation" "/storage/E2AB-E84A/ROMs/psx" ""
-            Jul 28 15:16:08 Debug:  Scripting::fireEvent(): screensaver-start "manual" "" "" ""
-            Jul 28 15:16:08 Debug:  Scripting::fireEvent(): screensaver-game-select "/storage/E2AB-E84A/ROMs/gb/Yoshi's Cookie (USA, Europe).zip" "Yoshi's Cookie" "gb" "Nintendo Game Boy"
-            Jul 28 15:16:10 Debug:  Scripting::fireEvent(): screensaver-end "cancel" "" "" ""
-            """.trimIndent(),
-        )
+    fun `startup replays from the last anchor event so screensaver-end resolves to the real prior state`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                """
+                Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select "psx" "Sony PlayStation" "/storage/E2AB-E84A/ROMs/psx" ""
+                Jul 28 15:16:08 Debug:  Scripting::fireEvent(): screensaver-start "manual" "" "" ""
+                Jul 28 15:16:08 Debug:  Scripting::fireEvent(): screensaver-game-select "/storage/E2AB-E84A/ROMs/gb/Yoshi's Cookie (USA, Europe).zip" "Yoshi's Cookie" "gb" "Nintendo Game Boy"
+                Jul 28 15:16:10 Debug:  Scripting::fireEvent(): screensaver-end "cancel" "" "" ""
+                """.trimIndent(),
+            )
 
-        val repository = repositoryFor(logFile)
+            val repository = repositoryFor(logFile)
 
-        repository.observeEvents().test {
-            val events = mutableListOf<EsdeEvent>()
-            repeat(4) { events += awaitItem() }
-            cancelAndIgnoreRemainingEvents()
+            repository.observeEvents().test {
+                val events = mutableListOf<EsdeEvent>()
+                repeat(4) { events += awaitItem() }
+                cancelAndIgnoreRemainingEvents()
 
-            val finalState = events.fold(AppState.Idle as AppState) { state, event ->
-                AppStateReducer.reduce(state, event)
+                val finalState =
+                    events.fold(AppState.Idle as AppState) { state, event ->
+                        AppStateReducer.reduce(state, event)
+                    }
+                assertEquals(
+                    AppState.BrowsingSystem("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
+                    finalState,
+                )
             }
-            assertEquals(
-                AppState.BrowsingSystem("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
-                finalState,
+        }
+
+    @Test
+    fun `startup skips replay when the file predates the current boot`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
             )
+
+            // Simulates a reboot: the file's real mtime is "now" (test-run time), but boot
+            // is reported as happening well after that - i.e. the file hasn't been touched
+            // since boot, so its anchor must be a leftover from before the reboot.
+            val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() + 60_000L })
+
+            repository.observeEvents().test {
+                expectNoEvents()
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `startup skips replay when the file predates the current boot`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
-        )
-
-        // Simulates a reboot: the file's real mtime is "now" (test-run time), but boot
-        // is reported as happening well after that - i.e. the file hasn't been touched
-        // since boot, so its anchor must be a leftover from before the reboot.
-        val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() + 60_000L })
-
-        repository.observeEvents().test {
-            expectNoEvents()
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `startup replays normally when the file was written after boot`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
-        )
-
-        // Boot reported as happening well before the file's real (test-run time) mtime -
-        // i.e. the file was written after boot, so its anchor is trustworthy.
-        val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() - 60_000L })
-
-        repository.observeEvents().test {
-            assertEquals(
-                EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
-                awaitItem(),
+    fun `startup replays normally when the file was written after boot`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
             )
-            cancelAndIgnoreRemainingEvents()
+
+            // Boot reported as happening well before the file's real (test-run time) mtime -
+            // i.e. the file was written after boot, so its anchor is trustworthy.
+            val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() - 60_000L })
+
+            repository.observeEvents().test {
+                assertEquals(
+                    EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
+                    awaitItem(),
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `startup emits nothing when the file has no anchor event at all`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            "Jul 28 15:16:08 Debug:  Scripting::fireEvent(): screensaver-start \"manual\" \"\" \"\" \"\"\n",
-        )
-
-        val repository = repositoryFor(logFile)
-
-        repository.observeEvents().test {
-            expectNoEvents()
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `startup replays a quit anchor so a game left running before ES-DE exited resolves to Idle`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            """
-            Jul 28 15:16:07 Debug:  Scripting::fireEvent(): game-start "/roms/dc/game.chd" "Game" "dreamcast" "Sega Dreamcast"
-            Aug 04 14:52:13 Debug:  Scripting::fireEvent(): quit "" "" "" ""
-            Aug 04 14:52:13 Info:   ES-DE cleanly shutting down
-            """.trimIndent(),
-        )
-
-        val repository = repositoryFor(logFile)
-
-        repository.observeEvents().test {
-            assertEquals(EsdeEvent.Quit, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `startup replays as an anchor so a game left running before an ungraceful restart resolves to Idle`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            """
-            Jul 28 15:16:07 Debug:  Scripting::fireEvent(): game-start "/roms/dc/game.chd" "Game" "dreamcast" "Sega Dreamcast"
-            Aug 05 17:13:32 Debug:  Scripting::fireEvent(): startup "" "" "" ""
-            """.trimIndent(),
-        )
-
-        val repository = repositoryFor(logFile)
-
-        repository.observeEvents().test {
-            assertEquals(EsdeEvent.Startup, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-    }
-
-    @Test
-    fun `the replayed navigation event carries the direction of its preceding controller press`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            """
-            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 14, isMappedTo=right, value=1
-            Aug 02 13:31:34 Debug:  Scripting::fireEvent(): game-select "/storage/E2AB-E84A/ROMs/mastersystem/Dragon Crystal (Europe, Brazil) (En).zip" "Dragon Crystal" "mastersystem" "Sega Master System"
-            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 14, isMappedTo=right, value=0
-            """.trimIndent(),
-        )
-
-        val repository = repositoryFor(logFile)
-
-        repository.observeEvents().test {
-            assertEquals(
-                EsdeEvent.GameSelect(
-                    romPath = "/storage/E2AB-E84A/ROMs/mastersystem/Dragon Crystal (Europe, Brazil) (En).zip",
-                    gameName = "Dragon Crystal",
-                    systemShortName = "mastersystem",
-                    systemFullName = "Sega Master System",
-                    direction = NavigationDirection.Right,
-                ),
-                awaitItem(),
+    fun `startup emits nothing when the file has no anchor event at all`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Jul 28 15:16:08 Debug:  Scripting::fireEvent(): screensaver-start \"manual\" \"\" \"\" \"\"\n",
             )
-            cancelAndIgnoreRemainingEvents()
+
+            val repository = repositoryFor(logFile)
+
+            repository.observeEvents().test {
+                expectNoEvents()
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `a non-directional button press clears a prior direction, reproducing the real log excerpt's b-triggered system-select`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            """
-            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=1
-            Aug 02 13:31:34 Debug:  Scripting::fireEvent(): game-select "/storage/E2AB-E84A/ROMs/mastersystem/Buggy Run (Europe, Brazil) (En).zip" "Buggy Run" "mastersystem" "Sega Master System"
-            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=0
-            Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 1, isMappedTo=b, value=1
-            Aug 02 13:31:34 Debug:  Scripting::fireEvent(): system-select "mastersystem" "Sega Master System" "/storage/E2AB-E84A/ROMs/mastersystem" ""
-            Aug 02 13:31:35 Debug:  Window::logInput(Xbox Wireless Controller): Button 1, isMappedTo=b, value=0
-            """.trimIndent(),
-        )
-
-        val repository = repositoryFor(logFile)
-
-        repository.observeEvents().test {
-            assertEquals(
-                EsdeEvent.SystemSelect(
-                    systemShortName = "mastersystem",
-                    systemFullName = "Sega Master System",
-                    systemPath = "/storage/E2AB-E84A/ROMs/mastersystem",
-                    direction = null,
-                ),
-                awaitItem(),
+    fun `startup replays a quit anchor so a game left running before ES-DE exited resolves to Idle`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                """
+                Jul 28 15:16:07 Debug:  Scripting::fireEvent(): game-start "/roms/dc/game.chd" "Game" "dreamcast" "Sega Dreamcast"
+                Aug 04 14:52:13 Debug:  Scripting::fireEvent(): quit "" "" "" ""
+                Aug 04 14:52:13 Info:   ES-DE cleanly shutting down
+                """.trimIndent(),
             )
-            cancelAndIgnoreRemainingEvents()
+
+            val repository = repositoryFor(logFile)
+
+            repository.observeEvents().test {
+                assertEquals(EsdeEvent.Quit, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `startup finds an anchor beyond the initial tail window`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        val padding = "Debug: some unrelated line\n".repeat(6_000) // ~168KB, past the 64KB initial window
-        val anchorLine = "Jul 28 07:01:30 Debug:  Scripting::fireEvent(): " +
-                "system-select \"dreamcast\" \"Sega Dreamcast\" \"/roms/dreamcast\" \"\""
-        logFile.writeText(padding + anchorLine + "\n")
-
-        val repository = repositoryFor(logFile)
-
-        repository.observeEvents().test {
-            assertEquals(
-                EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast"),
-                awaitItem(),
+    fun `startup replays as an anchor so a game left running before an ungraceful restart resolves to Idle`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                """
+                Jul 28 15:16:07 Debug:  Scripting::fireEvent(): game-start "/roms/dc/game.chd" "Game" "dreamcast" "Sega Dreamcast"
+                Aug 05 17:13:32 Debug:  Scripting::fireEvent(): startup "" "" "" ""
+                """.trimIndent(),
             )
-            cancelAndIgnoreRemainingEvents()
+
+            val repository = repositoryFor(logFile)
+
+            repository.observeEvents().test {
+                assertEquals(EsdeEvent.Startup, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
 
     @Test
-    fun `a rom path with a multi-byte UTF-8 character decodes correctly instead of as ISO-8859-1 mojibake`() = runTest {
-        val logFile = tempFolder.newFile("es_log.txt")
-        logFile.writeText(
-            "Aug 03 10:00:00 Debug:  Scripting::fireEvent(): game-select " +
-                "\"/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam\" \"NieR_Automata™\" \"steam\" \"Steam\"\n",
-        )
-
-        val repository = repositoryFor(logFile)
-
-        repository.observeEvents().test {
-            assertEquals(
-                EsdeEvent.GameSelect(
-                    romPath = "/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam",
-                    gameName = "NieR_Automata™",
-                    systemShortName = "steam",
-                    systemFullName = "Steam",
-                    direction = null,
-                ),
-                awaitItem(),
+    fun `the replayed navigation event carries the direction of its preceding controller press`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                """
+                Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 14, isMappedTo=right, value=1
+                Aug 02 13:31:34 Debug:  Scripting::fireEvent(): game-select "/storage/E2AB-E84A/ROMs/mastersystem/Dragon Crystal (Europe, Brazil) (En).zip" "Dragon Crystal" "mastersystem" "Sega Master System"
+                Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 14, isMappedTo=right, value=0
+                """.trimIndent(),
             )
-            cancelAndIgnoreRemainingEvents()
+
+            val repository = repositoryFor(logFile)
+
+            repository.observeEvents().test {
+                assertEquals(
+                    EsdeEvent.GameSelect(
+                        romPath = "/storage/E2AB-E84A/ROMs/mastersystem/Dragon Crystal (Europe, Brazil) (En).zip",
+                        gameName = "Dragon Crystal",
+                        systemShortName = "mastersystem",
+                        systemFullName = "Sega Master System",
+                        direction = NavigationDirection.Right,
+                    ),
+                    awaitItem(),
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
         }
-    }
+
+    @Test
+    fun `a non-directional button press clears a prior direction, reproducing the real log excerpt's b-triggered system-select`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                """
+                Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=1
+                Aug 02 13:31:34 Debug:  Scripting::fireEvent(): game-select "/storage/E2AB-E84A/ROMs/mastersystem/Buggy Run (Europe, Brazil) (En).zip" "Buggy Run" "mastersystem" "Sega Master System"
+                Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=0
+                Aug 02 13:31:34 Debug:  Window::logInput(Xbox Wireless Controller): Button 1, isMappedTo=b, value=1
+                Aug 02 13:31:34 Debug:  Scripting::fireEvent(): system-select "mastersystem" "Sega Master System" "/storage/E2AB-E84A/ROMs/mastersystem" ""
+                Aug 02 13:31:35 Debug:  Window::logInput(Xbox Wireless Controller): Button 1, isMappedTo=b, value=0
+                """.trimIndent(),
+            )
+
+            val repository = repositoryFor(logFile)
+
+            repository.observeEvents().test {
+                assertEquals(
+                    EsdeEvent.SystemSelect(
+                        systemShortName = "mastersystem",
+                        systemFullName = "Sega Master System",
+                        systemPath = "/storage/E2AB-E84A/ROMs/mastersystem",
+                        direction = null,
+                    ),
+                    awaitItem(),
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `startup finds an anchor beyond the initial tail window`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            val padding = "Debug: some unrelated line\n".repeat(6_000) // ~168KB, past the 64KB initial window
+            val anchorLine =
+                "Jul 28 07:01:30 Debug:  Scripting::fireEvent(): " +
+                    "system-select \"dreamcast\" \"Sega Dreamcast\" \"/roms/dreamcast\" \"\""
+            logFile.writeText(padding + anchorLine + "\n")
+
+            val repository = repositoryFor(logFile)
+
+            repository.observeEvents().test {
+                assertEquals(
+                    EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast"),
+                    awaitItem(),
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `a rom path with a multi-byte UTF-8 character decodes correctly instead of as ISO-8859-1 mojibake`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Aug 03 10:00:00 Debug:  Scripting::fireEvent(): game-select " +
+                    "\"/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam\" \"NieR_Automata™\" \"steam\" \"Steam\"\n",
+            )
+
+            val repository = repositoryFor(logFile)
+
+            repository.observeEvents().test {
+                assertEquals(
+                    EsdeEvent.GameSelect(
+                        romPath = "/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam",
+                        gameName = "NieR_Automata™",
+                        systemShortName = "steam",
+                        systemFullName = "Steam",
+                        direction = null,
+                    ),
+                    awaitItem(),
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 }

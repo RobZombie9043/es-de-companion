@@ -33,7 +33,6 @@ class ReactiveEsdeLogRepository(
         EsdeLogFileRepository(logFilePath = "$folderPath/logs/es_log.txt")
     },
 ) : EsdeLogRepository {
-
     override fun observeEvents(): Flow<EsdeEvent> =
         logFolderPath.flatMapLatest { folder ->
             folder?.let { repositoryFactory(it).observeEvents() } ?: emptyFlow()

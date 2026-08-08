@@ -6,6 +6,5 @@ import com.esde.companion.domain.repository.OnboardingRepository
 class SetThemePreferenceUseCase(
     private val onboardingRepository: OnboardingRepository,
 ) {
-    suspend operator fun invoke(preference: ThemePreference) =
-        onboardingRepository.setThemePreference(preference)
+    suspend operator fun invoke(preference: ThemePreference) = onboardingRepository.setThemePreference(preference)
 }

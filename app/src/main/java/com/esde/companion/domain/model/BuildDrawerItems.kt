@@ -25,23 +25,27 @@ fun buildDrawerItems(
     folders: List<AppFolder>,
     sortFoldersOnTop: Boolean = true,
 ): List<DrawerItem> {
-    val visibleByPackage = installedApps
-        .filterNot { it.packageName in hiddenPackages }
-        .associateBy { it.packageName }
+    val visibleByPackage =
+        installedApps
+            .filterNot { it.packageName in hiddenPackages }
+            .associateBy { it.packageName }
     val groupedPackageNames = folders.flatMap { it.memberPackageNames }.toSet()
 
-    val folderItems = folders
-        .map { folder ->
-            val members = folder.memberPackageNames
-                .mapNotNull { visibleByPackage[it] }
-                .sortedBy { it.label.lowercase() }
-            DrawerItem.Folder(folder = folder, apps = members)
-        }
-        .sortedBy { it.label.lowercase() }
-    val ungroupedItems = visibleByPackage.values
-        .filterNot { it.packageName in groupedPackageNames }
-        .map(DrawerItem::App)
-        .sortedBy { it.label.lowercase() }
+    val folderItems =
+        folders
+            .map { folder ->
+                val members =
+                    folder.memberPackageNames
+                        .mapNotNull { visibleByPackage[it] }
+                        .sortedBy { it.label.lowercase() }
+                DrawerItem.Folder(folder = folder, apps = members)
+            }
+            .sortedBy { it.label.lowercase() }
+    val ungroupedItems =
+        visibleByPackage.values
+            .filterNot { it.packageName in groupedPackageNames }
+            .map(DrawerItem::App)
+            .sortedBy { it.label.lowercase() }
 
     return if (sortFoldersOnTop) {
         folderItems + ungroupedItems

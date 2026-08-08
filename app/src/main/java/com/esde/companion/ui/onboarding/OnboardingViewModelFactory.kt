@@ -15,7 +15,6 @@ class OnboardingViewModelFactory(
     private val initialLogFolderPath: String? = null,
     private val initialMediaFolderPath: String? = null,
 ) : ViewModelProvider.Factory {
-
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         require(modelClass.isAssignableFrom(OnboardingViewModel::class.java)) {

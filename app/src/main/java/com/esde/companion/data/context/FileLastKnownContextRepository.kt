@@ -19,9 +19,7 @@ internal val Context.lastKnownContextDataStore by preferencesDataStore(name = "l
 class FileLastKnownContextRepository(
     private val context: Context,
 ) : LastKnownContextRepository {
-
-    override fun observeLastSystemShortName(): Flow<String?> =
-        context.lastKnownContextDataStore.data.map { it[SYSTEM_SHORT_NAME_KEY] }
+    override fun observeLastSystemShortName(): Flow<String?> = context.lastKnownContextDataStore.data.map { it[SYSTEM_SHORT_NAME_KEY] }
 
     override suspend fun setLastSystemShortName(systemShortName: String) {
         context.lastKnownContextDataStore.edit { it[SYSTEM_SHORT_NAME_KEY] = systemShortName }

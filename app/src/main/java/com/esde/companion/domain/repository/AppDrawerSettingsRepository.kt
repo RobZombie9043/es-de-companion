@@ -12,13 +12,14 @@ import kotlinx.coroutines.flow.Flow
  * legible as the settings surface grows.
  */
 interface AppDrawerSettingsRepository {
-
     /** Package names hidden from the App Drawer grid. Defaults to empty (nothing hidden). */
     suspend fun setHiddenApps(packageNames: Set<String>)
+
     fun observeHiddenApps(): Flow<Set<String>>
 
     /** Number of columns in the App Drawer grid, 3-6. Defaults to 4. */
     suspend fun setGridColumns(columns: Int)
+
     fun observeGridColumns(): Flow<Int>
 
     /**
@@ -29,10 +30,12 @@ interface AppDrawerSettingsRepository {
      * deliberately: this is a two-state per-app flag, not worth a full map encoding.
      */
     suspend fun setOtherScreenLaunchApps(packageNames: Set<String>)
+
     fun observeOtherScreenLaunchApps(): Flow<Set<String>>
 
     /** Whether folders are grouped ahead of ungrouped apps in the drawer grid, rather
      * than interleaved alphabetically with them - see buildDrawerItems. Defaults to true. */
     suspend fun setSortFoldersOnTop(sortOnTop: Boolean)
+
     fun observeSortFoldersOnTop(): Flow<Boolean>
 }

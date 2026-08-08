@@ -21,8 +21,11 @@ package com.esde.companion.domain.parser
  * filesystem required.
  */
 object GameMediaPathResolver {
-
-    fun resolveBaseRelativePath(systemShortName: String, romPath: String, romIsDirectory: Boolean): String? {
+    fun resolveBaseRelativePath(
+        systemShortName: String,
+        romPath: String,
+        romIsDirectory: Boolean,
+    ): String? {
         val systemMarker = "/$systemShortName/"
         val markerIndex = romPath.lastIndexOf(systemMarker)
         if (markerIndex == -1) return null

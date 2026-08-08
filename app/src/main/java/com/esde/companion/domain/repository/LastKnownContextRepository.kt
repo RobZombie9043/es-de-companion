@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.Flow
  */
 interface LastKnownContextRepository {
     fun observeLastSystemShortName(): Flow<String?>
+
     suspend fun setLastSystemShortName(systemShortName: String)
+
     fun observeLastGameReference(): Flow<GameReference?>
+
     suspend fun setLastGameReference(gameReference: GameReference)
 }

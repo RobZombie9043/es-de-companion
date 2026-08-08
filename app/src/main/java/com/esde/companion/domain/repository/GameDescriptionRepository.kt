@@ -8,5 +8,8 @@ import com.esde.companion.domain.model.GameDescription
  * concern - see FileGameDescriptionRepository.
  */
 interface GameDescriptionRepository {
-    suspend fun resolveDescription(systemShortName: String, romPath: String): GameDescription
+    suspend fun resolveDescription(
+        systemShortName: String,
+        romPath: String,
+    ): GameDescription
 }

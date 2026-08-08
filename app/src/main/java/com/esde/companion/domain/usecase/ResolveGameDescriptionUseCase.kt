@@ -10,6 +10,8 @@ import com.esde.companion.domain.repository.GameDescriptionRepository
 class ResolveGameDescriptionUseCase(
     private val gameDescriptionRepository: GameDescriptionRepository,
 ) {
-    suspend operator fun invoke(systemShortName: String, romPath: String): GameDescription =
-        gameDescriptionRepository.resolveDescription(systemShortName, romPath)
+    suspend operator fun invoke(
+        systemShortName: String,
+        romPath: String,
+    ): GameDescription = gameDescriptionRepository.resolveDescription(systemShortName, romPath)
 }

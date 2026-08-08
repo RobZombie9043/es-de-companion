@@ -10,7 +10,6 @@ class ReactiveCustomSystemImageRepository(
         FileCustomSystemImageRepository(folderPath = folder)
     },
 ) : CustomSystemImageRepository {
-
     override suspend fun findImage(systemShortName: String): String? {
         val folder = folderPath.first() ?: return null
         return repositoryFactory(folder).findImage(systemShortName)

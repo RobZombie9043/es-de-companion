@@ -19,9 +19,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil3.compose.rememberAsyncImagePainter
 import coil3.imageLoader
-import coil3.request.ImageRequest
 import coil3.request.SuccessResult
-import java.io.File
 
 /**
  * Crossfades from whatever model was previously shown to [model], never showing a
@@ -115,10 +113,11 @@ fun CrossfadeAsyncImage(
     Box(modifier = modifier) {
         previousModel?.let { prevModel ->
             key(identityKeyOf(prevModel)) {
-                val painter = rememberAsyncImagePainter(
-                    model = requestFor(context, prevModel),
-                    contentScale = contentScale,
-                )
+                val painter =
+                    rememberAsyncImagePainter(
+                        model = requestFor(context, prevModel),
+                        contentScale = contentScale,
+                    )
                 Image(
                     painter = painter,
                     contentDescription = null,
@@ -130,17 +129,19 @@ fun CrossfadeAsyncImage(
 
         currentModel?.let { curModel ->
             key(identityKeyOf(curModel)) {
-                val painter = rememberAsyncImagePainter(
-                    model = requestFor(context, curModel),
-                    contentScale = contentScale,
-                )
+                val painter =
+                    rememberAsyncImagePainter(
+                        model = requestFor(context, curModel),
+                        contentScale = contentScale,
+                    )
                 Image(
                     painter = painter,
                     contentDescription = contentDescription,
                     contentScale = contentScale,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(alpha.value),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .alpha(alpha.value),
                 )
             }
         }

@@ -3,8 +3,8 @@ package com.esde.companion.domain.repository
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
-import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.ScreenBehavior
+import com.esde.companion.domain.model.ThemePreference
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -17,28 +17,36 @@ import kotlinx.coroutines.flow.Flow
  * screen reuses these same methods to change folders later.
  */
 interface OnboardingRepository {
-
     fun defaultLogFolderPath(): String
+
     fun defaultMediaFolderPath(): String
 
     suspend fun validateLogFolder(path: String): LogFolderValidation
+
     suspend fun validateMediaFolder(path: String): MediaFolderValidation
 
     suspend fun saveLogFolderPath(path: String)
+
     suspend fun saveMediaFolderPath(path: String)
 
     fun observeLogFolderPath(): Flow<String?>
+
     fun observeMediaFolderPath(): Flow<String?>
 
     suspend fun saveCustomSystemImagesFolderPath(path: String)
+
     fun observeCustomSystemImagesFolderPath(): Flow<String?>
+
     suspend fun clearCustomSystemImagesFolderPath()
 
     suspend fun saveCustomLogosFolderPath(path: String)
+
     fun observeCustomLogosFolderPath(): Flow<String?>
+
     suspend fun clearCustomLogosFolderPath()
 
     suspend fun markOnboardingComplete()
+
     fun observeOnboardingComplete(): Flow<Boolean>
 
     /**
@@ -46,6 +54,7 @@ interface OnboardingRepository {
      * explicitly set.
      */
     suspend fun setThemePreference(preference: ThemePreference)
+
     fun observeThemePreference(): Flow<ThemePreference>
 
     /**
@@ -53,6 +62,7 @@ interface OnboardingRepository {
      * (AppState.PlayingGame). Defaults to [ScreenBehavior.Nothing].
      */
     suspend fun setGamePlayingBehavior(behavior: ScreenBehavior)
+
     fun observeGamePlayingBehavior(): Flow<ScreenBehavior>
 
     /**
@@ -60,6 +70,7 @@ interface OnboardingRepository {
      * (AppState.Screensaver). Defaults to [ScreenBehavior.Nothing].
      */
     suspend fun setScreensaverBehavior(behavior: ScreenBehavior)
+
     fun observeScreensaverBehavior(): Flow<ScreenBehavior>
 
     /**
@@ -68,30 +79,37 @@ interface OnboardingRepository {
      * behaviors.
      */
     suspend fun setVideoPlaybackEnabled(enabled: Boolean)
+
     fun observeVideoPlaybackEnabled(): Flow<Boolean>
 
     /** Delay in seconds before playback starts once a video becomes eligible to play. */
     suspend fun setVideoDelaySeconds(seconds: Int)
+
     fun observeVideoDelaySeconds(): Flow<Int>
 
     /** Whether video audio is audible; false mutes playback entirely. Defaults to true. */
     suspend fun setVideoAudioEnabled(enabled: Boolean)
+
     fun observeVideoAudioEnabled(): Flow<Boolean>
 
     /** Master toggle for background music. Defaults to true. */
     suspend fun setMusicEnabled(enabled: Boolean)
+
     fun observeMusicEnabled(): Flow<Boolean>
 
     /** Whether music plays while AppState is BrowsingSystem. Defaults to true. */
     suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean)
+
     fun observeMusicPlayWhileBrowsingSystems(): Flow<Boolean>
 
     /** Whether music plays while AppState is BrowsingGame. Defaults to true. */
     suspend fun setMusicPlayWhileBrowsingGames(enabled: Boolean)
+
     fun observeMusicPlayWhileBrowsingGames(): Flow<Boolean>
 
     /** Whether music plays while AppState is Screensaver. Defaults to true. */
     suspend fun setMusicPlayDuringScreensaver(enabled: Boolean)
+
     fun observeMusicPlayDuringScreensaver(): Flow<Boolean>
 
     /**
@@ -99,6 +117,7 @@ interface OnboardingRepository {
      * [MusicDuckingMode.LowerVolume].
      */
     suspend fun setMusicDuckingMode(mode: MusicDuckingMode)
+
     fun observeMusicDuckingMode(): Flow<MusicDuckingMode>
 
     /**
@@ -109,10 +128,13 @@ interface OnboardingRepository {
      * 0 = fully transparent, 100 = fully opaque. Defaults to 80.
      */
     suspend fun setOverlayOpacityPercent(percent: Int)
+
     fun observeOverlayOpacityPercent(): Flow<Int>
 
     suspend fun saveCustomMusicFolderPath(path: String)
+
     fun observeCustomMusicFolderPath(): Flow<String?>
+
     suspend fun clearCustomMusicFolderPath()
 
     /**
@@ -121,6 +143,7 @@ interface OnboardingRepository {
      * to keep running continuously on the secondary display regardless of ES-DE's state.
      */
     suspend fun setCloseCompanionOnQuitEnabled(enabled: Boolean)
+
     fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean>
 
     /**
@@ -130,6 +153,7 @@ interface OnboardingRepository {
      * screen's long-press menu.
      */
     suspend fun setSettingsFabVisible(visible: Boolean)
+
     fun observeSettingsFabVisible(): Flow<Boolean>
 
     /**
@@ -138,5 +162,6 @@ interface OnboardingRepository {
      * reasoning as [setCloseCompanionOnQuitEnabled].
      */
     suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean)
+
     fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean>
 }

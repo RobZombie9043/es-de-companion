@@ -134,9 +134,10 @@ internal fun SettingsLabel(
                 imageVector = icon,
                 contentDescription = null,
                 tint = labelColor,
-                modifier = Modifier
-                    .padding(SettingsLabelIconBorderWidth)
-                    .size(iconSize),
+                modifier =
+                    Modifier
+                        .padding(SettingsLabelIconBorderWidth)
+                        .size(iconSize),
             )
         }
         Text(text = text, style = style, color = labelColor)
@@ -152,7 +153,10 @@ internal fun SettingsLabel(
  * visibility throughout this file).
  */
 @Composable
-internal fun SettingsCategoryRow(category: SettingsCategory, onClick: () -> Unit) {
+internal fun SettingsCategoryRow(
+    category: SettingsCategory,
+    onClick: () -> Unit,
+) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -160,9 +164,10 @@ internal fun SettingsCategoryRow(category: SettingsCategory, onClick: () -> Unit
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -190,9 +195,10 @@ internal fun SettingsQuitRow(onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -223,16 +229,17 @@ internal fun SetupSettingsContent(
     onCustomMusicFolderCleared: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         if (!uiState.permissionGranted) {
             Text(
                 "All files access isn't currently granted - folder changes below " +
-                        "may not take effect until it's re-enabled in system Settings.",
+                    "may not take effect until it's re-enabled in system Settings.",
             )
         }
 
@@ -253,8 +260,9 @@ internal fun SetupSettingsContent(
         OptionalFolderSetting(
             label = { SettingsLabel(icon = Icons.Filled.Image, text = "Custom System Images Folder") },
             path = uiState.customSystemImagesFolderPath,
-            statusText = uiState.customSystemImagesFolderValidation.toStatusText()
-                .unlessValidating(uiState.isValidatingCustomSystemImagesFolder),
+            statusText =
+                uiState.customSystemImagesFolderValidation.toStatusText()
+                    .unlessValidating(uiState.isValidatingCustomSystemImagesFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomSystemImagesFolderPicked) },
             onClear = onCustomSystemImagesFolderCleared,
         )
@@ -262,8 +270,9 @@ internal fun SetupSettingsContent(
         OptionalFolderSetting(
             label = { SettingsLabel(icon = Icons.AutoMirrored.Filled.BrandingWatermark, text = "Custom Logos Folder") },
             path = uiState.customLogosFolderPath,
-            statusText = uiState.customLogosFolderValidation.toStatusText()
-                .unlessValidating(uiState.isValidatingCustomLogosFolder),
+            statusText =
+                uiState.customLogosFolderValidation.toStatusText()
+                    .unlessValidating(uiState.isValidatingCustomLogosFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomLogosFolderPicked) },
             onClear = onCustomLogosFolderCleared,
         )
@@ -271,8 +280,9 @@ internal fun SetupSettingsContent(
         OptionalFolderSetting(
             label = { SettingsLabel(icon = Icons.Filled.MusicNote, text = "Custom Music Folder") },
             path = uiState.customMusicFolderPath,
-            statusText = uiState.customMusicFolderValidation.toStatusText()
-                .unlessValidating(uiState.isValidatingCustomMusicFolder),
+            statusText =
+                uiState.customMusicFolderValidation.toStatusText()
+                    .unlessValidating(uiState.isValidatingCustomMusicFolder),
             onPick = { uri -> SafPathResolver.resolvePath(uri)?.let(onCustomMusicFolderPicked) },
             onClear = onCustomMusicFolderCleared,
         )
@@ -291,10 +301,11 @@ internal fun UISettingsContent(
     onScreensaverBehaviorChanged: (ScreenBehavior) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
@@ -324,10 +335,11 @@ internal fun UISettingsContent(
 @Composable
 internal fun WidgetsSettingsContent(onEditWidgetsClick: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         EditWidgetsEntry(onClick = onEditWidgetsClick)
@@ -341,7 +353,10 @@ internal fun WidgetsSettingsContent(onEditWidgetsClick: () -> Unit) {
  * replaced a separate slider per surface.
  */
 @Composable
-private fun OverlayOpacitySetting(percent: Int, onPercentChanged: (Int) -> Unit) {
+private fun OverlayOpacitySetting(
+    percent: Int,
+    onPercentChanged: (Int) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -374,10 +389,11 @@ internal fun VideoPlaybackSettingsContent(
     onVideoAudioEnabledChanged: (Boolean) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         VideoPlaybackEnabledSetting(enabled = videoPlaybackEnabled, onEnabledChanged = onVideoPlaybackEnabledChanged)
@@ -389,7 +405,10 @@ internal fun VideoPlaybackSettingsContent(
 }
 
 @Composable
-private fun VideoPlaybackEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun VideoPlaybackEnabledSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -424,7 +443,10 @@ private fun VideoPlaybackEnabledSetting(enabled: Boolean, onEnabledChanged: (Boo
 }
 
 @Composable
-private fun VideoDelaySetting(delaySeconds: Int, onDelaySecondsChanged: (Int) -> Unit) {
+private fun VideoDelaySetting(
+    delaySeconds: Int,
+    onDelaySecondsChanged: (Int) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -452,7 +474,10 @@ private fun VideoDelaySetting(delaySeconds: Int, onDelaySecondsChanged: (Int) ->
 }
 
 @Composable
-private fun VideoAudioSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun VideoAudioSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -496,10 +521,11 @@ internal fun OtherSettingsContent(
     onLaunchEsdeOnStartEnabledChanged: (Boolean) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         CloseCompanionOnQuitSetting(
@@ -518,7 +544,10 @@ internal fun OtherSettingsContent(
 }
 
 @Composable
-private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun CloseCompanionOnQuitSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -553,7 +582,10 @@ private fun CloseCompanionOnQuitSetting(enabled: Boolean, onEnabledChanged: (Boo
 }
 
 @Composable
-private fun LaunchEsdeOnStartSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun LaunchEsdeOnStartSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -588,7 +620,10 @@ private fun LaunchEsdeOnStartSetting(enabled: Boolean, onEnabledChanged: (Boolea
 }
 
 @Composable
-private fun SettingsFabVisibleSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun SettingsFabVisibleSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -646,10 +681,11 @@ private fun ScreenBehaviorPicker(
                     SegmentedButton(
                         selected = behavior == selected,
                         onClick = { onSelected(behavior) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = options.size,
-                        ),
+                        shape =
+                            SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = options.size,
+                            ),
                         icon = {
                             SegmentedButtonDefaults.Icon(active = behavior == selected) {
                                 Icon(
@@ -669,20 +705,22 @@ private fun ScreenBehaviorPicker(
 
 // Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
 private val ScreenBehavior.icon: ImageVector
-    get() = when (this) {
-        ScreenBehavior.Nothing -> Icons.Filled.Brightness7
-        ScreenBehavior.Dim -> Icons.Filled.Brightness4
-        ScreenBehavior.Black -> Icons.Filled.Brightness1
-        ScreenBehavior.GameManual -> Icons.Filled.MenuBook
-    }
+    get() =
+        when (this) {
+            ScreenBehavior.Nothing -> Icons.Filled.Brightness7
+            ScreenBehavior.Dim -> Icons.Filled.Brightness4
+            ScreenBehavior.Black -> Icons.Filled.Brightness1
+            ScreenBehavior.GameManual -> Icons.Filled.MenuBook
+        }
 
 private val ScreenBehavior.label: String
-    get() = when (this) {
-        ScreenBehavior.Nothing -> "On"
-        ScreenBehavior.Dim -> "Dim"
-        ScreenBehavior.Black -> "Off"
-        ScreenBehavior.GameManual -> "Manual"
-    }
+    get() =
+        when (this) {
+            ScreenBehavior.Nothing -> "On"
+            ScreenBehavior.Dim -> "Dim"
+            ScreenBehavior.Black -> "Off"
+            ScreenBehavior.GameManual -> "Manual"
+        }
 
 @Composable
 internal fun AppDrawerSettingsContent(
@@ -699,10 +737,11 @@ internal fun AppDrawerSettingsContent(
     onDockSizeChanged: (DockSize) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ManageAppsEntry(onClick = onManageAppsClick)
@@ -717,7 +756,10 @@ internal fun AppDrawerSettingsContent(
 }
 
 @Composable
-private fun SortFoldersOnTopSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun SortFoldersOnTopSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -725,9 +767,10 @@ private fun SortFoldersOnTopSetting(enabled: Boolean, onEnabledChanged: (Boolean
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -750,7 +793,10 @@ private fun SortFoldersOnTopSetting(enabled: Boolean, onEnabledChanged: (Boolean
 }
 
 @Composable
-private fun DockEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun DockEnabledSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -758,9 +804,10 @@ private fun DockEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> 
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -783,7 +830,10 @@ private fun DockEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> 
 }
 
 @Composable
-private fun DockMaxAppsSetting(maxApps: Int, onMaxAppsChanged: (Int) -> Unit) {
+private fun DockMaxAppsSetting(
+    maxApps: Int,
+    onMaxAppsChanged: (Int) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -809,7 +859,10 @@ private fun DockMaxAppsSetting(maxApps: Int, onMaxAppsChanged: (Int) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DockSizeSetting(size: DockSize, onSizeChanged: (DockSize) -> Unit) {
+private fun DockSizeSetting(
+    size: DockSize,
+    onSizeChanged: (DockSize) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -836,11 +889,12 @@ private fun DockSizeSetting(size: DockSize, onSizeChanged: (DockSize) -> Unit) {
 
 // Presentation-only label, same reasoning as ThemePreference.label above.
 private val DockSize.label: String
-    get() = when (this) {
-        DockSize.Small -> "Small"
-        DockSize.Medium -> "Medium"
-        DockSize.Large -> "Large"
-    }
+    get() =
+        when (this) {
+            DockSize.Small -> "Small"
+            DockSize.Medium -> "Medium"
+            DockSize.Large -> "Large"
+        }
 
 @Composable
 private fun ManageAppsEntry(onClick: () -> Unit) {
@@ -851,9 +905,10 @@ private fun ManageAppsEntry(onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -870,7 +925,10 @@ private fun ManageAppsEntry(onClick: () -> Unit) {
 }
 
 @Composable
-private fun GridColumnsSetting(columns: Int, onColumnsChanged: (Int) -> Unit) {
+private fun GridColumnsSetting(
+    columns: Int,
+    onColumnsChanged: (Int) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -909,10 +967,11 @@ internal fun SoundSettingsContent(
     onMusicDuckingModeChanged: (MusicDuckingMode) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         MusicEnabledSetting(enabled = musicEnabled, onEnabledChanged = onMusicEnabledChanged)
@@ -935,7 +994,10 @@ internal fun SoundSettingsContent(
 }
 
 @Composable
-private fun MusicEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun MusicEnabledSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -970,7 +1032,10 @@ private fun MusicEnabledSetting(enabled: Boolean, onEnabledChanged: (Boolean) ->
 }
 
 @Composable
-private fun MusicPlayWhileBrowsingSystemsSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun MusicPlayWhileBrowsingSystemsSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -978,9 +1043,10 @@ private fun MusicPlayWhileBrowsingSystemsSetting(enabled: Boolean, onEnabledChan
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1001,7 +1067,10 @@ private fun MusicPlayWhileBrowsingSystemsSetting(enabled: Boolean, onEnabledChan
 }
 
 @Composable
-private fun MusicPlayWhileBrowsingGamesSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun MusicPlayWhileBrowsingGamesSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1009,9 +1078,10 @@ private fun MusicPlayWhileBrowsingGamesSetting(enabled: Boolean, onEnabledChange
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1032,7 +1102,10 @@ private fun MusicPlayWhileBrowsingGamesSetting(enabled: Boolean, onEnabledChange
 }
 
 @Composable
-private fun MusicPlayDuringScreensaverSetting(enabled: Boolean, onEnabledChanged: (Boolean) -> Unit) {
+private fun MusicPlayDuringScreensaverSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1040,9 +1113,10 @@ private fun MusicPlayDuringScreensaverSetting(enabled: Boolean, onEnabledChanged
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1064,7 +1138,10 @@ private fun MusicPlayDuringScreensaverSetting(enabled: Boolean, onEnabledChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MusicDuckingModeSetting(selected: MusicDuckingMode, onSelected: (MusicDuckingMode) -> Unit) {
+private fun MusicDuckingModeSetting(
+    selected: MusicDuckingMode,
+    onSelected: (MusicDuckingMode) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -1080,10 +1157,11 @@ private fun MusicDuckingModeSetting(selected: MusicDuckingMode, onSelected: (Mus
                     SegmentedButton(
                         selected = mode == selected,
                         onClick = { onSelected(mode) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = MusicDuckingMode.entries.size,
-                        ),
+                        shape =
+                            SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = MusicDuckingMode.entries.size,
+                            ),
                         icon = {
                             SegmentedButtonDefaults.Icon(active = mode == selected) {
                                 Icon(
@@ -1103,22 +1181,27 @@ private fun MusicDuckingModeSetting(selected: MusicDuckingMode, onSelected: (Mus
 
 // Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
 private val MusicDuckingMode.icon: ImageVector
-    get() = when (this) {
-        MusicDuckingMode.Unchanged -> Icons.Filled.VolumeUp
-        MusicDuckingMode.LowerVolume -> Icons.Filled.VolumeDown
-        MusicDuckingMode.Pause -> Icons.Filled.Pause
-    }
+    get() =
+        when (this) {
+            MusicDuckingMode.Unchanged -> Icons.Filled.VolumeUp
+            MusicDuckingMode.LowerVolume -> Icons.Filled.VolumeDown
+            MusicDuckingMode.Pause -> Icons.Filled.Pause
+        }
 
 private val MusicDuckingMode.label: String
-    get() = when (this) {
-        MusicDuckingMode.Unchanged -> "Unchanged"
-        MusicDuckingMode.LowerVolume -> "Lower"
-        MusicDuckingMode.Pause -> "Pause"
-    }
+    get() =
+        when (this) {
+            MusicDuckingMode.Unchanged -> "Unchanged"
+            MusicDuckingMode.LowerVolume -> "Lower"
+            MusicDuckingMode.Pause -> "Pause"
+        }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ThemePicker(selected: ThemePreference, onSelected: (ThemePreference) -> Unit) {
+private fun ThemePicker(
+    selected: ThemePreference,
+    onSelected: (ThemePreference) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -1134,10 +1217,11 @@ private fun ThemePicker(selected: ThemePreference, onSelected: (ThemePreference)
                     SegmentedButton(
                         selected = theme == selected,
                         onClick = { onSelected(theme) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = ThemePreference.entries.size,
-                        ),
+                        shape =
+                            SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = ThemePreference.entries.size,
+                            ),
                         icon = {
                             SegmentedButtonDefaults.Icon(active = theme == selected) {
                                 Icon(
@@ -1158,18 +1242,20 @@ private fun ThemePicker(selected: ThemePreference, onSelected: (ThemePreference)
 // Presentation-only icon/label, kept in the UI layer rather than on the enum itself so
 // ThemePreference stays a plain domain identifier with no display concerns.
 private val ThemePreference.icon: ImageVector
-    get() = when (this) {
-        ThemePreference.Auto -> Icons.Filled.BrightnessAuto
-        ThemePreference.Light -> Icons.Filled.LightMode
-        ThemePreference.Dark -> Icons.Filled.DarkMode
-    }
+    get() =
+        when (this) {
+            ThemePreference.Auto -> Icons.Filled.BrightnessAuto
+            ThemePreference.Light -> Icons.Filled.LightMode
+            ThemePreference.Dark -> Icons.Filled.DarkMode
+        }
 
 private val ThemePreference.label: String
-    get() = when (this) {
-        ThemePreference.Auto -> "Auto"
-        ThemePreference.Light -> "Light"
-        ThemePreference.Dark -> "Dark"
-    }
+    get() =
+        when (this) {
+            ThemePreference.Auto -> "Auto"
+            ThemePreference.Light -> "Light"
+            ThemePreference.Dark -> "Dark"
+        }
 
 @Composable
 private fun EditWidgetsEntry(onClick: () -> Unit) {
@@ -1180,9 +1266,10 @@ private fun EditWidgetsEntry(onClick: () -> Unit) {
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1212,9 +1299,10 @@ private fun FolderSetting(
     statusText: String?,
     onPick: (Uri) -> Unit,
 ) {
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let(onPick)
-    }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let(onPick)
+        }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1261,9 +1349,10 @@ private fun OptionalFolderSetting(
     onPick: (Uri) -> Unit,
     onClear: () -> Unit,
 ) {
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let(onPick)
-    }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let(onPick)
+        }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1319,15 +1408,17 @@ private fun OptionalFolderSetting(
  */
 private fun String.unlessValidating(isValidating: Boolean): String? = if (isValidating) null else this
 
-private fun LogFolderValidation?.toStatusText(): String = when (this) {
-    null -> ""
-    is LogFolderValidation.FolderNotFound -> "Folder not found"
-    is LogFolderValidation.FolderFound ->
-        if (settingsFileFound) "settings/es_settings.xml found" else "Folder found, but appears to be the incorrect folder"
-}
+private fun LogFolderValidation?.toStatusText(): String =
+    when (this) {
+        null -> ""
+        is LogFolderValidation.FolderNotFound -> "Folder not found"
+        is LogFolderValidation.FolderFound ->
+            if (settingsFileFound) "settings/es_settings.xml found" else "Folder found, but appears to be the incorrect folder"
+    }
 
-private fun MediaFolderValidation?.toStatusText(): String = when (this) {
-    null -> ""
-    is MediaFolderValidation.FolderNotFound -> "Folder not found"
-    is MediaFolderValidation.FolderFound -> "Folder found"
-}
+private fun MediaFolderValidation?.toStatusText(): String =
+    when (this) {
+        null -> ""
+        is MediaFolderValidation.FolderNotFound -> "Folder not found"
+        is MediaFolderValidation.FolderFound -> "Folder found"
+    }

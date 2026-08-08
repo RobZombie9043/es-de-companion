@@ -19,7 +19,6 @@ sealed class MusicPlayerAction {
  * independently of pool/track changes so it reacts every snapshot, not just on switches.
  */
 object MusicPlayerActionResolver {
-
     fun resolve(
         hasCurrentTrack: Boolean,
         eligible: Boolean,

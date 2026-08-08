@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * lives in AppContainer for the app's whole lifetime, same as SharedEsdeLogRepository.
  */
 class ProcessActivityVisibilityRepository : ActivityVisibilityRepository {
-
     // Defaults to true: before MainActivity's first onStart/onStop callback lands,
     // assume visible rather than incorrectly suppressing video on cold start.
     private val isVisible = MutableStateFlow(true)

@@ -14,5 +14,6 @@ import kotlinx.coroutines.flow.Flow
  */
 interface ActivityVisibilityRepository {
     fun observeIsVisible(): Flow<Boolean>
+
     fun setVisible(visible: Boolean)
 }

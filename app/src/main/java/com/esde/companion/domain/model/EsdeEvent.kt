@@ -14,7 +14,6 @@ package com.esde.companion.domain.model
  * ES-DE log line the parser also recognizes - see its own kdoc.
  */
 sealed class EsdeEvent {
-
     data class SystemSelect(
         val systemShortName: String,
         val systemFullName: String,
@@ -87,34 +86,39 @@ sealed class EsdeEvent {
  * previousState/mode carried over from prior events (see AppStateReducer), so they are
  * never safe to treat as a starting point by themselves.
  */
-fun EsdeEvent.isStartupAnchor(): Boolean = when (this) {
-    is EsdeEvent.SystemSelect,
-    is EsdeEvent.GameSelect,
-    is EsdeEvent.GameStart,
-    is EsdeEvent.GameEnd,
-    is EsdeEvent.Startup,
-    is EsdeEvent.Quit,
-    is EsdeEvent.Reload -> true
+fun EsdeEvent.isStartupAnchor(): Boolean =
+    when (this) {
+        is EsdeEvent.SystemSelect,
+        is EsdeEvent.GameSelect,
+        is EsdeEvent.GameStart,
+        is EsdeEvent.GameEnd,
+        is EsdeEvent.Startup,
+        is EsdeEvent.Quit,
+        is EsdeEvent.Reload,
+        -> true
 
-    is EsdeEvent.ScreensaverStart,
-    is EsdeEvent.ScreensaverGameSelect,
-    is EsdeEvent.ScreensaverEnd -> false
-}
+        is EsdeEvent.ScreensaverStart,
+        is EsdeEvent.ScreensaverGameSelect,
+        is EsdeEvent.ScreensaverEnd,
+        -> false
+    }
 
 /**
  * Attaches [direction] to whichever event variants render a directional logo slide -
  * SystemSelect/GameSelect - a no-op for every other variant. See NavigationDirectionTracker
  * for how [direction] is derived from the raw log.
  */
-fun EsdeEvent.withDirection(direction: NavigationDirection?): EsdeEvent = when (this) {
-    is EsdeEvent.SystemSelect -> copy(direction = direction)
-    is EsdeEvent.GameSelect -> copy(direction = direction)
-    is EsdeEvent.GameStart,
-    is EsdeEvent.GameEnd,
-    is EsdeEvent.ScreensaverStart,
-    is EsdeEvent.ScreensaverGameSelect,
-    is EsdeEvent.ScreensaverEnd,
-    is EsdeEvent.Startup,
-    is EsdeEvent.Quit,
-    is EsdeEvent.Reload -> this
-}
+fun EsdeEvent.withDirection(direction: NavigationDirection?): EsdeEvent =
+    when (this) {
+        is EsdeEvent.SystemSelect -> copy(direction = direction)
+        is EsdeEvent.GameSelect -> copy(direction = direction)
+        is EsdeEvent.GameStart,
+        is EsdeEvent.GameEnd,
+        is EsdeEvent.ScreensaverStart,
+        is EsdeEvent.ScreensaverGameSelect,
+        is EsdeEvent.ScreensaverEnd,
+        is EsdeEvent.Startup,
+        is EsdeEvent.Quit,
+        is EsdeEvent.Reload,
+        -> this
+    }

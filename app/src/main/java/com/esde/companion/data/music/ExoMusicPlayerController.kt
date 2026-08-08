@@ -9,10 +9,10 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.esde.companion.domain.model.MusicTrack
 import com.esde.companion.domain.repository.MusicPlayerController
-import java.io.File
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import java.io.File
 
 /**
  * Headless ExoPlayer (audio only, no PlayerView) held for the app's whole process
@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.asSharedFlow
  * reduction work off its background dispatcher too).
  */
 class ExoMusicPlayerController(context: Context) : MusicPlayerController {
-
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val player =

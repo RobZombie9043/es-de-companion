@@ -15,6 +15,8 @@ import com.esde.companion.domain.repository.GameMediaRepository
 class ResolveGameMediaUseCase(
     private val gameMediaRepository: GameMediaRepository,
 ) {
-    suspend operator fun invoke(systemShortName: String, romPath: String): GameMedia =
-        gameMediaRepository.resolveMedia(systemShortName, romPath)
+    suspend operator fun invoke(
+        systemShortName: String,
+        romPath: String,
+    ): GameMedia = gameMediaRepository.resolveMedia(systemShortName, romPath)
 }

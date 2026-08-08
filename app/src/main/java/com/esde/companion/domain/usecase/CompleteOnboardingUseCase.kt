@@ -12,7 +12,10 @@ import com.esde.companion.domain.repository.OnboardingRepository
 class CompleteOnboardingUseCase(
     private val onboardingRepository: OnboardingRepository,
 ) {
-    suspend operator fun invoke(logFolderPath: String, mediaFolderPath: String) {
+    suspend operator fun invoke(
+        logFolderPath: String,
+        mediaFolderPath: String,
+    ) {
         onboardingRepository.saveLogFolderPath(logFolderPath)
         onboardingRepository.saveMediaFolderPath(mediaFolderPath)
         onboardingRepository.markOnboardingComplete()

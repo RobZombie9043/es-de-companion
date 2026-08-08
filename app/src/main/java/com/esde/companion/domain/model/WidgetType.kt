@@ -41,6 +41,7 @@ sealed class WidgetType {
         val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
         val glintEnabled: Boolean = false,
     ) : WidgetType()
+
     /**
      * A whole-system image sourced from the Custom System Images folder (Settings >
      * Setup): a literal `<systemShortName>.<ext>` file. Falls back to a random FanArt,

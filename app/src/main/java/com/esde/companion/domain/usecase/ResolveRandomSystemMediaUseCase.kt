@@ -11,6 +11,8 @@ import com.esde.companion.domain.repository.SystemMediaRepository
 class ResolveRandomSystemMediaUseCase(
     private val systemMediaRepository: SystemMediaRepository,
 ) {
-    suspend operator fun invoke(systemShortName: String, mediaType: MediaType): String? =
-        systemMediaRepository.randomMedia(systemShortName, mediaType)
+    suspend operator fun invoke(
+        systemShortName: String,
+        mediaType: MediaType,
+    ): String? = systemMediaRepository.randomMedia(systemShortName, mediaType)
 }

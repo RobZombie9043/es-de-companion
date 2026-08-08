@@ -25,9 +25,9 @@ import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
-import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
+import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
@@ -101,20 +101,22 @@ class SettingsViewModel(
     private val observeLaunchEsdeOnStartEnabledUseCase: ObserveLaunchEsdeOnStartEnabledUseCase,
     private val setLaunchEsdeOnStartEnabledUseCase: SetLaunchEsdeOnStartEnabledUseCase,
 ) : ViewModel() {
-
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
     // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient.
-    private val _uiState = MutableStateFlow(
-        SettingsUiState(permissionGranted = AllFilesAccessPermission.isGranted()),
-    )
+    private val _uiState =
+        MutableStateFlow(
+            SettingsUiState(permissionGranted = AllFilesAccessPermission.isGranted()),
+        )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val logPath = onboardingRepository.observeLogFolderPath().first()
-                ?: onboardingRepository.defaultLogFolderPath()
-            val mediaPath = onboardingRepository.observeMediaFolderPath().first()
-                ?: onboardingRepository.defaultMediaFolderPath()
+            val logPath =
+                onboardingRepository.observeLogFolderPath().first()
+                    ?: onboardingRepository.defaultLogFolderPath()
+            val mediaPath =
+                onboardingRepository.observeMediaFolderPath().first()
+                    ?: onboardingRepository.defaultMediaFolderPath()
             val customSystemImagesPath = onboardingRepository.observeCustomSystemImagesFolderPath().first()
             val customLogosPath = onboardingRepository.observeCustomLogosFolderPath().first()
             val customMusicPath = onboardingRepository.observeCustomMusicFolderPath().first()
@@ -138,33 +140,34 @@ class SettingsViewModel(
             val closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first()
             val settingsFabVisible = observeSettingsFabVisibleUseCase().first()
             val launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first()
-            _uiState.value = _uiState.value.copy(
-                logFolderPath = logPath,
-                mediaFolderPath = mediaPath,
-                customSystemImagesFolderPath = customSystemImagesPath,
-                customLogosFolderPath = customLogosPath,
-                customMusicFolderPath = customMusicPath,
-                gamePlayingBehavior = gamePlayingBehavior,
-                screensaverBehavior = screensaverBehavior,
-                themePreference = themePreference,
-                overlayOpacityPercent = overlayOpacityPercent,
-                gridColumns = gridColumns,
-                sortFoldersOnTop = sortFoldersOnTop,
-                dockEnabled = dockEnabled,
-                dockMaxApps = dockMaxApps,
-                dockSize = dockSize,
-                videoPlaybackEnabled = videoPlaybackEnabled,
-                videoDelaySeconds = videoDelaySeconds,
-                videoAudioEnabled = videoAudioEnabled,
-                musicEnabled = musicEnabled,
-                musicPlayWhileBrowsingSystems = musicPlayWhileBrowsingSystems,
-                musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
-                musicPlayDuringScreensaver = musicPlayDuringScreensaver,
-                musicDuckingMode = musicDuckingMode,
-                closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
-                settingsFabVisible = settingsFabVisible,
-                launchEsdeOnStartEnabled = launchEsdeOnStartEnabled,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    logFolderPath = logPath,
+                    mediaFolderPath = mediaPath,
+                    customSystemImagesFolderPath = customSystemImagesPath,
+                    customLogosFolderPath = customLogosPath,
+                    customMusicFolderPath = customMusicPath,
+                    gamePlayingBehavior = gamePlayingBehavior,
+                    screensaverBehavior = screensaverBehavior,
+                    themePreference = themePreference,
+                    overlayOpacityPercent = overlayOpacityPercent,
+                    gridColumns = gridColumns,
+                    sortFoldersOnTop = sortFoldersOnTop,
+                    dockEnabled = dockEnabled,
+                    dockMaxApps = dockMaxApps,
+                    dockSize = dockSize,
+                    videoPlaybackEnabled = videoPlaybackEnabled,
+                    videoDelaySeconds = videoDelaySeconds,
+                    videoAudioEnabled = videoAudioEnabled,
+                    musicEnabled = musicEnabled,
+                    musicPlayWhileBrowsingSystems = musicPlayWhileBrowsingSystems,
+                    musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
+                    musicPlayDuringScreensaver = musicPlayDuringScreensaver,
+                    musicDuckingMode = musicDuckingMode,
+                    closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
+                    settingsFabVisible = settingsFabVisible,
+                    launchEsdeOnStartEnabled = launchEsdeOnStartEnabled,
+                )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
             customSystemImagesPath?.let { validateCustomSystemImagesFolder(it) }
@@ -333,10 +336,11 @@ class SettingsViewModel(
     }
 
     fun onCustomSystemImagesFolderCleared() {
-        _uiState.value = _uiState.value.copy(
-            customSystemImagesFolderPath = null,
-            customSystemImagesFolderValidation = null,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                customSystemImagesFolderPath = null,
+                customSystemImagesFolderValidation = null,
+            )
         viewModelScope.launch { onboardingRepository.clearCustomSystemImagesFolderPath() }
     }
 
@@ -356,10 +360,11 @@ class SettingsViewModel(
     private suspend fun validateCustomSystemImagesFolder(path: String) {
         _uiState.value = _uiState.value.copy(isValidatingCustomSystemImagesFolder = true)
         val result = validateMediaFolderUseCase(path)
-        _uiState.value = _uiState.value.copy(
-            isValidatingCustomSystemImagesFolder = false,
-            customSystemImagesFolderValidation = result,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                isValidatingCustomSystemImagesFolder = false,
+                customSystemImagesFolderValidation = result,
+            )
     }
 
     private suspend fun validateCustomLogosFolder(path: String) {

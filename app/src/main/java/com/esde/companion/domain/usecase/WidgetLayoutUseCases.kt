@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.map
 class ObserveWidgetCanvasUseCase(
     private val repository: WidgetLayoutRepository,
 ) {
-    operator fun invoke(stateGroup: StateGroup, grid: GridDimensions): Flow<List<PlacedWidget>> =
+    operator fun invoke(
+        stateGroup: StateGroup,
+        grid: GridDimensions,
+    ): Flow<List<PlacedWidget>> =
         repository.observeCanvas(stateGroup).map { saved ->
             when {
                 saved.widgets.isEmpty() -> defaultCanvas(stateGroup, grid)
@@ -25,6 +28,9 @@ class ObserveWidgetCanvasUseCase(
 class SaveWidgetCanvasUseCase(
     private val repository: WidgetLayoutRepository,
 ) {
-    suspend operator fun invoke(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions) =
-        repository.saveCanvas(stateGroup, widgets, grid)
+    suspend operator fun invoke(
+        stateGroup: StateGroup,
+        widgets: List<PlacedWidget>,
+        grid: GridDimensions,
+    ) = repository.saveCanvas(stateGroup, widgets, grid)
 }

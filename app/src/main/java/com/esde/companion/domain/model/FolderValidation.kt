@@ -20,5 +20,6 @@ sealed class LogFolderValidation {
 
 sealed class MediaFolderValidation {
     data object FolderNotFound : MediaFolderValidation()
+
     data object FolderFound : MediaFolderValidation()
 }

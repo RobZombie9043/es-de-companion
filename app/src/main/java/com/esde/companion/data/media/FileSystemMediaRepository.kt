@@ -2,9 +2,9 @@ package com.esde.companion.data.media
 
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.repository.SystemMediaRepository
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Picks a random file of [MediaType] from `<mediaFolderPath>/<systemShortName>/<type>/`,
@@ -16,8 +16,10 @@ import kotlinx.coroutines.withContext
 class FileSystemMediaRepository(
     private val mediaFolderPath: String,
 ) : SystemMediaRepository {
-
-    override suspend fun randomMedia(systemShortName: String, mediaType: MediaType): String? =
+    override suspend fun randomMedia(
+        systemShortName: String,
+        mediaType: MediaType,
+    ): String? =
         withContext(Dispatchers.IO) {
             val typeDir = File(mediaFolderPath, "$systemShortName/${mediaType.folderName}")
             if (!typeDir.isDirectory) return@withContext null

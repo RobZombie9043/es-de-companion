@@ -10,5 +10,6 @@ import kotlinx.coroutines.flow.Flow
  */
 interface VideoPlaybackStateRepository {
     fun observeIsPlaying(): Flow<Boolean>
+
     fun setIsPlaying(playing: Boolean)
 }

@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetPanZoomEligibilityTest {
-
     private val panZoomEligibleMediaTypes = setOf(MediaType.FanArt, MediaType.Screenshots, MediaType.TitleScreens)
 
     // --- supportsPanZoom: non-media variants ---------------------------------------------
@@ -54,17 +53,18 @@ class WidgetPanZoomEligibilityTest {
 
     @Test
     fun `Marquees and instant-only media types are never pan-zoom eligible`() {
-        val ineligible = setOf(
-            MediaType.Marquees,
-            MediaType.Covers,
-            MediaType.ThreeDBoxes,
-            MediaType.MixImages,
-            MediaType.BackCovers,
-            MediaType.PhysicalMedia,
-            MediaType.Videos,
-            MediaType.Manuals,
-            MediaType.Custom,
-        )
+        val ineligible =
+            setOf(
+                MediaType.Marquees,
+                MediaType.Covers,
+                MediaType.ThreeDBoxes,
+                MediaType.MixImages,
+                MediaType.BackCovers,
+                MediaType.PhysicalMedia,
+                MediaType.Videos,
+                MediaType.Manuals,
+                MediaType.Custom,
+            )
         for (mediaType in ineligible) {
             assertFalse("GameMedia($mediaType)", WidgetType.GameMedia(mediaType, ScaleMode.Fill).supportsPanZoom)
         }

@@ -10,7 +10,6 @@ package com.esde.companion.domain.model
  * observes this type rather than AppState directly.
  */
 sealed class EsdeConnectionState {
-
     /** es_log.txt does not currently exist at the configured path. */
     data object LogFileNotFound : EsdeConnectionState()
 

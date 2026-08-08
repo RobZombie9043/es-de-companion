@@ -6,7 +6,6 @@ package com.esde.companion.domain.model
  * uninstalled members dropped) - see [buildDrawerItems], the only place this is produced.
  */
 sealed interface DrawerItem {
-
     /** Display label, used to sort apps and folders into one alphabetical grid. */
     val label: String
 

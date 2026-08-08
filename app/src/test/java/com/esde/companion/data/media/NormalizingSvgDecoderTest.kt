@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NormalizingSvgDecoderTest {
-
     @Test
     fun `handles an Illustrator-style export with a DOCTYPE, switch fallback, and large embedded CDATA`() {
         // Reproduces the structure that broke NormalizingSvgDecoder against a real bundled
@@ -17,7 +16,8 @@ class NormalizingSvgDecoderTest {
         // rather than a real asset file so the regression coverage doesn't depend on that
         // bundled logo keeping this exact shape.
         val hugeCdata = "A".repeat(150_000)
-        val xml = """
+        val xml =
+            """
             <?xml version="1.0" encoding="utf-8"?>
             <!DOCTYPE svg [
                 <!ENTITY ns_ai "http://ns.adobe.com/AdobeIllustrator/10.0/">
@@ -29,7 +29,7 @@ class NormalizingSvgDecoderTest {
             </switch>
             <metadata><![CDATA[$hugeCdata]]></metadata>
             </svg>
-        """.trimIndent()
+            """.trimIndent()
 
         val result = normalizeSmallViewBoxSvg(xml)
 
@@ -107,13 +107,14 @@ class NormalizingSvgDecoderTest {
 
     @Test
     fun `preserves everything between the opening and closing tags, including defs and metadata`() {
-        val xml = """
+        val xml =
+            """
             <svg viewBox="0 0 168 62">
               <defs><clipPath id="a"><rect width="10" height="10"/></clipPath></defs>
               <sodipodi:namedview id="namedview"/>
               <path d="M1 1" clip-path="url(#a)"/>
             </svg>
-        """.trimIndent()
+            """.trimIndent()
 
         val result = normalizeSmallViewBoxSvg(xml)
 

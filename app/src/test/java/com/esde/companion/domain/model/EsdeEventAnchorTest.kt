@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EsdeEventAnchorTest {
-
     @Test
     fun `screensaver events are never startup anchors`() {
         assertFalse(EsdeEvent.ScreensaverStart("manual").isStartupAnchor())

@@ -26,10 +26,11 @@ fun AppDrawerHandle(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .width(40.dp)
-                .height(6.dp)
-                .background(color = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(3.dp)),
+            modifier =
+                Modifier
+                    .width(40.dp)
+                    .height(6.dp)
+                    .background(color = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(3.dp)),
         )
     }
 }

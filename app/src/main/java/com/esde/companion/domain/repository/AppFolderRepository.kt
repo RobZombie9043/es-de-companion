@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
  * two folders) - see [AppFolder]'s kdoc on where that invariant is actually enforced.
  */
 interface AppFolderRepository {
-
     suspend fun setFolders(folders: List<AppFolder>)
+
     fun observeFolders(): Flow<List<AppFolder>>
 }

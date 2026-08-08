@@ -19,8 +19,9 @@ enum class NavigationDirection {
  * anything other than a recognized directional press (e.g. a back/select button, or no
  * preceding controller input at all).
  */
-fun AppState.navigationDirection(): NavigationDirection? = when (this) {
-    is AppState.BrowsingSystem -> navigationDirection
-    is AppState.BrowsingGame -> navigationDirection
-    is AppState.Idle, is AppState.PlayingGame, is AppState.Screensaver -> null
-}
+fun AppState.navigationDirection(): NavigationDirection? =
+    when (this) {
+        is AppState.BrowsingSystem -> navigationDirection
+        is AppState.BrowsingGame -> navigationDirection
+        is AppState.Idle, is AppState.PlayingGame, is AppState.Screensaver -> null
+    }

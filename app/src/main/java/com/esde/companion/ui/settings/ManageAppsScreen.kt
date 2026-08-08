@@ -32,7 +32,10 @@ import com.esde.companion.data.apps.AppIconLoader
  * [ManageAppsViewModel] - there's no separate save step, matching the rest of Settings.
  */
 @Composable
-fun ManageAppsScreen(viewModel: ManageAppsViewModel, modifier: Modifier = Modifier) {
+fun ManageAppsScreen(
+    viewModel: ManageAppsViewModel,
+    modifier: Modifier = Modifier,
+) {
     val rows by viewModel.rows.collectAsStateWithLifecycle()
 
     LazyColumn(
@@ -50,7 +53,10 @@ fun ManageAppsScreen(viewModel: ManageAppsViewModel, modifier: Modifier = Modifi
 }
 
 @Composable
-private fun ManageAppsRow(row: AppVisibilityRow, onToggle: (hidden: Boolean) -> Unit) {
+private fun ManageAppsRow(
+    row: AppVisibilityRow,
+    onToggle: (hidden: Boolean) -> Unit,
+) {
     val context = LocalContext.current
     val icon by produceState<Any?>(initialValue = null, key1 = row.app.packageName) {
         value = AppIconLoader.loadIcon(context, row.app.packageName)
@@ -72,9 +78,10 @@ private fun ManageAppsRow(row: AppVisibilityRow, onToggle: (hidden: Boolean) -> 
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

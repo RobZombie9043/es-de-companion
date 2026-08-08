@@ -6,6 +6,5 @@ import com.esde.companion.domain.repository.OnboardingRepository
 class ValidateEsdeMediaFolderUseCase(
     private val onboardingRepository: OnboardingRepository,
 ) {
-    suspend operator fun invoke(path: String): MediaFolderValidation =
-        onboardingRepository.validateMediaFolder(path)
+    suspend operator fun invoke(path: String): MediaFolderValidation = onboardingRepository.validateMediaFolder(path)
 }

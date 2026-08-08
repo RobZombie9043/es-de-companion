@@ -32,19 +32,20 @@ class GameManualViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
 ) : ViewModel() {
+    private val currentGameReference: Flow<GameReference?> =
+        observeConnectionState()
+            .map { connection -> (connection as? EsdeConnectionState.Connected)?.appState?.currentGameReference() }
+            .distinctUntilChanged()
 
-    private val currentGameReference: Flow<GameReference?> = observeConnectionState()
-        .map { connection -> (connection as? EsdeConnectionState.Connected)?.appState?.currentGameReference() }
-        .distinctUntilChanged()
-
-    val pdfPath: StateFlow<String?> = currentGameReference
-        .map { gameRef -> gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath).path(MediaType.Manuals) } }
-        .distinctUntilChanged()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = null,
-        )
+    val pdfPath: StateFlow<String?> =
+        currentGameReference
+            .map { gameRef -> gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath).path(MediaType.Manuals) } }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = null,
+            )
 
     private var renderer: PdfManualRenderer? = null
     private var openedForPath: String? = null

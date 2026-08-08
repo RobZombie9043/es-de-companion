@@ -11,8 +11,10 @@ class ReactiveSystemMediaRepository(
         FileSystemMediaRepository(mediaFolderPath = folder)
     },
 ) : SystemMediaRepository {
-
-    override suspend fun randomMedia(systemShortName: String, mediaType: MediaType): String? {
+    override suspend fun randomMedia(
+        systemShortName: String,
+        mediaType: MediaType,
+    ): String? {
         val folder = mediaFolderPath.first() ?: return null
         return repositoryFactory(folder).randomMedia(systemShortName, mediaType)
     }

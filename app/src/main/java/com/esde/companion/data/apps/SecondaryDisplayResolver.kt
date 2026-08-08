@@ -13,7 +13,6 @@ import android.view.WindowManager
  * something worth a picker UI right now.
  */
 object SecondaryDisplayResolver {
-
     fun secondaryDisplayId(context: Context): Int? {
         val displayManager = context.getSystemService(DisplayManager::class.java) ?: return null
         val currentDisplayId = currentDisplayId(context)

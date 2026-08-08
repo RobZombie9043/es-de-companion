@@ -53,22 +53,22 @@ import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
  * class (no built-in ordinal) and some steps are conditionally skipped, so adjacent steps
  * in a given run aren't always adjacent here. */
 private val OnboardingStep.order: Int
-    get() = when (this) {
-        OnboardingStep.Permission -> 0
-        OnboardingStep.EsdeFolder -> 1
-        OnboardingStep.MediaFolder -> 2
-        OnboardingStep.LegacyScripts -> 3
-        OnboardingStep.EventScriptSettings -> 4
-        OnboardingStep.LiveLogCheck -> 5
-    }
+    get() =
+        when (this) {
+            OnboardingStep.Permission -> 0
+            OnboardingStep.EsdeFolder -> 1
+            OnboardingStep.MediaFolder -> 2
+            OnboardingStep.LegacyScripts -> 3
+            OnboardingStep.EventScriptSettings -> 4
+            OnboardingStep.LiveLogCheck -> 5
+        }
 
 /** Onboarding text renders directly over the themed fallback background image rather than
  * an opaque Material surface, so it can't rely on colorScheme.onBackground/onSurface for
  * contrast the way a flat-colored Surface could - white in dark mode, black in light mode,
  * same explicit-contrast approach AppDrawer/AppDock use for text over background art. */
 @Composable
-private fun onboardingContentColor(): Color =
-    if (LocalIsDarkTheme.current) Color.White else Color.Black
+private fun onboardingContentColor(): Color = if (LocalIsDarkTheme.current) Color.White else Color.Black
 
 @Composable
 fun OnboardingScreen(
@@ -92,11 +92,12 @@ fun OnboardingScreen(
     val currentOnPermissionResult = rememberUpdatedState(viewModel::onPermissionResult)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                currentOnPermissionResult.value(AllFilesAccessPermission.isGranted())
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    currentOnPermissionResult.value(AllFilesAccessPermission.isGranted())
+                }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -141,57 +142,63 @@ fun OnboardingScreen(
                         label = "onboardingStepContent",
                     ) { step ->
                         when (step) {
-                            OnboardingStep.Permission -> PermissionStep(
-                                granted = uiState.permissionGranted,
-                                onBack = onBack,
-                                onNext = { viewModel.onPermissionResult(uiState.permissionGranted) },
-                            )
+                            OnboardingStep.Permission ->
+                                PermissionStep(
+                                    granted = uiState.permissionGranted,
+                                    onBack = onBack,
+                                    onNext = { viewModel.onPermissionResult(uiState.permissionGranted) },
+                                )
 
-                            OnboardingStep.EsdeFolder -> EsdeFolderStep(
-                                path = uiState.logFolderPath,
-                                validation = uiState.logFolderValidation,
-                                isValidating = uiState.isValidatingLogFolder,
-                                isCheckingInstallation = uiState.isCheckingInstallation,
-                                onPickFolder = { uri ->
-                                    SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
-                                },
-                                onBack = onBack,
-                                onNext = viewModel::onEsdeFolderConfirmed,
-                            )
+                            OnboardingStep.EsdeFolder ->
+                                EsdeFolderStep(
+                                    path = uiState.logFolderPath,
+                                    validation = uiState.logFolderValidation,
+                                    isValidating = uiState.isValidatingLogFolder,
+                                    isCheckingInstallation = uiState.isCheckingInstallation,
+                                    onPickFolder = { uri ->
+                                        SafPathResolver.resolvePath(uri)?.let(viewModel::onEsdeFolderPicked)
+                                    },
+                                    onBack = onBack,
+                                    onNext = viewModel::onEsdeFolderConfirmed,
+                                )
 
-                            OnboardingStep.MediaFolder -> MediaFolderStep(
-                                path = uiState.mediaFolderPath,
-                                validation = uiState.mediaFolderValidation,
-                                isValidating = uiState.isValidatingMediaFolder,
-                                autoDetected = uiState.mediaFolderAutoDetected,
-                                onPickFolder = { uri ->
-                                    SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
-                                },
-                                onBack = onBack,
-                                onNext = viewModel::onMediaFolderConfirmed,
-                            )
+                            OnboardingStep.MediaFolder ->
+                                MediaFolderStep(
+                                    path = uiState.mediaFolderPath,
+                                    validation = uiState.mediaFolderValidation,
+                                    isValidating = uiState.isValidatingMediaFolder,
+                                    autoDetected = uiState.mediaFolderAutoDetected,
+                                    onPickFolder = { uri ->
+                                        SafPathResolver.resolvePath(uri)?.let(viewModel::onMediaFolderPicked)
+                                    },
+                                    onBack = onBack,
+                                    onNext = viewModel::onMediaFolderConfirmed,
+                                )
 
-                            OnboardingStep.LegacyScripts -> LegacyScriptsStep(
-                                scriptFiles = uiState.legacyScriptFiles,
-                                isDeleting = uiState.isDeletingLegacyScripts,
-                                onDelete = viewModel::onDeleteLegacyScriptFiles,
-                                onBack = onBack,
-                                onNext = viewModel::onLegacyScriptsConfirmed,
-                            )
+                            OnboardingStep.LegacyScripts ->
+                                LegacyScriptsStep(
+                                    scriptFiles = uiState.legacyScriptFiles,
+                                    isDeleting = uiState.isDeletingLegacyScripts,
+                                    onDelete = viewModel::onDeleteLegacyScriptFiles,
+                                    onBack = onBack,
+                                    onNext = viewModel::onLegacyScriptsConfirmed,
+                                )
 
-                            OnboardingStep.EventScriptSettings -> EventScriptSettingsStep(
-                                settings = uiState.eventScriptSettings,
-                                onBack = onBack,
-                                onNext = viewModel::onEventScriptSettingsConfirmed,
-                            )
+                            OnboardingStep.EventScriptSettings ->
+                                EventScriptSettingsStep(
+                                    settings = uiState.eventScriptSettings,
+                                    onBack = onBack,
+                                    onNext = viewModel::onEventScriptSettingsConfirmed,
+                                )
 
-                            OnboardingStep.LiveLogCheck -> LiveLogCheckStep(
-                                connectionState = uiState.connectionState,
-                                passed = uiState.liveCheckPassed,
-                                isCompleting = uiState.isCompleting,
-                                onBack = onBack,
-                                onNext = viewModel::onFinishSetup,
-                            )
+                            OnboardingStep.LiveLogCheck ->
+                                LiveLogCheckStep(
+                                    connectionState = uiState.connectionState,
+                                    passed = uiState.liveCheckPassed,
+                                    isCompleting = uiState.isCompleting,
+                                    onBack = onBack,
+                                    onNext = viewModel::onFinishSetup,
+                                )
                         }
                     }
                 }
@@ -207,14 +214,16 @@ private fun PermissionStep(
     onNext: () -> Unit,
 ) {
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        // Result code is ignored - the DisposableEffect's ON_RESUME check in
-        // OnboardingScreen is what actually re-evaluates isExternalStorageManager().
-    }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            // Result code is ignored - the DisposableEffect's ON_RESUME check in
+            // OnboardingScreen is what actually re-evaluates isExternalStorageManager().
+        }
 
     StepScaffold(
         title = "Storage access",
-        description = "ES-DE Companion reads ES-DE's log file and media folder directly " +
+        description =
+            "ES-DE Companion reads ES-DE's log file and media folder directly " +
                 "from storage. Grant \"All files access\" to continue.",
         onBack = onBack,
         onNext = onNext,
@@ -240,9 +249,10 @@ private fun EsdeFolderStep(
     onBack: (() -> Unit)?,
     onNext: () -> Unit,
 ) {
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let(onPickFolder)
-    }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let(onPickFolder)
+        }
 
     val settingsFileFound = (validation as? LogFolderValidation.FolderFound)?.settingsFileFound == true
     val folderExistsButLooksWrong = validation is LogFolderValidation.FolderFound && !settingsFileFound
@@ -257,10 +267,11 @@ private fun EsdeFolderStep(
         when {
             isValidating -> CircularProgressIndicator()
             settingsFileFound -> Text("Found settings/es_settings.xml - this looks right.")
-            folderExistsButLooksWrong -> Text(
-                "This folder exists, but settings/es_settings.xml wasn't found inside it - " +
+            folderExistsButLooksWrong ->
+                Text(
+                    "This folder exists, but settings/es_settings.xml wasn't found inside it - " +
                         "it appears to be the incorrect folder. Choose the correct one to continue.",
-            )
+                )
             validation is LogFolderValidation.FolderNotFound -> Text("This folder doesn't exist. Choose the correct folder.")
         }
 
@@ -285,9 +296,10 @@ private fun MediaFolderStep(
     onBack: (() -> Unit)?,
     onNext: () -> Unit,
 ) {
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        uri?.let(onPickFolder)
-    }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let(onPickFolder)
+        }
 
     StepScaffold(
         title = "Media folder",
@@ -299,9 +311,10 @@ private fun MediaFolderStep(
         when {
             isValidating -> CircularProgressIndicator()
             validation is MediaFolderValidation.FolderFound -> Text("Folder found.")
-            validation is MediaFolderValidation.FolderNotFound && autoDetected -> Text(
-                "ES-DE's settings point at this path, but it doesn't exist - choose the correct folder.",
-            )
+            validation is MediaFolderValidation.FolderNotFound && autoDetected ->
+                Text(
+                    "ES-DE's settings point at this path, but it doesn't exist - choose the correct folder.",
+                )
             validation is MediaFolderValidation.FolderNotFound -> Text("This folder doesn't exist. Choose the correct folder.")
         }
 
@@ -321,7 +334,8 @@ private fun LegacyScriptsStep(
 ) {
     StepScaffold(
         title = "Leftover script files",
-        description = "Found ${scriptFiles.size} leftover script file(s) from an older " +
+        description =
+            "Found ${scriptFiles.size} leftover script file(s) from an older " +
                 "version of ES-DE Companion. These are no longer required - removing them " +
                 "will lead to improved performance.",
         onBack = onBack,
@@ -350,7 +364,8 @@ private fun EventScriptSettingsStep(
 
     StepScaffold(
         title = "ES-DE settings",
-        description = "ES-DE Companion needs a few settings enabled in ES-DE itself: " +
+        description =
+            "ES-DE Companion needs a few settings enabled in ES-DE itself: " +
                 "Main Menu > Other Settings >",
         onBack = onBack,
         onNext = onNext,
@@ -371,7 +386,7 @@ private fun EventScriptSettingsStep(
         } else {
             Text(
                 "Make these changes in ES-DE, then navigate back out of the settings menu - " +
-                        "this will be detected automatically.",
+                    "this will be detected automatically.",
             )
         }
     }
@@ -387,7 +402,8 @@ private fun LiveLogCheckStep(
 ) {
     StepScaffold(
         title = "Confirm it's working",
-        description = "Browse to a system or game in ES-DE now, to confirm the log is " +
+        description =
+            "Browse to a system or game in ES-DE now, to confirm the log is " +
                 "found and generating activity.",
         onBack = onBack,
         onNext = onNext,
@@ -415,9 +431,10 @@ private fun StepScaffold(
     content: @Composable () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(text = title, style = MaterialTheme.typography.headlineSmall)

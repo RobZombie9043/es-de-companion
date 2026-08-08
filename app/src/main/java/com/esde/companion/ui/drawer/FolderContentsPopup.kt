@@ -77,9 +77,10 @@ fun FolderContentsPopup(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -88,15 +89,16 @@ fun FolderContentsPopup(
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .weight(1f)
-                    .combinedClickable(
-                        onClick = {},
-                        onLongClick = {
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            showRenameDialog = true
-                        },
-                    ),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                showRenameDialog = true
+                            },
+                        ),
             )
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Filled.Close, contentDescription = "Close folder")
@@ -120,11 +122,12 @@ fun FolderContentsPopup(
                     isInsideFolder = true,
                     contentColor = contentColor,
                     onClick = {
-                        val displayId = if (isOtherScreenPreferred) {
-                            SecondaryDisplayResolver.secondaryDisplayId(context)
-                        } else {
-                            null
-                        }
+                        val displayId =
+                            if (isOtherScreenPreferred) {
+                                SecondaryDisplayResolver.secondaryDisplayId(context)
+                            } else {
+                                null
+                            }
                         AppLauncher.launch(context, app.packageName, displayId = displayId)
                         onAppLaunched()
                     },

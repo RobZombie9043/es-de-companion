@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AutoCollectionAssetsTest {
-
     @Test
     fun `maps each known auto collection to its asset name`() {
         assertEquals("auto-allgames", systemLogoAssetName("all"))

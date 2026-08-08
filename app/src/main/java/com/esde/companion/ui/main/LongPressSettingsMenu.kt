@@ -74,27 +74,28 @@ import kotlinx.coroutines.launch
  * of trying it. */
 private const val EASTER_EGG_TAP_THRESHOLD = 7
 
-private val EasterEggMessages = listOf(
-    "It's dangerous to go alone! Take this.",
-    "Hey! Listen!",
-    "Do a barrel roll!",
-    "Snake? Snake?! SNAAAAAKE!",
-    "The cake is a lie.",
-    "Stay a while and listen.",
-    "Praise the Sun!",
-    "War. War never changes.",
-    "Would you kindly...",
-    "Finish the fight.",
-    "Rip and tear!",
-    "You must construct additional pylons.",
-    "Gotta go fast!",
-    "A winner is you!",
-    "Wake up, we've got a city to burn.",
-    "The princess is in another castle.",
-    "Get over here!",
-    "There is no cow level.",
-    "Wake me. When you need me.",
-)
+private val EasterEggMessages =
+    listOf(
+        "It's dangerous to go alone! Take this.",
+        "Hey! Listen!",
+        "Do a barrel roll!",
+        "Snake? Snake?! SNAAAAAKE!",
+        "The cake is a lie.",
+        "Stay a while and listen.",
+        "Praise the Sun!",
+        "War. War never changes.",
+        "Would you kindly...",
+        "Finish the fight.",
+        "Rip and tear!",
+        "You must construct additional pylons.",
+        "Gotta go fast!",
+        "A winner is you!",
+        "Wake up, we've got a city to burn.",
+        "The princess is in another castle.",
+        "Get over here!",
+        "There is no cow level.",
+        "Wake me. When you need me.",
+    )
 
 /**
  * The menu's single navigation state - Home (the [SettingsCategory] list), a drilled-into
@@ -107,7 +108,9 @@ private val EasterEggMessages = listOf(
  */
 private sealed interface MenuPage {
     data object Home : MenuPage
+
     data class Category(val category: SettingsCategory) : MenuPage
+
     data class ManageApps(val fromCategory: SettingsCategory) : MenuPage
 }
 
@@ -116,11 +119,12 @@ private sealed interface MenuPage {
  * stepping back slides in from the left), the same "how many levels deep" comparison the
  * old two-state version made with a plain boolean. */
 private val MenuPage.depth: Int
-    get() = when (this) {
-        MenuPage.Home -> 0
-        is MenuPage.Category -> 1
-        is MenuPage.ManageApps -> 2
-    }
+    get() =
+        when (this) {
+            MenuPage.Home -> 0
+            is MenuPage.Category -> 1
+            is MenuPage.ManageApps -> 2
+        }
 
 /**
  * Full body of the long-press popup - everything that used to be the standalone
@@ -150,11 +154,12 @@ fun LongPressSettingsMenu(
     val currentOnRefresh = rememberUpdatedState(settingsViewModel::refreshPermissionState)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                currentOnRefresh.value(AllFilesAccessPermission.isGranted())
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    currentOnRefresh.value(AllFilesAccessPermission.isGranted())
+                }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -188,11 +193,12 @@ fun LongPressSettingsMenu(
     // Always shown, unlike a plain drill-down title - the top level reads "Settings" (the
     // popup's own identity) rather than having no header at all, matching how
     // SettingsScreen's TopAppBar looked before it was retired.
-    val title = when (val current = page) {
-        MenuPage.Home -> "Settings"
-        is MenuPage.Category -> current.category.title
-        is MenuPage.ManageApps -> "Manage Apps"
-    }
+    val title =
+        when (val current = page) {
+            MenuPage.Home -> "Settings"
+            is MenuPage.Category -> current.category.title
+            is MenuPage.ManageApps -> "Manage Apps"
+        }
 
     Box(modifier = modifier) {
         // Same fallback background image SettingsScreen used to render behind its
@@ -230,80 +236,88 @@ fun LongPressSettingsMenu(
                     label = "longPressSettingsContent",
                 ) { targetPage ->
                     when (targetPage) {
-                        MenuPage.Home -> SettingsMenuHome(
-                            onCategorySelected = { page = MenuPage.Category(it) },
-                            onEditWidgetsClick = onEditWidgetsClick,
-                            onQuitClick = onQuitClick,
-                            onEasterEggUnlocked = onEasterEggUnlocked,
-                        )
+                        MenuPage.Home ->
+                            SettingsMenuHome(
+                                onCategorySelected = { page = MenuPage.Category(it) },
+                                onEditWidgetsClick = onEditWidgetsClick,
+                                onQuitClick = onQuitClick,
+                                onEasterEggUnlocked = onEasterEggUnlocked,
+                            )
 
                         is MenuPage.ManageApps -> ManageAppsScreen(viewModel = manageAppsViewModel)
 
-                        is MenuPage.Category -> when (targetPage.category) {
-                            SettingsCategory.Setup -> SetupSettingsContent(
-                                uiState = uiState,
-                                onLogFolderPicked = settingsViewModel::onLogFolderPicked,
-                                onMediaFolderPicked = settingsViewModel::onMediaFolderPicked,
-                                onCustomSystemImagesFolderPicked = settingsViewModel::onCustomSystemImagesFolderPicked,
-                                onCustomSystemImagesFolderCleared = settingsViewModel::onCustomSystemImagesFolderCleared,
-                                onCustomLogosFolderPicked = settingsViewModel::onCustomLogosFolderPicked,
-                                onCustomLogosFolderCleared = settingsViewModel::onCustomLogosFolderCleared,
-                                onCustomMusicFolderPicked = settingsViewModel::onCustomMusicFolderPicked,
-                                onCustomMusicFolderCleared = settingsViewModel::onCustomMusicFolderCleared,
-                            )
-                            SettingsCategory.UI -> UISettingsContent(
-                                themePreference = uiState.themePreference,
-                                onThemePreferenceChanged = settingsViewModel::onThemePreferenceChanged,
-                                overlayOpacityPercent = uiState.overlayOpacityPercent,
-                                onOverlayOpacityChanged = settingsViewModel::onOverlayOpacityChanged,
-                                gamePlayingBehavior = uiState.gamePlayingBehavior,
-                                onGamePlayingBehaviorChanged = settingsViewModel::onGamePlayingBehaviorChanged,
-                                screensaverBehavior = uiState.screensaverBehavior,
-                                onScreensaverBehaviorChanged = settingsViewModel::onScreensaverBehaviorChanged,
-                            )
-                            SettingsCategory.VideoPlayback -> VideoPlaybackSettingsContent(
-                                videoPlaybackEnabled = uiState.videoPlaybackEnabled,
-                                onVideoPlaybackEnabledChanged = settingsViewModel::onVideoPlaybackEnabledChanged,
-                                videoDelaySeconds = uiState.videoDelaySeconds,
-                                onVideoDelaySecondsChanged = settingsViewModel::onVideoDelaySecondsChanged,
-                                videoAudioEnabled = uiState.videoAudioEnabled,
-                                onVideoAudioEnabledChanged = settingsViewModel::onVideoAudioEnabledChanged,
-                            )
-                            SettingsCategory.AppDrawer -> AppDrawerSettingsContent(
-                                gridColumns = uiState.gridColumns,
-                                onGridColumnsChanged = settingsViewModel::onGridColumnsChanged,
-                                sortFoldersOnTop = uiState.sortFoldersOnTop,
-                                onSortFoldersOnTopChanged = settingsViewModel::onSortFoldersOnTopChanged,
-                                onManageAppsClick = { page = MenuPage.ManageApps(fromCategory = targetPage.category) },
-                                dockEnabled = uiState.dockEnabled,
-                                onDockEnabledChanged = settingsViewModel::onDockEnabledChanged,
-                                dockMaxApps = uiState.dockMaxApps,
-                                onDockMaxAppsChanged = settingsViewModel::onDockMaxAppsChanged,
-                                dockSize = uiState.dockSize,
-                                onDockSizeChanged = settingsViewModel::onDockSizeChanged,
-                            )
-                            SettingsCategory.Sound -> SoundSettingsContent(
-                                musicEnabled = uiState.musicEnabled,
-                                onMusicEnabledChanged = settingsViewModel::onMusicEnabledChanged,
-                                musicPlayWhileBrowsingSystems = uiState.musicPlayWhileBrowsingSystems,
-                                onMusicPlayWhileBrowsingSystemsChanged = settingsViewModel::onMusicPlayWhileBrowsingSystemsChanged,
-                                musicPlayWhileBrowsingGames = uiState.musicPlayWhileBrowsingGames,
-                                onMusicPlayWhileBrowsingGamesChanged = settingsViewModel::onMusicPlayWhileBrowsingGamesChanged,
-                                musicPlayDuringScreensaver = uiState.musicPlayDuringScreensaver,
-                                onMusicPlayDuringScreensaverChanged = settingsViewModel::onMusicPlayDuringScreensaverChanged,
-                                musicDuckingMode = uiState.musicDuckingMode,
-                                onMusicDuckingModeChanged = settingsViewModel::onMusicDuckingModeChanged,
-                            )
-                            SettingsCategory.Other -> OtherSettingsContent(
-                                closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
-                                onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
-                                settingsFabVisible = uiState.settingsFabVisible,
-                                onSettingsFabVisibleChanged = settingsViewModel::onSettingsFabVisibleChanged,
-                                launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
-                                onLaunchEsdeOnStartEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
-                            )
-                            SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
-                        }
+                        is MenuPage.Category ->
+                            when (targetPage.category) {
+                                SettingsCategory.Setup ->
+                                    SetupSettingsContent(
+                                        uiState = uiState,
+                                        onLogFolderPicked = settingsViewModel::onLogFolderPicked,
+                                        onMediaFolderPicked = settingsViewModel::onMediaFolderPicked,
+                                        onCustomSystemImagesFolderPicked = settingsViewModel::onCustomSystemImagesFolderPicked,
+                                        onCustomSystemImagesFolderCleared = settingsViewModel::onCustomSystemImagesFolderCleared,
+                                        onCustomLogosFolderPicked = settingsViewModel::onCustomLogosFolderPicked,
+                                        onCustomLogosFolderCleared = settingsViewModel::onCustomLogosFolderCleared,
+                                        onCustomMusicFolderPicked = settingsViewModel::onCustomMusicFolderPicked,
+                                        onCustomMusicFolderCleared = settingsViewModel::onCustomMusicFolderCleared,
+                                    )
+                                SettingsCategory.UI ->
+                                    UISettingsContent(
+                                        themePreference = uiState.themePreference,
+                                        onThemePreferenceChanged = settingsViewModel::onThemePreferenceChanged,
+                                        overlayOpacityPercent = uiState.overlayOpacityPercent,
+                                        onOverlayOpacityChanged = settingsViewModel::onOverlayOpacityChanged,
+                                        gamePlayingBehavior = uiState.gamePlayingBehavior,
+                                        onGamePlayingBehaviorChanged = settingsViewModel::onGamePlayingBehaviorChanged,
+                                        screensaverBehavior = uiState.screensaverBehavior,
+                                        onScreensaverBehaviorChanged = settingsViewModel::onScreensaverBehaviorChanged,
+                                    )
+                                SettingsCategory.VideoPlayback ->
+                                    VideoPlaybackSettingsContent(
+                                        videoPlaybackEnabled = uiState.videoPlaybackEnabled,
+                                        onVideoPlaybackEnabledChanged = settingsViewModel::onVideoPlaybackEnabledChanged,
+                                        videoDelaySeconds = uiState.videoDelaySeconds,
+                                        onVideoDelaySecondsChanged = settingsViewModel::onVideoDelaySecondsChanged,
+                                        videoAudioEnabled = uiState.videoAudioEnabled,
+                                        onVideoAudioEnabledChanged = settingsViewModel::onVideoAudioEnabledChanged,
+                                    )
+                                SettingsCategory.AppDrawer ->
+                                    AppDrawerSettingsContent(
+                                        gridColumns = uiState.gridColumns,
+                                        onGridColumnsChanged = settingsViewModel::onGridColumnsChanged,
+                                        sortFoldersOnTop = uiState.sortFoldersOnTop,
+                                        onSortFoldersOnTopChanged = settingsViewModel::onSortFoldersOnTopChanged,
+                                        onManageAppsClick = { page = MenuPage.ManageApps(fromCategory = targetPage.category) },
+                                        dockEnabled = uiState.dockEnabled,
+                                        onDockEnabledChanged = settingsViewModel::onDockEnabledChanged,
+                                        dockMaxApps = uiState.dockMaxApps,
+                                        onDockMaxAppsChanged = settingsViewModel::onDockMaxAppsChanged,
+                                        dockSize = uiState.dockSize,
+                                        onDockSizeChanged = settingsViewModel::onDockSizeChanged,
+                                    )
+                                SettingsCategory.Sound ->
+                                    SoundSettingsContent(
+                                        musicEnabled = uiState.musicEnabled,
+                                        onMusicEnabledChanged = settingsViewModel::onMusicEnabledChanged,
+                                        musicPlayWhileBrowsingSystems = uiState.musicPlayWhileBrowsingSystems,
+                                        onMusicPlayWhileBrowsingSystemsChanged = settingsViewModel::onMusicPlayWhileBrowsingSystemsChanged,
+                                        musicPlayWhileBrowsingGames = uiState.musicPlayWhileBrowsingGames,
+                                        onMusicPlayWhileBrowsingGamesChanged = settingsViewModel::onMusicPlayWhileBrowsingGamesChanged,
+                                        musicPlayDuringScreensaver = uiState.musicPlayDuringScreensaver,
+                                        onMusicPlayDuringScreensaverChanged = settingsViewModel::onMusicPlayDuringScreensaverChanged,
+                                        musicDuckingMode = uiState.musicDuckingMode,
+                                        onMusicDuckingModeChanged = settingsViewModel::onMusicDuckingModeChanged,
+                                    )
+                                SettingsCategory.Other ->
+                                    OtherSettingsContent(
+                                        closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
+                                        onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
+                                        settingsFabVisible = uiState.settingsFabVisible,
+                                        onSettingsFabVisibleChanged = settingsViewModel::onSettingsFabVisibleChanged,
+                                        launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
+                                        onLaunchEsdeOnStartEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
+                                    )
+                                SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
+                            }
                     }
                 }
             }
@@ -311,9 +325,10 @@ fun LongPressSettingsMenu(
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
         ) { data ->
             // Same reasoning as SettingsScreen's snackbar used to have: the stock
             // Snackbar always fills the offered max width regardless of how short its
@@ -336,11 +351,15 @@ fun LongPressSettingsMenu(
 }
 
 @Composable
-private fun SettingsMenuHeader(title: String, onBack: () -> Unit) {
+private fun SettingsMenuHeader(
+    title: String,
+    onBack: () -> Unit,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
@@ -358,10 +377,11 @@ private fun SettingsMenuHome(
     onEasterEggUnlocked: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SettingsCategory.entries.forEach { category ->
@@ -389,19 +409,20 @@ private fun SettingsMenuHome(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {
-                        versionTapCount++
-                        if (versionTapCount >= EASTER_EGG_TAP_THRESHOLD) {
-                            versionTapCount = 0
-                            onEasterEggUnlocked()
-                        }
-                    },
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            versionTapCount++
+                            if (versionTapCount >= EASTER_EGG_TAP_THRESHOLD) {
+                                versionTapCount = 0
+                                onEasterEggUnlocked()
+                            }
+                        },
+                    ),
         )
     }
 }

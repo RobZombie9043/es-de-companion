@@ -8,7 +8,6 @@ import coil3.gif.AnimatedImageDecoder
 import com.esde.companion.data.media.NormalizingSvgDecoder
 
 class CompanionApplication : Application(), SingletonImageLoader.Factory {
-
     lateinit var appContainer: AppContainer
         private set
 

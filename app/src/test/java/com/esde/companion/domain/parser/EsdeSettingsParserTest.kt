@@ -5,7 +5,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class EsdeSettingsParserTest {
-
     @Test
     fun `parses a string value`() {
         val xml = """<string name="MediaDirectory" value="/storage/emulated/0/ES-DE/downloaded_media" />"""
@@ -29,7 +28,8 @@ class EsdeSettingsParserTest {
 
     @Test
     fun `finds the right tag among many others in a realistic file`() {
-        val xml = """
+        val xml =
+            """
             <?xml version="1.0"?>
             <config>
                 <string name="ROMDirectory" value="" />
@@ -38,7 +38,7 @@ class EsdeSettingsParserTest {
                 <bool name="DebugMode" value="true" />
                 <string name="MediaDirectory" value="/storage/emulated/0/ES-DE/downloaded_media" />
             </config>
-        """.trimIndent()
+            """.trimIndent()
 
         assertEquals(true, EsdeSettingsParser.findBoolValue(xml, "CustomEventScripts"))
         assertEquals(false, EsdeSettingsParser.findBoolValue(xml, "CustomEventScriptsBrowsing"))

@@ -60,10 +60,11 @@ fun ScrollingText(
             fontSize = fontSizeSp.sp,
             lineHeight = (fontSizeSp * LINE_HEIGHT_RATIO).sp,
             color = Color(textColorArgb),
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState, enabled = userScrollEnabled)
-                .padding(TEXT_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState, enabled = userScrollEnabled)
+                    .padding(TEXT_PADDING),
         )
     }
 

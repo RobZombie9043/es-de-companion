@@ -15,9 +15,10 @@ enum class StateGroup {
  * Maps the live AppState to the widget canvas that should be shown for it, or null for
  * Idle. The widget overlay simply doesn't render when this is null.
  */
-fun AppState.stateGroup(): StateGroup? = when (this) {
-    is AppState.Idle -> null
-    is AppState.BrowsingSystem -> StateGroup.System
-    is AppState.BrowsingGame, is AppState.PlayingGame -> StateGroup.Playing
-    is AppState.Screensaver -> StateGroup.Playing
-}
+fun AppState.stateGroup(): StateGroup? =
+    when (this) {
+        is AppState.Idle -> null
+        is AppState.BrowsingSystem -> StateGroup.System
+        is AppState.BrowsingGame, is AppState.PlayingGame -> StateGroup.Playing
+        is AppState.Screensaver -> StateGroup.Playing
+    }

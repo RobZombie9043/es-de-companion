@@ -24,11 +24,12 @@ fun EsdeCompanionTheme(
     themePreference: ThemePreference = ThemePreference.Auto,
     content: @Composable () -> Unit,
 ) {
-    val isDark = when (themePreference) {
-        ThemePreference.Auto -> isSystemInDarkTheme()
-        ThemePreference.Light -> false
-        ThemePreference.Dark -> true
-    }
+    val isDark =
+        when (themePreference) {
+            ThemePreference.Auto -> isSystemInDarkTheme()
+            ThemePreference.Light -> false
+            ThemePreference.Dark -> true
+        }
     val colorScheme = if (isDark) darkColorScheme() else lightColorScheme()
     CompositionLocalProvider(LocalIsDarkTheme provides isDark) {
         MaterialTheme(colorScheme = colorScheme, content = content)

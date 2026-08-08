@@ -67,7 +67,6 @@ class MusicPlaybackCoordinator(
     private val musicPlayerController: MusicPlayerController,
     applicationScope: CoroutineScope,
 ) {
-
     private val _playbackState = MutableStateFlow<MusicPlaybackState>(MusicPlaybackState.Stopped)
     val playbackState: StateFlow<MusicPlaybackState> = _playbackState.asStateFlow()
 
@@ -184,7 +183,10 @@ class MusicPlaybackCoordinator(
         currentTrack = pickRandomTrack(loadedTracks, excluding = currentTrack)
     }
 
-    private fun pickRandomTrack(tracks: List<MusicTrack>, excluding: MusicTrack?): MusicTrack? {
+    private fun pickRandomTrack(
+        tracks: List<MusicTrack>,
+        excluding: MusicTrack?,
+    ): MusicTrack? {
         if (tracks.isEmpty()) return null
         val candidates = tracks.filter { it != excluding }
         return candidates.ifEmpty { tracks }.random()
@@ -232,7 +234,9 @@ class MusicPlaybackCoordinator(
      * mutating state directly. */
     private sealed class CoordinatorEvent {
         data class SnapshotUpdated(val snapshot: Snapshot) : CoordinatorEvent()
+
         data object TrackCompleted : CoordinatorEvent()
+
         data object PlayPauseToggled : CoordinatorEvent()
     }
 }

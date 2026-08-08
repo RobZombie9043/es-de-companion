@@ -45,8 +45,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FlipToFront
 import androidx.compose.material.icons.filled.FlipToBack
+import androidx.compose.material.icons.filled.FlipToFront
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ZoomIn
@@ -152,36 +152,40 @@ private val MENU_SHAPE = RoundedCornerShape(16.dp)
  * carries sensible default config (scale mode, starting color/alpha) - these are exactly
  * what gets placed on add; per-widget reconfiguration is a later slice.
  */
-private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> = when (stateGroup) {
-    StateGroup.System -> listOf(
-        WidgetType.SystemLogo(ScaleMode.Fit),
-        WidgetType.SystemImage(ScaleMode.Fill),
-        WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
-        WidgetType.SystemMedia(MediaType.Screenshots, ScaleMode.Fill),
-        WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
-        WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
-    )
+private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
+    when (stateGroup) {
+        StateGroup.System ->
+            listOf(
+                WidgetType.SystemLogo(ScaleMode.Fit),
+                WidgetType.SystemImage(ScaleMode.Fill),
+                WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
+                WidgetType.SystemMedia(MediaType.Screenshots, ScaleMode.Fill),
+                WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
+                WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
+            )
 
-    StateGroup.Playing -> listOf(
-        WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
-        WidgetType.GameDescription(),
-        WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit),
-        WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit),
-        WidgetType.GameMedia(MediaType.MixImages, ScaleMode.Fill),
-        WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill),
-        WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill),
-        WidgetType.GameMedia(MediaType.TitleScreens, ScaleMode.Fit),
-        WidgetType.GameMedia(MediaType.BackCovers, ScaleMode.Fit),
-        WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit),
-        WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
-        WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
-    )
-}
+        StateGroup.Playing ->
+            listOf(
+                WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
+                WidgetType.GameDescription(),
+                WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit),
+                WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit),
+                WidgetType.GameMedia(MediaType.MixImages, ScaleMode.Fill),
+                WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill),
+                WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill),
+                WidgetType.GameMedia(MediaType.TitleScreens, ScaleMode.Fit),
+                WidgetType.GameMedia(MediaType.BackCovers, ScaleMode.Fit),
+                WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit),
+                WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
+                WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
+            )
+    }
 
-private fun StateGroup.displayLabel(): String = when (this) {
-    StateGroup.System -> "System Canvas"
-    StateGroup.Playing -> "Game Canvas"
-}
+private fun StateGroup.displayLabel(): String =
+    when (this) {
+        StateGroup.System -> "System Canvas"
+        StateGroup.Playing -> "Game Canvas"
+    }
 
 /**
  * Full-screen edit-mode overlay - not a nav destination, same pattern as the App Drawer
@@ -241,11 +245,12 @@ fun EditWidgetsOverlay(
             // instantly see something real" experience instead of adding a placeholder
             // that still needs a follow-up Configure Widget step. Cancelling the picker
             // (null result) adds nothing.
-            val addCustomImageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                uri?.let(SafPathResolver::resolveDocumentPath)?.let { path ->
-                    viewModel.addWidget(WidgetType.CustomImage(path = path, scaleMode = ScaleMode.Fill))
+            val addCustomImageLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                    uri?.let(SafPathResolver::resolveDocumentPath)?.let { path ->
+                        viewModel.addWidget(WidgetType.CustomImage(path = path, scaleMode = ScaleMode.Fill))
+                    }
                 }
-            }
 
             // Without this, back falls through to the system default and exits the app -
             // MainScreen's own BackHandler (which normally intercepts back so this kiosk
@@ -268,15 +273,16 @@ fun EditWidgetsOverlay(
             }
 
             BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxSize()
-                    // Background tap deselects. Only fires when the touch didn't land on
-                    // a widget - a widget's own tap-select consumes the event first (see
-                    // PlaceholderWidgetBox), so this correctly no-ops for taps on widgets
-                    // rather than deselecting in the same gesture that selected.
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { viewModel.selectWidget(null) })
-                    },
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        // Background tap deselects. Only fires when the touch didn't land on
+                        // a widget - a widget's own tap-select consumes the event first (see
+                        // PlaceholderWidgetBox), so this correctly no-ops for taps on widgets
+                        // rather than deselecting in the same gesture that selected.
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { viewModel.selectWidget(null) })
+                        },
             ) {
                 val grid = remember(maxWidth, maxHeight) { gridDimensionsFor(maxWidth, maxHeight) }
                 // Switch to whichever canvas edit mode was entered for, before the first
@@ -309,10 +315,11 @@ fun EditWidgetsOverlay(
                         onMove = viewModel::updateWidgetPosition,
                         onDragStateChanged = viewModel::setDragging,
                         onDragEnd = viewModel::persistWidgets,
-                        modifier = Modifier
-                            .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
-                            .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
-                            .zIndex(widget.zIndex.toFloat()),
+                        modifier =
+                            Modifier
+                                .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
+                                .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
+                                .zIndex(widget.zIndex.toFloat()),
                     )
                 }
 
@@ -334,13 +341,16 @@ fun EditWidgetsOverlay(
                         onResize = viewModel::updateWidgetBounds,
                         onDragStateChanged = viewModel::setDragging,
                         onDragEnd = viewModel::persistWidgets,
-                        modifier = Modifier
-                            .offset(
-                                x = cellWidth * (selectedWidget.gridColumn + selectedWidget.columnSpan) -
-                                    WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
-                                y = verticalCenter - HANDLE_SIZE / 2,
-                            )
-                            .zIndex(Float.MAX_VALUE - 1), // always above widgets, below grid-line overlay
+                        modifier =
+                            Modifier
+                                .offset(
+                                    x =
+                                        cellWidth * (selectedWidget.gridColumn + selectedWidget.columnSpan) -
+                                            WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                                    y = verticalCenter - HANDLE_SIZE / 2,
+                                )
+                                .zIndex(Float.MAX_VALUE - 1),
+                        // always above widgets, below grid-line overlay
                     )
                     ResizeHandle(
                         edge = ResizeEdge.Left,
@@ -351,12 +361,13 @@ fun EditWidgetsOverlay(
                         onResize = viewModel::updateWidgetBounds,
                         onDragStateChanged = viewModel::setDragging,
                         onDragEnd = viewModel::persistWidgets,
-                        modifier = Modifier
-                            .offset(
-                                x = cellWidth * selectedWidget.gridColumn + WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
-                                y = verticalCenter - HANDLE_SIZE / 2,
-                            )
-                            .zIndex(Float.MAX_VALUE - 1),
+                        modifier =
+                            Modifier
+                                .offset(
+                                    x = cellWidth * selectedWidget.gridColumn + WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                                    y = verticalCenter - HANDLE_SIZE / 2,
+                                )
+                                .zIndex(Float.MAX_VALUE - 1),
                     )
                     ResizeHandle(
                         edge = ResizeEdge.Bottom,
@@ -367,13 +378,15 @@ fun EditWidgetsOverlay(
                         onResize = viewModel::updateWidgetBounds,
                         onDragStateChanged = viewModel::setDragging,
                         onDragEnd = viewModel::persistWidgets,
-                        modifier = Modifier
-                            .offset(
-                                x = horizontalCenter - HANDLE_SIZE / 2,
-                                y = cellHeight * (selectedWidget.gridRow + selectedWidget.rowSpan) -
-                                    WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
-                            )
-                            .zIndex(Float.MAX_VALUE - 1),
+                        modifier =
+                            Modifier
+                                .offset(
+                                    x = horizontalCenter - HANDLE_SIZE / 2,
+                                    y =
+                                        cellHeight * (selectedWidget.gridRow + selectedWidget.rowSpan) -
+                                            WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                                )
+                                .zIndex(Float.MAX_VALUE - 1),
                     )
                     ResizeHandle(
                         edge = ResizeEdge.Top,
@@ -384,12 +397,13 @@ fun EditWidgetsOverlay(
                         onResize = viewModel::updateWidgetBounds,
                         onDragStateChanged = viewModel::setDragging,
                         onDragEnd = viewModel::persistWidgets,
-                        modifier = Modifier
-                            .offset(
-                                x = horizontalCenter - HANDLE_SIZE / 2,
-                                y = cellHeight * selectedWidget.gridRow + WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
-                            )
-                            .zIndex(Float.MAX_VALUE - 1),
+                        modifier =
+                            Modifier
+                                .offset(
+                                    x = horizontalCenter - HANDLE_SIZE / 2,
+                                    y = cellHeight * selectedWidget.gridRow + WIDGET_BORDER_INSET - HANDLE_SIZE / 2,
+                                )
+                                .zIndex(Float.MAX_VALUE - 1),
                     )
                 }
 
@@ -449,10 +463,11 @@ fun EditWidgetsOverlay(
             // (CornerButtonMetrics) - opposite corner, but keeps all three corner buttons
             // at the same offset from their respective edges by construction.
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(CORNER_BUTTON_EDGE_PADDING)
-                    .alpha(optionsButtonAlpha),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(CORNER_BUTTON_EDGE_PADDING)
+                        .alpha(optionsButtonAlpha),
             ) {
                 CornerFab(onClick = { menuExpanded = true }, opacityPercent = dockOpacityPercent) {
                     Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "Widget options")
@@ -465,11 +480,12 @@ fun EditWidgetsOverlay(
                     StateGroup.entries.forEach { group ->
                         DropdownMenuItem(
                             text = { Text(group.displayLabel()) },
-                            leadingIcon = if (group == selectedCanvas) {
-                                { Icon(imageVector = Icons.Filled.Check, contentDescription = null) }
-                            } else {
-                                null
-                            },
+                            leadingIcon =
+                                if (group == selectedCanvas) {
+                                    { Icon(imageVector = Icons.Filled.Check, contentDescription = null) }
+                                } else {
+                                    null
+                                },
                             onClick = {
                                 viewModel.selectCanvas(group)
                                 menuExpanded = false
@@ -610,97 +626,100 @@ private fun PlaceholderWidgetBox(
     val isPlaceholder = content == WidgetContent.Empty
 
     Box(
-        modifier = modifier
-            .padding(WIDGET_BORDER_INSET)
-            .then(
-                if (isPlaceholder) {
-                    Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                } else {
-                    Modifier
-                },
-            )
-            .then(
-                Modifier.border(
-                    width = if (isSelected) 2.dp else 1.dp,
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
+        modifier =
+            modifier
+                .padding(WIDGET_BORDER_INSET)
+                .then(
+                    if (isPlaceholder) {
+                        Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                     } else {
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        Modifier
                     },
-                    shape = RoundedCornerShape(8.dp),
-                ),
-            )
-            .pointerInput(widget.id) {
-                detectTapGestures(onTap = { onSelect() })
-            }
-            .then(
-                if (isSelected) {
-                    Modifier.pointerInput(widget.id, cellWidth, cellHeight) {
-                        val cellWidthPx = with(density) { cellWidth.toPx() }
-                        val cellHeightPx = with(density) { cellHeight.toPx() }
-                        var currentColumn = 0
-                        var currentRow = 0
-                        var maxColumn = 0
-                        var maxRow = 0
-                        var accumX = 0f
-                        var accumY = 0f
-
-                        detectDragGestures(
-                            onDragStart = {
-                                val liveWidget = currentWidget
-                                currentColumn = liveWidget.gridColumn
-                                currentRow = liveWidget.gridRow
-                                // A saved widget's span can exceed the live-measured grid (e.g.
-                                // it was placed on a differently-sized canvas) - coerceAtLeast(0)
-                                // keeps the coerceIn below from throwing on an empty range in
-                                // that case, pinning the widget to the origin instead of crashing.
-                                maxColumn = (grid.columns - liveWidget.columnSpan).coerceAtLeast(0)
-                                maxRow = (grid.rows - liveWidget.rowSpan).coerceAtLeast(0)
-                                accumX = 0f
-                                accumY = 0f
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onDragStateChanged(true)
+                )
+                .then(
+                    Modifier.border(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color =
+                            if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                             },
-                            onDragEnd = {
-                                onDragStateChanged(false)
-                                onDragEnd()
-                            },
-                            onDragCancel = {
-                                onDragStateChanged(false)
-                                onDragEnd()
-                            },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            accumX += dragAmount.x
-                            accumY += dragAmount.y
+                        shape = RoundedCornerShape(8.dp),
+                    ),
+                )
+                .pointerInput(widget.id) {
+                    detectTapGestures(onTap = { onSelect() })
+                }
+                .then(
+                    if (isSelected) {
+                        Modifier.pointerInput(widget.id, cellWidth, cellHeight) {
+                            val cellWidthPx = with(density) { cellWidth.toPx() }
+                            val cellHeightPx = with(density) { cellHeight.toPx() }
+                            var currentColumn = 0
+                            var currentRow = 0
+                            var maxColumn = 0
+                            var maxRow = 0
+                            var accumX = 0f
+                            var accumY = 0f
 
-                            val columnDelta = (accumX / cellWidthPx).toInt()
-                            val rowDelta = (accumY / cellHeightPx).toInt()
-
-                            if (columnDelta != 0 || rowDelta != 0) {
-                                val previousColumn = currentColumn
-                                val previousRow = currentRow
-                                currentColumn = (currentColumn + columnDelta).coerceIn(0, maxColumn)
-                                currentRow = (currentRow + rowDelta).coerceIn(0, maxRow)
-                                accumX -= columnDelta * cellWidthPx
-                                accumY -= rowDelta * cellHeightPx
-                                // Fires once at the moment the drag is clamped onto a grid
-                                // boundary (a real transition, not every tick spent pinned
-                                // against it) - same "hit the wall" feedback as the resize
-                                // handles' edge-snap below.
-                                val hitBoundary = (currentColumn != previousColumn && (currentColumn == 0 || currentColumn == maxColumn)) ||
-                                    (currentRow != previousRow && (currentRow == 0 || currentRow == maxRow))
-                                if (hitBoundary) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    val liveWidget = currentWidget
+                                    currentColumn = liveWidget.gridColumn
+                                    currentRow = liveWidget.gridRow
+                                    // A saved widget's span can exceed the live-measured grid (e.g.
+                                    // it was placed on a differently-sized canvas) - coerceAtLeast(0)
+                                    // keeps the coerceIn below from throwing on an empty range in
+                                    // that case, pinning the widget to the origin instead of crashing.
+                                    maxColumn = (grid.columns - liveWidget.columnSpan).coerceAtLeast(0)
+                                    maxRow = (grid.rows - liveWidget.rowSpan).coerceAtLeast(0)
+                                    accumX = 0f
+                                    accumY = 0f
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onDragStateChanged(true)
+                                },
+                                onDragEnd = {
+                                    onDragStateChanged(false)
+                                    onDragEnd()
+                                },
+                                onDragCancel = {
+                                    onDragStateChanged(false)
+                                    onDragEnd()
+                                },
+                            ) { change, dragAmount ->
+                                change.consume()
+                                accumX += dragAmount.x
+                                accumY += dragAmount.y
+
+                                val columnDelta = (accumX / cellWidthPx).toInt()
+                                val rowDelta = (accumY / cellHeightPx).toInt()
+
+                                if (columnDelta != 0 || rowDelta != 0) {
+                                    val previousColumn = currentColumn
+                                    val previousRow = currentRow
+                                    currentColumn = (currentColumn + columnDelta).coerceIn(0, maxColumn)
+                                    currentRow = (currentRow + rowDelta).coerceIn(0, maxRow)
+                                    accumX -= columnDelta * cellWidthPx
+                                    accumY -= rowDelta * cellHeightPx
+                                    // Fires once at the moment the drag is clamped onto a grid
+                                    // boundary (a real transition, not every tick spent pinned
+                                    // against it) - same "hit the wall" feedback as the resize
+                                    // handles' edge-snap below.
+                                    val hitBoundary =
+                                        (currentColumn != previousColumn && (currentColumn == 0 || currentColumn == maxColumn)) ||
+                                            (currentRow != previousRow && (currentRow == 0 || currentRow == maxRow))
+                                    if (hitBoundary) {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                    onMove(widget.id, currentColumn, currentRow)
                                 }
-                                onMove(widget.id, currentColumn, currentRow)
                             }
                         }
-                    }
-                } else {
-                    Modifier
-                },
-            ),
+                    } else {
+                        Modifier
+                    },
+                ),
         contentAlignment = Alignment.Center,
     ) {
         if (isPlaceholder) {
@@ -777,159 +796,165 @@ private fun ResizeHandle(
     val isFarEdge = edge == ResizeEdge.Right || edge == ResizeEdge.Bottom
 
     Box(
-        modifier = modifier
-            .size(HANDLE_SIZE) // touch target - see HANDLE_SIZE's kdoc for why this stays full-size
-            .pointerInput(widget.id, edge, cellWidth, cellHeight, grid) {
-                val cellWidthPx = with(density) { cellWidth.toPx() }
-                val cellHeightPx = with(density) { cellHeight.toPx() }
-                val cellPx = if (isColumnAxis) cellWidthPx else cellHeightPx
-                val gridExtentCells = if (isColumnAxis) grid.columns else grid.rows
-                val gridExtentPx = cellPx * gridExtentCells
-                val edgeSnapThresholdPx = with(density) { EDGE_SNAP_THRESHOLD.toPx() }
+        modifier =
+            modifier
+                .size(HANDLE_SIZE) // touch target - see HANDLE_SIZE's kdoc for why this stays full-size
+                .pointerInput(widget.id, edge, cellWidth, cellHeight, grid) {
+                    val cellWidthPx = with(density) { cellWidth.toPx() }
+                    val cellHeightPx = with(density) { cellHeight.toPx() }
+                    val cellPx = if (isColumnAxis) cellWidthPx else cellHeightPx
+                    val gridExtentCells = if (isColumnAxis) grid.columns else grid.rows
+                    val gridExtentPx = cellPx * gridExtentCells
+                    val edgeSnapThresholdPx = with(density) { EDGE_SNAP_THRESHOLD.toPx() }
 
-                // maxSpan means different things per anchor: for a far-edge (Right/Bottom)
-                // handle it's the largest span can grow to; for a near-edge (Left/Top)
-                // handle it's the anchored far edge's fixed cell position, since span
-                // there is derived as maxSpan - start.
-                var maxSpan = 0
-                var start = 0
-                var span = 0
-                var initialFarEdgePx = 0f
-                var initialStartPx = 0f
-                var accum = 0f
-                var totalDrag = 0f
+                    // maxSpan means different things per anchor: for a far-edge (Right/Bottom)
+                    // handle it's the largest span can grow to; for a near-edge (Left/Top)
+                    // handle it's the anchored far edge's fixed cell position, since span
+                    // there is derived as maxSpan - start.
+                    var maxSpan = 0
+                    var start = 0
+                    var span = 0
+                    var initialFarEdgePx = 0f
+                    var initialStartPx = 0f
+                    var accum = 0f
+                    var totalDrag = 0f
 
-                detectDragGestures(
-                    onDragStart = {
-                        val liveWidget = currentWidget
-                        start = if (isColumnAxis) liveWidget.gridColumn else liveWidget.gridRow
-                        span = if (isColumnAxis) liveWidget.columnSpan else liveWidget.rowSpan
-                        // Same reasoning as PlaceholderWidgetBox's onDragStart: a saved
-                        // widget's position can leave less room than MIN_SPAN on a
-                        // live-measured grid smaller than the one it was placed on -
-                        // coerceAtLeast(MIN_SPAN) keeps the coerceIn calls below from
-                        // throwing on an empty range in that case.
-                        maxSpan = if (isFarEdge) {
-                            (gridExtentCells - start).coerceAtLeast(MIN_SPAN)
+                    detectDragGestures(
+                        onDragStart = {
+                            val liveWidget = currentWidget
+                            start = if (isColumnAxis) liveWidget.gridColumn else liveWidget.gridRow
+                            span = if (isColumnAxis) liveWidget.columnSpan else liveWidget.rowSpan
+                            // Same reasoning as PlaceholderWidgetBox's onDragStart: a saved
+                            // widget's position can leave less room than MIN_SPAN on a
+                            // live-measured grid smaller than the one it was placed on -
+                            // coerceAtLeast(MIN_SPAN) keeps the coerceIn calls below from
+                            // throwing on an empty range in that case.
+                            maxSpan =
+                                if (isFarEdge) {
+                                    (gridExtentCells - start).coerceAtLeast(MIN_SPAN)
+                                } else {
+                                    (start + span).coerceAtLeast(MIN_SPAN)
+                                }
+                            initialFarEdgePx = (start + span) * cellPx
+                            initialStartPx = start * cellPx
+                            accum = 0f
+                            totalDrag = 0f
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onDragStateChanged(true)
+                        },
+                        onDragEnd = {
+                            onDragStateChanged(false)
+                            onDragEnd()
+                        },
+                        onDragCancel = {
+                            onDragStateChanged(false)
+                            onDragEnd()
+                        },
+                    ) { change, dragAmount ->
+                        change.consume()
+                        val delta = if (isColumnAxis) dragAmount.x else dragAmount.y
+                        accum += delta
+                        totalDrag += delta
+
+                        var changed = false
+
+                        if (isFarEdge) {
+                            // Right/Bottom: the far edge moves with the drag, start is fixed.
+                            val farEdgePx = initialFarEdgePx + totalDrag
+                            val nearGridBoundary = gridExtentPx - farEdgePx <= edgeSnapThresholdPx
+                            if (nearGridBoundary && span != maxSpan) {
+                                span = maxSpan
+                                changed = true
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            } else if (!nearGridBoundary) {
+                                val cellDelta = (accum / cellPx).toInt()
+                                if (cellDelta != 0) {
+                                    span = (span + cellDelta).coerceIn(MIN_SPAN, maxSpan)
+                                    accum -= cellDelta * cellPx
+                                    changed = true
+                                }
+                            }
                         } else {
-                            (start + span).coerceAtLeast(MIN_SPAN)
-                        }
-                        initialFarEdgePx = (start + span) * cellPx
-                        initialStartPx = start * cellPx
-                        accum = 0f
-                        totalDrag = 0f
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onDragStateChanged(true)
-                    },
-                    onDragEnd = {
-                        onDragStateChanged(false)
-                        onDragEnd()
-                    },
-                    onDragCancel = {
-                        onDragStateChanged(false)
-                        onDragEnd()
-                    },
-                ) { change, dragAmount ->
-                    change.consume()
-                    val delta = if (isColumnAxis) dragAmount.x else dragAmount.y
-                    accum += delta
-                    totalDrag += delta
-
-                    var changed = false
-
-                    if (isFarEdge) {
-                        // Right/Bottom: the far edge moves with the drag, start is fixed.
-                        val farEdgePx = initialFarEdgePx + totalDrag
-                        val nearGridBoundary = gridExtentPx - farEdgePx <= edgeSnapThresholdPx
-                        if (nearGridBoundary && span != maxSpan) {
-                            span = maxSpan
-                            changed = true
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        } else if (!nearGridBoundary) {
-                            val cellDelta = (accum / cellPx).toInt()
-                            if (cellDelta != 0) {
-                                span = (span + cellDelta).coerceIn(MIN_SPAN, maxSpan)
-                                accum -= cellDelta * cellPx
+                            // Left/Top: the near edge (start) moves with the drag, the far
+                            // edge is fixed - start and span must update together.
+                            val startPx = initialStartPx + totalDrag
+                            val nearGridBoundary = startPx <= edgeSnapThresholdPx
+                            if (nearGridBoundary && start != 0) {
+                                start = 0
+                                span = maxSpan
                                 changed = true
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            } else if (!nearGridBoundary) {
+                                val cellDelta = (accum / cellPx).toInt()
+                                if (cellDelta != 0) {
+                                    start = (start + cellDelta).coerceIn(0, maxSpan - MIN_SPAN)
+                                    span = maxSpan - start
+                                    accum -= cellDelta * cellPx
+                                    changed = true
+                                }
                             }
                         }
-                    } else {
-                        // Left/Top: the near edge (start) moves with the drag, the far
-                        // edge is fixed - start and span must update together.
-                        val startPx = initialStartPx + totalDrag
-                        val nearGridBoundary = startPx <= edgeSnapThresholdPx
-                        if (nearGridBoundary && start != 0) {
-                            start = 0
-                            span = maxSpan
-                            changed = true
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        } else if (!nearGridBoundary) {
-                            val cellDelta = (accum / cellPx).toInt()
-                            if (cellDelta != 0) {
-                                start = (start + cellDelta).coerceIn(0, maxSpan - MIN_SPAN)
-                                span = maxSpan - start
-                                accum -= cellDelta * cellPx
-                                changed = true
-                            }
+
+                        if (changed) {
+                            val liveWidget = currentWidget
+                            onResize(
+                                widget.id,
+                                if (isColumnAxis) start else liveWidget.gridColumn,
+                                if (isColumnAxis) liveWidget.gridRow else start,
+                                if (isColumnAxis) span else liveWidget.columnSpan,
+                                if (isColumnAxis) liveWidget.rowSpan else span,
+                            )
                         }
                     }
-
-                    if (changed) {
-                        val liveWidget = currentWidget
-                        onResize(
-                            widget.id,
-                            if (isColumnAxis) start else liveWidget.gridColumn,
-                            if (isColumnAxis) liveWidget.gridRow else start,
-                            if (isColumnAxis) span else liveWidget.columnSpan,
-                            if (isColumnAxis) liveWidget.rowSpan else span,
-                        )
-                    }
-                }
-            },
+                },
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(HANDLE_DOT_SIZE)
-                .background(MaterialTheme.colorScheme.primary, CircleShape),
+            modifier =
+                Modifier
+                    .size(HANDLE_DOT_SIZE)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
         )
     }
 }
 
-private fun WidgetType.label(): String = when (this) {
-    is WidgetType.SystemLogo -> "System Logo"
-    is WidgetType.SystemImage -> "System Image"
-    is WidgetType.SystemMedia -> mediaType.systemWidgetLabel()
-    is WidgetType.GameMedia -> mediaType.gameWidgetLabel()
-    is WidgetType.CustomImage -> "Custom Image"
-    is WidgetType.ColorBackground -> "Color Background"
-    is WidgetType.GameDescription -> "Description"
-}
+private fun WidgetType.label(): String =
+    when (this) {
+        is WidgetType.SystemLogo -> "System Logo"
+        is WidgetType.SystemImage -> "System Image"
+        is WidgetType.SystemMedia -> mediaType.systemWidgetLabel()
+        is WidgetType.GameMedia -> mediaType.gameWidgetLabel()
+        is WidgetType.CustomImage -> "Custom Image"
+        is WidgetType.ColorBackground -> "Color Background"
+        is WidgetType.GameDescription -> "Description"
+    }
 
 /** Display label for a MediaType-backed System-canvas widget - only FanArt/Screenshots
  * ever appear there (see widgetCatalogFor), named for what they actually show: a random
  * game's art for the browsed system, not the system's own art. */
-private fun MediaType.systemWidgetLabel(): String = when (this) {
-    MediaType.FanArt -> "Random Game Fanart"
-    MediaType.Screenshots -> "Random Game Screenshot"
-    else -> "System: $name"
-}
+private fun MediaType.systemWidgetLabel(): String =
+    when (this) {
+        MediaType.FanArt -> "Random Game Fanart"
+        MediaType.Screenshots -> "Random Game Screenshot"
+        else -> "System: $name"
+    }
 
 /** Display label for a MediaType-backed Game-canvas widget - plain-English names in
  * place of the raw MediaType enum constant (e.g. "Box Cover" instead of "Covers", "3D
  * Box" instead of "ThreeDBoxes"). */
-private fun MediaType.gameWidgetLabel(): String = when (this) {
-    MediaType.Marquees -> "Marquee"
-    MediaType.Covers -> "Box Cover"
-    MediaType.ThreeDBoxes -> "3D Box"
-    MediaType.MixImages -> "Mix Image"
-    MediaType.Screenshots -> "Screenshot"
-    MediaType.FanArt -> "Fan Art"
-    MediaType.TitleScreens -> "Title Screen"
-    MediaType.BackCovers -> "Box Back Cover"
-    MediaType.PhysicalMedia -> "Physical Media"
-    else -> "Game: $name"
-}
+private fun MediaType.gameWidgetLabel(): String =
+    when (this) {
+        MediaType.Marquees -> "Marquee"
+        MediaType.Covers -> "Box Cover"
+        MediaType.ThreeDBoxes -> "3D Box"
+        MediaType.MixImages -> "Mix Image"
+        MediaType.Screenshots -> "Screenshot"
+        MediaType.FanArt -> "Fan Art"
+        MediaType.TitleScreens -> "Title Screen"
+        MediaType.BackCovers -> "Box Back Cover"
+        MediaType.PhysicalMedia -> "Physical Media"
+        else -> "Game: $name"
+    }
 
 /**
  * Simple list picker for widgetCatalogFor(selectedCanvas) - one dialog serves both
@@ -951,13 +976,14 @@ private fun AddWidgetDialog(
                     Text(
                         text = widgetType.label(),
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onPick(widgetType)
-                            }
-                            .padding(vertical = 12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onPick(widgetType)
+                                }
+                                .padding(vertical = 12.dp),
                     )
                 }
             }
@@ -990,10 +1016,11 @@ private fun ConfigureWidgetDialog(
         title = { Text("Configure Widget") },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 420.dp)
-                    .verticalScroll(rememberScrollState()),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 when (widgetType) {
@@ -1007,7 +1034,9 @@ private fun ConfigureWidgetDialog(
                     is WidgetType.SystemImage -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
-                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
@@ -1018,10 +1047,14 @@ private fun ConfigureWidgetDialog(
                     is WidgetType.SystemMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         if (widgetType.isLogoStyle) {
-                            LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
+                            LogoTransitionPicker(
+                                current = widgetType.logoTransitionMode,
+                            ) { onChange(widgetType.copy(logoTransitionMode = it)) }
                             GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
                         } else if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
-                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
@@ -1032,10 +1065,14 @@ private fun ConfigureWidgetDialog(
                     is WidgetType.GameMedia -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         if (widgetType.isLogoStyle) {
-                            LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
+                            LogoTransitionPicker(
+                                current = widgetType.logoTransitionMode,
+                            ) { onChange(widgetType.copy(logoTransitionMode = it)) }
                             GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
                         } else if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
-                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
@@ -1047,7 +1084,9 @@ private fun ConfigureWidgetDialog(
                         CustomImageConfig(current = widgetType, onChange = onChange)
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
                         if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
-                            ImageTransitionPicker(current = widgetType.imageTransitionMode) { onChange(widgetType.copy(imageTransitionMode = it)) }
+                            ImageTransitionPicker(
+                                current = widgetType.imageTransitionMode,
+                            ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
@@ -1079,9 +1118,10 @@ private fun CustomImageConfig(
     current: WidgetType.CustomImage,
     onChange: (WidgetType.CustomImage) -> Unit,
 ) {
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let(SafPathResolver::resolveDocumentPath)?.let { path -> onChange(current.copy(path = path)) }
-    }
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let(SafPathResolver::resolveDocumentPath)?.let { path -> onChange(current.copy(path = path)) }
+        }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "Image", style = MaterialTheme.typography.titleSmall)
@@ -1096,19 +1136,24 @@ private fun CustomImageConfig(
     }
 }
 
-private fun ScaleMode.displayLabel(): String = when (this) {
-    ScaleMode.Fit -> "Contain"
-    ScaleMode.Fill -> "Cover"
-}
+private fun ScaleMode.displayLabel(): String =
+    when (this) {
+        ScaleMode.Fit -> "Contain"
+        ScaleMode.Fill -> "Cover"
+    }
 
-private fun ScaleMode.icon(): ImageVector = when (this) {
-    ScaleMode.Fit -> Icons.Filled.CropFree   // whole image visible, letterboxed
-    ScaleMode.Fill -> Icons.Filled.Crop      // cropped to fill the frame
-}
+private fun ScaleMode.icon(): ImageVector =
+    when (this) {
+        ScaleMode.Fit -> Icons.Filled.CropFree // whole image visible, letterboxed
+        ScaleMode.Fill -> Icons.Filled.Crop // cropped to fill the frame
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScaleModeConfig(current: ScaleMode, onSelect: (ScaleMode) -> Unit) {
+private fun ScaleModeConfig(
+    current: ScaleMode,
+    onSelect: (ScaleMode) -> Unit,
+) {
     Column {
         Text(text = "Image Scaling", style = MaterialTheme.typography.titleSmall)
         Spacer(modifier = Modifier.height(8.dp))
@@ -1142,7 +1187,10 @@ private fun ScaleModeConfig(current: ScaleMode, onSelect: (ScaleMode) -> Unit) {
  * busy background image so a logo/widget placed on top reads more clearly.
  */
 @Composable
-private fun ImageEffectsConfig(current: ImageEffects, onChange: (ImageEffects) -> Unit) {
+private fun ImageEffectsConfig(
+    current: ImageEffects,
+    onChange: (ImageEffects) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = "Blur: ${(current.blurAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
@@ -1169,7 +1217,10 @@ private fun ImageEffectsConfig(current: ImageEffects, onChange: (ImageEffects) -
  * See PanZoomImage.kt for the animation this toggle drives.
  */
 @Composable
-private fun PanZoomConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
+private fun PanZoomConfig(
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1197,7 +1248,10 @@ private fun PanZoomConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
  * [WidgetType.supportsPanZoom] hiding rather than graying out.
  */
 @Composable
-private fun ImageTransitionPicker(current: ImageTransitionMode, onSelected: (ImageTransitionMode) -> Unit) {
+private fun ImageTransitionPicker(
+    current: ImageTransitionMode,
+    onSelected: (ImageTransitionMode) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "Image Transitions", style = MaterialTheme.typography.titleSmall)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -1222,15 +1276,17 @@ private fun ImageTransitionPicker(current: ImageTransitionMode, onSelected: (Ima
     }
 }
 
-private fun ImageTransitionMode.icon(): ImageVector = when (this) {
-    ImageTransitionMode.None -> Icons.Filled.Block
-    ImageTransitionMode.Fade -> Icons.Filled.BlurOn
-}
+private fun ImageTransitionMode.icon(): ImageVector =
+    when (this) {
+        ImageTransitionMode.None -> Icons.Filled.Block
+        ImageTransitionMode.Fade -> Icons.Filled.BlurOn
+    }
 
-private fun ImageTransitionMode.displayLabel(): String = when (this) {
-    ImageTransitionMode.None -> "None"
-    ImageTransitionMode.Fade -> "Fade"
-}
+private fun ImageTransitionMode.displayLabel(): String =
+    when (this) {
+        ImageTransitionMode.None -> "None"
+        ImageTransitionMode.Fade -> "Fade"
+    }
 
 /**
  * Shown for every logo-style widget (SystemLogo, or SystemMedia/GameMedia with mediaType
@@ -1238,7 +1294,10 @@ private fun ImageTransitionMode.displayLabel(): String = when (this) {
  * AnimatedLogoImage's kdoc for why (double-exposure on overlapping transparent images).
  */
 @Composable
-private fun LogoTransitionPicker(current: LogoTransitionMode, onSelected: (LogoTransitionMode) -> Unit) {
+private fun LogoTransitionPicker(
+    current: LogoTransitionMode,
+    onSelected: (LogoTransitionMode) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "Logo Transitions", style = MaterialTheme.typography.titleSmall)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -1263,17 +1322,19 @@ private fun LogoTransitionPicker(current: LogoTransitionMode, onSelected: (LogoT
     }
 }
 
-private fun LogoTransitionMode.icon(): ImageVector = when (this) {
-    LogoTransitionMode.None -> Icons.Filled.Block
-    LogoTransitionMode.Slide -> Icons.Filled.ArrowForward
-    LogoTransitionMode.Scale -> Icons.Filled.ZoomIn
-}
+private fun LogoTransitionMode.icon(): ImageVector =
+    when (this) {
+        LogoTransitionMode.None -> Icons.Filled.Block
+        LogoTransitionMode.Slide -> Icons.Filled.ArrowForward
+        LogoTransitionMode.Scale -> Icons.Filled.ZoomIn
+    }
 
-private fun LogoTransitionMode.displayLabel(): String = when (this) {
-    LogoTransitionMode.None -> "None"
-    LogoTransitionMode.Slide -> "Slide"
-    LogoTransitionMode.Scale -> "Scale"
-}
+private fun LogoTransitionMode.displayLabel(): String =
+    when (this) {
+        LogoTransitionMode.None -> "None"
+        LogoTransitionMode.Slide -> "Slide"
+        LogoTransitionMode.Scale -> "Scale"
+    }
 
 /**
  * Shown alongside [LogoTransitionPicker] for the same logo-style widget types -
@@ -1281,7 +1342,10 @@ private fun LogoTransitionMode.displayLabel(): String = when (this) {
  * entrance-transition mode is selected above (see AnimatedLogoImage's glint loop).
  */
 @Composable
-private fun GlintConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
+private fun GlintConfig(
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1302,16 +1366,17 @@ private fun GlintConfig(enabled: Boolean, onChange: (Boolean) -> Unit) {
 /** Fixed preset palette - a full custom color picker (hue/saturation wheel) is more
  * than this widget type needs for a first pass; these presets cover the common cases
  * (tint/darken behind other widgets) with a much simpler UI. */
-private val COLOR_PRESETS = listOf(
-    0xFF000000L, // black
-    0xFFFFFFFFL, // white
-    0xFF9E9E9EL, // gray
-    0xFFF44336L, // red
-    0xFF2196F3L, // blue
-    0xFF4CAF50L, // green
-    0xFFFFEB3BL, // yellow
-    0xFF9C27B0L, // purple
-)
+private val COLOR_PRESETS =
+    listOf(
+        0xFF000000L, // black
+        0xFFFFFFFFL, // white
+        0xFF9E9E9EL, // gray
+        0xFFF44336L, // red
+        0xFF2196F3L, // blue
+        0xFF4CAF50L, // green
+        0xFFFFEB3BL, // yellow
+        0xFF9C27B0L, // purple
+    )
 
 @Composable
 private fun ColorBackgroundConfig(
@@ -1325,21 +1390,22 @@ private fun ColorBackgroundConfig(
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 COLOR_PRESETS.forEach { colorArgb ->
                     Box(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .size(36.dp)
-                            .background(Color(colorArgb), CircleShape)
-                            .then(
-                                if (colorArgb == current.colorArgb) {
-                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                } else {
-                                    Modifier
+                        modifier =
+                            Modifier
+                                .padding(4.dp)
+                                .size(36.dp)
+                                .background(Color(colorArgb), CircleShape)
+                                .then(
+                                    if (colorArgb == current.colorArgb) {
+                                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .clickable {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onChange(current.copy(colorArgb = colorArgb))
                                 },
-                            )
-                            .clickable {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onChange(current.copy(colorArgb = colorArgb))
-                            },
                     )
                 }
             }
@@ -1376,21 +1442,22 @@ private fun GameDescriptionConfig(
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 COLOR_PRESETS.forEach { colorArgb ->
                     Box(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .size(36.dp)
-                            .background(Color(colorArgb), CircleShape)
-                            .then(
-                                if (colorArgb == current.textColorArgb) {
-                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                } else {
-                                    Modifier
+                        modifier =
+                            Modifier
+                                .padding(4.dp)
+                                .size(36.dp)
+                                .background(Color(colorArgb), CircleShape)
+                                .then(
+                                    if (colorArgb == current.textColorArgb) {
+                                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .clickable {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onChange(current.copy(textColorArgb = colorArgb))
                                 },
-                            )
-                            .clickable {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onChange(current.copy(textColorArgb = colorArgb))
-                            },
                     )
                 }
             }
@@ -1401,21 +1468,22 @@ private fun GameDescriptionConfig(
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 COLOR_PRESETS.forEach { colorArgb ->
                     Box(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .size(36.dp)
-                            .background(Color(colorArgb), CircleShape)
-                            .then(
-                                if (colorArgb == current.backgroundColorArgb) {
-                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                } else {
-                                    Modifier
+                        modifier =
+                            Modifier
+                                .padding(4.dp)
+                                .size(36.dp)
+                                .background(Color(colorArgb), CircleShape)
+                                .then(
+                                    if (colorArgb == current.backgroundColorArgb) {
+                                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .clickable {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onChange(current.copy(backgroundColorArgb = colorArgb))
                                 },
-                            )
-                            .clickable {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onChange(current.copy(backgroundColorArgb = colorArgb))
-                            },
                     )
                 }
             }
@@ -1447,7 +1515,10 @@ private fun GameDescriptionConfig(
  * fires once the text parses cleanly, so partial input never produces a garbage color.
  */
 @Composable
-private fun HexColorInput(current: Long, onValidHex: (Long) -> Unit) {
+private fun HexColorInput(
+    current: Long,
+    onValidHex: (Long) -> Unit,
+) {
     var text by remember(current) { mutableStateOf(current.toHexRgbString()) }
     val isValid = parseHexColor(text) != null
 

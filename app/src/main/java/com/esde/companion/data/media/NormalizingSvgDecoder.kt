@@ -9,9 +9,9 @@ import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 import coil3.svg.SvgDecoder
 import coil3.svg.isSvg
-import java.io.File
 import okio.FileSystem
 import okio.Path.Companion.toOkioPath
+import java.io.File
 
 private const val MIME_TYPE_SVG = "image/svg+xml"
 
@@ -65,13 +65,13 @@ class NormalizingSvgDecoder(
     private val result: SourceFetchResult,
     private val options: Options,
 ) : Decoder {
-
     override suspend fun decode(): DecodeResult? {
-        val prefix = run {
-            val peeked = result.source.source().peek()
-            peeked.request(OPEN_TAG_PEEK_BYTES)
-            peeked.buffer.readUtf8(minOf(OPEN_TAG_PEEK_BYTES, peeked.buffer.size))
-        }
+        val prefix =
+            run {
+                val peeked = result.source.source().peek()
+                peeked.request(OPEN_TAG_PEEK_BYTES)
+                peeked.buffer.readUtf8(minOf(OPEN_TAG_PEEK_BYTES, peeked.buffer.size))
+            }
 
         if (!prefixNeedsNormalization(prefix)) {
             return SvgDecoder(source = result.source, options = options).decode()
@@ -91,7 +91,11 @@ class NormalizingSvgDecoder(
     }
 
     class Factory : Decoder.Factory {
-        override fun create(result: SourceFetchResult, options: Options, imageLoader: ImageLoader): Decoder? {
+        override fun create(
+            result: SourceFetchResult,
+            options: Options,
+            imageLoader: ImageLoader,
+        ): Decoder? {
             val isSvg = result.mimeType == MIME_TYPE_SVG || DecodeUtils.isSvg(result.source.source())
             if (!isSvg) return null
             return NormalizingSvgDecoder(result, options)
@@ -167,7 +171,10 @@ private fun dimensionsOf(openTag: String): Pair<Double, Double>? {
     return width to height
 }
 
-private fun scaleFor(width: Double, height: Double): Double? {
+private fun scaleFor(
+    width: Double,
+    height: Double,
+): Double? {
     val longEdge = maxOf(width, height)
     if (longEdge <= 0.0 || longEdge >= SMALL_VIEW_BOX_THRESHOLD) return null
     return NORMALIZED_LONG_EDGE / longEdge
@@ -181,9 +188,17 @@ private fun parseViewBox(value: String): ViewBox? {
 
 private fun parseUnitless(value: String): Double? = value.removeSuffix("px").toDoubleOrNull()
 
-private fun setAttr(tag: String, name: String, value: Double): String = setAttr(tag, name, value.toString())
+private fun setAttr(
+    tag: String,
+    name: String,
+    value: Double,
+): String = setAttr(tag, name, value.toString())
 
-private fun setAttr(tag: String, name: String, value: String): String {
+private fun setAttr(
+    tag: String,
+    name: String,
+    value: String,
+): String {
     val attrRegex = Regex("""(\b$name\s*=\s*")([^"]*)(")""", RegexOption.IGNORE_CASE)
     return if (attrRegex.containsMatchIn(tag)) {
         attrRegex.replace(tag) { "${it.groupValues[1]}$value${it.groupValues[3]}" }

@@ -4,10 +4,10 @@ import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.parser.GameListDescriptionParser
 import com.esde.companion.domain.parser.LegacyGamelistPathResolver
 import com.esde.companion.domain.repository.GameDescriptionRepository
-import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Reads and parses gamelist.xml to find a game's <desc>, checking the standard ES-DE
@@ -37,25 +37,31 @@ import kotlinx.coroutines.withContext
 class FileGameDescriptionRepository(
     private val esdeRootPath: String,
 ) : GameDescriptionRepository {
-
     private val cache = ConcurrentHashMap<String, CacheEntry>()
 
-    override suspend fun resolveDescription(systemShortName: String, romPath: String): GameDescription =
+    override suspend fun resolveDescription(
+        systemShortName: String,
+        romPath: String,
+    ): GameDescription =
         withContext(Dispatchers.IO) {
             val file = resolveGamelistFile(systemShortName, romPath) ?: return@withContext GameDescription(text = null)
 
             val lastModified = file.lastModified()
             val cached = cache[file.path]
-            val content = if (cached != null && cached.lastModified == lastModified) {
-                cached.content
-            } else {
-                file.readText().also { cache[file.path] = CacheEntry(lastModified, it) }
-            }
+            val content =
+                if (cached != null && cached.lastModified == lastModified) {
+                    cached.content
+                } else {
+                    file.readText().also { cache[file.path] = CacheEntry(lastModified, it) }
+                }
 
             GameDescription(text = GameListDescriptionParser.findDescription(content, romPath))
         }
 
-    private fun resolveGamelistFile(systemShortName: String, romPath: String): File? {
+    private fun resolveGamelistFile(
+        systemShortName: String,
+        romPath: String,
+    ): File? {
         val standard = File(esdeRootPath, "gamelists/$systemShortName/gamelist.xml")
         if (standard.isFile) return standard
 

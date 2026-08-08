@@ -21,7 +21,6 @@ import kotlinx.serialization.json.Json
 class FileAppFolderRepository(
     private val context: Context,
 ) : AppFolderRepository {
-
     override suspend fun setFolders(folders: List<AppFolder>) {
         context.appFolderSettingsDataStore.edit {
             it[FOLDERS_KEY] = Json.encodeToString(folders.map(AppFolder::toDto))

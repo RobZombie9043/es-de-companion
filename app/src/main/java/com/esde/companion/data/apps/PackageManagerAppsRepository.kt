@@ -25,46 +25,52 @@ import kotlinx.coroutines.withContext
 class PackageManagerAppsRepository(
     private val context: Context,
 ) : InstalledAppsRepository {
+    override fun observeInstalledApps(): Flow<List<InstalledApp>> =
+        channelFlow {
+            send(queryLaunchableApps())
 
-    override fun observeInstalledApps(): Flow<List<InstalledApp>> = channelFlow {
-        send(queryLaunchableApps())
+            val signal = Channel<Unit>(capacity = Channel.CONFLATED)
+            val receiver =
+                object : BroadcastReceiver() {
+                    override fun onReceive(
+                        receivedContext: Context?,
+                        intent: Intent?,
+                    ) {
+                        signal.trySend(Unit)
+                    }
+                }
+            val filter =
+                IntentFilter().apply {
+                    addAction(Intent.ACTION_PACKAGE_ADDED)
+                    addAction(Intent.ACTION_PACKAGE_REMOVED)
+                    addAction(Intent.ACTION_PACKAGE_CHANGED)
+                    addDataScheme("package")
+                }
+            context.registerReceiver(receiver, filter)
 
-        val signal = Channel<Unit>(capacity = Channel.CONFLATED)
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(receivedContext: Context?, intent: Intent?) {
-                signal.trySend(Unit)
+            try {
+                for (unit in signal) {
+                    send(queryLaunchableApps())
+                }
+            } finally {
+                context.unregisterReceiver(receiver)
             }
-        }
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_ADDED)
-            addAction(Intent.ACTION_PACKAGE_REMOVED)
-            addAction(Intent.ACTION_PACKAGE_CHANGED)
-            addDataScheme("package")
-        }
-        context.registerReceiver(receiver, filter)
+        }.flowOn(Dispatchers.IO)
 
-        try {
-            for (unit in signal) {
-                send(queryLaunchableApps())
-            }
-        } finally {
-            context.unregisterReceiver(receiver)
+    private suspend fun queryLaunchableApps(): List<InstalledApp> =
+        withContext(Dispatchers.IO) {
+            val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            val packageManager = context.packageManager
+
+            packageManager.queryIntentActivities(launcherIntent, 0)
+                .filter { it.activityInfo.packageName != context.packageName }
+                .map { resolveInfo ->
+                    InstalledApp(
+                        packageName = resolveInfo.activityInfo.packageName,
+                        label = resolveInfo.loadLabel(packageManager).toString(),
+                    )
+                }
+                .distinctBy { it.packageName }
+                .sortedBy { it.label.lowercase() }
         }
-    }.flowOn(Dispatchers.IO)
-
-    private suspend fun queryLaunchableApps(): List<InstalledApp> = withContext(Dispatchers.IO) {
-        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val packageManager = context.packageManager
-
-        packageManager.queryIntentActivities(launcherIntent, 0)
-            .filter { it.activityInfo.packageName != context.packageName }
-            .map { resolveInfo ->
-                InstalledApp(
-                    packageName = resolveInfo.activityInfo.packageName,
-                    label = resolveInfo.loadLabel(packageManager).toString(),
-                )
-            }
-            .distinctBy { it.packageName }
-            .sortedBy { it.label.lowercase() }
-    }
 }

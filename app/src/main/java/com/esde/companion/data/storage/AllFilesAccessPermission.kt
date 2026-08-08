@@ -14,19 +14,18 @@ import android.provider.Settings
  * history for why.
  */
 object AllFilesAccessPermission {
-
-    fun isGranted(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()
+    fun isGranted(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()
 
     /**
      * Prefers the app-specific grant screen; falls back to the general all-files-access
      * list screen on OEM builds where the app-specific intent doesn't resolve.
      */
     fun requestIntent(context: Context): Intent {
-        val appSpecific = Intent(
-            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-            Uri.parse("package:${context.packageName}"),
-        )
+        val appSpecific =
+            Intent(
+                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                Uri.parse("package:${context.packageName}"),
+            )
         return if (appSpecific.resolveActivity(context.packageManager) != null) {
             appSpecific
         } else {

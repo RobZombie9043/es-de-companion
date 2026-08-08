@@ -10,17 +10,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class WidgetLayoutMappingTest {
-
     private fun roundTrip(widgetType: WidgetType): WidgetType {
-        val placed = PlacedWidget(
-            id = "widget-1",
-            widgetType = widgetType,
-            gridColumn = 0,
-            gridRow = 0,
-            columnSpan = 1,
-            rowSpan = 1,
-            zIndex = 0,
-        )
+        val placed =
+            PlacedWidget(
+                id = "widget-1",
+                widgetType = widgetType,
+                gridColumn = 0,
+                gridRow = 0,
+                columnSpan = 1,
+                rowSpan = 1,
+                zIndex = 0,
+            )
         val dto = listOf(placed).toDtoList()
         val roundTripped = dto.toDomainList()
         return roundTripped.single().widgetType
@@ -88,25 +88,27 @@ class WidgetLayoutMappingTest {
 
     @Test
     fun `SystemMedia round-trips imageTransitionMode, logoTransitionMode, and glintEnabled`() {
-        val widget = WidgetType.SystemMedia(
-            MediaType.Marquees,
-            ScaleMode.Fit,
-            imageTransitionMode = ImageTransitionMode.Fade,
-            logoTransitionMode = LogoTransitionMode.Scale,
-            glintEnabled = true,
-        )
+        val widget =
+            WidgetType.SystemMedia(
+                MediaType.Marquees,
+                ScaleMode.Fit,
+                imageTransitionMode = ImageTransitionMode.Fade,
+                logoTransitionMode = LogoTransitionMode.Scale,
+                glintEnabled = true,
+            )
         assertEquals(widget, roundTrip(widget))
     }
 
     @Test
     fun `GameMedia round-trips imageTransitionMode, logoTransitionMode, and glintEnabled`() {
-        val widget = WidgetType.GameMedia(
-            MediaType.Screenshots,
-            ScaleMode.Fill,
-            imageTransitionMode = ImageTransitionMode.Fade,
-            logoTransitionMode = LogoTransitionMode.Slide,
-            glintEnabled = true,
-        )
+        val widget =
+            WidgetType.GameMedia(
+                MediaType.Screenshots,
+                ScaleMode.Fill,
+                imageTransitionMode = ImageTransitionMode.Fade,
+                logoTransitionMode = LogoTransitionMode.Slide,
+                glintEnabled = true,
+            )
         assertEquals(widget, roundTrip(widget))
     }
 

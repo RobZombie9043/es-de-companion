@@ -21,20 +21,17 @@ import kotlinx.serialization.json.Json
 class FileDockSettingsRepository(
     private val context: Context,
 ) : DockSettingsRepository {
-
     override suspend fun setDockEnabled(enabled: Boolean) {
         context.dockSettingsDataStore.edit { it[DOCK_ENABLED_KEY] = enabled }
     }
 
-    override fun observeDockEnabled(): Flow<Boolean> =
-        context.dockSettingsDataStore.data.map { it[DOCK_ENABLED_KEY] ?: false }
+    override fun observeDockEnabled(): Flow<Boolean> = context.dockSettingsDataStore.data.map { it[DOCK_ENABLED_KEY] ?: false }
 
     override suspend fun setDockMaxApps(maxApps: Int) {
         context.dockSettingsDataStore.edit { it[DOCK_MAX_APPS_KEY] = maxApps.coerceIn(2, 5) }
     }
 
-    override fun observeDockMaxApps(): Flow<Int> =
-        context.dockSettingsDataStore.data.map { it[DOCK_MAX_APPS_KEY] ?: DEFAULT_DOCK_MAX_APPS }
+    override fun observeDockMaxApps(): Flow<Int> = context.dockSettingsDataStore.data.map { it[DOCK_MAX_APPS_KEY] ?: DEFAULT_DOCK_MAX_APPS }
 
     override suspend fun setDockSize(size: DockSize) {
         context.dockSettingsDataStore.edit { it[DOCK_SIZE_KEY] = size.name }

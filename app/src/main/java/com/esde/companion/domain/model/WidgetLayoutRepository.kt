@@ -17,5 +17,10 @@ import kotlinx.coroutines.flow.Flow
  */
 interface WidgetLayoutRepository {
     fun observeCanvas(stateGroup: StateGroup): Flow<SavedWidgetCanvas>
-    suspend fun saveCanvas(stateGroup: StateGroup, widgets: List<PlacedWidget>, grid: GridDimensions)
+
+    suspend fun saveCanvas(
+        stateGroup: StateGroup,
+        widgets: List<PlacedWidget>,
+        grid: GridDimensions,
+    )
 }

@@ -85,9 +85,10 @@ private val MENU_SHAPE = RoundedCornerShape(16.dp)
 // bounds (and back on close) via SharedTransitionLayout/sharedBounds rather than a plain
 // Popup scale-from-center - see FolderDrawerItem and the overlay AnimatedVisibility below.
 @OptIn(ExperimentalSharedTransitionApi::class)
-private val FOLDER_SHARED_BOUNDS_TRANSFORM = BoundsTransform { _, _ ->
-    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
-}
+private val FOLDER_SHARED_BOUNDS_TRANSFORM =
+    BoundsTransform { _, _ ->
+        spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+    }
 private const val FOLDER_SCRIM_ALPHA = 0.32f
 
 // Fixed size rather than a fraction of screen (contrast LongPressSettingsMenu's Popup) -
@@ -103,20 +104,19 @@ private val FOLDER_MOSAIC_SPACING = 2.dp
 /** Drawer background base color: black in dark mode, white in light mode - matches
  * AppDock's [dockBackgroundColor] so the drawer and dock read as one consistent surface. */
 @Composable
-internal fun drawerBackgroundColor(): Color =
-    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+internal fun drawerBackgroundColor(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
 
 /** App label text color: the inverse of [drawerBackgroundColor], so labels stay readable
  * against the drawer's background in either theme. */
 @Composable
-internal fun drawerContentColor(): Color =
-    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+internal fun drawerContentColor(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
 
 /** Two-step "add to folder" flow state, hoisted here (mirrors how AppDock hoists its own
  * add-app dialog state) rather than inside AppDrawerItem, since it drives a dialog that
  * sits above the whole grid, not just one item. */
 private sealed interface FolderPickerState {
     data class Picking(val packageName: String) : FolderPickerState
+
     data class NamingNewFolder(val packageName: String) : FolderPickerState
 }
 
@@ -206,10 +206,11 @@ fun AppDrawer(
         Box(Modifier.fillMaxSize()) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(gridColumns),
-                modifier = Modifier
-                    .fillMaxSize()
-                    // Standard convention: 0% = fully transparent, 100% = fully opaque.
-                    .background(backgroundColor.copy(alpha = drawerOpacityPercent / 100f)),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        // Standard convention: 0% = fully transparent, 100% = fully opaque.
+                        .background(backgroundColor.copy(alpha = drawerOpacityPercent / 100f)),
                 contentPadding = PaddingValues(24.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -234,11 +235,12 @@ fun AppDrawer(
                                 isInsideFolder = false,
                                 contentColor = contentColor,
                                 onClick = {
-                                    val displayId = if (isOtherScreenPreferred) {
-                                        SecondaryDisplayResolver.secondaryDisplayId(context)
-                                    } else {
-                                        null
-                                    }
+                                    val displayId =
+                                        if (isOtherScreenPreferred) {
+                                            SecondaryDisplayResolver.secondaryDisplayId(context)
+                                        } else {
+                                            null
+                                        }
                                     AppLauncher.launch(context, app.packageName, displayId = displayId)
                                     onAppLaunched()
                                 },
@@ -318,32 +320,34 @@ fun AppDrawer(
                     // Popup(focusable = true) used to block all input to the grid underneath and
                     // dismiss on an outside tap for free - both now rebuilt explicitly here.
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = FOLDER_SCRIM_ALPHA))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { openFolderId = null },
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = FOLDER_SCRIM_ALPHA))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { openFolderId = null },
                     )
 
                     displayedFolder?.let { folderToShow ->
                         Surface(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .width(FOLDER_POPUP_WIDTH)
-                                .heightIn(max = FOLDER_POPUP_MAX_HEIGHT)
-                                .sharedBounds(
-                                    sharedContentState = rememberSharedContentState(key = folderToShow.folder.id),
-                                    animatedVisibilityScope = overlayScope,
-                                    boundsTransform = FOLDER_SHARED_BOUNDS_TRANSFORM,
-                                )
-                                // Absorbs taps on the panel's own dead space (e.g. header padding)
-                                // so they don't fall through to the scrim behind it and dismiss.
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                ) {},
+                            modifier =
+                                Modifier
+                                    .align(Alignment.Center)
+                                    .width(FOLDER_POPUP_WIDTH)
+                                    .heightIn(max = FOLDER_POPUP_MAX_HEIGHT)
+                                    .sharedBounds(
+                                        sharedContentState = rememberSharedContentState(key = folderToShow.folder.id),
+                                        animatedVisibilityScope = overlayScope,
+                                        boundsTransform = FOLDER_SHARED_BOUNDS_TRANSFORM,
+                                    )
+                                    // Absorbs taps on the panel's own dead space (e.g. header padding)
+                                    // so they don't fall through to the scrim behind it and dismiss.
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                    ) {},
                             shape = MENU_SHAPE,
                             color = MaterialTheme.colorScheme.surfaceContainer,
                             tonalElevation = 3.dp,
@@ -435,16 +439,17 @@ internal fun AppDrawerItem(
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = onClick,
-                    onDoubleClick = onDoubleClick,
-                    onLongClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menuExpanded = true
-                    },
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = onClick,
+                        onDoubleClick = onDoubleClick,
+                        onLongClick = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            menuExpanded = true
+                        },
+                    ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -456,10 +461,11 @@ internal fun AppDrawerItem(
                 )
                 if (isOtherScreenPreferred) {
                     Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(10.dp)
-                            .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(10.dp)
+                                .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                     )
                 }
             }
@@ -537,7 +543,10 @@ internal fun AppLongPressMenu(
                     Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
             },
-            onClick = { onDismiss(); onLaunchThisScreen() },
+            onClick = {
+                onDismiss()
+                onLaunchThisScreen()
+            },
         )
         DropdownMenuItem(
             text = { Text("Launch on other screen") },
@@ -547,25 +556,37 @@ internal fun AppLongPressMenu(
                     Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
             },
-            onClick = { onDismiss(); onLaunchOtherScreen() },
+            onClick = {
+                onDismiss()
+                onLaunchOtherScreen()
+            },
         )
         HorizontalDivider()
         DropdownMenuItem(
             text = { Text("App Info") },
             leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
-            onClick = { onDismiss(); onAppInfo() },
+            onClick = {
+                onDismiss()
+                onAppInfo()
+            },
         )
         if (isInsideFolder) {
             DropdownMenuItem(
                 text = { Text("Remove from Folder") },
                 leadingIcon = { Icon(Icons.Filled.FolderOff, contentDescription = null) },
-                onClick = { onDismiss(); onRemoveFromFolder() },
+                onClick = {
+                    onDismiss()
+                    onRemoveFromFolder()
+                },
             )
         } else {
             DropdownMenuItem(
                 text = { Text("Add to Folder") },
                 leadingIcon = { Icon(Icons.Filled.Folder, contentDescription = null) },
-                onClick = { onDismiss(); onAddToFolder() },
+                onClick = {
+                    onDismiss()
+                    onAddToFolder()
+                },
             )
         }
         DropdownMenuItem(
@@ -607,20 +628,21 @@ private fun FolderDrawerItem(
     val hapticFeedback = LocalHapticFeedback.current
     with(sharedTransitionScope) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = folder.id),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    boundsTransform = FOLDER_SHARED_BOUNDS_TRANSFORM,
-                )
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongClick()
-                    },
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .sharedBounds(
+                        sharedContentState = rememberSharedContentState(key = folder.id),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        boundsTransform = FOLDER_SHARED_BOUNDS_TRANSFORM,
+                    )
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLongClick()
+                        },
+                    ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -643,12 +665,17 @@ private fun FolderDrawerItem(
  * every member has been hidden/uninstalled (see buildDrawerItems), rather than rendering
  * an empty box. */
 @Composable
-private fun FolderMosaicIcon(apps: List<InstalledApp>, contentColor: Color, modifier: Modifier = Modifier) {
+private fun FolderMosaicIcon(
+    apps: List<InstalledApp>,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+) {
     Box(
-        modifier = modifier.background(
-            color = contentColor.copy(alpha = 0.12f),
-            shape = RoundedCornerShape(14.dp),
-        ),
+        modifier =
+            modifier.background(
+                color = contentColor.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(14.dp),
+            ),
         contentAlignment = Alignment.Center,
     ) {
         if (apps.isEmpty()) {
@@ -712,10 +739,11 @@ private fun FolderPickerDialog(
 @Composable
 private fun NewFolderRow(onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -725,12 +753,16 @@ private fun NewFolderRow(onClick: () -> Unit) {
 }
 
 @Composable
-private fun FolderPickerRow(folder: AppFolder, onClick: () -> Unit) {
+private fun FolderPickerRow(
+    folder: AppFolder,
+    onClick: () -> Unit,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

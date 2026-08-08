@@ -13,7 +13,6 @@ import com.esde.companion.domain.model.EsdeEvent
  * not-yet-handled input here is an expected, routine outcome, not an error.
  */
 class EsdeEventParser {
-
     fun parseLine(rawLine: String): EsdeEvent? {
         // Neither of these is a Scripting::fireEvent() line - ES-DE logs them plainly as
         // it tears down and rebuilds state (a window/display change, or a game-system
@@ -38,35 +37,43 @@ class EsdeEventParser {
         return toEvent(eventName, args)
     }
 
-    private fun toEvent(eventName: String, args: List<String>): EsdeEvent? = when (eventName) {
-        "system-select" -> args.toSystemSelect()
+    private fun toEvent(
+        eventName: String,
+        args: List<String>,
+    ): EsdeEvent? =
+        when (eventName) {
+            "system-select" -> args.toSystemSelect()
 
-        "game-select" -> args.toGameArgs()?.let {
-            EsdeEvent.GameSelect(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
+            "game-select" ->
+                args.toGameArgs()?.let {
+                    EsdeEvent.GameSelect(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
+                }
+
+            "game-start" ->
+                args.toGameArgs()?.let {
+                    EsdeEvent.GameStart(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
+                }
+
+            "game-end" ->
+                args.toGameArgs()?.let {
+                    EsdeEvent.GameEnd(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
+                }
+
+            "screensaver-start" -> args.getOrNull(0)?.let { EsdeEvent.ScreensaverStart(it) }
+
+            "screensaver-game-select" ->
+                args.toGameArgs()?.let {
+                    EsdeEvent.ScreensaverGameSelect(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
+                }
+
+            "screensaver-end" -> args.getOrNull(0)?.let { EsdeEvent.ScreensaverEnd(it) }
+
+            "startup" -> EsdeEvent.Startup
+
+            "quit" -> EsdeEvent.Quit
+
+            else -> null
         }
-
-        "game-start" -> args.toGameArgs()?.let {
-            EsdeEvent.GameStart(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
-        }
-
-        "game-end" -> args.toGameArgs()?.let {
-            EsdeEvent.GameEnd(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
-        }
-
-        "screensaver-start" -> args.getOrNull(0)?.let { EsdeEvent.ScreensaverStart(it) }
-
-        "screensaver-game-select" -> args.toGameArgs()?.let {
-            EsdeEvent.ScreensaverGameSelect(it.romPath, it.gameName, it.systemShortName, it.systemFullName)
-        }
-
-        "screensaver-end" -> args.getOrNull(0)?.let { EsdeEvent.ScreensaverEnd(it) }
-
-        "startup" -> EsdeEvent.Startup
-
-        "quit" -> EsdeEvent.Quit
-
-        else -> null
-    }
 
     private fun List<String>.toSystemSelect(): EsdeEvent.SystemSelect? {
         val shortName = getOrNull(0) ?: return null
@@ -116,14 +123,14 @@ class EsdeEventParser {
 
             val pieces = trimmed.split(FIELD_DELIMITER)
             return pieces.mapIndexed { index, piece ->
-                val stripped = piece
-                    .let { if (index == 0) it.removePrefix("\"") else it }
-                    .let { if (index == pieces.lastIndex) it.removeSuffix("\"") else it }
+                val stripped =
+                    piece
+                        .let { if (index == 0) it.removePrefix("\"") else it }
+                        .let { if (index == pieces.lastIndex) it.removeSuffix("\"") else it }
                 stripped.unescapeBackslashes()
             }
         }
 
-        fun String.unescapeBackslashes(): String =
-            BACKSLASH_ESCAPE_REGEX.replace(this) { it.groupValues[1] }
+        fun String.unescapeBackslashes(): String = BACKSLASH_ESCAPE_REGEX.replace(this) { it.groupValues[1] }
     }
 }

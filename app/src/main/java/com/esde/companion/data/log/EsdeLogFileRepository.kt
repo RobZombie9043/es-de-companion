@@ -8,8 +8,6 @@ import com.esde.companion.domain.model.withDirection
 import com.esde.companion.domain.parser.EsdeEventParser
 import com.esde.companion.domain.parser.NavigationDirectionTracker
 import com.esde.companion.domain.repository.EsdeLogRepository
-import java.io.File
-import java.io.RandomAccessFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -18,6 +16,8 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.RandomAccessFile
 
 /**
  * Tails es_log.txt using [FileObserver] for near-instant pickup of new writes, with a
@@ -60,60 +60,61 @@ class EsdeLogFileRepository(
     private val watchDirectory: (targetPath: String, mask: Int, onChange: () -> Unit) -> DirectoryWatcher =
         ::FileObserverDirectoryWatcher,
 ) : EsdeLogRepository {
+    override fun observeEvents(): Flow<EsdeEvent> =
+        channelFlow {
+            var position = 0L
+            val directionTracker = NavigationDirectionTracker()
 
-    override fun observeEvents(): Flow<EsdeEvent> = channelFlow {
-        var position = 0L
-        val directionTracker = NavigationDirectionTracker()
-
-        val startupFile = File(logFilePath)
-        if (startupFile.exists()) {
-            // A device reboot can auto-start this app (see MainActivity's HOME intent
-            // filter) before ES-DE has (re)written es_log.txt this boot. If the file
-            // predates boot, any anchor in it is guaranteed to be from a previous
-            // session - skip replay rather than surface stale system/game info.
-            if (startupFile.lastModified() >= bootTimeMillis() - STALE_ANCHOR_GRACE_MS) {
-                findEventsSinceLastAnchor(startupFile, directionTracker).forEach { send(it) }
+            val startupFile = File(logFilePath)
+            if (startupFile.exists()) {
+                // A device reboot can auto-start this app (see MainActivity's HOME intent
+                // filter) before ES-DE has (re)written es_log.txt this boot. If the file
+                // predates boot, any anchor in it is guaranteed to be from a previous
+                // session - skip replay rather than surface stale system/game info.
+                if (startupFile.lastModified() >= bootTimeMillis() - STALE_ANCHOR_GRACE_MS) {
+                    findEventsSinceLastAnchor(startupFile, directionTracker).forEach { send(it) }
+                }
+                position = startupFile.length()
             }
-            position = startupFile.length()
-        }
 
-        // Both the FileObserver callback and the fallback ticker just post "something may
-        // have changed, go check" - CONFLATED because we always read from `position` to
-        // current end-of-file regardless of how many signals coalesce into one wakeup.
-        val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
+            // Both the FileObserver callback and the fallback ticker just post "something may
+            // have changed, go check" - CONFLATED because we always read from `position` to
+            // current end-of-file regardless of how many signals coalesce into one wakeup.
+            val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
 
-        val fileObserver = watchDirectory(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
-        fileObserver.startWatching()
+            val fileObserver = watchDirectory(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+            fileObserver.startWatching()
 
-        val fallbackJob = launch {
-            while (isActive) {
-                delay(fallbackPollIntervalMs)
-                checkSignal.trySend(Unit)
-            }
-        }
-
-        try {
-            for (signal in checkSignal) {
-                val file = File(logFilePath)
-                if (!file.exists()) continue
-
-                val length = file.length()
-
-                if (length < position) {
-                    // Smaller than what we've already read: ES-DE restarted and wrote
-                    // a fresh log. Start over from the beginning.
-                    position = 0L
+            val fallbackJob =
+                launch {
+                    while (isActive) {
+                        delay(fallbackPollIntervalMs)
+                        checkSignal.trySend(Unit)
+                    }
                 }
 
-                if (length > position) {
-                    position = readNewLines(file, position, directionTracker) { event -> send(event) }
+            try {
+                for (signal in checkSignal) {
+                    val file = File(logFilePath)
+                    if (!file.exists()) continue
+
+                    val length = file.length()
+
+                    if (length < position) {
+                        // Smaller than what we've already read: ES-DE restarted and wrote
+                        // a fresh log. Start over from the beginning.
+                        position = 0L
+                    }
+
+                    if (length > position) {
+                        position = readNewLines(file, position, directionTracker) { event -> send(event) }
+                    }
                 }
+            } finally {
+                fallbackJob.cancel()
+                fileObserver.stopWatching()
             }
-        } finally {
-            fallbackJob.cancel()
-            fileObserver.stopWatching()
-        }
-    }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.IO)
 
     /**
      * Whether es_log.txt currently exists. Runs its own independent FileObserver/poll
@@ -122,34 +123,36 @@ class EsdeLogFileRepository(
      * need for read position, so keeping it separate is simpler than threading existence
      * state through the tailing loop above.
      */
-    override fun observeLogFileExists(): Flow<Boolean> = channelFlow {
-        var lastKnown = File(logFilePath).exists()
-        send(lastKnown)
+    override fun observeLogFileExists(): Flow<Boolean> =
+        channelFlow {
+            var lastKnown = File(logFilePath).exists()
+            send(lastKnown)
 
-        val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
-        val fileObserver = watchDirectory(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
-        fileObserver.startWatching()
+            val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
+            val fileObserver = watchDirectory(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+            fileObserver.startWatching()
 
-        val fallbackJob = launch {
-            while (isActive) {
-                delay(fallbackPollIntervalMs)
-                checkSignal.trySend(Unit)
-            }
-        }
-
-        try {
-            for (signal in checkSignal) {
-                val exists = File(logFilePath).exists()
-                if (exists != lastKnown) {
-                    lastKnown = exists
-                    send(exists)
+            val fallbackJob =
+                launch {
+                    while (isActive) {
+                        delay(fallbackPollIntervalMs)
+                        checkSignal.trySend(Unit)
+                    }
                 }
+
+            try {
+                for (signal in checkSignal) {
+                    val exists = File(logFilePath).exists()
+                    if (exists != lastKnown) {
+                        lastKnown = exists
+                        send(exists)
+                    }
+                }
+            } finally {
+                fallbackJob.cancel()
+                fileObserver.stopWatching()
             }
-        } finally {
-            fallbackJob.cancel()
-            fileObserver.stopWatching()
-        }
-    }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.IO)
 
     /**
      * Finds the most recent "anchor" event (see [isStartupAnchor]) and returns it plus
@@ -165,7 +168,10 @@ class EsdeLogFileRepository(
      * the whole file has been read; if no anchor exists anywhere in the file, returns an
      * empty list and startup correctly falls back to [AppState.Idle].
      */
-    private fun findEventsSinceLastAnchor(file: File, directionTracker: NavigationDirectionTracker): List<EsdeEvent> {
+    private fun findEventsSinceLastAnchor(
+        file: File,
+        directionTracker: NavigationDirectionTracker,
+    ): List<EsdeEvent> {
         val fileLength = file.length()
         if (fileLength == 0L) return emptyList()
 
@@ -186,10 +192,11 @@ class EsdeLogFileRepository(
                 // off mid-line by the window boundary, not a real line boundary - drop it
                 // rather than risk parsing a truncated line.
                 val lines = text.lineSequence().let { if (startPos > 0) it.drop(1) else it }
-                val events = lines.mapNotNull { line ->
-                    directionTracker.observeLine(line)
-                    parser.parseLine(line)?.withDirection(directionTracker.direction)
-                }.toList()
+                val events =
+                    lines.mapNotNull { line ->
+                        directionTracker.observeLine(line)
+                        parser.parseLine(line)?.withDirection(directionTracker.direction)
+                    }.toList()
 
                 val anchorIndex = events.indexOfLast { it.isStartupAnchor() }
                 if (anchorIndex != -1) return events.subList(anchorIndex, events.size)
@@ -239,12 +246,14 @@ class EsdeLogFileRepository(
         // predates bootTimeMillis()'s computed value.
         const val STALE_ANCHOR_GRACE_MS = 10_000L
 
-        val WRITE_EVENTS_MASK = FileObserver.MODIFY or
+        val WRITE_EVENTS_MASK =
+            FileObserver.MODIFY or
                 FileObserver.CLOSE_WRITE or
                 FileObserver.CREATE or
                 FileObserver.MOVED_TO
 
-        val EXISTENCE_EVENTS_MASK = FileObserver.CREATE or
+        val EXISTENCE_EVENTS_MASK =
+            FileObserver.CREATE or
                 FileObserver.DELETE or
                 FileObserver.MOVED_TO or
                 FileObserver.MOVED_FROM
@@ -262,6 +271,7 @@ class EsdeLogFileRepository(
  */
 interface DirectoryWatcher {
     fun startWatching()
+
     fun stopWatching()
 }
 
@@ -276,12 +286,17 @@ private class FileObserverDirectoryWatcher(
     onChange: () -> Unit,
 ) : DirectoryWatcher {
     private val targetFile = File(targetPath)
-    private val observer = object : FileObserver(targetFile.parentFile ?: File("/"), mask) {
-        override fun onEvent(event: Int, path: String?) {
-            if (path == null || path == targetFile.name) onChange()
+    private val observer =
+        object : FileObserver(targetFile.parentFile ?: File("/"), mask) {
+            override fun onEvent(
+                event: Int,
+                path: String?,
+            ) {
+                if (path == null || path == targetFile.name) onChange()
+            }
         }
-    }
 
     override fun startWatching() = observer.startWatching()
+
     override fun stopWatching() = observer.stopWatching()
 }

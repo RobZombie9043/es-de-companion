@@ -17,13 +17,11 @@ import kotlinx.coroutines.flow.map
 class FileAppDrawerSettingsRepository(
     private val context: Context,
 ) : AppDrawerSettingsRepository {
-
     override suspend fun setHiddenApps(packageNames: Set<String>) {
         context.appDrawerSettingsDataStore.edit { it[HIDDEN_APPS_KEY] = packageNames }
     }
 
-    override fun observeHiddenApps(): Flow<Set<String>> =
-        context.appDrawerSettingsDataStore.data.map { it[HIDDEN_APPS_KEY] ?: emptySet() }
+    override fun observeHiddenApps(): Flow<Set<String>> = context.appDrawerSettingsDataStore.data.map { it[HIDDEN_APPS_KEY] ?: emptySet() }
 
     override suspend fun setGridColumns(columns: Int) {
         context.appDrawerSettingsDataStore.edit { it[GRID_COLUMNS_KEY] = columns.coerceIn(3, 6) }

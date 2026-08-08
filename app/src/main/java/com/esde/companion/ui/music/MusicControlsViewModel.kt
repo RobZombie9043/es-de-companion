@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.stateIn
 class MusicControlsViewModel(
     private val coordinator: MusicPlaybackCoordinator,
 ) : ViewModel() {
-
     val playbackState: StateFlow<MusicPlaybackState> =
         coordinator.playbackState.stateIn(
             scope = viewModelScope,

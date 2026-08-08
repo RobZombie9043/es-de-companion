@@ -7,7 +7,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class MusicEligibilityResolverTest {
-
     private val allEnabled = MusicSettings(enabled = true, systems = true, games = true, screensaver = true)
     private val allDisabled = MusicSettings(enabled = false, systems = true, games = true, screensaver = true)
 
@@ -36,12 +35,13 @@ class MusicEligibilityResolverTest {
 
     @Test
     fun `BrowsingGame is eligible for its own PerSystem pool when the games toggle is on`() {
-        val state = AppState.BrowsingGame(
-            romPath = "/roms/psx/Final Fantasy IX (USA).chd",
-            gameName = "Final Fantasy IX",
-            systemShortName = "psx",
-            systemFullName = "Sony PlayStation",
-        )
+        val state =
+            AppState.BrowsingGame(
+                romPath = "/roms/psx/Final Fantasy IX (USA).chd",
+                gameName = "Final Fantasy IX",
+                systemShortName = "psx",
+                systemFullName = "Sony PlayStation",
+            )
 
         assertEquals(
             MusicEligibility.Eligible(MusicPool.PerSystem("psx")),
@@ -51,12 +51,13 @@ class MusicEligibilityResolverTest {
 
     @Test
     fun `BrowsingGame is ineligible when the games toggle is off`() {
-        val state = AppState.BrowsingGame(
-            romPath = "/roms/psx/Final Fantasy IX (USA).chd",
-            gameName = "Final Fantasy IX",
-            systemShortName = "psx",
-            systemFullName = "Sony PlayStation",
-        )
+        val state =
+            AppState.BrowsingGame(
+                romPath = "/roms/psx/Final Fantasy IX (USA).chd",
+                gameName = "Final Fantasy IX",
+                systemShortName = "psx",
+                systemFullName = "Sony PlayStation",
+            )
         val settings = allEnabled.copy(games = false)
 
         assertEquals(MusicEligibility.Ineligible, MusicEligibilityResolver.resolve(state, settings))
@@ -64,12 +65,13 @@ class MusicEligibilityResolverTest {
 
     @Test
     fun `PlayingGame is always ineligible regardless of toggles`() {
-        val state = AppState.PlayingGame(
-            romPath = "/roms/psx/Final Fantasy IX (USA).chd",
-            gameName = "Final Fantasy IX",
-            systemShortName = "psx",
-            systemFullName = "Sony PlayStation",
-        )
+        val state =
+            AppState.PlayingGame(
+                romPath = "/roms/psx/Final Fantasy IX (USA).chd",
+                gameName = "Final Fantasy IX",
+                systemShortName = "psx",
+                systemFullName = "Sony PlayStation",
+            )
 
         assertEquals(MusicEligibility.Ineligible, MusicEligibilityResolver.resolve(state, allEnabled))
     }
@@ -87,12 +89,13 @@ class MusicEligibilityResolverTest {
     @Test
     fun `Screensaver ignores currentGame and previousState tied to a specific system - always General`() {
         val previous = AppState.BrowsingSystem("dreamcast", "Sega Dreamcast", "/roms/dreamcast")
-        val currentGame = ScreensaverGame(
-            romPath = "/roms/psx/Final Fantasy IX (USA).chd",
-            gameName = "Final Fantasy IX",
-            systemShortName = "psx",
-            systemFullName = "Sony PlayStation",
-        )
+        val currentGame =
+            ScreensaverGame(
+                romPath = "/roms/psx/Final Fantasy IX (USA).chd",
+                gameName = "Final Fantasy IX",
+                systemShortName = "psx",
+                systemFullName = "Sony PlayStation",
+            )
         val state = AppState.Screensaver(mode = "video", currentGame = currentGame, previousState = previous)
 
         assertEquals(
@@ -111,13 +114,14 @@ class MusicEligibilityResolverTest {
 
     @Test
     fun `master toggle off makes every state ineligible`() {
-        val states = listOf(
-            AppState.Idle,
-            AppState.BrowsingSystem("dreamcast", "Sega Dreamcast", "/roms/dreamcast"),
-            AppState.BrowsingGame("/roms/psx/game.chd", "Game", "psx", "Sony PlayStation"),
-            AppState.PlayingGame("/roms/psx/game.chd", "Game", "psx", "Sony PlayStation"),
-            AppState.Screensaver(mode = "video", currentGame = null, previousState = AppState.Idle),
-        )
+        val states =
+            listOf(
+                AppState.Idle,
+                AppState.BrowsingSystem("dreamcast", "Sega Dreamcast", "/roms/dreamcast"),
+                AppState.BrowsingGame("/roms/psx/game.chd", "Game", "psx", "Sony PlayStation"),
+                AppState.PlayingGame("/roms/psx/game.chd", "Game", "psx", "Sony PlayStation"),
+                AppState.Screensaver(mode = "video", currentGame = null, previousState = AppState.Idle),
+            )
 
         states.forEach { state ->
             assertEquals(MusicEligibility.Ineligible, MusicEligibilityResolver.resolve(state, allDisabled))

@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PanZoomImageTest {
-
     private val size = IntSize(width = 200, height = 100)
 
     @Test

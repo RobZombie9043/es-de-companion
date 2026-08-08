@@ -1,17 +1,16 @@
 package com.esde.companion.data.media
 
 import com.esde.companion.domain.model.MediaType
-import java.io.File
-import java.nio.file.Files
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class FileGameMediaRepositoryTest {
-
     private lateinit var mediaRoot: File
     private lateinit var romRoot: File
 
@@ -28,68 +27,76 @@ class FileGameMediaRepositoryTest {
     }
 
     @Test
-    fun `finds a matching cover image by trying each valid extension`() = runTest {
-        writeMediaFile("dreamcast/covers/Cosmic Smash (Japan).png")
-        val repository = FileGameMediaRepository(mediaRoot.absolutePath)
+    fun `finds a matching cover image by trying each valid extension`() =
+        runTest {
+            writeMediaFile("dreamcast/covers/Cosmic Smash (Japan).png")
+            val repository = FileGameMediaRepository(mediaRoot.absolutePath)
 
-        val result = repository.resolveMedia(
-            systemShortName = "dreamcast",
-            romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd",
-        )
+            val result =
+                repository.resolveMedia(
+                    systemShortName = "dreamcast",
+                    romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd",
+                )
 
-        assertEquals(
-            File(mediaRoot, "dreamcast/covers/Cosmic Smash (Japan).png").absolutePath,
-            result.path(MediaType.Covers),
-        )
-    }
-
-    @Test
-    fun `finds media nested in replicated subfolders`() = runTest {
-        writeMediaFile("psx/screenshots/RPGs/Final Fantasy IX (USA).jpg")
-        val repository = FileGameMediaRepository(mediaRoot.absolutePath)
-
-        val result = repository.resolveMedia(
-            systemShortName = "psx",
-            romPath = "/storage/E2AB-E84A/ROMs/psx/RPGs/Final Fantasy IX (USA).chd",
-        )
-
-        assertEquals(
-            File(mediaRoot, "psx/screenshots/RPGs/Final Fantasy IX (USA).jpg").absolutePath,
-            result.path(MediaType.Screenshots),
-        )
-    }
+            assertEquals(
+                File(mediaRoot, "dreamcast/covers/Cosmic Smash (Japan).png").absolutePath,
+                result.path(MediaType.Covers),
+            )
+        }
 
     @Test
-    fun `treats a real directory rom path as ES-DE's directories-interpreted-as-files case`() = runTest {
-        val gameDir = File(romRoot, "psx/Final Fantasy VII (USA).m3u")
-        gameDir.mkdirs()
-        File(gameDir, "Final Fantasy VII (USA).m3u").writeText("stub")
-        writeMediaFile("psx/covers/Final Fantasy VII (USA).m3u.png")
+    fun `finds media nested in replicated subfolders`() =
+        runTest {
+            writeMediaFile("psx/screenshots/RPGs/Final Fantasy IX (USA).jpg")
+            val repository = FileGameMediaRepository(mediaRoot.absolutePath)
 
-        val repository = FileGameMediaRepository(mediaRoot.absolutePath)
+            val result =
+                repository.resolveMedia(
+                    systemShortName = "psx",
+                    romPath = "/storage/E2AB-E84A/ROMs/psx/RPGs/Final Fantasy IX (USA).chd",
+                )
 
-        val result = repository.resolveMedia(
-            systemShortName = "psx",
-            romPath = gameDir.absolutePath.replace(File.separatorChar, '/'),
-        )
-
-        assertEquals(
-            File(mediaRoot, "psx/covers/Final Fantasy VII (USA).m3u.png").absolutePath,
-            result.path(MediaType.Covers),
-        )
-    }
+            assertEquals(
+                File(mediaRoot, "psx/screenshots/RPGs/Final Fantasy IX (USA).jpg").absolutePath,
+                result.path(MediaType.Screenshots),
+            )
+        }
 
     @Test
-    fun `returns no match for a type with no file on disk`() = runTest {
-        val repository = FileGameMediaRepository(mediaRoot.absolutePath)
+    fun `treats a real directory rom path as ES-DE's directories-interpreted-as-files case`() =
+        runTest {
+            val gameDir = File(romRoot, "psx/Final Fantasy VII (USA).m3u")
+            gameDir.mkdirs()
+            File(gameDir, "Final Fantasy VII (USA).m3u").writeText("stub")
+            writeMediaFile("psx/covers/Final Fantasy VII (USA).m3u.png")
 
-        val result = repository.resolveMedia(
-            systemShortName = "dreamcast",
-            romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Missing Game.chd",
-        )
+            val repository = FileGameMediaRepository(mediaRoot.absolutePath)
 
-        assertNull(result.path(MediaType.Covers))
-    }
+            val result =
+                repository.resolveMedia(
+                    systemShortName = "psx",
+                    romPath = gameDir.absolutePath.replace(File.separatorChar, '/'),
+                )
+
+            assertEquals(
+                File(mediaRoot, "psx/covers/Final Fantasy VII (USA).m3u.png").absolutePath,
+                result.path(MediaType.Covers),
+            )
+        }
+
+    @Test
+    fun `returns no match for a type with no file on disk`() =
+        runTest {
+            val repository = FileGameMediaRepository(mediaRoot.absolutePath)
+
+            val result =
+                repository.resolveMedia(
+                    systemShortName = "dreamcast",
+                    romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Missing Game.chd",
+                )
+
+            assertNull(result.path(MediaType.Covers))
+        }
 
     private fun writeMediaFile(relativePath: String) {
         val file = File(mediaRoot, relativePath)

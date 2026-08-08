@@ -131,7 +131,6 @@ import kotlinx.coroutines.launch
  * everything here is already expressed as interfaces / constructor dependencies.
  */
 class AppContainer(context: Context) {
-
     private val appContext = context.applicationContext
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -144,10 +143,11 @@ class AppContainer(context: Context) {
 
     val videoPlaybackStateRepository: VideoPlaybackStateRepository = ProcessVideoPlaybackStateRepository()
 
-    private val logRepository: EsdeLogRepository = SharedEsdeLogRepository(
-        inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
-        scope = applicationScope,
-    )
+    private val logRepository: EsdeLogRepository =
+        SharedEsdeLogRepository(
+            inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
+            scope = applicationScope,
+        )
 
     // Same reactive-to-Settings pattern as logRepository, for the media folder.
     private val gameMediaRepository: GameMediaRepository =
@@ -292,19 +292,20 @@ class AppContainer(context: Context) {
     val observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
 
-    val musicPlaybackCoordinator = MusicPlaybackCoordinator(
-        observeConnectionState = observeConnectionStateUseCase,
-        observeMusicEnabled = observeMusicEnabledUseCase,
-        observeMusicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase,
-        observeMusicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase,
-        observeMusicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase,
-        observeMusicDuckingMode = observeMusicDuckingModeUseCase,
-        activityVisibilityRepository = activityVisibilityRepository,
-        videoPlaybackStateRepository = videoPlaybackStateRepository,
-        musicLibraryRepository = musicLibraryRepository,
-        musicPlayerController = musicPlayerController,
-        applicationScope = applicationScope,
-    )
+    val musicPlaybackCoordinator =
+        MusicPlaybackCoordinator(
+            observeConnectionState = observeConnectionStateUseCase,
+            observeMusicEnabled = observeMusicEnabledUseCase,
+            observeMusicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase,
+            observeMusicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase,
+            observeMusicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase,
+            observeMusicDuckingMode = observeMusicDuckingModeUseCase,
+            activityVisibilityRepository = activityVisibilityRepository,
+            videoPlaybackStateRepository = videoPlaybackStateRepository,
+            musicLibraryRepository = musicLibraryRepository,
+            musicPlayerController = musicPlayerController,
+            applicationScope = applicationScope,
+        )
 
     init {
         // Always-running, independent of whether edit mode is even open - records

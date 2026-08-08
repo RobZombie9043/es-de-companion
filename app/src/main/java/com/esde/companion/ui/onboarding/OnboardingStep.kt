@@ -10,9 +10,14 @@ package com.esde.companion.ui.onboarding
  */
 sealed class OnboardingStep {
     data object Permission : OnboardingStep()
+
     data object EsdeFolder : OnboardingStep()
+
     data object MediaFolder : OnboardingStep()
+
     data object LegacyScripts : OnboardingStep()
+
     data object EventScriptSettings : OnboardingStep()
+
     data object LiveLogCheck : OnboardingStep()
 }

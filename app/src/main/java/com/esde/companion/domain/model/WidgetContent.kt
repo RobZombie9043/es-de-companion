@@ -67,16 +67,17 @@ private val TRANSPARENT_MEDIA_TYPES = setOf(MediaType.Marquees)
  * to a real logo would remount AnimatedLogoImage fresh and skip its enter animation.
  */
 val WidgetType.isLogoStyle: Boolean
-    get() = when (this) {
-        is WidgetType.SystemLogo -> true
-        is WidgetType.GameMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
-        is WidgetType.SystemMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
-        is WidgetType.SystemImage,
-        is WidgetType.CustomImage,
-        is WidgetType.ColorBackground,
-        is WidgetType.GameDescription,
-        -> false
-    }
+    get() =
+        when (this) {
+            is WidgetType.SystemLogo -> true
+            is WidgetType.GameMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
+            is WidgetType.SystemMedia -> mediaType in TRANSPARENT_MEDIA_TYPES
+            is WidgetType.SystemImage,
+            is WidgetType.CustomImage,
+            is WidgetType.ColorBackground,
+            is WidgetType.GameDescription,
+            -> false
+        }
 
 /** Game-view box-art-style media where each new game's art should snap in instantly
  * rather than fade, even when the widget's own per-widget imageTransitionMode (Configure
@@ -84,13 +85,14 @@ val WidgetType.isLogoStyle: Boolean
  * not a scene changing, so a cross-dissolve between two unrelated pieces of box art looks
  * like a smear rather than a clean cut the way a fade between full-bleed fanart/screenshots
  * does. */
-private val INSTANT_ONLY_MEDIA_TYPES = setOf(
-    MediaType.Covers,
-    MediaType.ThreeDBoxes,
-    MediaType.MixImages,
-    MediaType.BackCovers,
-    MediaType.PhysicalMedia,
-)
+private val INSTANT_ONLY_MEDIA_TYPES =
+    setOf(
+        MediaType.Covers,
+        MediaType.ThreeDBoxes,
+        MediaType.MixImages,
+        MediaType.BackCovers,
+        MediaType.PhysicalMedia,
+    )
 
 /**
  * Whether this widget type must always render with an instant (no-fade) transition,
@@ -109,37 +111,40 @@ val WidgetType.forcesInstantImageTransition: Boolean
  * [ImageTransitionMode.None] here without it ever being displayed or applied.
  */
 val WidgetType.imageTransitionMode: ImageTransitionMode
-    get() = when (this) {
-        is WidgetType.SystemImage -> imageTransitionMode
-        is WidgetType.SystemMedia -> imageTransitionMode
-        is WidgetType.GameMedia -> imageTransitionMode
-        is WidgetType.CustomImage -> imageTransitionMode
-        else -> ImageTransitionMode.None
-    }
+    get() =
+        when (this) {
+            is WidgetType.SystemImage -> imageTransitionMode
+            is WidgetType.SystemMedia -> imageTransitionMode
+            is WidgetType.GameMedia -> imageTransitionMode
+            is WidgetType.CustomImage -> imageTransitionMode
+            else -> ImageTransitionMode.None
+        }
 
 /**
  * This widget instance's own per-widget [LogoTransitionMode] (Configure Widget dialog),
  * for whichever [WidgetType] variants are logo-style - see [WidgetType.isLogoStyle].
  */
 val WidgetType.logoTransitionMode: LogoTransitionMode
-    get() = when (this) {
-        is WidgetType.SystemLogo -> logoTransitionMode
-        is WidgetType.SystemMedia -> logoTransitionMode
-        is WidgetType.GameMedia -> logoTransitionMode
-        else -> LogoTransitionMode.None
-    }
+    get() =
+        when (this) {
+            is WidgetType.SystemLogo -> logoTransitionMode
+            is WidgetType.SystemMedia -> logoTransitionMode
+            is WidgetType.GameMedia -> logoTransitionMode
+            else -> LogoTransitionMode.None
+        }
 
 /**
  * This widget instance's own per-widget Logo Glint toggle (Configure Widget dialog), for
  * whichever [WidgetType] variants are logo-style - see [WidgetType.isLogoStyle].
  */
 val WidgetType.glintEnabled: Boolean
-    get() = when (this) {
-        is WidgetType.SystemLogo -> glintEnabled
-        is WidgetType.SystemMedia -> glintEnabled
-        is WidgetType.GameMedia -> glintEnabled
-        else -> false
-    }
+    get() =
+        when (this) {
+            is WidgetType.SystemLogo -> glintEnabled
+            is WidgetType.SystemMedia -> glintEnabled
+            is WidgetType.GameMedia -> glintEnabled
+            else -> false
+        }
 
 /**
  * Whether this widget type's Configure dialog should offer the Image Transitions picker
@@ -150,12 +155,13 @@ val WidgetType.glintEnabled: Boolean
  * same reasoning as [supportsPanZoom] hiding rather than graying out).
  */
 val WidgetType.supportsImageTransition: Boolean
-    get() = when (this) {
-        is WidgetType.SystemImage, is WidgetType.CustomImage -> true
-        is WidgetType.SystemMedia -> !isLogoStyle
-        is WidgetType.GameMedia -> !isLogoStyle && !forcesInstantImageTransition
-        is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
-    }
+    get() =
+        when (this) {
+            is WidgetType.SystemImage, is WidgetType.CustomImage -> true
+            is WidgetType.SystemMedia -> !isLogoStyle
+            is WidgetType.GameMedia -> !isLogoStyle && !forcesInstantImageTransition
+            is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+        }
 
 /**
  * Whether Fade is currently selectable within the Image Transitions picker - unlike
@@ -167,13 +173,14 @@ val WidgetType.supportsImageTransition: Boolean
  * before a Fit switch is ignored rather than needing to be actively cleared.
  */
 val WidgetType.allowsFadeTransition: Boolean
-    get() = when (this) {
-        is WidgetType.SystemImage -> scaleMode == ScaleMode.Fill
-        is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
-        is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill
-        is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill
-        else -> false
-    }
+    get() =
+        when (this) {
+            is WidgetType.SystemImage -> scaleMode == ScaleMode.Fill
+            is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
+            is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill
+            is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill
+            else -> false
+        }
 
 /**
  * The [ImageTransitionMode] that should actually apply at render time -
@@ -201,13 +208,14 @@ private val PAN_ZOOM_ELIGIBLE_MEDIA_TYPES = setOf(MediaType.FanArt, MediaType.Sc
  * which looks broken rather than cinematic, so pan-zoom is Fill-only.
  */
 val WidgetType.supportsPanZoom: Boolean
-    get() = when (this) {
-        is WidgetType.SystemImage -> scaleMode == ScaleMode.Fill
-        is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
-        is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
-        is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
-        is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
-    }
+    get() =
+        when (this) {
+            is WidgetType.SystemImage -> scaleMode == ScaleMode.Fill
+            is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
+            is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
+            is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
+            is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+        }
 
 /**
  * Whether pan-zoom should actually render right now - [supportsPanZoom] AND the user's
@@ -217,23 +225,26 @@ val WidgetType.supportsPanZoom: Boolean
  * needing its flag actively cleared, the same reasoning as [forcesInstantImageTransition].
  */
 val WidgetType.panZoomActive: Boolean
-    get() = supportsPanZoom && when (this) {
-        is WidgetType.SystemImage -> panZoomEnabled
-        is WidgetType.SystemMedia -> panZoomEnabled
-        is WidgetType.GameMedia -> panZoomEnabled
-        is WidgetType.CustomImage -> panZoomEnabled
-        else -> false
-    }
+    get() =
+        supportsPanZoom &&
+            when (this) {
+                is WidgetType.SystemImage -> panZoomEnabled
+                is WidgetType.SystemMedia -> panZoomEnabled
+                is WidgetType.GameMedia -> panZoomEnabled
+                is WidgetType.CustomImage -> panZoomEnabled
+                else -> false
+            }
 
 /**
  * FanArt and Screenshots fall back to each other when the primary type is missing - the
  * only two MediaTypes that do. Every other type is exact-or-empty; see widget system
  * design notes for why a general fallback chain per type was deliberately not built.
  */
-private val MEDIA_FALLBACKS: Map<MediaType, MediaType> = mapOf(
-    MediaType.FanArt to MediaType.Screenshots,
-    MediaType.Screenshots to MediaType.FanArt,
-)
+private val MEDIA_FALLBACKS: Map<MediaType, MediaType> =
+    mapOf(
+        MediaType.FanArt to MediaType.Screenshots,
+        MediaType.Screenshots to MediaType.FanArt,
+    )
 
 /** Only these two types fall back further to a generic background image when neither
  * they nor their MEDIA_FALLBACKS partner has a real file - they're the ones used as
@@ -260,7 +271,13 @@ fun resolveMediaWidgetContent(
 ): WidgetContent {
     val path = lookup(mediaType) ?: MEDIA_FALLBACKS[mediaType]?.let(lookup)
     if (path != null) {
-        return WidgetContent.Image(path, scaleMode, isTransparentOverlay = mediaType in TRANSPARENT_MEDIA_TYPES, isAsset = false, effects = effects)
+        return WidgetContent.Image(
+            path,
+            scaleMode,
+            isTransparentOverlay = mediaType in TRANSPARENT_MEDIA_TYPES,
+            isAsset = false,
+            effects = effects,
+        )
     }
 
     if (mediaType in BACKGROUND_FALLBACK_ELIGIBLE && fallbackBackgroundAssetPath != null) {

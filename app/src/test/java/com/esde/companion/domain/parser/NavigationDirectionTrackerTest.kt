@@ -10,7 +10,6 @@ import org.junit.Test
  * preceded by a directional press and followed by that same button's release.
  */
 class NavigationDirectionTrackerTest {
-
     private val tracker = NavigationDirectionTracker()
 
     @Test

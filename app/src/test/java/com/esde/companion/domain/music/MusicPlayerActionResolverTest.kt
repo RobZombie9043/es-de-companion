@@ -5,7 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class MusicPlayerActionResolverTest {
-
     @Test
     fun `no current track always resolves to NoTrackLoaded regardless of every other input`() {
         assertEquals(

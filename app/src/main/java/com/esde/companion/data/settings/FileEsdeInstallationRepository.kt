@@ -4,7 +4,6 @@ import android.os.FileObserver
 import com.esde.companion.domain.model.EsdeEventScriptSettings
 import com.esde.companion.domain.parser.EsdeSettingsParser
 import com.esde.companion.domain.repository.EsdeInstallationRepository
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Reads ES-DE's own settings/es_settings.xml and checks for the legacy
@@ -23,7 +23,6 @@ import kotlinx.coroutines.withContext
 class FileEsdeInstallationRepository(
     private val fallbackPollIntervalMs: Long = DEFAULT_FALLBACK_POLL_INTERVAL_MS,
 ) : EsdeInstallationRepository {
-
     override suspend fun readMediaDirectory(esdeRootPath: String): String? =
         withContext(Dispatchers.IO) {
             readSettingsXml(esdeRootPath)?.let { xml ->
@@ -42,37 +41,43 @@ class FileEsdeInstallationRepository(
      * may rewrite the file rather than edit it in place) with a slow poll running
      * alongside as a safety net, the same combination used there.
      */
-    override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> = channelFlow {
-        send(parseEventScriptSettings(esdeRootPath))
+    override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> =
+        channelFlow {
+            send(parseEventScriptSettings(esdeRootPath))
 
-        val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
+            val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
 
-        val settingsFile = File(esdeRootPath, SETTINGS_XML_RELATIVE_PATH)
-        val parentDir = settingsFile.parentFile ?: File(esdeRootPath)
-        val targetName = settingsFile.name
-        val fileObserver = object : FileObserver(parentDir, WRITE_EVENTS_MASK) {
-            override fun onEvent(event: Int, path: String?) {
-                if (path == null || path == targetName) checkSignal.trySend(Unit)
+            val settingsFile = File(esdeRootPath, SETTINGS_XML_RELATIVE_PATH)
+            val parentDir = settingsFile.parentFile ?: File(esdeRootPath)
+            val targetName = settingsFile.name
+            val fileObserver =
+                object : FileObserver(parentDir, WRITE_EVENTS_MASK) {
+                    override fun onEvent(
+                        event: Int,
+                        path: String?,
+                    ) {
+                        if (path == null || path == targetName) checkSignal.trySend(Unit)
+                    }
+                }
+            fileObserver.startWatching()
+
+            val fallbackJob =
+                launch {
+                    while (isActive) {
+                        delay(fallbackPollIntervalMs)
+                        checkSignal.trySend(Unit)
+                    }
+                }
+
+            try {
+                for (signal in checkSignal) {
+                    send(parseEventScriptSettings(esdeRootPath))
+                }
+            } finally {
+                fallbackJob.cancel()
+                fileObserver.stopWatching()
             }
-        }
-        fileObserver.startWatching()
-
-        val fallbackJob = launch {
-            while (isActive) {
-                delay(fallbackPollIntervalMs)
-                checkSignal.trySend(Unit)
-            }
-        }
-
-        try {
-            for (signal in checkSignal) {
-                send(parseEventScriptSettings(esdeRootPath))
-            }
-        } finally {
-            fallbackJob.cancel()
-            fileObserver.stopWatching()
-        }
-    }.flowOn(Dispatchers.IO)
+        }.flowOn(Dispatchers.IO)
 
     private fun parseEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? =
         readSettingsXml(esdeRootPath)?.let { xml ->
@@ -109,19 +114,21 @@ class FileEsdeInstallationRepository(
         // reasoning as EsdeLogFileRepository's fallback poll.
         const val DEFAULT_FALLBACK_POLL_INTERVAL_MS = 3_000L
 
-        val WRITE_EVENTS_MASK = FileObserver.MODIFY or
+        val WRITE_EVENTS_MASK =
+            FileObserver.MODIFY or
                 FileObserver.CLOSE_WRITE or
                 FileObserver.CREATE or
                 FileObserver.MOVED_TO
 
-        val LEGACY_SCRIPT_RELATIVE_PATHS = listOf(
-            "scripts/game-end/esdecompanion-game-end.sh",
-            "scripts/game-start/esdecompanion-game-start.sh",
-            "scripts/game-select/esdecompanion-game-select.sh",
-            "scripts/screensaver-end/esdecompanion-screensaver-end.sh",
-            "scripts/screensaver-game-select/esdecompanion-screensaver-game-select.sh",
-            "scripts/screensaver-start/esdecompanion-screensaver-start.sh",
-            "scripts/system-select/esdecompanion-system-select.sh",
-        )
+        val LEGACY_SCRIPT_RELATIVE_PATHS =
+            listOf(
+                "scripts/game-end/esdecompanion-game-end.sh",
+                "scripts/game-start/esdecompanion-game-start.sh",
+                "scripts/game-select/esdecompanion-game-select.sh",
+                "scripts/screensaver-end/esdecompanion-screensaver-end.sh",
+                "scripts/screensaver-game-select/esdecompanion-screensaver-game-select.sh",
+                "scripts/screensaver-start/esdecompanion-screensaver-start.sh",
+                "scripts/system-select/esdecompanion-system-select.sh",
+            )
     }
 }

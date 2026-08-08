@@ -53,8 +53,8 @@ import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.SettingsViewModel
-import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private val LONG_PRESS_MENU_SHAPE = RoundedCornerShape(16.dp)
 
@@ -67,10 +67,11 @@ private const val LONG_PRESS_MENU_HEIGHT_FRACTION = 0.85f
 // Entrance scale+fade for the long-press menu - starts at 85% size/transparent and
 // springs up to full size, same damping/stiffness family as DRAWER_SETTLE_SPRING.
 private const val LONG_PRESS_MENU_REVEAL_START_SCALE = 0.85f
-private val LONG_PRESS_MENU_REVEAL_SPRING = spring<Float>(
-    dampingRatio = Spring.DampingRatioMediumBouncy,
-    stiffness = Spring.StiffnessMedium,
-)
+private val LONG_PRESS_MENU_REVEAL_SPRING =
+    spring<Float>(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessMedium,
+    )
 
 /** Position-based fallback threshold for the whole-screen (opening) gesture - used only
  * when the release wasn't a decisive fling (see FLING_VELOCITY_THRESHOLD). */
@@ -86,10 +87,11 @@ private const val DRAWER_HANDLE_CLOSE_SNAP_THRESHOLD = 0.65f
  * thresholds above, so a quick flick closes the drawer even from near the top. */
 private const val FLING_VELOCITY_THRESHOLD = 1.0f
 
-private val DRAWER_SETTLE_SPRING = spring<Float>(
-    dampingRatio = Spring.DampingRatioLowBouncy,
-    stiffness = Spring.StiffnessMedium,
-)
+private val DRAWER_SETTLE_SPRING =
+    spring<Float>(
+        dampingRatio = Spring.DampingRatioLowBouncy,
+        stiffness = Spring.StiffnessMedium,
+    )
 
 @Composable
 fun MainScreen(
@@ -218,12 +220,16 @@ private fun MainScreenContent(
         // velocityFraction: positive = moving toward open (upward), negative = moving
         // toward closed (downward) - same sign convention as openFraction itself, so a
         // decisive value can be compared directly against FLING_VELOCITY_THRESHOLD.
-        fun settle(velocityFraction: Float, positionThreshold: Float) {
-            val towardOpen = when {
-                velocityFraction > FLING_VELOCITY_THRESHOLD -> true
-                velocityFraction < -FLING_VELOCITY_THRESHOLD -> false
-                else -> openFraction.value > positionThreshold
-            }
+        fun settle(
+            velocityFraction: Float,
+            positionThreshold: Float,
+        ) {
+            val towardOpen =
+                when {
+                    velocityFraction > FLING_VELOCITY_THRESHOLD -> true
+                    velocityFraction < -FLING_VELOCITY_THRESHOLD -> false
+                    else -> openFraction.value > positionThreshold
+                }
             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
             coroutineScope.launch {
                 openFraction.animateTo(
@@ -259,59 +265,60 @@ private fun MainScreenContent(
         }
 
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                // Deliberately on the outermost Box, not scoped to any particular child,
-                // so the drawer can be opened by a swipe starting anywhere on screen.
-                // Known limitation: once open, this and the app grid's own scrolling both
-                // listen for vertical drags over the grid area - not resolved via
-                // Compose's nested-scroll protocol here. The handle below remains the
-                // reliable way to close.
-                .pointerInput(drawerHeightPx) {
-                    var velocityTracker = VelocityTracker()
-                    detectVerticalDragGestures(
-                        onDragStart = { velocityTracker = VelocityTracker() },
-                        onDragEnd = {
-                            val velocityFraction = -velocityTracker.calculateVelocity().y / drawerHeightPx
-                            settle(velocityFraction, DRAWER_OPEN_SNAP_THRESHOLD)
-                        },
-                        onDragCancel = { settle(0f, DRAWER_OPEN_SNAP_THRESHOLD) },
-                    ) { change, dragAmount ->
-                        change.consume()
-                        velocityTracker.addPointerInputChange(change)
-                        onVerticalDrag(dragAmount)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    // Deliberately on the outermost Box, not scoped to any particular child,
+                    // so the drawer can be opened by a swipe starting anywhere on screen.
+                    // Known limitation: once open, this and the app grid's own scrolling both
+                    // listen for vertical drags over the grid area - not resolved via
+                    // Compose's nested-scroll protocol here. The handle below remains the
+                    // reliable way to close.
+                    .pointerInput(drawerHeightPx) {
+                        var velocityTracker = VelocityTracker()
+                        detectVerticalDragGestures(
+                            onDragStart = { velocityTracker = VelocityTracker() },
+                            onDragEnd = {
+                                val velocityFraction = -velocityTracker.calculateVelocity().y / drawerHeightPx
+                                settle(velocityFraction, DRAWER_OPEN_SNAP_THRESHOLD)
+                            },
+                            onDragCancel = { settle(0f, DRAWER_OPEN_SNAP_THRESHOLD) },
+                        ) { change, dragAmount ->
+                            change.consume()
+                            velocityTracker.addPointerInputChange(change)
+                            onVerticalDrag(dragAmount)
+                        }
                     }
-                }
-                // Long-press-to-open-menu and double-tap-to-blank, layered alongside the
-                // drag gesture above rather than replacing it. These coexist safely
-                // because of how Compose's gesture consumption works:
-                // detectVerticalDragGestures only consumes once real movement exceeds
-                // touch slop, so a stationary hold/tap never gets consumed and this
-                // detector's gestures fire normally; a genuine swipe does get consumed
-                // by the drag detector, which cancels this detector's recognition. So a
-                // still finger reaches the menu/blank-toggle and a moving finger opens
-                // the drawer, without any manual disambiguation logic - but this is
-                // exactly the kind of gesture composition worth confirming feels right
-                // on a real device, not just reasoning about in code.
-                // Double-tap-to-blank is always available now (Settings > UI Settings
-                // no longer gates it - see MainActivity for the automatic Dim/Black
-                // behavior that now lives there instead).
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onLongPress = {
-                            if (openFraction.value == 0f) {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                setLongPressMenuOpen(true)
-                            }
-                        },
-                        onDoubleTap = {
-                            if (openFraction.value == 0f) {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onToggleBlankScreen()
-                            }
-                        },
-                    )
-                },
+                    // Long-press-to-open-menu and double-tap-to-blank, layered alongside the
+                    // drag gesture above rather than replacing it. These coexist safely
+                    // because of how Compose's gesture consumption works:
+                    // detectVerticalDragGestures only consumes once real movement exceeds
+                    // touch slop, so a stationary hold/tap never gets consumed and this
+                    // detector's gestures fire normally; a genuine swipe does get consumed
+                    // by the drag detector, which cancels this detector's recognition. So a
+                    // still finger reaches the menu/blank-toggle and a moving finger opens
+                    // the drawer, without any manual disambiguation logic - but this is
+                    // exactly the kind of gesture composition worth confirming feels right
+                    // on a real device, not just reasoning about in code.
+                    // Double-tap-to-blank is always available now (Settings > UI Settings
+                    // no longer gates it - see MainActivity for the automatic Dim/Black
+                    // behavior that now lives there instead).
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = {
+                                if (openFraction.value == 0f) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    setLongPressMenuOpen(true)
+                                }
+                            },
+                            onDoubleTap = {
+                                if (openFraction.value == 0f) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onToggleBlankScreen()
+                                }
+                            },
+                        )
+                    },
         ) {
             // CornerFab, not a plain IconButton with a Settings icon - same composable as
             // MainActivity's music FAB (opposite corner) and EditWidgetsOverlay's options
@@ -331,9 +338,10 @@ private fun MainScreenContent(
                 CornerFab(
                     onClick = { setLongPressMenuOpen(true) },
                     opacityPercent = overlayOpacityPercent,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(CORNER_BUTTON_EDGE_PADDING),
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(CORNER_BUTTON_EDGE_PADDING),
                 ) {
                     Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
                 }
@@ -379,16 +387,18 @@ private fun MainScreenContent(
                     }
 
                     Surface(
-                        modifier = Modifier
-                            .width(longPressMenuWidth)
-                            .height(longPressMenuHeight)
-                            .graphicsLayer {
-                                val scale = LONG_PRESS_MENU_REVEAL_START_SCALE +
-                                    (1f - LONG_PRESS_MENU_REVEAL_START_SCALE) * revealProgress.value
-                                scaleX = scale
-                                scaleY = scale
-                                alpha = revealProgress.value
-                            },
+                        modifier =
+                            Modifier
+                                .width(longPressMenuWidth)
+                                .height(longPressMenuHeight)
+                                .graphicsLayer {
+                                    val scale =
+                                        LONG_PRESS_MENU_REVEAL_START_SCALE +
+                                            (1f - LONG_PRESS_MENU_REVEAL_START_SCALE) * revealProgress.value
+                                    scaleX = scale
+                                    scaleY = scale
+                                    alpha = revealProgress.value
+                                },
                         shape = LONG_PRESS_MENU_SHAPE,
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         tonalElevation = 3.dp,
@@ -429,12 +439,13 @@ private fun MainScreenContent(
             // full height), so it doesn't intercept touches meant for the content above
             // even though no explicit visibility/clipping gate is applied.
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .offset {
-                        val clampedFraction = openFraction.value.coerceIn(0f, 1f)
-                        IntOffset(x = 0, y = ((1f - clampedFraction) * drawerHeightPx).roundToInt())
-                    },
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .offset {
+                            val clampedFraction = openFraction.value.coerceIn(0f, 1f)
+                            IntOffset(x = 0, y = ((1f - clampedFraction) * drawerHeightPx).roundToInt())
+                        },
             ) {
                 AppDrawer(
                     viewModel = appDrawerViewModel,
@@ -453,34 +464,36 @@ private fun MainScreenContent(
                 AppDock(
                     viewModel = dockViewModel,
                     onOpenAppDrawer = { openDrawer() },
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .offset(y = -dockBarHeight(dockSize)),
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = -dockBarHeight(dockSize)),
                 )
 
                 // A dedicated, always-reliable drag target for closing - doesn't compete
                 // with the app grid's own scroll gesture the way the whole-screen
                 // detector above can once the drawer is open.
                 AppDrawerHandle(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .height(32.dp)
-                        .pointerInput(drawerHeightPx) {
-                            var velocityTracker = VelocityTracker()
-                            detectVerticalDragGestures(
-                                onDragStart = { velocityTracker = VelocityTracker() },
-                                onDragEnd = {
-                                    val velocityFraction = -velocityTracker.calculateVelocity().y / drawerHeightPx
-                                    settle(velocityFraction, DRAWER_HANDLE_CLOSE_SNAP_THRESHOLD)
-                                },
-                                onDragCancel = { settle(0f, DRAWER_HANDLE_CLOSE_SNAP_THRESHOLD) },
-                            ) { change, dragAmount ->
-                                change.consume()
-                                velocityTracker.addPointerInputChange(change)
-                                onVerticalDrag(dragAmount)
-                            }
-                        },
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(32.dp)
+                            .pointerInput(drawerHeightPx) {
+                                var velocityTracker = VelocityTracker()
+                                detectVerticalDragGestures(
+                                    onDragStart = { velocityTracker = VelocityTracker() },
+                                    onDragEnd = {
+                                        val velocityFraction = -velocityTracker.calculateVelocity().y / drawerHeightPx
+                                        settle(velocityFraction, DRAWER_HANDLE_CLOSE_SNAP_THRESHOLD)
+                                    },
+                                    onDragCancel = { settle(0f, DRAWER_HANDLE_CLOSE_SNAP_THRESHOLD) },
+                                ) { change, dragAmount ->
+                                    change.consume()
+                                    velocityTracker.addPointerInputChange(change)
+                                    onVerticalDrag(dragAmount)
+                                }
+                            },
                 )
             }
         }

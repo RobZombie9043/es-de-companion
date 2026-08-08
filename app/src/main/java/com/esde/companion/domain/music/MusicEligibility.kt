@@ -26,8 +26,10 @@ sealed class MusicEligibility {
  * pool regardless of ES-DE's screensaver-tied game/system.
  */
 object MusicEligibilityResolver {
-
-    fun resolve(appState: AppState, settings: MusicSettings): MusicEligibility {
+    fun resolve(
+        appState: AppState,
+        settings: MusicSettings,
+    ): MusicEligibility {
         if (!settings.enabled) return MusicEligibility.Ineligible
 
         return when (appState) {

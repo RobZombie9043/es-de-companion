@@ -24,8 +24,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import java.io.File
 import kotlinx.coroutines.delay
+import java.io.File
 
 /**
  * Opaque full-screen video cover - see MainActivity's showVideoOverlay for the gating
@@ -53,23 +53,26 @@ fun VideoOverlayScreen(
 
     var isPlaying by remember(videoPath) { mutableStateOf(false) }
 
-    val player = remember(videoPath) {
-        ExoPlayer.Builder(context).build().apply {
-            addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(playing: Boolean) {
-                    isPlaying = playing
-                    onIsPlayingChanged(playing)
-                }
+    val player =
+        remember(videoPath) {
+            ExoPlayer.Builder(context).build().apply {
+                addListener(
+                    object : Player.Listener {
+                        override fun onIsPlayingChanged(playing: Boolean) {
+                            isPlaying = playing
+                            onIsPlayingChanged(playing)
+                        }
 
-                override fun onPlayerError(error: PlaybackException) {
-                    android.util.Log.e("VideoDebug", "playback error for $videoPath", error)
-                }
-            })
-            setMediaItem(MediaItem.fromUri(Uri.fromFile(File(videoPath))))
-            repeatMode = Player.REPEAT_MODE_ONE
-            prepare()
+                        override fun onPlayerError(error: PlaybackException) {
+                            android.util.Log.e("VideoDebug", "playback error for $videoPath", error)
+                        }
+                    },
+                )
+                setMediaItem(MediaItem.fromUri(Uri.fromFile(File(videoPath))))
+                repeatMode = Player.REPEAT_MODE_ONE
+                prepare()
+            }
         }
-    }
 
     LaunchedEffect(player, delaySeconds) {
         delay(delaySeconds * 1000L)

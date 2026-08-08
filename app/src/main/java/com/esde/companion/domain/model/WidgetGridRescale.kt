@@ -14,7 +14,11 @@ import kotlin.math.roundToInt
  * Returns [widgets] unchanged when [from] == [to] (the common case - same screen every
  * launch), so nothing here introduces rounding drift on every load.
  */
-fun rescaleWidgetsToGrid(widgets: List<PlacedWidget>, from: GridDimensions, to: GridDimensions): List<PlacedWidget> {
+fun rescaleWidgetsToGrid(
+    widgets: List<PlacedWidget>,
+    from: GridDimensions,
+    to: GridDimensions,
+): List<PlacedWidget> {
     if (from == to) return widgets
 
     val columnScale = to.columns.toFloat() / from.columns

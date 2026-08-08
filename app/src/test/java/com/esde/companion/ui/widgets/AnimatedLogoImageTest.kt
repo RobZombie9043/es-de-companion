@@ -9,7 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AnimatedLogoImageTest {
-
     private val boxSize = IntSize(width = 200, height = 100)
 
     @Test
@@ -63,12 +62,13 @@ class AnimatedLogoImageTest {
         // sweep, and progress 1, during the pause after one), every corner of the widget -
         // not just its edges at a single y - must project outside the gradient's [0, 1]
         // range, or a residual sliver of brightness leaks through (the bug this replaced).
-        val corners = listOf(
-            Offset(0f, 0f),
-            Offset(glintSize.width, 0f),
-            Offset(0f, glintSize.height),
-            Offset(glintSize.width, glintSize.height),
-        )
+        val corners =
+            listOf(
+                Offset(0f, 0f),
+                Offset(glintSize.width, 0f),
+                Offset(0f, glintSize.height),
+                Offset(glintSize.width, glintSize.height),
+            )
         for (progress in listOf(0f, 1f)) {
             val (start, end) = glintBandOffsets(progress, glintSize)
             for (corner in corners) {
@@ -84,7 +84,11 @@ class AnimatedLogoImageTest {
     /** Mirrors how Brush.linearGradient projects a point onto the [start]-[end] axis: 0f
      * at [start], 1f at [end], values outside [0,1] clamp to the boundary color (both of
      * which are Transparent here - see [glintBandOffsets]'s colorStops usage). */
-    private fun projectionT(point: Offset, start: Offset, end: Offset): Float {
+    private fun projectionT(
+        point: Offset,
+        start: Offset,
+        end: Offset,
+    ): Float {
         val directionX = end.x - start.x
         val directionY = end.y - start.y
         val toPointX = point.x - start.x

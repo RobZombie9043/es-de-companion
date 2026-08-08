@@ -8,5 +8,8 @@ import com.esde.companion.domain.model.GameMedia
  * media root folder) is entirely a data-layer concern.
  */
 interface GameMediaRepository {
-    suspend fun resolveMedia(systemShortName: String, romPath: String): GameMedia
+    suspend fun resolveMedia(
+        systemShortName: String,
+        romPath: String,
+    ): GameMedia
 }

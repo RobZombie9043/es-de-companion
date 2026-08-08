@@ -16,7 +16,6 @@ import com.esde.companion.domain.model.NavigationDirection
  * Any other line (including the fireEvent line itself) also leaves it untouched.
  */
 class NavigationDirectionTracker {
-
     var direction: NavigationDirection? = null
         private set
 

@@ -13,7 +13,6 @@ import org.junit.Test
  * EsdeEventParserTest - a naive parser gets tripped up by real device names/timestamps.
  */
 class NavigationDirectionParserTest {
-
     @Test
     fun `parses up press`() {
         val line = "Aug 02 13:31:33 Debug:  Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=1"

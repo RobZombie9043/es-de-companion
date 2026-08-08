@@ -102,18 +102,25 @@ fun GameManualScreen(
     }
 
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .focusRequester(focusRequester)
-            .focusable()
-            .onKeyEvent { event ->
-                when (event.key) {
-                    Key.DirectionRight -> { viewModel.nextPage(); true }
-                    Key.DirectionLeft -> { viewModel.previousPage(); true }
-                    else -> false
-                }
-            },
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .focusRequester(focusRequester)
+                .focusable()
+                .onKeyEvent { event ->
+                    when (event.key) {
+                        Key.DirectionRight -> {
+                            viewModel.nextPage()
+                            true
+                        }
+                        Key.DirectionLeft -> {
+                            viewModel.previousPage()
+                            true
+                        }
+                        else -> false
+                    }
+                },
     ) {
         val widthPx = with(LocalDensity.current) { maxWidth.roundToPx() }
         LaunchedEffect(widthPx) { viewModel.setTargetWidth(widthPx) }
@@ -135,51 +142,52 @@ fun GameManualScreen(
                 bitmap = bitmap,
                 contentDescription = "Game manual, page ${currentPage + 1} of $pageCount",
                 contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        scaleX = scale.value
-                        scaleY = scale.value
-                        translationX = offset.value.x
-                        translationY = offset.value.y
-                    }
-                    .pointerInput(currentPage) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scope.launch {
-                                val newScale = (scale.value * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
-                                scale.snapTo(newScale)
-                                offset.snapTo(if (newScale > MIN_SCALE) offset.value + pan else Offset.Zero)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = scale.value
+                            scaleY = scale.value
+                            translationX = offset.value.x
+                            translationY = offset.value.y
+                        }
+                        .pointerInput(currentPage) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                scope.launch {
+                                    val newScale = (scale.value * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
+                                    scale.snapTo(newScale)
+                                    offset.snapTo(if (newScale > MIN_SCALE) offset.value + pan else Offset.Zero)
+                                }
                             }
                         }
-                    }
-                    .pointerInput(currentPage, scale.value) {
-                        // Swipe-to-turn-page only while unzoomed - otherwise a pinched-in
-                        // pan would fight this gesture detector.
-                        if (scale.value > MIN_SCALE) return@pointerInput
-                        detectHorizontalDragGestures(
-                            onDragEnd = {
-                                when {
-                                    dragTotal <= -SWIPE_THRESHOLD_PX -> viewModel.nextPage()
-                                    dragTotal >= SWIPE_THRESHOLD_PX -> viewModel.previousPage()
-                                }
-                                dragTotal = 0f
-                            },
-                        ) { change, dragAmount ->
-                            change.consume()
-                            dragTotal += dragAmount
+                        .pointerInput(currentPage, scale.value) {
+                            // Swipe-to-turn-page only while unzoomed - otherwise a pinched-in
+                            // pan would fight this gesture detector.
+                            if (scale.value > MIN_SCALE) return@pointerInput
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    when {
+                                        dragTotal <= -SWIPE_THRESHOLD_PX -> viewModel.nextPage()
+                                        dragTotal >= SWIPE_THRESHOLD_PX -> viewModel.previousPage()
+                                    }
+                                    dragTotal = 0f
+                                },
+                            ) { change, dragAmount ->
+                                change.consume()
+                                dragTotal += dragAmount
+                            }
                         }
-                    }
-                    .pointerInput(Unit) {
-                        // Separate tap-only detector for revealing/hiding controls - kept
-                        // independent of the transform/drag detectors above so a plain
-                        // tap (no pan, no drag past threshold) isn't swallowed by either.
-                        detectTapGestures(
-                            onTap = {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                controlsVisible = !controlsVisible
-                            },
-                        )
-                    },
+                        .pointerInput(Unit) {
+                            // Separate tap-only detector for revealing/hiding controls - kept
+                            // independent of the transform/drag detectors above so a plain
+                            // tap (no pan, no drag past threshold) isn't swallowed by either.
+                            detectTapGestures(
+                                onTap = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    controlsVisible = !controlsVisible
+                                },
+                            )
+                        },
             )
         }
 

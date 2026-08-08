@@ -10,7 +10,6 @@ class ReactiveCustomSystemLogoRepository(
         FileCustomSystemLogoRepository(folderPath = folder)
     },
 ) : CustomSystemLogoRepository {
-
     override suspend fun findLogo(systemShortName: String): String? {
         val folder = folderPath.first() ?: return null
         return repositoryFactory(folder).findLogo(systemShortName)

@@ -6,8 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +13,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -76,8 +76,7 @@ private const val DOCK_PREVIEW_ALPHA = 0.65f
 /** Dock background base color: black in dark mode, white in light mode - same
  * theme-detection approach as MusicControlsOverlay's content/background colors. */
 @Composable
-private fun dockBackgroundColor(): Color =
-    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+private fun dockBackgroundColor(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
 
 /** Empty-slot border/icon color: the inverse of [dockBackgroundColor], so the "add app"
  * placeholder stays visible against the dock's background in either theme. */
@@ -91,14 +90,14 @@ private fun dockContentColor(): Color =
  * clearly against the dock's forced black/white background rather than whatever the
  * ambient content color happens to be. */
 @Composable
-private fun appDrawerShortcutIconTint(): Color =
-    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+private fun appDrawerShortcutIconTint(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
 
-private fun DockSize.iconDp(): Dp = when (this) {
-    DockSize.Small -> 40.dp
-    DockSize.Medium -> 48.dp
-    DockSize.Large -> 60.dp
-}
+private fun DockSize.iconDp(): Dp =
+    when (this) {
+        DockSize.Small -> 40.dp
+        DockSize.Medium -> 48.dp
+        DockSize.Large -> 60.dp
+    }
 
 /**
  * Height of the dock bar for a given [size], derived from its icon size rather than a
@@ -125,7 +124,11 @@ fun dockBarHeight(size: DockSize): Dp = size.iconDp() + VERTICAL_PADDING * 2
  * the launch-location/App Info rows that don't apply to it (see [DockItemMenu]).
  */
 @Composable
-fun AppDock(viewModel: AppDockViewModel, onOpenAppDrawer: () -> Unit, modifier: Modifier = Modifier) {
+fun AppDock(
+    viewModel: AppDockViewModel,
+    onOpenAppDrawer: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val dockEnabled by viewModel.dockEnabled.collectAsStateWithLifecycle()
     val dockSize by viewModel.dockSize.collectAsStateWithLifecycle()
     val dockOpacityPercent by viewModel.dockOpacityPercent.collectAsStateWithLifecycle()
@@ -141,20 +144,21 @@ fun AppDock(viewModel: AppDockViewModel, onOpenAppDrawer: () -> Unit, modifier: 
     var showAddAppDialog by remember { mutableStateOf(false) }
 
     Box(
-        modifier = modifier
-            .background(color = dockBackgroundColor().copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE)
-            // Claims every tap/press landing anywhere within the dock's bounds -
-            // including gaps between slots and empty placeholder slots - so
-            // MainScreen's whole-screen double-tap-to-blank / long-press-to-edit
-            // gesture never fires here. A slot's own combinedClickable below still
-            // handles its own taps normally: Compose's pointer-consumption
-            // propagation means a descendant consuming a gesture prevents this (and
-            // any further ancestor) from also recognizing it, so nothing double-fires.
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {},
-            ),
+        modifier =
+            modifier
+                .background(color = dockBackgroundColor().copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE)
+                // Claims every tap/press landing anywhere within the dock's bounds -
+                // including gaps between slots and empty placeholder slots - so
+                // MainScreen's whole-screen double-tap-to-blank / long-press-to-edit
+                // gesture never fires here. A slot's own combinedClickable below still
+                // handles its own taps normally: Compose's pointer-consumption
+                // propagation means a descendant consuming a gesture prevents this (and
+                // any further ancestor) from also recognizing it, so nothing double-fires.
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = HORIZONTAL_PADDING, vertical = VERTICAL_PADDING),
@@ -191,11 +195,12 @@ fun AppDock(viewModel: AppDockViewModel, onOpenAppDrawer: () -> Unit, modifier: 
                         isLeftmost = index == 0,
                         isRightmost = index == dockItems.lastIndex,
                         onClick = {
-                            val displayId = if (otherScreenLaunchApps.contains(app.packageName)) {
-                                SecondaryDisplayResolver.secondaryDisplayId(context)
-                            } else {
-                                null
-                            }
+                            val displayId =
+                                if (otherScreenLaunchApps.contains(app.packageName)) {
+                                    SecondaryDisplayResolver.secondaryDisplayId(context)
+                                } else {
+                                    null
+                                }
                             AppLauncher.launch(context, app.packageName, displayId = displayId)
                         },
                         onDoubleClick = {
@@ -266,9 +271,10 @@ fun DockPreview(
     val iconDp = dockSize.iconDp()
 
     Box(
-        modifier = modifier
-            .alpha(DOCK_PREVIEW_ALPHA)
-            .background(color = dockBackgroundColor().copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE),
+        modifier =
+            modifier
+                .alpha(DOCK_PREVIEW_ALPHA)
+                .background(color = dockBackgroundColor().copy(alpha = dockOpacityPercent / 100f), shape = DOCK_SHAPE),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = HORIZONTAL_PADDING, vertical = VERTICAL_PADDING),
@@ -288,7 +294,10 @@ fun DockPreview(
 }
 
 @Composable
-private fun FilledDockSlotPreview(app: InstalledApp, iconDp: Dp) {
+private fun FilledDockSlotPreview(
+    app: InstalledApp,
+    iconDp: Dp,
+) {
     if (app.packageName == APP_DRAWER_SHORTCUT_PACKAGE_NAME) {
         Icon(
             imageVector = Icons.Filled.Apps,
@@ -309,9 +318,10 @@ private fun FilledDockSlotPreview(app: InstalledApp, iconDp: Dp) {
 private fun EmptyDockSlotPreview(iconDp: Dp) {
     val tint = dockContentColor()
     Box(
-        modifier = Modifier
-            .size(iconDp)
-            .border(width = 1.dp, color = tint, shape = CircleShape),
+        modifier =
+            Modifier
+                .size(iconDp)
+                .border(width = 1.dp, color = tint, shape = CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -345,16 +355,17 @@ private fun FilledDockSlot(
 
     Box(contentAlignment = Alignment.Center) {
         Box(
-            modifier = Modifier
-                .size(iconDp)
-                .combinedClickable(
-                    onClick = onClick,
-                    onDoubleClick = onDoubleClick,
-                    onLongClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        menuExpanded = true
-                    },
-                ),
+            modifier =
+                Modifier
+                    .size(iconDp)
+                    .combinedClickable(
+                        onClick = onClick,
+                        onDoubleClick = onDoubleClick,
+                        onLongClick = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            menuExpanded = true
+                        },
+                    ),
         ) {
             if (isAppDrawerShortcut) {
                 Icon(
@@ -376,10 +387,11 @@ private fun FilledDockSlot(
             }
             if (isOtherScreenPreferred) {
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(10.dp)
-                        .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(10.dp)
+                            .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 )
             }
         }
@@ -404,20 +416,24 @@ private fun FilledDockSlot(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun EmptyDockSlot(iconDp: Dp, onAddApp: () -> Unit) {
+private fun EmptyDockSlot(
+    iconDp: Dp,
+    onAddApp: () -> Unit,
+) {
     val tint = dockContentColor()
     val hapticFeedback = LocalHapticFeedback.current
     Box(
-        modifier = Modifier
-            .size(iconDp)
-            .border(width = 1.dp, color = tint, shape = CircleShape)
-            .combinedClickable(
-                onClick = {},
-                onLongClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onAddApp()
-                },
-            ),
+        modifier =
+            Modifier
+                .size(iconDp)
+                .border(width = 1.dp, color = tint, shape = CircleShape)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onAddApp()
+                    },
+                ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -475,7 +491,10 @@ private fun DockItemMenu(
                         Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
                 },
-                onClick = { onDismiss(); onLaunchThisScreen() },
+                onClick = {
+                    onDismiss()
+                    onLaunchThisScreen()
+                },
             )
             DropdownMenuItem(
                 text = { Text("Launch on other screen") },
@@ -485,13 +504,19 @@ private fun DockItemMenu(
                         Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
                 },
-                onClick = { onDismiss(); onLaunchOtherScreen() },
+                onClick = {
+                    onDismiss()
+                    onLaunchOtherScreen()
+                },
             )
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text("App Info") },
                 leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
-                onClick = { onDismiss(); onAppInfo() },
+                onClick = {
+                    onDismiss()
+                    onAppInfo()
+                },
             )
             HorizontalDivider()
         }
@@ -499,14 +524,20 @@ private fun DockItemMenu(
             DropdownMenuItem(
                 text = { Text("Move Left") },
                 leadingIcon = { Icon(Icons.Filled.ChevronLeft, contentDescription = null) },
-                onClick = { onDismiss(); onMoveLeft() },
+                onClick = {
+                    onDismiss()
+                    onMoveLeft()
+                },
             )
         }
         if (!isRightmost) {
             DropdownMenuItem(
                 text = { Text("Move Right") },
                 leadingIcon = { Icon(Icons.Filled.ChevronRight, contentDescription = null) },
-                onClick = { onDismiss(); onMoveRight() },
+                onClick = {
+                    onDismiss()
+                    onMoveRight()
+                },
             )
         }
         DropdownMenuItem(
@@ -552,14 +583,18 @@ private fun AddAppDialog(
 }
 
 @Composable
-private fun AddAppRow(app: InstalledApp, onClick: () -> Unit) {
+private fun AddAppRow(
+    app: InstalledApp,
+    onClick: () -> Unit,
+) {
     val isAppDrawerShortcut = app.packageName == APP_DRAWER_SHORTCUT_PACKAGE_NAME
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

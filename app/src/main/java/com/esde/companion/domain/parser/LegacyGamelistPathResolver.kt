@@ -14,8 +14,10 @@ package com.esde.companion.domain.parser
  * Returns null if [romPath] doesn't contain a "/<systemShortName>/" segment to anchor on.
  */
 object LegacyGamelistPathResolver {
-
-    fun resolvePath(systemShortName: String, romPath: String): String? {
+    fun resolvePath(
+        systemShortName: String,
+        romPath: String,
+    ): String? {
         val systemMarker = "/$systemShortName/"
         val markerIndex = romPath.lastIndexOf(systemMarker)
         if (markerIndex == -1) return null

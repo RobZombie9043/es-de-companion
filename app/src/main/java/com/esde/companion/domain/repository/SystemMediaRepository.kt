@@ -9,5 +9,8 @@ import com.esde.companion.domain.model.MediaType
  * entirely a data-layer concern.
  */
 interface SystemMediaRepository {
-    suspend fun randomMedia(systemShortName: String, mediaType: MediaType): String?
+    suspend fun randomMedia(
+        systemShortName: String,
+        mediaType: MediaType,
+    ): String?
 }

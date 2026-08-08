@@ -7,7 +7,6 @@ import com.esde.companion.AppContainer
 class GameManualViewModelFactory(
     private val appContainer: AppContainer,
 ) : ViewModelProvider.Factory {
-
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         require(modelClass.isAssignableFrom(GameManualViewModel::class.java)) {

@@ -11,13 +11,13 @@ import org.junit.Test
  * combination is exactly the kind of thing a naive parser gets wrong.
  */
 class EsdeEventParserTest {
-
     private val parser = EsdeEventParser()
 
     @Test
     fun `parses system-select`() {
-        val line = "Jul 28 07:01:30 Debug:  Scripting::fireEvent(): system-select " +
-            "\"gamegear\" \"Sega Game Gear\" \"/storage/E2AB-E84A/ROMs/gamegear\" \"\""
+        val line =
+            "Jul 28 07:01:30 Debug:  Scripting::fireEvent(): system-select " +
+                "\"gamegear\" \"Sega Game Gear\" \"/storage/E2AB-E84A/ROMs/gamegear\" \"\""
 
         assertEquals(
             EsdeEvent.SystemSelect(
@@ -31,9 +31,10 @@ class EsdeEventParserTest {
 
     @Test
     fun `parses game-select with spaces and parentheses in the rom path`() {
-        val line = "Jul 28 07:01:32 Debug:  Scripting::fireEvent(): game-select " +
-            "\"/storage/E2AB-E84A/ROMs/dreamcast/Dead or Alive 2 (USA).chd\" " +
-            "\"Dead or Alive 2\" \"dreamcast\" \"Sega Dreamcast\""
+        val line =
+            "Jul 28 07:01:32 Debug:  Scripting::fireEvent(): game-select " +
+                "\"/storage/E2AB-E84A/ROMs/dreamcast/Dead or Alive 2 (USA).chd\" " +
+                "\"Dead or Alive 2\" \"dreamcast\" \"Sega Dreamcast\""
 
         assertEquals(
             EsdeEvent.GameSelect(
@@ -48,9 +49,10 @@ class EsdeEventParserTest {
 
     @Test
     fun `parses game-start`() {
-        val line = "Jul 28 07:01:46 Debug:  Scripting::fireEvent(): game-start " +
-            "\"/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd\" " +
-            "\"Cosmic Smash\" \"dreamcast\" \"Sega Dreamcast\""
+        val line =
+            "Jul 28 07:01:46 Debug:  Scripting::fireEvent(): game-start " +
+                "\"/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd\" " +
+                "\"Cosmic Smash\" \"dreamcast\" \"Sega Dreamcast\""
 
         assertEquals(
             EsdeEvent.GameStart(
@@ -65,7 +67,8 @@ class EsdeEventParserTest {
 
     @Test
     fun `parses game-start with shell-escaped path and unescapes it`() {
-        val line = "Jul 28 10:01:54 Debug:  Scripting::fireEvent(): game-start " +
+        val line =
+            "Jul 28 10:01:54 Debug:  Scripting::fireEvent(): game-start " +
                 "\"/storage/E2AB-E84A/ROMs/gba/Mega\\ Man\\ Battle\\ Network\\ 3\\ -\\ White\\ Version\\ \\(USA\\).zip\" " +
                 "\"Mega Man Battle Network 3 : White\" \"gba\" \"Nintendo Game Boy Advance\""
 
@@ -84,9 +87,10 @@ class EsdeEventParserTest {
 
     @Test
     fun `parses game-select whose display name has unescaped embedded double quotes`() {
-        val line = "Debug:  Scripting::fireEvent(): game-select " +
-            "\"/storage/E2AB-E84A/ROMs/nes/Ivan 'Ironman' Stewart's Super Off Road (USA).zip\" " +
-            "\"Ivan \"Ironman\" Stewart's Super Off Road\" \"nes\" \"Nintendo Entertainment System\""
+        val line =
+            "Debug:  Scripting::fireEvent(): game-select " +
+                "\"/storage/E2AB-E84A/ROMs/nes/Ivan 'Ironman' Stewart's Super Off Road (USA).zip\" " +
+                "\"Ivan \"Ironman\" Stewart's Super Off Road\" \"nes\" \"Nintendo Entertainment System\""
 
         assertEquals(
             EsdeEvent.GameSelect(
@@ -101,9 +105,10 @@ class EsdeEventParserTest {
 
     @Test
     fun `parses game-end`() {
-        val line = "Jul 28 07:01:55 Debug:  Scripting::fireEvent(): game-end " +
-            "\"/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd\" " +
-            "\"Cosmic Smash\" \"dreamcast\" \"Sega Dreamcast\""
+        val line =
+            "Jul 28 07:01:55 Debug:  Scripting::fireEvent(): game-end " +
+                "\"/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd\" " +
+                "\"Cosmic Smash\" \"dreamcast\" \"Sega Dreamcast\""
 
         assertEquals(
             EsdeEvent.GameEnd(
@@ -125,8 +130,9 @@ class EsdeEventParserTest {
 
     @Test
     fun `parses screensaver-game-select`() {
-        val line = "Jul 28 07:01:36 Debug:  Scripting::fireEvent(): screensaver-game-select " +
-            "\"/storage/E2AB-E84A/ROMs/arcade/tapper.zip\" \"Tapper\" \"arcade\" \"Arcade\""
+        val line =
+            "Jul 28 07:01:36 Debug:  Scripting::fireEvent(): screensaver-game-select " +
+                "\"/storage/E2AB-E84A/ROMs/arcade/tapper.zip\" \"Tapper\" \"arcade\" \"Arcade\""
 
         assertEquals(
             EsdeEvent.ScreensaverGameSelect(
@@ -176,8 +182,9 @@ class EsdeEventParserTest {
 
     @Test
     fun `ignores lines with no fireEvent marker`() {
-        val line = "Jul 28 07:01:30 Debug:  Window::logInput(Xbox Wireless Controller): " +
-            "Button 14, isMappedTo=right, value=1"
+        val line =
+            "Jul 28 07:01:30 Debug:  Window::logInput(Xbox Wireless Controller): " +
+                "Button 14, isMappedTo=right, value=1"
 
         assertNull(parser.parseLine(line))
     }

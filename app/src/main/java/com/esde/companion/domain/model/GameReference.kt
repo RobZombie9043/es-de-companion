@@ -8,9 +8,10 @@ data class GameReference(val systemShortName: String, val romPath: String)
  * a Screensaver's currentGame. Null for Idle, BrowsingSystem, or a Screensaver with no
  * game selected yet.
  */
-fun AppState.currentGameReference(): GameReference? = when (this) {
-    is AppState.BrowsingGame -> GameReference(systemShortName, romPath)
-    is AppState.PlayingGame -> GameReference(systemShortName, romPath)
-    is AppState.Screensaver -> currentGame?.let { GameReference(it.systemShortName, it.romPath) }
-    is AppState.Idle, is AppState.BrowsingSystem -> null
-}
+fun AppState.currentGameReference(): GameReference? =
+    when (this) {
+        is AppState.BrowsingGame -> GameReference(systemShortName, romPath)
+        is AppState.PlayingGame -> GameReference(systemShortName, romPath)
+        is AppState.Screensaver -> currentGame?.let { GameReference(it.systemShortName, it.romPath) }
+        is AppState.Idle, is AppState.BrowsingSystem -> null
+    }

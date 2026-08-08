@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetImageTransitionEligibilityTest {
-
     // --- supportsImageTransition -----------------------------------------------------------
 
     @Test
@@ -27,14 +26,15 @@ class WidgetImageTransitionEligibilityTest {
 
     @Test
     fun `GameMedia supports the picker except for Marquees and box-art-style media`() {
-        val excluded = setOf(
-            MediaType.Marquees,
-            MediaType.Covers,
-            MediaType.ThreeDBoxes,
-            MediaType.MixImages,
-            MediaType.BackCovers,
-            MediaType.PhysicalMedia,
-        )
+        val excluded =
+            setOf(
+                MediaType.Marquees,
+                MediaType.Covers,
+                MediaType.ThreeDBoxes,
+                MediaType.MixImages,
+                MediaType.BackCovers,
+                MediaType.PhysicalMedia,
+            )
         for (mediaType in MediaType.entries) {
             val widget = WidgetType.GameMedia(mediaType, ScaleMode.Fill)
             assertEquals(mediaType.toString(), mediaType !in excluded, widget.supportsImageTransition)
@@ -92,8 +92,14 @@ class WidgetImageTransitionEligibilityTest {
 
     @Test
     fun `imageTransitionMode reads through for every opaque image-backed variant`() {
-        assertEquals(ImageTransitionMode.Fade, WidgetType.SystemImage(ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode)
-        assertEquals(ImageTransitionMode.Fade, WidgetType.CustomImage("p", ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode)
+        assertEquals(
+            ImageTransitionMode.Fade,
+            WidgetType.SystemImage(ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode,
+        )
+        assertEquals(
+            ImageTransitionMode.Fade,
+            WidgetType.CustomImage("p", ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode,
+        )
         assertEquals(
             ImageTransitionMode.Fade,
             WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode,
@@ -112,12 +118,13 @@ class WidgetImageTransitionEligibilityTest {
         assertEquals(LogoTransitionMode.Slide, logo.logoTransitionMode)
         assertTrue(logo.glintEnabled)
 
-        val marquee = WidgetType.GameMedia(
-            MediaType.Marquees,
-            ScaleMode.Fit,
-            logoTransitionMode = LogoTransitionMode.Scale,
-            glintEnabled = true,
-        )
+        val marquee =
+            WidgetType.GameMedia(
+                MediaType.Marquees,
+                ScaleMode.Fit,
+                logoTransitionMode = LogoTransitionMode.Scale,
+                glintEnabled = true,
+            )
         assertEquals(LogoTransitionMode.Scale, marquee.logoTransitionMode)
         assertTrue(marquee.glintEnabled)
 

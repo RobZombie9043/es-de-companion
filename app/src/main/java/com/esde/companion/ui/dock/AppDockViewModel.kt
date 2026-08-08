@@ -48,18 +48,25 @@ class AppDockViewModel(
     private val observeOtherScreenLaunchApps: ObserveOtherScreenLaunchAppsUseCase,
     private val setOtherScreenLaunchApps: SetOtherScreenLaunchAppsUseCase,
 ) : ViewModel() {
+    val dockEnabled: StateFlow<Boolean> =
+        observeDockEnabled()
+            .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = false)
 
-    val dockEnabled: StateFlow<Boolean> = observeDockEnabled()
-        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = false)
+    val maxApps: StateFlow<Int> =
+        observeDockMaxApps()
+            .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 5)
 
-    val maxApps: StateFlow<Int> = observeDockMaxApps()
-        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 5)
+    val dockSize: StateFlow<DockSize> =
+        observeDockSize()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = DockSize.Medium,
+            )
 
-    val dockSize: StateFlow<DockSize> = observeDockSize()
-        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = DockSize.Medium)
-
-    val dockOpacityPercent: StateFlow<Int> = observeOverlayOpacity()
-        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 80)
+    val dockOpacityPercent: StateFlow<Int> =
+        observeOverlayOpacity()
+            .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 80)
 
     /** The pinned apps actually shown, in order, resolved to their current
      * label/packageName and capped to [maxApps] - lowering the max never deletes
@@ -79,8 +86,9 @@ class AppDockViewModel(
 
     /** Packages whose last-used launch location is the other screen - same set the App
      * Drawer reads/writes, see the class kdoc. */
-    val otherScreenLaunchApps: StateFlow<Set<String>> = observeOtherScreenLaunchApps()
-        .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptySet())
+    val otherScreenLaunchApps: StateFlow<Set<String>> =
+        observeOtherScreenLaunchApps()
+            .stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptySet())
 
     /** Installed apps not already pinned - the candidate list for the "add app to
      * dock" picker opened by long-pressing an empty slot. [AppDrawerShortcut] is
@@ -92,7 +100,10 @@ class AppDockViewModel(
             if (APP_DRAWER_SHORTCUT_PACKAGE_NAME in pinned) realApps else listOf(AppDrawerShortcut) + realApps
         }.stateIn(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptyList())
 
-    fun recordLaunchLocation(packageName: String, location: LaunchLocation) {
+    fun recordLaunchLocation(
+        packageName: String,
+        location: LaunchLocation,
+    ) {
         viewModelScope.launch {
             val current = observeOtherScreenLaunchApps().first()
             val updated = if (location == LaunchLocation.OtherScreen) current + packageName else current - packageName
@@ -136,6 +147,12 @@ class AppDockViewModel(
         }
     }
 
-    private fun List<String>.swapped(a: Int, b: Int): List<String> =
-        toMutableList().also { it[a] = this[b]; it[b] = this[a] }
+    private fun List<String>.swapped(
+        a: Int,
+        b: Int,
+    ): List<String> =
+        toMutableList().also {
+            it[a] = this[b]
+            it[b] = this[a]
+        }
 }

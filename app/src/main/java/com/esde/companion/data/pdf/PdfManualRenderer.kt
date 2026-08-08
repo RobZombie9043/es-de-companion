@@ -5,11 +5,11 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Wraps android.graphics.pdf.PdfRenderer for a single opened manual PDF. Deliberately not
@@ -34,20 +34,24 @@ class PdfManualRenderer private constructor(
     val pageCount: Int get() = renderer.pageCount
 
     /** Renders [index] (0-based) at roughly [targetWidthPx] wide. Null on any failure. */
-    suspend fun renderPage(index: Int, targetWidthPx: Int): ImageBitmap? = withContext(Dispatchers.IO) {
-        if (index !in 0 until renderer.pageCount || targetWidthPx <= 0) return@withContext null
-        mutex.withLock {
-            runCatching {
-                renderer.openPage(index).use { page ->
-                    val scale = targetWidthPx.toFloat() / page.width
-                    val targetHeightPx = (page.height * scale).toInt().coerceAtLeast(1)
-                    val bitmap = Bitmap.createBitmap(targetWidthPx, targetHeightPx, Bitmap.Config.ARGB_8888)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    bitmap.asImageBitmap()
-                }
-            }.getOrNull()
+    suspend fun renderPage(
+        index: Int,
+        targetWidthPx: Int,
+    ): ImageBitmap? =
+        withContext(Dispatchers.IO) {
+            if (index !in 0 until renderer.pageCount || targetWidthPx <= 0) return@withContext null
+            mutex.withLock {
+                runCatching {
+                    renderer.openPage(index).use { page ->
+                        val scale = targetWidthPx.toFloat() / page.width
+                        val targetHeightPx = (page.height * scale).toInt().coerceAtLeast(1)
+                        val bitmap = Bitmap.createBitmap(targetWidthPx, targetHeightPx, Bitmap.Config.ARGB_8888)
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bitmap.asImageBitmap()
+                    }
+                }.getOrNull()
+            }
         }
-    }
 
     fun close() {
         runCatching { renderer.close() }
@@ -56,11 +60,12 @@ class PdfManualRenderer private constructor(
 
     companion object {
         /** Returns null if [pdfPath] doesn't exist or can't be opened as a PDF. */
-        suspend fun open(pdfPath: String): PdfManualRenderer? = withContext(Dispatchers.IO) {
-            runCatching {
-                val fd = ParcelFileDescriptor.open(File(pdfPath), ParcelFileDescriptor.MODE_READ_ONLY)
-                PdfManualRenderer(fd, PdfRenderer(fd))
-            }.getOrNull()
-        }
+        suspend fun open(pdfPath: String): PdfManualRenderer? =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val fd = ParcelFileDescriptor.open(File(pdfPath), ParcelFileDescriptor.MODE_READ_ONLY)
+                    PdfManualRenderer(fd, PdfRenderer(fd))
+                }.getOrNull()
+            }
     }
 }

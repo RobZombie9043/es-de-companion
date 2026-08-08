@@ -24,8 +24,10 @@ class ReactiveGameMediaRepository(
         FileGameMediaRepository(mediaFolderPath = folder)
     },
 ) : GameMediaRepository {
-
-    override suspend fun resolveMedia(systemShortName: String, romPath: String): GameMedia {
+    override suspend fun resolveMedia(
+        systemShortName: String,
+        romPath: String,
+    ): GameMedia {
         val folder = mediaFolderPath.first() ?: return GameMedia(baseRelativePath = null, filesByType = emptyMap())
         return repositoryFactory(folder).resolveMedia(systemShortName, romPath)
     }

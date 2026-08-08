@@ -29,7 +29,10 @@ import com.esde.companion.ui.theme.LocalIsDarkTheme
  * genuinely nothing applies (Idle / not connected - see [WidgetCanvasState.Disconnected]).
  */
 @Composable
-fun WidgetOverlay(viewModel: WidgetsViewModel, modifier: Modifier = Modifier) {
+fun WidgetOverlay(
+    viewModel: WidgetsViewModel,
+    modifier: Modifier = Modifier,
+) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val grid = remember(maxWidth, maxHeight) { gridDimensionsFor(maxWidth, maxHeight) }
         LaunchedEffect(grid) { viewModel.setGridDimensions(grid) }

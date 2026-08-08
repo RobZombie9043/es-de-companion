@@ -18,7 +18,10 @@ internal val CUSTOM_ASSET_EXTENSIONS = listOf("png", "jpg", "jpeg", "webp", "gif
  * Not recursive - these are flat "one file per system" folders, unlike downloaded_media's
  * per-system subfolder layout (see FileSystemMediaRepository).
  */
-internal fun findSystemAssetFile(folderPath: String, systemShortName: String): String? {
+internal fun findSystemAssetFile(
+    folderPath: String,
+    systemShortName: String,
+): String? {
     val folder = File(folderPath)
     if (!folder.isDirectory) return null
     return CUSTOM_ASSET_EXTENSIONS

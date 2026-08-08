@@ -134,7 +134,6 @@ private val LONG_PRESS_MENU_BLUR_RADIUS = 4.dp
 private const val ESDE_PACKAGE_NAME = "org.es_de.frontend"
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         hideStatusBar()
@@ -157,11 +156,12 @@ class MainActivity : ComponentActivity() {
                 // forward from there, same as a fresh install.
                 val startupInfo by produceState<OnboardingStartupInfo?>(initialValue = null) {
                     val onboardingComplete = appContainer.observeOnboardingCompleteUseCase().first()
-                    value = OnboardingStartupInfo(
-                        showOnboarding = !onboardingComplete || !AllFilesAccessPermission.isGranted(),
-                        savedLogFolderPath = appContainer.onboardingRepository.observeLogFolderPath().first(),
-                        savedMediaFolderPath = appContainer.onboardingRepository.observeMediaFolderPath().first(),
-                    )
+                    value =
+                        OnboardingStartupInfo(
+                            showOnboarding = !onboardingComplete || !AllFilesAccessPermission.isGranted(),
+                            savedLogFolderPath = appContainer.onboardingRepository.observeLogFolderPath().first(),
+                            savedMediaFolderPath = appContainer.onboardingRepository.observeMediaFolderPath().first(),
+                        )
                 }
 
                 startupInfo?.let { info ->
@@ -171,13 +171,15 @@ class MainActivity : ComponentActivity() {
                         startDestination = if (info.showOnboarding) Destinations.ONBOARDING else Destinations.MAIN,
                     ) {
                         composable(Destinations.ONBOARDING) {
-                            val viewModel: OnboardingViewModel = viewModel(
-                                factory = OnboardingViewModelFactory(
-                                    appContainer = appContainer,
-                                    initialLogFolderPath = info.savedLogFolderPath,
-                                    initialMediaFolderPath = info.savedMediaFolderPath,
-                                ),
-                            )
+                            val viewModel: OnboardingViewModel =
+                                viewModel(
+                                    factory =
+                                        OnboardingViewModelFactory(
+                                            appContainer = appContainer,
+                                            initialLogFolderPath = info.savedLogFolderPath,
+                                            initialMediaFolderPath = info.savedMediaFolderPath,
+                                        ),
+                                )
                             OnboardingScreen(
                                 viewModel = viewModel,
                                 onOnboardingComplete = {
@@ -206,8 +208,9 @@ class MainActivity : ComponentActivity() {
                             // wherever ES-DE currently is, not whatever canvas was last left
                             // open in the editor. Idle/no connection falls back to System.
                             val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
-                            val editWidgetsInitialCanvas = (connectionState as? EsdeConnectionState.Connected)
-                                ?.appState?.stateGroup() ?: StateGroup.System
+                            val editWidgetsInitialCanvas =
+                                (connectionState as? EsdeConnectionState.Connected)
+                                    ?.appState?.stateGroup() ?: StateGroup.System
 
                             // Momentary "is the screen currently blanked" state - local,
                             // not persisted. Double-tap-to-blank is always available (no
@@ -333,11 +336,12 @@ class MainActivity : ComponentActivity() {
                             // Playing -> Paused but shouldn't close the panel.
                             var musicControlsRevealed by remember { mutableStateOf(false) }
 
-                            val musicTrack = when (val state = musicPlaybackState) {
-                                is MusicPlaybackState.Playing -> state.track
-                                is MusicPlaybackState.Paused -> state.track
-                                MusicPlaybackState.Stopped -> null
-                            }
+                            val musicTrack =
+                                when (val state = musicPlaybackState) {
+                                    is MusicPlaybackState.Playing -> state.track
+                                    is MusicPlaybackState.Paused -> state.track
+                                    MusicPlaybackState.Stopped -> null
+                                }
 
                             // Keyed on the track too, not just musicControlsRevealed, so a
                             // new song starting while the panel is already showing restarts
@@ -357,11 +361,12 @@ class MainActivity : ComponentActivity() {
                                 if (musicTrack != null) musicControlsRevealed = true
                             }
 
-                            val activeScreenBehavior = when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
-                                is AppState.PlayingGame -> gamePlayingBehavior
-                                is AppState.Screensaver -> screensaverBehavior
-                                else -> ScreenBehavior.Nothing
-                            }
+                            val activeScreenBehavior =
+                                when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
+                                    is AppState.PlayingGame -> gamePlayingBehavior
+                                    is AppState.Screensaver -> screensaverBehavior
+                                    else -> ScreenBehavior.Nothing
+                                }
 
                             val isPlayingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
                             LaunchedEffect(isPlayingGame) {
@@ -369,7 +374,8 @@ class MainActivity : ComponentActivity() {
                             }
 
                             val isBrowsingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
-                            val showVideoOverlay = videoPlaybackEnabled &&
+                            val showVideoOverlay =
+                                videoPlaybackEnabled &&
                                     videoPath != null &&
                                     isBrowsingGame &&
                                     mainScreenActive &&
@@ -379,14 +385,15 @@ class MainActivity : ComponentActivity() {
                                 android.util.Log.d(
                                     "VideoDebug",
                                     "enabled=$videoPlaybackEnabled path=$videoPath browsing=$isBrowsingGame " +
-                                            "mainScreenActive=$mainScreenActive visible=$isActivityVisible -> show=$showVideoOverlay",
+                                        "mainScreenActive=$mainScreenActive visible=$isActivityVisible -> show=$showVideoOverlay",
                                 )
                             }
 
                             // GameManual selected but no manual resolved for this game, or
                             // the user tapped exit on it -> falls through to the plain
                             // main screen, same as ScreenBehavior.Nothing.
-                            val showGameManual = activeScreenBehavior == ScreenBehavior.GameManual &&
+                            val showGameManual =
+                                activeScreenBehavior == ScreenBehavior.GameManual &&
                                     manualPdfPath != null &&
                                     !manualDismissed
 
@@ -421,9 +428,10 @@ class MainActivity : ComponentActivity() {
                                         CornerFab(
                                             onClick = { musicControlsRevealed = !musicControlsRevealed },
                                             opacityPercent = overlayOpacityPercent,
-                                            modifier = Modifier
-                                                .align(Alignment.TopStart)
-                                                .padding(CORNER_BUTTON_EDGE_PADDING),
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .padding(CORNER_BUTTON_EDGE_PADDING),
                                         ) {
                                             Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
                                         }
@@ -434,15 +442,16 @@ class MainActivity : ComponentActivity() {
                                             MusicControlsOverlay(
                                                 viewModel = musicControlsViewModel,
                                                 opacityPercent = overlayOpacityPercent,
-                                                modifier = Modifier
-                                                    .align(Alignment.TopStart)
-                                                    .padding(start = overlayStart, top = CORNER_BUTTON_EDGE_PADDING)
-                                                    .widthIn(max = overlayMaxWidth.coerceAtLeast(0.dp))
-                                                    // min, not exact - a wrapped two-line
-                                                    // title (see MusicControlsOverlay) needs
-                                                    // to grow taller than the FAB, not be
-                                                    // clipped to match it.
-                                                    .heightIn(min = CORNER_BUTTON_SIZE),
+                                                modifier =
+                                                    Modifier
+                                                        .align(Alignment.TopStart)
+                                                        .padding(start = overlayStart, top = CORNER_BUTTON_EDGE_PADDING)
+                                                        .widthIn(max = overlayMaxWidth.coerceAtLeast(0.dp))
+                                                        // min, not exact - a wrapped two-line
+                                                        // title (see MusicControlsOverlay) needs
+                                                        // to grow taller than the FAB, not be
+                                                        // clipped to match it.
+                                                        .heightIn(min = CORNER_BUTTON_SIZE),
                                             )
                                         }
                                     }
@@ -463,9 +472,10 @@ class MainActivity : ComponentActivity() {
                             )
 
                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(longPressMenuBlurRadius),
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .blur(longPressMenuBlurRadius),
                             ) {
                                 WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
 
@@ -507,9 +517,10 @@ class MainActivity : ComponentActivity() {
                                 // whatever's underneath, unlike the Black cover below.
                                 AnimatedVisibility(visible = isDimmed && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
                                     Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Black.copy(alpha = 0.5f)),
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black.copy(alpha = 0.5f)),
                                     )
                                 }
 
@@ -530,19 +541,20 @@ class MainActivity : ComponentActivity() {
                                 // unreachable, not just visually covered.
                                 AnimatedVisibility(visible = isBlanked && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
                                     Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Black)
-                                            .clickable(
-                                                interactionSource = remember { MutableInteractionSource() },
-                                                indication = null,
-                                                onClick = {},
-                                            )
-                                            .pointerInput(Unit) {
-                                                detectTapGestures(onDoubleTap = {
-                                                    isBlanked = false
-                                                })
-                                            },
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black)
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                    onClick = {},
+                                                )
+                                                .pointerInput(Unit) {
+                                                    detectTapGestures(onDoubleTap = {
+                                                        isBlanked = false
+                                                    })
+                                                },
                                     )
                                 }
 

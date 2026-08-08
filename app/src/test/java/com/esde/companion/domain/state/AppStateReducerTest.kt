@@ -9,7 +9,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AppStateReducerTest {
-
     @Test
     fun `system-select produces BrowsingSystem`() {
         val event = EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast")
@@ -175,11 +174,12 @@ class AppStateReducerTest {
     @Test
     fun `screensaver-end restores the state active before the screensaver started`() {
         val previous = AppState.BrowsingSystem("gc", "Nintendo GameCube", "/roms/gc")
-        val screensaver = AppState.Screensaver(
-            mode = "manual",
-            currentGame = ScreensaverGame("/roms/arcade/xexex.zip", "Xexex", "arcade", "Arcade"),
-            previousState = previous,
-        )
+        val screensaver =
+            AppState.Screensaver(
+                mode = "manual",
+                currentGame = ScreensaverGame("/roms/arcade/xexex.zip", "Xexex", "arcade", "Arcade"),
+                previousState = previous,
+            )
 
         val result = AppStateReducer.reduce(screensaver, EsdeEvent.ScreensaverEnd("cancel"))
 

@@ -31,7 +31,6 @@ class ManageAppsViewModel(
     private val observeHiddenApps: ObserveHiddenAppsUseCase,
     private val setHiddenApps: SetHiddenAppsUseCase,
 ) : ViewModel() {
-
     val rows: StateFlow<List<AppVisibilityRow>> =
         combine(observeInstalledApps(), observeHiddenApps()) { apps, hidden ->
             apps.map { app -> AppVisibilityRow(app = app, isHidden = hidden.contains(app.packageName)) }
@@ -42,7 +41,10 @@ class ManageAppsViewModel(
         )
 
     /** [hidden] is the new hidden state to apply for [packageName]. */
-    fun onVisibilityToggled(packageName: String, hidden: Boolean) {
+    fun onVisibilityToggled(
+        packageName: String,
+        hidden: Boolean,
+    ) {
         viewModelScope.launch {
             val currentHidden = observeHiddenApps().first()
             val updated = if (hidden) currentHidden + packageName else currentHidden - packageName

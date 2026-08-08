@@ -21,7 +21,6 @@ class SharedEsdeLogRepository(
     scope: CoroutineScope,
     replayExpiryMillis: Long = 5_000,
 ) : EsdeLogRepository {
-
     private val sharedEvents: Flow<EsdeEvent> =
         inner.observeEvents().shareIn(scope, SharingStarted.WhileSubscribed(replayExpiryMillis))
 
@@ -29,5 +28,6 @@ class SharedEsdeLogRepository(
         inner.observeLogFileExists().shareIn(scope, SharingStarted.WhileSubscribed(replayExpiryMillis), replay = 1)
 
     override fun observeEvents(): Flow<EsdeEvent> = sharedEvents
+
     override fun observeLogFileExists(): Flow<Boolean> = sharedExists
 }

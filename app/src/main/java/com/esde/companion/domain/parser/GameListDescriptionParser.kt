@@ -1,9 +1,9 @@
 package com.esde.companion.domain.parser
 
-import java.io.StringReader
-import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
+import java.io.StringReader
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Parses ES-DE's gamelist.xml content to find the <desc> text for one specific game.
@@ -26,21 +26,24 @@ import org.xml.sax.InputSource
  * expected outcomes here, not errors.
  */
 object GameListDescriptionParser {
-
-    fun findDescription(content: String, romPath: String): String? {
+    fun findDescription(
+        content: String,
+        romPath: String,
+    ): String? {
         val gameListXml = content.extractGameListElement() ?: return null
 
-        val document = try {
-            DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                .parse(InputSource(StringReader(gameListXml)))
-        } catch (e: Exception) {
-            // Deliberately broad: this parses external, scraper-generated XML we don't
-            // control. Malformed content (e.g. an unescaped "&" in a <desc>) can surface
-            // as checked exceptions (SAXException) or unchecked ones (DOMException, seen
-            // in practice on-device) depending on the platform XML implementation - any
-            // parse failure here should degrade to "no description," never crash the app.
-            return null
-        }
+        val document =
+            try {
+                DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                    .parse(InputSource(StringReader(gameListXml)))
+            } catch (e: Exception) {
+                // Deliberately broad: this parses external, scraper-generated XML we don't
+                // control. Malformed content (e.g. an unescaped "&" in a <desc>) can surface
+                // as checked exceptions (SAXException) or unchecked ones (DOMException, seen
+                // in practice on-device) depending on the platform XML implementation - any
+                // parse failure here should degrade to "no description," never crash the app.
+                return null
+            }
 
         val gameNodes = document.getElementsByTagName("game")
         for (index in 0 until gameNodes.length) {

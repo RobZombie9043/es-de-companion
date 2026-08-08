@@ -6,6 +6,5 @@ import com.esde.companion.domain.repository.OnboardingRepository
 class SetGamePlayingBehaviorUseCase(
     private val onboardingRepository: OnboardingRepository,
 ) {
-    suspend operator fun invoke(behavior: ScreenBehavior) =
-        onboardingRepository.setGamePlayingBehavior(behavior)
+    suspend operator fun invoke(behavior: ScreenBehavior) = onboardingRepository.setGamePlayingBehavior(behavior)
 }

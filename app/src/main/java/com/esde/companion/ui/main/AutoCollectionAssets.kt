@@ -12,11 +12,11 @@ package com.esde.companion.ui.main
  * about asset file naming. Any systemShortName not in this map (i.e. every real system)
  * is returned unchanged.
  */
-private val AUTO_COLLECTION_ASSET_NAMES = mapOf(
-    "all" to "auto-allgames",
-    "favorites" to "auto-favorites",
-    "recent" to "auto-lastplayed",
-)
+private val AUTO_COLLECTION_ASSET_NAMES =
+    mapOf(
+        "all" to "auto-allgames",
+        "favorites" to "auto-favorites",
+        "recent" to "auto-lastplayed",
+    )
 
-fun systemLogoAssetName(systemShortName: String): String =
-    AUTO_COLLECTION_ASSET_NAMES[systemShortName] ?: systemShortName
+fun systemLogoAssetName(systemShortName: String): String = AUTO_COLLECTION_ASSET_NAMES[systemShortName] ?: systemShortName

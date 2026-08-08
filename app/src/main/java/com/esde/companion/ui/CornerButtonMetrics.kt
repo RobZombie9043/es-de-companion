@@ -52,11 +52,12 @@ fun CornerFab(
     val contentColor = if (isDarkTheme) Color.White else Color.Black
 
     Box(
-        modifier = modifier
-            .size(CORNER_BUTTON_SIZE)
-            .clip(CORNER_BUTTON_SHAPE)
-            .background(backgroundColor.copy(alpha = opacityPercent / 100f))
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .size(CORNER_BUTTON_SIZE)
+                .clip(CORNER_BUTTON_SHAPE)
+                .background(backgroundColor.copy(alpha = opacityPercent / 100f))
+                .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {

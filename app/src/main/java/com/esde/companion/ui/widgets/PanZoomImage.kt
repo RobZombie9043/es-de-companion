@@ -38,7 +38,11 @@ internal fun randomPanZoomDirection(): PanZoomDirection =
  * evaluated at *this frame's* scale (not a fixed max), so the edge stays flush at every
  * point along the easing curve, not just at the animation's endpoints.
  */
-internal fun panZoomTranslation(scale: Float, size: IntSize, direction: PanZoomDirection): Pair<Float, Float> {
+internal fun panZoomTranslation(
+    scale: Float,
+    size: IntSize,
+    direction: PanZoomDirection,
+): Pair<Float, Float> {
     val overflowX = size.width * (scale - 1f) / 2f
     val overflowY = size.height * (scale - 1f) / 2f
     return direction.dirX * overflowX to direction.dirY * overflowY
@@ -57,7 +61,10 @@ internal fun panZoomTranslation(scale: Float, size: IntSize, direction: PanZoomD
  * `WidgetCanvas.kt`, with zero changes needed to that shared file.
  */
 @Composable
-internal fun rememberPanZoomModifier(enabled: Boolean, model: Any?): Modifier {
+internal fun rememberPanZoomModifier(
+    enabled: Boolean,
+    model: Any?,
+): Modifier {
     if (!enabled) return Modifier
 
     return key(identityKeyOf(model)) {
@@ -67,10 +74,11 @@ internal fun rememberPanZoomModifier(enabled: Boolean, model: Any?): Modifier {
         val progress by infiniteTransition.animateFloat(
             initialValue = 0f,
             targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(PAN_ZOOM_DURATION_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(PAN_ZOOM_DURATION_MS, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
             label = "panZoomProgress",
         )
 

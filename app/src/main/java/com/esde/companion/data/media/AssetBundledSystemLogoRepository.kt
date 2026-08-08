@@ -12,7 +12,6 @@ import kotlinx.coroutines.withContext
  * bundled app assets can't change at runtime.
  */
 class AssetBundledSystemLogoRepository(private val context: Context) : BundledSystemLogoRepository {
-
     private val availableFileNames: Set<String> by lazy {
         (context.assets.list(SYSTEM_LOGOS_DIR) ?: emptyArray()).toSet()
     }

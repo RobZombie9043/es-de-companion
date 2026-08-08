@@ -38,34 +38,37 @@ class VideoOverlayViewModel(
     observeVideoDelaySeconds: ObserveVideoDelaySecondsUseCase,
     observeVideoAudioEnabled: ObserveVideoAudioEnabledUseCase,
 ) : ViewModel() {
+    private val browsingGameReference: Flow<GameReference?> =
+        observeConnectionState()
+            .map { connection ->
+                ((connection as? EsdeConnectionState.Connected)?.appState as? AppState.BrowsingGame)
+                    ?.let { GameReference(it.systemShortName, it.romPath) }
+            }
+            .distinctUntilChanged()
 
-    private val browsingGameReference: Flow<GameReference?> = observeConnectionState()
-        .map { connection ->
-            ((connection as? EsdeConnectionState.Connected)?.appState as? AppState.BrowsingGame)
-                ?.let { GameReference(it.systemShortName, it.romPath) }
-        }
-        .distinctUntilChanged()
+    val videoPath: StateFlow<String?> =
+        browsingGameReference
+            .map { ref -> ref?.let { resolveGameMedia(it.systemShortName, it.romPath).path(MediaType.Videos) } }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = null,
+            )
 
-    val videoPath: StateFlow<String?> = browsingGameReference
-        .map { ref -> ref?.let { resolveGameMedia(it.systemShortName, it.romPath).path(MediaType.Videos) } }
-        .distinctUntilChanged()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = null,
-        )
+    val delaySeconds: StateFlow<Int> =
+        observeVideoDelaySeconds()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = 0,
+            )
 
-    val delaySeconds: StateFlow<Int> = observeVideoDelaySeconds()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = 0,
-        )
-
-    val audioEnabled: StateFlow<Boolean> = observeVideoAudioEnabled()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-            initialValue = true,
-        )
+    val audioEnabled: StateFlow<Boolean> =
+        observeVideoAudioEnabled()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = true,
+            )
 }

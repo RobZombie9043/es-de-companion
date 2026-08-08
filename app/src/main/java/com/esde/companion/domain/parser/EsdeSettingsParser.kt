@@ -14,16 +14,17 @@ package com.esde.companion.domain.parser
  * never touched, or the file doesn't match the shape we expect), not an error.
  */
 object EsdeSettingsParser {
+    fun findStringValue(
+        xmlContent: String,
+        settingName: String,
+    ): String? = stringRegexFor(settingName).find(xmlContent)?.groupValues?.get(1)
 
-    fun findStringValue(xmlContent: String, settingName: String): String? =
-        stringRegexFor(settingName).find(xmlContent)?.groupValues?.get(1)
+    fun findBoolValue(
+        xmlContent: String,
+        settingName: String,
+    ): Boolean? = boolRegexFor(settingName).find(xmlContent)?.groupValues?.get(1)?.toBooleanStrictOrNull()
 
-    fun findBoolValue(xmlContent: String, settingName: String): Boolean? =
-        boolRegexFor(settingName).find(xmlContent)?.groupValues?.get(1)?.toBooleanStrictOrNull()
+    private fun stringRegexFor(settingName: String) = Regex("""<string\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""")
 
-    private fun stringRegexFor(settingName: String) =
-        Regex("""<string\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""")
-
-    private fun boolRegexFor(settingName: String) =
-        Regex("""<bool\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""")
+    private fun boolRegexFor(settingName: String) = Regex("""<bool\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""")
 }
