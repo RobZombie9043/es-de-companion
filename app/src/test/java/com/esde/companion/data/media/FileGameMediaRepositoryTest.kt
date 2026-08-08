@@ -36,6 +36,7 @@ class FileGameMediaRepositoryTest {
                 repository.resolveMedia(
                     systemShortName = "dreamcast",
                     romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd",
+                    mediaTypes = setOf(MediaType.Covers),
                 )
 
             assertEquals(
@@ -54,6 +55,7 @@ class FileGameMediaRepositoryTest {
                 repository.resolveMedia(
                     systemShortName = "psx",
                     romPath = "/storage/E2AB-E84A/ROMs/psx/RPGs/Final Fantasy IX (USA).chd",
+                    mediaTypes = setOf(MediaType.Screenshots),
                 )
 
             assertEquals(
@@ -76,6 +78,7 @@ class FileGameMediaRepositoryTest {
                 repository.resolveMedia(
                     systemShortName = "psx",
                     romPath = gameDir.absolutePath.replace(File.separatorChar, '/'),
+                    mediaTypes = setOf(MediaType.Covers),
                 )
 
             assertEquals(
@@ -93,6 +96,7 @@ class FileGameMediaRepositoryTest {
                 repository.resolveMedia(
                     systemShortName = "dreamcast",
                     romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Missing Game.chd",
+                    mediaTypes = setOf(MediaType.Covers),
                 )
 
             assertNull(result.path(MediaType.Covers))

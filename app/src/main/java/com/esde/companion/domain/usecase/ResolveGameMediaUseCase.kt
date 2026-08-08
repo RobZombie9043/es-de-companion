@@ -1,6 +1,7 @@
 package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.GameMedia
+import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.repository.GameMediaRepository
 
 /**
@@ -10,7 +11,8 @@ import com.esde.companion.domain.repository.GameMediaRepository
  *
  * Callers pass whatever game is currently relevant (from AppState.BrowsingGame,
  * .PlayingGame, or a Screensaver's currentGame) - this use case has no opinion about
- * which state the app is in.
+ * which state the app is in. [mediaTypes] is exactly what the caller needs (see
+ * GameMediaRepository's kdoc).
  */
 class ResolveGameMediaUseCase(
     private val gameMediaRepository: GameMediaRepository,
@@ -18,5 +20,6 @@ class ResolveGameMediaUseCase(
     suspend operator fun invoke(
         systemShortName: String,
         romPath: String,
-    ): GameMedia = gameMediaRepository.resolveMedia(systemShortName, romPath)
+        mediaTypes: Set<MediaType>,
+    ): GameMedia = gameMediaRepository.resolveMedia(systemShortName, romPath, mediaTypes)
 }

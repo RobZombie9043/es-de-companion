@@ -56,6 +56,8 @@ class SettingsViewModelFactory(
             setSettingsFabVisibleUseCase = appContainer.setSettingsFabVisibleUseCase,
             observeLaunchEsdeOnStartEnabledUseCase = appContainer.observeLaunchEsdeOnStartEnabledUseCase,
             setLaunchEsdeOnStartEnabledUseCase = appContainer.setLaunchEsdeOnStartEnabledUseCase,
+            observeDebugLoggingEnabledUseCase = appContainer.observeDebugLoggingEnabledUseCase,
+            setDebugLoggingEnabledUseCase = appContainer.setDebugLoggingEnabledUseCase,
         ) as T
     }
 }

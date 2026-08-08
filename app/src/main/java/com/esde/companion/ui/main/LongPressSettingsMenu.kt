@@ -315,6 +315,8 @@ fun LongPressSettingsMenu(
                                         onSettingsFabVisibleChanged = settingsViewModel::onSettingsFabVisibleChanged,
                                         launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
                                         onLaunchEsdeOnStartEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
+                                        debugLoggingEnabled = uiState.debugLoggingEnabled,
+                                        onDebugLoggingEnabledChanged = settingsViewModel::onDebugLoggingEnabledChanged,
                                     )
                                 SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
                             }

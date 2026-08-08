@@ -44,4 +44,5 @@ data class SettingsUiState(
     val closeCompanionOnQuitEnabled: Boolean = false,
     val settingsFabVisible: Boolean = true,
     val launchEsdeOnStartEnabled: Boolean = false,
+    val debugLoggingEnabled: Boolean = false,
 )

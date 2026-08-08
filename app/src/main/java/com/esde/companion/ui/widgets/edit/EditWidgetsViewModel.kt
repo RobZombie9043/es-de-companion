@@ -356,7 +356,9 @@ class EditWidgetsViewModel(
     private suspend fun resolvePreviewContent(widgets: List<PlacedWidget>): Map<String, WidgetContent> {
         val lastSystemShortName = observeLastSystemShortName().first()
         val lastGameReference = observeLastGameReference().first()
-        val gameMedia = lastGameReference?.let { resolveGameMedia(it.systemShortName, it.romPath) }
+        val neededGameMediaTypes = widgets.mapNotNull { (it.widgetType as? WidgetType.GameMedia)?.mediaType }.toSet()
+        val gameMedia =
+            lastGameReference?.let { resolveGameMedia(it.systemShortName, it.romPath, neededGameMediaTypes) }
         val gameDescription = lastGameReference?.let { resolveGameDescription(it.systemShortName, it.romPath) }
 
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }

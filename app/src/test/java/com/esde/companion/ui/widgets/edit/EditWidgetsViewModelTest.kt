@@ -107,6 +107,7 @@ class EditWidgetsViewModelTest {
         override suspend fun resolveMedia(
             systemShortName: String,
             romPath: String,
+            mediaTypes: Set<MediaType>,
         ): GameMedia = media
     }
 
@@ -277,6 +278,10 @@ class EditWidgetsViewModelTest {
         override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {}
 
         override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setDebugLoggingEnabled(enabled: Boolean) {}
+
+        override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
         override suspend fun setSettingsFabVisible(visible: Boolean) {}
 

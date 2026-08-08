@@ -10,6 +10,7 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
@@ -30,6 +31,7 @@ import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
+import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
@@ -82,6 +84,7 @@ class SettingsViewModelTest {
         var closeCompanionOnQuitEnabled = false
         var settingsFabVisible = true
         var launchEsdeOnStartEnabled = false
+        var debugLoggingEnabled = false
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
 
@@ -210,6 +213,12 @@ class SettingsViewModelTest {
         }
 
         override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> = flowOf(launchEsdeOnStartEnabled)
+
+        override suspend fun setDebugLoggingEnabled(enabled: Boolean) {
+            debugLoggingEnabled = enabled
+        }
+
+        override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(debugLoggingEnabled)
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -334,6 +343,8 @@ class SettingsViewModelTest {
                 setSettingsFabVisibleUseCase = SetSettingsFabVisibleUseCase(onboardingRepository),
                 observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
                 setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
+                observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository),
+                setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository),
             )
         return viewModel to appDrawerSettingsRepository
     }

@@ -1,13 +1,16 @@
 package com.esde.companion
 
 import android.content.Context
+import android.os.Environment
 import com.esde.companion.data.activity.ProcessActivityVisibilityRepository
 import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
+import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.log.SharedEsdeLogRepository
 import com.esde.companion.data.media.AssetBundledSystemLogoRepository
+import com.esde.companion.data.media.LoggingGameMediaRepository
 import com.esde.companion.data.media.ReactiveCustomSystemImageRepository
 import com.esde.companion.data.media.ReactiveCustomSystemLogoRepository
 import com.esde.companion.data.media.ReactiveGameMediaRepository
@@ -44,6 +47,7 @@ import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.VideoPlaybackStateRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
+import com.esde.companion.domain.state.AppStateReducer
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
@@ -51,6 +55,7 @@ import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
@@ -92,6 +97,7 @@ import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
+import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
@@ -122,6 +128,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.io.File
+import java.time.Clock
 
 /**
  * Minimal hand-rolled composition root. At this project's current scale (single module,
@@ -143,6 +151,18 @@ class AppContainer(context: Context) {
 
     val videoPlaybackStateRepository: VideoPlaybackStateRepository = ProcessVideoPlaybackStateRepository()
 
+    // Opt-in debug log (state transitions, media resolution outcomes) to help diagnose
+    // reported issues - see Settings > Other Settings. Lives in a top-level
+    // "ES-DE Companion" folder parallel to the user's "ES-DE" folder, not nested inside
+    // it and not tied to wherever the user configured the ES-DE root to be.
+    private val debugFileLogger =
+        DebugFileLogger(
+            logFile = File(Environment.getExternalStorageDirectory(), "ES-DE Companion/logs/esde_companion_log.txt"),
+            onboardingRepository = onboardingRepository,
+            applicationScope = applicationScope,
+            clock = Clock.systemDefaultZone(),
+        )
+
     private val logRepository: EsdeLogRepository =
         SharedEsdeLogRepository(
             inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
@@ -151,7 +171,10 @@ class AppContainer(context: Context) {
 
     // Same reactive-to-Settings pattern as logRepository, for the media folder.
     private val gameMediaRepository: GameMediaRepository =
-        ReactiveGameMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
+        LoggingGameMediaRepository(
+            inner = ReactiveGameMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath()),
+            debugFileLogger = debugFileLogger,
+        )
 
     // gamelists/ lives alongside logs/ under the ES-DE root, so this reacts to the log
     // folder path, not the media folder path - see ReactiveGameDescriptionRepository.
@@ -237,7 +260,16 @@ class AppContainer(context: Context) {
     val observeDockAppsUseCase = ObserveDockAppsUseCase(dockSettingsRepository)
     val setDockAppsUseCase = SetDockAppsUseCase(dockSettingsRepository)
 
-    val observeAppStateUseCase = ObserveAppStateUseCase(logRepository, applicationScope)
+    val observeAppStateUseCase =
+        ObserveAppStateUseCase(
+            logRepository = logRepository,
+            scope = applicationScope,
+            reducer = { state, event ->
+                val newState = AppStateReducer.reduce(state, event)
+                debugFileLogger.logStateTransition(event, newState)
+                newState
+            },
+        )
     val observeConnectionStateUseCase = ObserveConnectionStateUseCase(logRepository, observeAppStateUseCase)
     val observeEsdeLogActivityUseCase = ObserveEsdeLogActivityUseCase(logRepository)
     val observeEsdeQuitEventUseCase = ObserveEsdeQuitEventUseCase(logRepository)
@@ -291,6 +323,8 @@ class AppContainer(context: Context) {
     val setSettingsFabVisibleUseCase = SetSettingsFabVisibleUseCase(onboardingRepository)
     val observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
+    val observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository)
+    val setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository)
 
     val musicPlaybackCoordinator =
         MusicPlaybackCoordinator(

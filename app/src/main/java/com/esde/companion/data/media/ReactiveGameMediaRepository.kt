@@ -1,6 +1,7 @@
 package com.esde.companion.data.media
 
 import com.esde.companion.domain.model.GameMedia
+import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.repository.GameMediaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -27,8 +28,9 @@ class ReactiveGameMediaRepository(
     override suspend fun resolveMedia(
         systemShortName: String,
         romPath: String,
+        mediaTypes: Set<MediaType>,
     ): GameMedia {
         val folder = mediaFolderPath.first() ?: return GameMedia(baseRelativePath = null, filesByType = emptyMap())
-        return repositoryFactory(folder).resolveMedia(systemShortName, romPath)
+        return repositoryFactory(folder).resolveMedia(systemShortName, romPath, mediaTypes)
     }
 }

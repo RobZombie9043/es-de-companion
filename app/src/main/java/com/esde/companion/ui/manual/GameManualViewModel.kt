@@ -39,7 +39,11 @@ class GameManualViewModel(
 
     val pdfPath: StateFlow<String?> =
         currentGameReference
-            .map { gameRef -> gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath).path(MediaType.Manuals) } }
+            .map { gameRef ->
+                gameRef?.let {
+                    resolveGameMedia(it.systemShortName, it.romPath, setOf(MediaType.Manuals)).path(MediaType.Manuals)
+                }
+            }
             .distinctUntilChanged()
             .stateIn(
                 scope = viewModelScope,

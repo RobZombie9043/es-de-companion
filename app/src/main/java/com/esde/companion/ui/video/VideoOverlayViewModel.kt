@@ -48,7 +48,11 @@ class VideoOverlayViewModel(
 
     val videoPath: StateFlow<String?> =
         browsingGameReference
-            .map { ref -> ref?.let { resolveGameMedia(it.systemShortName, it.romPath).path(MediaType.Videos) } }
+            .map { ref ->
+                ref?.let {
+                    resolveGameMedia(it.systemShortName, it.romPath, setOf(MediaType.Videos)).path(MediaType.Videos)
+                }
+            }
             .distinctUntilChanged()
             .stateIn(
                 scope = viewModelScope,

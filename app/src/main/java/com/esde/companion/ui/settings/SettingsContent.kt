@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
@@ -519,6 +520,8 @@ internal fun OtherSettingsContent(
     onSettingsFabVisibleChanged: (Boolean) -> Unit,
     launchEsdeOnStartEnabled: Boolean,
     onLaunchEsdeOnStartEnabledChanged: (Boolean) -> Unit,
+    debugLoggingEnabled: Boolean,
+    onDebugLoggingEnabledChanged: (Boolean) -> Unit,
 ) {
     Column(
         modifier =
@@ -539,6 +542,10 @@ internal fun OtherSettingsContent(
         SettingsFabVisibleSetting(
             enabled = settingsFabVisible,
             onEnabledChanged = onSettingsFabVisibleChanged,
+        )
+        DebugLoggingSetting(
+            enabled = debugLoggingEnabled,
+            onEnabledChanged = onDebugLoggingEnabledChanged,
         )
     }
 }
@@ -604,6 +611,44 @@ private fun LaunchEsdeOnStartSetting(
             ) {
                 Text(
                     text = "Launch ES-DE on the other display when Companion App starts",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onEnabledChanged(it)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DebugLoggingSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SettingsLabel(icon = Icons.Filled.BugReport, text = "Debug Logging")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Write a debug log to help diagnose reported issues",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )

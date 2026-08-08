@@ -14,6 +14,7 @@ class ReactiveGameMediaRepositoryTest {
         override suspend fun resolveMedia(
             systemShortName: String,
             romPath: String,
+            mediaTypes: Set<MediaType>,
         ): GameMedia =
             GameMedia(
                 baseRelativePath = "resolved",
@@ -30,7 +31,7 @@ class ReactiveGameMediaRepositoryTest {
                     repositoryFactory = { folder -> FakeGameMediaRepository(folder) },
                 )
 
-            val result = repository.resolveMedia("dreamcast", "/roms/dreamcast/game.chd")
+            val result = repository.resolveMedia("dreamcast", "/roms/dreamcast/game.chd", setOf(MediaType.Covers))
 
             assertNull(result.path(MediaType.Covers))
         }
@@ -44,7 +45,7 @@ class ReactiveGameMediaRepositoryTest {
                     repositoryFactory = { folder -> FakeGameMediaRepository(folder) },
                 )
 
-            val result = repository.resolveMedia("dreamcast", "/roms/dreamcast/game.chd")
+            val result = repository.resolveMedia("dreamcast", "/roms/dreamcast/game.chd", setOf(MediaType.Covers))
 
             assertEquals(
                 "/sdcard/ES-DE/downloaded_media/dreamcast/covers/resolved.png",

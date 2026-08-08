@@ -164,4 +164,14 @@ interface OnboardingRepository {
     suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean)
 
     fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean>
+
+    /**
+     * Settings > Other Settings: whether ES-DE Companion writes a debug log (parsed
+     * events, state transitions, media resolution outcomes) to help diagnose reported
+     * issues. Defaults to false - opt-in, since it's a diagnostic aid rather than a
+     * normal-use feature.
+     */
+    suspend fun setDebugLoggingEnabled(enabled: Boolean)
+
+    fun observeDebugLoggingEnabled(): Flow<Boolean>
 }

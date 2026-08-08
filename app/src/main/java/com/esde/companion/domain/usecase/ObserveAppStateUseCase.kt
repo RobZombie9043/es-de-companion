@@ -1,6 +1,7 @@
 package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.AppState
+import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.state.AppStateReducer
 import kotlinx.coroutines.CoroutineScope
@@ -27,14 +28,19 @@ import kotlinx.coroutines.flow.stateIn
  * StateFlow (which always replays its latest value to new subscribers), means every
  * caller sees the same correctly-reconstructed state immediately, not just whichever
  * caller happened to be first.
+ *
+ * [reducer] defaults to [AppStateReducer.reduce] itself; callers that need to observe
+ * every (previousState, event) -> newState transition (e.g. debug logging) can supply a
+ * wrapping function instead, without [AppStateReducer] ever needing to know about it.
  */
 class ObserveAppStateUseCase(
     logRepository: EsdeLogRepository,
     scope: CoroutineScope,
+    reducer: (AppState, EsdeEvent) -> AppState = AppStateReducer::reduce,
 ) {
     private val sharedAppState: StateFlow<AppState> =
         logRepository.observeEvents()
-            .scan(AppState.Idle as AppState) { state, event -> AppStateReducer.reduce(state, event) }
+            .scan(AppState.Idle as AppState) { state, event -> reducer(state, event) }
             .stateIn(
                 scope = scope,
                 started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),

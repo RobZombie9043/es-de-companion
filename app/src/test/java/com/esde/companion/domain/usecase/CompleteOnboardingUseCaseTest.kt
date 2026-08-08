@@ -157,6 +157,10 @@ class CompleteOnboardingUseCaseTest {
 
         override fun observeLaunchEsdeOnStartEnabled(): Flow<Boolean> = flowOf(false)
 
+        override suspend fun setDebugLoggingEnabled(enabled: Boolean) {}
+
+        override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setSettingsFabVisible(visible: Boolean) {}
 
         override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)

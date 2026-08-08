@@ -8,13 +8,13 @@
         <error line="60" column="1" source="standard:no-consecutive-comments" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/settings/SettingsContent.kt">
-        <error line="644" column="1" source="standard:max-line-length" />
+        <error line="689" column="1" source="standard:max-line-length" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/widgets/WidgetCanvas.kt">
         <error line="215" column="1" source="standard:max-line-length" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/widgets/WidgetsViewModel.kt">
-        <error line="185" column="78" source="standard:discouraged-comment-location" />
+        <error line="187" column="78" source="standard:discouraged-comment-location" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/widgets/edit/EditWidgetsOverlay.kt">
         <error line="1372" column="22" source="standard:discouraged-comment-location" />

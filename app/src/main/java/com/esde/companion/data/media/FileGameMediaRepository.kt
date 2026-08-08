@@ -14,6 +14,7 @@ class FileGameMediaRepository(
     override suspend fun resolveMedia(
         systemShortName: String,
         romPath: String,
+        mediaTypes: Set<MediaType>,
     ): GameMedia =
         withContext(Dispatchers.IO) {
             // Real filesystem check for ES-DE's "directories interpreted as files" case -
@@ -28,7 +29,7 @@ class FileGameMediaRepository(
                 ) ?: return@withContext GameMedia(baseRelativePath = null, filesByType = emptyMap())
 
             val filesByType =
-                MediaType.entries
+                mediaTypes
                     .mapNotNull { type -> findExistingFile(type, systemShortName, baseRelativePath)?.let { type to it } }
                     .toMap()
 

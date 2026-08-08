@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
@@ -29,6 +30,7 @@ import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
+import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
@@ -100,6 +102,8 @@ class SettingsViewModel(
     private val setSettingsFabVisibleUseCase: SetSettingsFabVisibleUseCase,
     private val observeLaunchEsdeOnStartEnabledUseCase: ObserveLaunchEsdeOnStartEnabledUseCase,
     private val setLaunchEsdeOnStartEnabledUseCase: SetLaunchEsdeOnStartEnabledUseCase,
+    private val observeDebugLoggingEnabledUseCase: ObserveDebugLoggingEnabledUseCase,
+    private val setDebugLoggingEnabledUseCase: SetDebugLoggingEnabledUseCase,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
     // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient.
@@ -140,6 +144,7 @@ class SettingsViewModel(
             val closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first()
             val settingsFabVisible = observeSettingsFabVisibleUseCase().first()
             val launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first()
+            val debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first()
             _uiState.value =
                 _uiState.value.copy(
                     logFolderPath = logPath,
@@ -167,6 +172,7 @@ class SettingsViewModel(
                     closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
                     settingsFabVisible = settingsFabVisible,
                     launchEsdeOnStartEnabled = launchEsdeOnStartEnabled,
+                    debugLoggingEnabled = debugLoggingEnabled,
                 )
             validateLogFolder(logPath)
             validateMediaFolder(mediaPath)
@@ -259,6 +265,11 @@ class SettingsViewModel(
     fun onLaunchEsdeOnStartEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(launchEsdeOnStartEnabled = enabled)
         viewModelScope.launch { setLaunchEsdeOnStartEnabledUseCase(enabled) }
+    }
+
+    fun onDebugLoggingEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(debugLoggingEnabled = enabled)
+        viewModelScope.launch { setDebugLoggingEnabledUseCase(enabled) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {
