@@ -1,12 +1,20 @@
 package com.esde.companion.ui.drawer
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,7 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -62,8 +69,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
@@ -76,15 +81,14 @@ import com.esde.companion.domain.model.LaunchLocation
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
 
-// Folder-open popup reveal - deliberately duplicated from MainScreenContent's
-// long-press-menu Popup rather than extracted into a shared composable, matching this
-// codebase's preference for small duplication over a premature shared abstraction (see
-// AppDockViewModel's kdoc on the same tradeoff for recordLaunchLocation).
-private const val FOLDER_POPUP_REVEAL_START_SCALE = 0.85f
-private val FOLDER_POPUP_REVEAL_SPRING = spring<Float>(
-    dampingRatio = Spring.DampingRatioMediumBouncy,
-    stiffness = Spring.StiffnessMedium,
-)
+// Folder-open shared-element transform: the tapped tile's bounds morph into the panel's
+// bounds (and back on close) via SharedTransitionLayout/sharedBounds rather than a plain
+// Popup scale-from-center - see FolderDrawerItem and the overlay AnimatedVisibility below.
+@OptIn(ExperimentalSharedTransitionApi::class)
+private val FOLDER_SHARED_BOUNDS_TRANSFORM = BoundsTransform { _, _ ->
+    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+}
+private const val FOLDER_SCRIM_ALPHA = 0.32f
 
 // Fixed size rather than a fraction of screen (contrast LongPressSettingsMenu's Popup) -
 // a folder's contents are a small, bounded list, so it doesn't need to scale with screen
@@ -134,13 +138,16 @@ private sealed interface FolderPickerState {
  * Add/Remove Folder - see [AppLongPressMenu].
  *
  * A folder tile collapses its members into one grid cell (see [FolderDrawerItem]); tapping
- * it opens a blurred-backdrop popup with its contents (see [FolderContentsPopup]).
- * Folders are never launchable, so a folder tile has no double-tap/long-press handling at
- * all - just a plain tap to open. [isDrawerOpen] auto-dismisses any open folder popup (and
- * an in-progress add-to-folder dialog) when the drawer itself is dragged closed, since
- * both would otherwise float over an invisible drawer sheet - see the
+ * it expands that tile into a scrimmed panel with its contents (see [FolderContentsPopup])
+ * via a `SharedTransitionLayout` container transform - the tile's bounds morph into the
+ * panel's and back, rather than a `Popup` scaling from screen center. Folders are never
+ * launchable, so a folder tile has no double-tap handling - just a plain tap to open and a
+ * long-press to rename (see [FolderDrawerItem]). [isDrawerOpen] auto-dismisses any open
+ * folder panel (and an in-progress add-to-folder dialog) when the drawer itself is dragged
+ * closed, since both would otherwise float over an invisible drawer sheet - see the
  * `LaunchedEffect(isDrawerOpen)` below.
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun AppDrawer(
     viewModel: AppDrawerViewModel,
@@ -177,86 +184,172 @@ fun AppDrawer(
         }
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(gridColumns),
-        modifier = modifier
-            .fillMaxSize()
-            // Standard convention: 0% = fully transparent, 100% = fully opaque.
-            .background(drawerBackgroundColor().copy(alpha = drawerOpacityPercent / 100f)),
-        contentPadding = PaddingValues(24.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        items(
-            drawerItems,
-            key = { item ->
-                when (item) {
-                    is DrawerItem.App -> item.app.packageName
-                    is DrawerItem.Folder -> item.folder.id
-                }
-            },
-        ) { item ->
-            when (item) {
-                is DrawerItem.App -> {
-                    val app = item.app
-                    val isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName)
+    // Keeps real folder data available through the whole close animation - AnimatedVisibility
+    // already keeps the overlay composed until its exit transition finishes, but openFolder
+    // itself goes null the instant openFolderId does, so the closing panel needs its own copy
+    // of "which folder" to render in the meantime.
+    var displayedFolder by remember { mutableStateOf<DrawerItem.Folder?>(null) }
+    LaunchedEffect(openFolder) {
+        if (openFolder != null) displayedFolder = openFolder
+    }
 
-                    AppDrawerItem(
-                        app = app,
-                        isOtherScreenPreferred = isOtherScreenPreferred,
-                        isInsideFolder = false,
-                        onClick = {
-                            val displayId = if (isOtherScreenPreferred) {
-                                SecondaryDisplayResolver.secondaryDisplayId(context)
-                            } else {
-                                null
-                            }
-                            AppLauncher.launch(context, app.packageName, displayId = displayId)
-                            onAppLaunched()
-                        },
-                        onDoubleClick = {
-                            // Toggle: double-tap always does the opposite of the app's current
-                            // saved preference, not "always other screen" - so double-tapping
-                            // twice in a row round-trips back to where it started.
-                            if (isOtherScreenPreferred) {
-                                viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
-                                AppLauncher.launch(context, app.packageName)
-                            } else {
-                                val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
-                                if (secondaryDisplayId != null) {
+    SharedTransitionLayout(modifier = modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(gridColumns),
+                modifier = Modifier
+                    .fillMaxSize()
+                    // Standard convention: 0% = fully transparent, 100% = fully opaque.
+                    .background(drawerBackgroundColor().copy(alpha = drawerOpacityPercent / 100f)),
+                contentPadding = PaddingValues(24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(
+                    drawerItems,
+                    key = { item ->
+                        when (item) {
+                            is DrawerItem.App -> item.app.packageName
+                            is DrawerItem.Folder -> item.folder.id
+                        }
+                    },
+                ) { item ->
+                    when (item) {
+                        is DrawerItem.App -> {
+                            val app = item.app
+                            val isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName)
+
+                            AppDrawerItem(
+                                app = app,
+                                isOtherScreenPreferred = isOtherScreenPreferred,
+                                isInsideFolder = false,
+                                onClick = {
+                                    val displayId = if (isOtherScreenPreferred) {
+                                        SecondaryDisplayResolver.secondaryDisplayId(context)
+                                    } else {
+                                        null
+                                    }
+                                    AppLauncher.launch(context, app.packageName, displayId = displayId)
+                                    onAppLaunched()
+                                },
+                                onDoubleClick = {
+                                    // Toggle: double-tap always does the opposite of the app's current
+                                    // saved preference, not "always other screen" - so double-tapping
+                                    // twice in a row round-trips back to where it started.
+                                    if (isOtherScreenPreferred) {
+                                        viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
+                                        AppLauncher.launch(context, app.packageName)
+                                    } else {
+                                        val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
+                                        if (secondaryDisplayId != null) {
+                                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
+                                        }
+                                        AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
+                                    }
+                                    onAppLaunched()
+                                },
+                                onLaunchThisScreen = {
+                                    viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
+                                    AppLauncher.launch(context, app.packageName)
+                                    onAppLaunched()
+                                },
+                                onLaunchOtherScreen = {
                                     viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
-                                }
-                                AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
+                                    val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
+                                    AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
+                                    onAppLaunched()
+                                },
+                                onAppInfo = {
+                                    AppLauncher.openAppInfo(context, app.packageName)
+                                    onAppLaunched()
+                                },
+                                onHideApp = { viewModel.hideApp(app.packageName) },
+                                onAddToFolder = { folderPickerState = FolderPickerState.Picking(app.packageName) },
+                                onRemoveFromFolder = {},
+                            )
+                        }
+                        is DrawerItem.Folder -> {
+                            // Fades out (no size animation) rather than disposing immediately, so
+                            // the tile's own sharedBounds has a moment to hand off to the panel's -
+                            // see FolderDrawerItem's kdoc for the "other tiles reflow once this
+                            // finishes" tradeoff this accepts.
+                            AnimatedVisibility(
+                                visible = item.folder.id != openFolderId,
+                                enter = fadeIn(),
+                                exit = fadeOut(),
+                            ) {
+                                FolderDrawerItem(
+                                    folder = item.folder,
+                                    apps = item.apps,
+                                    sharedTransitionScope = this@SharedTransitionLayout,
+                                    animatedVisibilityScope = this@AnimatedVisibility,
+                                    onClick = { openFolderId = item.folder.id },
+                                    onLongClick = { renamingFolder = item.folder },
+                                )
                             }
-                            onAppLaunched()
-                        },
-                        onLaunchThisScreen = {
-                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
-                            AppLauncher.launch(context, app.packageName)
-                            onAppLaunched()
-                        },
-                        onLaunchOtherScreen = {
-                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
-                            val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
-                            AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
-                            onAppLaunched()
-                        },
-                        onAppInfo = {
-                            AppLauncher.openAppInfo(context, app.packageName)
-                            onAppLaunched()
-                        },
-                        onHideApp = { viewModel.hideApp(app.packageName) },
-                        onAddToFolder = { folderPickerState = FolderPickerState.Picking(app.packageName) },
-                        onRemoveFromFolder = {},
-                    )
+                        }
+                    }
                 }
-                is DrawerItem.Folder -> {
-                    FolderDrawerItem(
-                        folder = item.folder,
-                        apps = item.apps,
-                        onClick = { openFolderId = item.folder.id },
-                        onLongClick = { renamingFolder = item.folder },
+            }
+
+            // The expanded folder panel - shares its bounds with whichever tile is currently
+            // collapsed (FolderDrawerItem, above), so opening/closing morphs between the two
+            // instead of a Popup scaling from screen center. Deliberately an in-tree overlay,
+            // not a Popup, since sharedBounds requires both sides in the same composition/window
+            // (a Popup is a genuinely separate Android window - see AppDrawer's kdoc history).
+            AnimatedVisibility(
+                visible = openFolderId != null,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                val overlayScope = this
+                Box(Modifier.fillMaxSize()) {
+                    // Popup(focusable = true) used to block all input to the grid underneath and
+                    // dismiss on an outside tap for free - both now rebuilt explicitly here.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = FOLDER_SCRIM_ALPHA))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { openFolderId = null },
                     )
+
+                    displayedFolder?.let { folderToShow ->
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .width(FOLDER_POPUP_WIDTH)
+                                .heightIn(max = FOLDER_POPUP_MAX_HEIGHT)
+                                .sharedBounds(
+                                    sharedContentState = rememberSharedContentState(key = folderToShow.folder.id),
+                                    animatedVisibilityScope = overlayScope,
+                                    boundsTransform = FOLDER_SHARED_BOUNDS_TRANSFORM,
+                                )
+                                // Absorbs taps on the panel's own dead space (e.g. header padding)
+                                // so they don't fall through to the scrim behind it and dismiss.
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {},
+                            shape = MENU_SHAPE,
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            tonalElevation = 3.dp,
+                            shadowElevation = 3.dp,
+                        ) {
+                            FolderContentsPopup(
+                                viewModel = viewModel,
+                                folder = folderToShow.folder,
+                                apps = folderToShow.apps,
+                                onAppLaunched = {
+                                    openFolderId = null
+                                    onAppLaunched()
+                                },
+                                onDismiss = { openFolderId = null },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -300,63 +393,6 @@ fun AppDrawer(
             },
             onDismiss = { renamingFolder = null },
         )
-    }
-
-    // Kept composed slightly past openFolderId flipping null so the exit animation below
-    // actually gets to play - same "animate close before disposing" idiom as
-    // MainScreenContent's long-press-menu Popup (popupVisible).
-    var popupVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(openFolderId) {
-        if (openFolderId != null) popupVisible = true
-    }
-
-    if (popupVisible) {
-        Popup(
-            alignment = Alignment.Center,
-            onDismissRequest = { openFolderId = null },
-            properties = PopupProperties(focusable = true),
-        ) {
-            val revealProgress = remember { Animatable(0f) }
-            LaunchedEffect(openFolderId) {
-                if (openFolderId != null) {
-                    revealProgress.animateTo(targetValue = 1f, animationSpec = FOLDER_POPUP_REVEAL_SPRING)
-                } else {
-                    revealProgress.animateTo(targetValue = 0f, animationSpec = FOLDER_POPUP_REVEAL_SPRING)
-                    popupVisible = false
-                }
-            }
-
-            Surface(
-                modifier = Modifier
-                    .width(FOLDER_POPUP_WIDTH)
-                    .heightIn(max = FOLDER_POPUP_MAX_HEIGHT)
-                    .graphicsLayer {
-                        val scale = FOLDER_POPUP_REVEAL_START_SCALE +
-                            (1f - FOLDER_POPUP_REVEAL_START_SCALE) * revealProgress.value
-                        scaleX = scale
-                        scaleY = scale
-                        alpha = revealProgress.value
-                    },
-                shape = MENU_SHAPE,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 3.dp,
-                shadowElevation = 3.dp,
-            ) {
-                val folderToShow = openFolder
-                if (folderToShow != null) {
-                    FolderContentsPopup(
-                        viewModel = viewModel,
-                        folder = folderToShow.folder,
-                        apps = folderToShow.apps,
-                        onAppLaunched = {
-                            openFolderId = null
-                            onAppLaunched()
-                        },
-                        onDismiss = { openFolderId = null },
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -537,39 +573,55 @@ internal fun AppLongPressMenu(
  * folders aren't launchable and don't participate in this-screen/other-screen semantics the
  * way an app does, so there's no double-click, but long-press opens the same rename dialog
  * [FolderContentsPopup] already offers via its title, just reachable without opening the
- * folder first. */
-@OptIn(ExperimentalFoundationApi::class)
+ * folder first.
+ *
+ * [sharedTransitionScope]/[animatedVisibilityScope] tie this tile's bounds to the expanded
+ * panel's via [SharedTransitionScope.sharedBounds] (see [AppDrawer]'s overlay), so opening
+ * morphs the tile into the panel instead of a plain fade/scale. Only the outer container
+ * shares bounds - the mosaic icon and name `Text` just crossfade with the rest of
+ * `sharedBounds`'s default content transition, not individually shared-elemented (there's no
+ * natural 1:1 destination for a 4-icon mosaic inside the panel). */
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 private fun FolderDrawerItem(
     folder: AppFolder,
     apps: List<InstalledApp>,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onLongClick()
-                },
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        FolderMosaicIcon(apps = apps, modifier = Modifier.size(56.dp))
-        Text(
-            text = folder.name,
-            style = MaterialTheme.typography.bodySmall,
-            color = drawerContentColor(),
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
+    with(sharedTransitionScope) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .sharedBounds(
+                    sharedContentState = rememberSharedContentState(key = folder.id),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    boundsTransform = FOLDER_SHARED_BOUNDS_TRANSFORM,
+                )
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongClick()
+                    },
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            FolderMosaicIcon(apps = apps, modifier = Modifier.size(56.dp))
+            Text(
+                text = folder.name,
+                style = MaterialTheme.typography.bodySmall,
+                color = drawerContentColor(),
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
     }
 }
 

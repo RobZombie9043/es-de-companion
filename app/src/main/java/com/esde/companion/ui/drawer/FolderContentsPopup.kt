@@ -45,8 +45,8 @@ private const val POPUP_GRID_COLUMNS = 3
  * Contents of an open App Drawer folder - a small grid of its member apps, rendered via
  * the same [AppDrawerItem] used at the top level (`isInsideFolder = true`, so its
  * long-press menu offers "Remove from Folder" instead of "Add to Folder"). Hosted inside
- * the Popup built by [AppDrawer] - this composable owns only the content and its own
- * step-back [BackHandler], not the Popup/blur/reveal machinery itself.
+ * the shared-element overlay built by [AppDrawer] - this composable owns only the content
+ * and its own step-back [BackHandler], not the scrim/shared-transition machinery itself.
  *
  * Registers its own local [BackHandler], composed only while this popup is part of the
  * composition (i.e. while a folder is open). Compose dispatches back presses LIFO by

@@ -237,13 +237,12 @@ class MainActivity : ComponentActivity() {
                             var longPressMenuOpen by remember { mutableStateOf(false) }
 
                             // Reported by MainScreen (via AppDrawer) through
-                            // onFolderOpenChanged - an open App Drawer folder popup needs
-                            // the exact same backdrop blur as the long-press menu, for the
-                            // same structural reason: it's a Popup, so it can't blur
-                            // itself. Kept as its own flag rather than folded into
-                            // longPressMenuOpen since the two are conceptually different
-                            // states (drawer folder vs. settings menu), even though they
-                            // drive identical blur/active behavior below.
+                            // onFolderOpenChanged - folded into mainScreenActive below so
+                            // the automatic Dim/Black cover never shows over an open App
+                            // Drawer folder panel. Deliberately does NOT drive the backdrop
+                            // blur below (unlike longPressMenuOpen) - the folder panel no
+                            // longer needs it now that it's an in-tree overlay rather than a
+                            // separate Popup window, and it wasn't wanted visually either.
                             var folderOpen by remember { mutableStateOf(false) }
 
                             val mainScreenActive = !longPressMenuOpen && !showEditWidgets && !drawerOpen && !folderOpen
@@ -456,9 +455,10 @@ class MainActivity : ComponentActivity() {
                             // with the menu's own entrance animation. The menu itself is
                             // unaffected: Popup renders in its own platform window, entirely
                             // outside this Box's render tree, so blurring this Box can never
-                            // blur it too.
+                            // blur it too. Deliberately not applied while a folder is open -
+                            // see folderOpen's kdoc above.
                             val longPressMenuBlurRadius by animateDpAsState(
-                                targetValue = if (longPressMenuOpen || folderOpen) LONG_PRESS_MENU_BLUR_RADIUS else 0.dp,
+                                targetValue = if (longPressMenuOpen) LONG_PRESS_MENU_BLUR_RADIUS else 0.dp,
                                 label = "longPressMenuBlur",
                             )
 
