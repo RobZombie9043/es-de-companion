@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Matches GitHubUpdateRepository's download destination: context.cacheDir/apk_updates/ -->
+    <cache-path name="apk_updates" path="apk_updates/" />
+</paths>

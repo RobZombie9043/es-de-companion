@@ -77,6 +77,10 @@ import com.esde.companion.ui.settings.ManageAppsViewModelFactory
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SettingsViewModelFactory
 import com.esde.companion.ui.theme.EsdeCompanionTheme
+import com.esde.companion.ui.update.UpdateAvailableDialog
+import com.esde.companion.ui.update.UpdateViewModel
+import com.esde.companion.ui.update.UpdateViewModelFactory
+import com.esde.companion.ui.update.WhatsNewDialog
 import com.esde.companion.ui.video.VideoOverlayScreen
 import com.esde.companion.ui.video.VideoOverlayViewModel
 import com.esde.companion.ui.video.VideoOverlayViewModelFactory
@@ -200,6 +204,10 @@ class MainActivity : ComponentActivity() {
                             // destination it replaced).
                             val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
                             val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
+                            val updateViewModel: UpdateViewModel =
+                                viewModel(factory = UpdateViewModelFactory(appContainer))
+                            val updateUiState by updateViewModel.uiState.collectAsStateWithLifecycle()
+                            LaunchedEffect(Unit) { updateViewModel.runStartupChecks() }
                             var showEditWidgets by rememberSaveable { mutableStateOf(false) }
 
                             // Whichever StateGroup is live right now - read fresh on every
@@ -503,6 +511,7 @@ class MainActivity : ComponentActivity() {
                                             dockViewModel = dockViewModel,
                                             settingsViewModel = settingsViewModel,
                                             manageAppsViewModel = manageAppsViewModel,
+                                            updateViewModel = updateViewModel,
                                             showSettingsFab = settingsFabVisible,
                                             overlayOpacityPercent = overlayOpacityPercent,
                                             onOpenEditWidgets = { showEditWidgets = true },
@@ -584,6 +593,31 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.fillMaxSize(),
                                         onIsPlayingChanged = appContainer.videoPlaybackStateRepository::setIsPlaying,
                                     )
+                                }
+
+                                // Update checker dialogs (silent startup check + manual
+                                // "Check for Updates" in Settings > Setup both funnel into
+                                // this same showUpdateDialog flag). Placement here isn't
+                                // functionally load-bearing - AlertDialog renders into its
+                                // own window, same reason LongPressSettingsMenu's Popup
+                                // doesn't need special z-ordering either.
+                                if (updateUiState.showUpdateDialog) {
+                                    updateUiState.availableRelease?.let { release ->
+                                        UpdateAvailableDialog(
+                                            release = release,
+                                            downloadState = updateUiState.downloadState,
+                                            onDownloadAndInstall = updateViewModel::onDownloadAndInstallClicked,
+                                            onDismiss = updateViewModel::onUpdateDialogDismissed,
+                                        )
+                                    }
+                                }
+                                if (updateUiState.showWhatsNewDialog) {
+                                    updateUiState.whatsNewRelease?.let { release ->
+                                        WhatsNewDialog(
+                                            release = release,
+                                            onDismiss = updateViewModel::onWhatsNewDialogDismissed,
+                                        )
+                                    }
                                 }
                             }
                         }

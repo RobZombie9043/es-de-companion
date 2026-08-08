@@ -23,6 +23,8 @@ import com.esde.companion.data.settings.FileDockSettingsRepository
 import com.esde.companion.data.settings.FileEsdeInstallationRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
 import com.esde.companion.data.settings.FileWidgetLayoutRepository
+import com.esde.companion.data.update.FileUpdateStateRepository
+import com.esde.companion.data.update.GitHubUpdateRepository
 import com.esde.companion.data.video.ProcessVideoPlaybackStateRepository
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
@@ -45,11 +47,16 @@ import com.esde.companion.domain.repository.MusicLibraryRepository
 import com.esde.companion.domain.repository.MusicPlayerController
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
+import com.esde.companion.domain.repository.UpdateRepository
+import com.esde.companion.domain.repository.UpdateStateRepository
 import com.esde.companion.domain.repository.VideoPlaybackStateRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.state.AppStateReducer
+import com.esde.companion.domain.usecase.CheckForUpdateUseCase
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
+import com.esde.companion.domain.usecase.DownloadApkUseCase
+import com.esde.companion.domain.usecase.FetchReleaseNotesForVersionUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
@@ -68,6 +75,7 @@ import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
+import com.esde.companion.domain.usecase.ObserveLastSeenChangelogVersionCodeUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
@@ -106,6 +114,7 @@ import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetLastGameReferenceUseCase
+import com.esde.companion.domain.usecase.SetLastSeenChangelogVersionCodeUseCase
 import com.esde.companion.domain.usecase.SetLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
@@ -325,6 +334,17 @@ class AppContainer(context: Context) {
     val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository)
     val setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository)
+
+    // Update checker (GitHub Releases). The one sanctioned network use case in this app -
+    // see CLAUDE.md's "What NOT to Do" entry on network layers.
+    private val updateRepository: UpdateRepository = GitHubUpdateRepository(appContext)
+    private val updateStateRepository: UpdateStateRepository = FileUpdateStateRepository(appContext)
+
+    val checkForUpdateUseCase = CheckForUpdateUseCase(updateRepository)
+    val fetchReleaseNotesForVersionUseCase = FetchReleaseNotesForVersionUseCase(updateRepository)
+    val downloadApkUseCase = DownloadApkUseCase(updateRepository)
+    val observeLastSeenChangelogVersionCodeUseCase = ObserveLastSeenChangelogVersionCodeUseCase(updateStateRepository)
+    val setLastSeenChangelogVersionCodeUseCase = SetLastSeenChangelogVersionCodeUseCase(updateStateRepository)
 
     val musicPlaybackCoordinator =
         MusicPlaybackCoordinator(

@@ -66,6 +66,7 @@ import com.esde.companion.ui.settings.UISettingsContent
 import com.esde.companion.ui.settings.VideoPlaybackSettingsContent
 import com.esde.companion.ui.settings.WidgetsSettingsContent
 import com.esde.companion.ui.theme.LocalIsDarkTheme
+import com.esde.companion.ui.update.UpdateViewModel
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 import kotlinx.coroutines.launch
 
@@ -140,12 +141,14 @@ private val MenuPage.depth: Int
 fun LongPressSettingsMenu(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
+    updateViewModel: UpdateViewModel,
     onEditWidgetsClick: () -> Unit,
     onQuitClick: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val updateUiState by updateViewModel.uiState.collectAsStateWithLifecycle()
 
     // Named locally so passing it into OtherSettingsContent below doesn't push that call's
     // line over the max line length - the callback name is already the longest in the file.
@@ -259,6 +262,9 @@ fun LongPressSettingsMenu(
                                         onCustomLogosFolderCleared = settingsViewModel::onCustomLogosFolderCleared,
                                         onCustomMusicFolderPicked = settingsViewModel::onCustomMusicFolderPicked,
                                         onCustomMusicFolderCleared = settingsViewModel::onCustomMusicFolderCleared,
+                                        updateCheckResult = updateUiState.lastManualCheckResult,
+                                        isCheckingForUpdate = updateUiState.isCheckingForUpdate,
+                                        onCheckForUpdatesClicked = updateViewModel::checkForUpdatesManually,
                                     )
                                 SettingsCategory.UI ->
                                     UISettingsContent(

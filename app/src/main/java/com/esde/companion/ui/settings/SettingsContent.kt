@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VolumeDown
@@ -81,6 +82,7 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.UpdateCheckResult
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import kotlin.math.roundToInt
 
@@ -217,6 +219,47 @@ internal fun SettingsQuitRow(onClick: () -> Unit) {
     }
 }
 
+/**
+ * Top item of Setup - manual "Check for Updates" entry. [checkResult] is null until the
+ * first manual check completes (the silent startup check never sets it - see
+ * UpdateUiState's kdoc), in which case no status text is shown yet.
+ */
+@Composable
+internal fun CheckForUpdatesRow(
+    checkResult: UpdateCheckResult?,
+    isChecking: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsLabel(icon = Icons.Filled.SystemUpdate, text = "Check for Updates")
+            when {
+                isChecking -> CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                checkResult != null -> Text(text = checkResult.statusText(), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+private fun UpdateCheckResult.statusText(): String =
+    when (this) {
+        is UpdateCheckResult.UpdateAvailable -> "Update available"
+        UpdateCheckResult.UpToDate -> "Up to date"
+        is UpdateCheckResult.Failed -> "Check failed"
+    }
+
 @Composable
 internal fun SetupSettingsContent(
     uiState: SettingsUiState,
@@ -228,6 +271,9 @@ internal fun SetupSettingsContent(
     onCustomLogosFolderCleared: () -> Unit,
     onCustomMusicFolderPicked: (String) -> Unit,
     onCustomMusicFolderCleared: () -> Unit,
+    updateCheckResult: UpdateCheckResult?,
+    isCheckingForUpdate: Boolean,
+    onCheckForUpdatesClicked: () -> Unit,
 ) {
     Column(
         modifier =
@@ -237,6 +283,8 @@ internal fun SetupSettingsContent(
                 .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        CheckForUpdatesRow(updateCheckResult, isCheckingForUpdate, onCheckForUpdatesClicked)
+
         if (!uiState.permissionGranted) {
             Text(
                 "All files access isn't currently granted - folder changes below " +
@@ -686,7 +734,9 @@ private fun SettingsFabVisibleSetting(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Show the Settings gear on the main screen. It's always reachable via the long-press menu regardless of this setting.",
+                    text =
+                        "Show the Settings gear on the main screen. It's always reachable via the " +
+                            "long-press menu regardless of this setting.",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )

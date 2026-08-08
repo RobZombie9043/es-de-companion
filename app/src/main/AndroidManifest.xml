@@ -15,6 +15,13 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
+    <!-- Update checker: fetches release info from the GitHub API and downloads the
+         release APK (see GitHubUpdateRepository / CLAUDE.md's network-layer carve-out). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Update checker: lets the user grant "install unknown apps" for this app
+         specifically, to install the downloaded update APK (see InstallUnknownAppsPermission). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -45,6 +52,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Exposes the downloaded update APK (private cache dir) to the system package
+             installer - see ApkInstaller / res/xml/file_paths.xml. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

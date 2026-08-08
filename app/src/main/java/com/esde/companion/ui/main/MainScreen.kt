@@ -53,6 +53,7 @@ import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.SettingsViewModel
+import com.esde.companion.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -99,6 +100,7 @@ fun MainScreen(
     dockViewModel: AppDockViewModel,
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
+    updateViewModel: UpdateViewModel,
     showSettingsFab: Boolean,
     overlayOpacityPercent: Int,
     onOpenEditWidgets: () -> Unit,
@@ -114,6 +116,7 @@ fun MainScreen(
         dockViewModel = dockViewModel,
         settingsViewModel = settingsViewModel,
         manageAppsViewModel = manageAppsViewModel,
+        updateViewModel = updateViewModel,
         showSettingsFab = showSettingsFab,
         overlayOpacityPercent = overlayOpacityPercent,
         onOpenEditWidgets = onOpenEditWidgets,
@@ -141,6 +144,7 @@ private fun MainScreenContent(
     dockViewModel: AppDockViewModel,
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
+    updateViewModel: UpdateViewModel,
     showSettingsFab: Boolean,
     overlayOpacityPercent: Int,
     onOpenEditWidgets: () -> Unit,
@@ -407,6 +411,7 @@ private fun MainScreenContent(
                         LongPressSettingsMenu(
                             settingsViewModel = settingsViewModel,
                             manageAppsViewModel = manageAppsViewModel,
+                            updateViewModel = updateViewModel,
                             onEditWidgetsClick = {
                                 setLongPressMenuOpen(false)
                                 onOpenEditWidgets()
