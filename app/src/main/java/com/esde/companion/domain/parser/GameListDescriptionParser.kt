@@ -36,7 +36,9 @@ object GameListDescriptionParser {
             try {
                 DocumentBuilderFactory.newInstance().newDocumentBuilder()
                     .parse(InputSource(StringReader(gameListXml)))
-            } catch (e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
+            ) {
                 // Deliberately broad: this parses external, scraper-generated XML we don't
                 // control. Malformed content (e.g. an unescaped "&" in a <desc>) can surface
                 // as checked exceptions (SAXException) or unchecked ones (DOMException, seen

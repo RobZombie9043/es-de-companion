@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
+    <file name="src/main/java/com/esde/companion/data/settings/FileWidgetLayoutRepository.kt">
+        <error line="46" column="18" source="standard:parameter-list-wrapping" />
+        <error line="46" column="75" source="standard:parameter-list-wrapping" />
+    </file>
     <file name="src/main/java/com/esde/companion/domain/model/WidgetContentResolver.kt">
         <error line="24" column="1" source="standard:max-line-length" />
         <error line="32" column="1" source="standard:max-line-length" />
+    </file>
+    <file name="src/main/java/com/esde/companion/domain/parser/GameListDescriptionParser.kt">
+        <error line="39" column="22" source="standard:parameter-list-wrapping" />
+        <error line="39" column="95" source="standard:parameter-list-wrapping" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/CornerButtonMetrics.kt">
         <error line="44" column="5" source="standard:function-naming" />
@@ -130,19 +138,18 @@
         <error line="185" column="78" source="standard:discouraged-comment-location" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/widgets/edit/EditWidgetsOverlay.kt">
-        <error line="208" column="5" source="standard:function-naming" />
-        <error line="610" column="13" source="standard:function-naming" />
-        <error line="777" column="13" source="standard:function-naming" />
-        <error line="964" column="13" source="standard:function-naming" />
-        <error line="1009" column="13" source="standard:function-naming" />
-        <error line="1117" column="13" source="standard:function-naming" />
-        <error line="1153" column="13" source="standard:function-naming" />
-        <error line="1190" column="13" source="standard:function-naming" />
-        <error line="1220" column="13" source="standard:function-naming" />
-        <error line="1251" column="13" source="standard:function-naming" />
-        <error line="1297" column="13" source="standard:function-naming" />
-        <error line="1345" column="13" source="standard:function-naming" />
-        <error line="1371" column="22" source="standard:discouraged-comment-location" />
+        <error line="209" column="5" source="standard:function-naming" />
+        <error line="611" column="13" source="standard:function-naming" />
+        <error line="778" column="13" source="standard:function-naming" />
+        <error line="965" column="13" source="standard:function-naming" />
+        <error line="1010" column="13" source="standard:function-naming" />
+        <error line="1118" column="13" source="standard:function-naming" />
+        <error line="1154" column="13" source="standard:function-naming" />
+        <error line="1191" column="13" source="standard:function-naming" />
+        <error line="1221" column="13" source="standard:function-naming" />
+        <error line="1252" column="13" source="standard:function-naming" />
+        <error line="1298" column="13" source="standard:function-naming" />
+        <error line="1346" column="13" source="standard:function-naming" />
         <error line="1372" column="22" source="standard:discouraged-comment-location" />
         <error line="1373" column="22" source="standard:discouraged-comment-location" />
         <error line="1374" column="22" source="standard:discouraged-comment-location" />
@@ -150,9 +157,10 @@
         <error line="1376" column="22" source="standard:discouraged-comment-location" />
         <error line="1377" column="22" source="standard:discouraged-comment-location" />
         <error line="1378" column="22" source="standard:discouraged-comment-location" />
-        <error line="1382" column="13" source="standard:function-naming" />
-        <error line="1426" column="13" source="standard:function-naming" />
-        <error line="1518" column="13" source="standard:function-naming" />
+        <error line="1379" column="22" source="standard:discouraged-comment-location" />
+        <error line="1383" column="13" source="standard:function-naming" />
+        <error line="1427" column="13" source="standard:function-naming" />
+        <error line="1519" column="13" source="standard:function-naming" />
     </file>
     <file name="src/test/java/com/esde/companion/data/log/EsdeLogFileRepositoryTest.kt">
         <error line="87" column="1" source="standard:max-line-length" />

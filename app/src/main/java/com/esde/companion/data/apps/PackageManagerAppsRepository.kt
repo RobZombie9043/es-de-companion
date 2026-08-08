@@ -49,6 +49,9 @@ class PackageManagerAppsRepository(
             context.registerReceiver(receiver, filter)
 
             try {
+                // Loop variable is intentionally unused - signal is CONFLATED, so every
+                // iteration just means "re-check", regardless of what coalesced into it.
+                @Suppress("UnusedPrivateProperty")
                 for (unit in signal) {
                     send(queryLaunchableApps())
                 }

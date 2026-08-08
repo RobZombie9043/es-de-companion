@@ -70,6 +70,9 @@ class FileEsdeInstallationRepository(
                 }
 
             try {
+                // Loop variable is intentionally unused - checkSignal is CONFLATED, so
+                // every iteration just means "re-check", regardless of what coalesced into it.
+                @Suppress("UnusedPrivateProperty")
                 for (signal in checkSignal) {
                     send(parseEventScriptSettings(esdeRootPath))
                 }

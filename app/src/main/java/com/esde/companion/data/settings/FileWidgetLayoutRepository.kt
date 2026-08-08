@@ -43,7 +43,9 @@ class FileWidgetLayoutRepository(
     private fun decodeCanvas(json: String): SavedWidgetCanvas =
         try {
             Json.decodeFromString<CanvasDto>(json).toDomain()
-        } catch (e: SerializationException) {
+        } catch (
+            @Suppress("SwallowedException") e: SerializationException,
+        ) {
             SavedWidgetCanvas(grid = null, widgets = Json.decodeFromString<List<PlacedWidgetDto>>(json).toDomainList())
         }
 

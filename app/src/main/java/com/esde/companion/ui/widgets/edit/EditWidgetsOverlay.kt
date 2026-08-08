@@ -112,6 +112,7 @@ import com.esde.companion.ui.CornerFab
 import com.esde.companion.ui.dock.DockPreview
 import com.esde.companion.ui.widgets.WidgetContentView
 import com.esde.companion.ui.widgets.gridDimensionsFor
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /** Options button opacity at rest - translucent so it's unobtrusive but still visible. */
@@ -1537,7 +1538,7 @@ private fun HexColorInput(
     )
 }
 
-private fun Long.toHexRgbString(): String = String.format("%06X", this and 0xFFFFFF)
+private fun Long.toHexRgbString(): String = String.format(Locale.ROOT, "%06X", this and 0xFFFFFF)
 
 private fun parseHexColor(text: String): Long? {
     val cleaned = text.removePrefix("#").trim()

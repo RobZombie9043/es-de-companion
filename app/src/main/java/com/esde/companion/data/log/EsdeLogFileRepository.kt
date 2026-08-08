@@ -94,6 +94,8 @@ class EsdeLogFileRepository(
                 }
 
             try {
+                // Loop variable is intentionally unused - see checkSignal's kdoc above.
+                @Suppress("UnusedPrivateProperty")
                 for (signal in checkSignal) {
                     val file = File(logFilePath)
                     if (!file.exists()) continue
@@ -141,6 +143,9 @@ class EsdeLogFileRepository(
                 }
 
             try {
+                // Loop variable is intentionally unused - same CONFLATED-channel,
+                // re-check-on-any-signal pattern as observeEvents() above.
+                @Suppress("UnusedPrivateProperty")
                 for (signal in checkSignal) {
                     val exists = File(logFilePath).exists()
                     if (exists != lastKnown) {

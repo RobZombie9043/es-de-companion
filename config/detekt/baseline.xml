@@ -137,7 +137,6 @@
     <ID>ArgumentListWrapping:WidgetsViewModel.kt$WidgetsViewModel$(systemLogoAssetName(it))</ID>
     <ID>ArgumentListWrapping:WidgetsViewModel.kt$WidgetsViewModel$(widgets, identity)</ID>
     <ID>ArgumentListWrapping:WidgetsViewModel.kt$WidgetsViewModel$(widgets, resolveContent(widgets, identity), identity.navigationDirection)</ID>
-    <ID>ComplexCondition:MainActivity.kt$MainActivity$!isBlanked &amp;&amp; isActivityVisible &amp;&amp; musicEnabled &amp;&amp; musicPlaybackState != MusicPlaybackState.Stopped</ID>
     <ID>CyclomaticComplexMethod:AppDrawer.kt$@OptIn(ExperimentalSharedTransitionApi::class) @Composable fun AppDrawer( viewModel: AppDrawerViewModel, onAppLaunched: () -&gt; Unit, onFolderOpenChanged: (Boolean) -&gt; Unit = {}, isDrawerOpen: Boolean = true, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:AppStateReducer.kt$AppStateReducer$fun reduce( current: AppState, event: EsdeEvent, ): AppState</ID>
     <ID>CyclomaticComplexMethod:EditWidgetsOverlay.kt$@Composable fun EditWidgetsOverlay( viewModel: EditWidgetsViewModel, initialCanvas: StateGroup, onDone: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
@@ -256,7 +255,6 @@
     <ID>FunctionNaming:WidgetCanvas.kt$@Composable internal fun WidgetContentView( content: WidgetContent, widgetType: WidgetType, navigationDirection: NavigationDirection? = null, modifier: Modifier = Modifier, textUserScrollEnabled: Boolean = true, )</ID>
     <ID>FunctionNaming:WidgetCanvas.kt$@Composable private fun DarkenOverlay(effects: ImageEffects)</ID>
     <ID>FunctionNaming:WidgetOverlay.kt$@Composable fun WidgetOverlay( viewModel: WidgetsViewModel, modifier: Modifier = Modifier, )</ID>
-    <ID>ImplicitDefaultLocale:EditWidgetsOverlay.kt$String.format("%06X", this and 0xFFFFFF)</ID>
     <ID>Indentation:AnimatedLogoImage.kt$ </ID>
     <ID>Indentation:AppDock.kt$ </ID>
     <ID>Indentation:AppDrawer.kt$ </ID>
@@ -280,7 +278,6 @@
     <ID>Indentation:Type.kt$ </ID>
     <ID>Indentation:WidgetCanvas.kt$ </ID>
     <ID>Indentation:WidgetsViewModel.kt$WidgetsViewModel$ </ID>
-    <ID>InvalidPackageDeclaration:WidgetLayoutRepository.kt$package com.esde.companion.domain.repository</ID>
     <ID>LongMethod:AnimatedLogoImage.kt$@Composable fun AnimatedLogoImage( model: Any?, contentDescription: String?, contentScale: ContentScale, mode: LogoTransitionMode, direction: NavigationDirection? = null, glintEnabled: Boolean = false, modifier: Modifier = Modifier, durationMillis: Int = 500, )</ID>
     <ID>LongMethod:AppDock.kt$@Composable fun AppDock( viewModel: AppDockViewModel, onOpenAppDrawer: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppDock.kt$@Composable private fun DockItemMenu( expanded: Boolean, appLabel: String, isAppDrawerShortcut: Boolean, isOtherScreenPreferred: Boolean, isLeftmost: Boolean, isRightmost: Boolean, onDismiss: () -&gt; Unit, onLaunchThisScreen: () -&gt; Unit, onLaunchOtherScreen: () -&gt; Unit, onAppInfo: () -&gt; Unit, onMoveLeft: () -&gt; Unit, onMoveRight: () -&gt; Unit, onRemove: () -&gt; Unit, )</ID>
@@ -447,7 +444,6 @@
     <ID>MaxLineLength:MainActivity.kt$MainActivity$AnimatedVisibility</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$LaunchedEffect</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$if</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val dockViewModel: AppDockViewModel = viewModel(factory = AppDockViewModelFactory(appContainer))</ID>
     <ID>MaxLineLength:MainActivity.kt$MainActivity$val gameManualViewModel: GameManualViewModel = viewModel(factory = GameManualViewModelFactory(appContainer))</ID>
@@ -593,9 +589,6 @@
     <ID>ReturnCount:NormalizingSvgDecoder.kt$internal fun normalizeSmallViewBoxSvg(xml: String): String?</ID>
     <ID>ReturnCount:NormalizingSvgDecoder.kt$private fun dimensionsOf(openTag: String): Pair&lt;Double, Double&gt;?</ID>
     <ID>ReturnCount:WidgetContent.kt$fun resolveMediaWidgetContent( mediaType: MediaType, scaleMode: ScaleMode, lookup: (MediaType) -&gt; String?, fallbackBackgroundAssetPath: String?, effects: ImageEffects = ImageEffects(), ): WidgetContent</ID>
-    <ID>SwallowedException:FileWidgetLayoutRepository.kt$FileWidgetLayoutRepository$e: SerializationException</ID>
-    <ID>SwallowedException:GameListDescriptionParser.kt$GameListDescriptionParser$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:GameListDescriptionParser.kt$GameListDescriptionParser$e: Exception</ID>
     <ID>TooManyFunctions:AppDock.kt$com.esde.companion.ui.dock.AppDock.kt</ID>
     <ID>TooManyFunctions:AppDrawer.kt$com.esde.companion.ui.drawer.AppDrawer.kt</ID>
     <ID>TooManyFunctions:EditWidgetsOverlay.kt$com.esde.companion.ui.widgets.edit.EditWidgetsOverlay.kt</ID>
@@ -606,9 +599,6 @@
     <ID>TooManyFunctions:SettingsContent.kt$com.esde.companion.ui.settings.SettingsContent.kt</ID>
     <ID>TooManyFunctions:SettingsViewModel.kt$SettingsViewModel : ViewModel</ID>
     <ID>TooManyFunctions:WidgetLayoutMapping.kt$com.esde.companion.data.settings.WidgetLayoutMapping.kt</ID>
-    <ID>UnusedPrivateProperty:EsdeLogFileRepository.kt$EsdeLogFileRepository$signal</ID>
-    <ID>UnusedPrivateProperty:FileEsdeInstallationRepository.kt$FileEsdeInstallationRepository$signal</ID>
-    <ID>UnusedPrivateProperty:PackageManagerAppsRepository.kt$PackageManagerAppsRepository$unit</ID>
     <ID>Wrapping:FileAppDrawerSettingsRepository.kt$FileAppDrawerSettingsRepository$it[HIDDEN_APPS_KEY] ?: emptySet()</ID>
     <ID>Wrapping:FileDockSettingsRepository.kt$FileDockSettingsRepository$it[DOCK_ENABLED_KEY] ?: false</ID>
     <ID>Wrapping:FileDockSettingsRepository.kt$FileDockSettingsRepository$it[DOCK_MAX_APPS_KEY] ?: DEFAULT_DOCK_MAX_APPS</ID>

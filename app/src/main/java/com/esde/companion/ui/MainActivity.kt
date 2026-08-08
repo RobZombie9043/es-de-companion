@@ -415,7 +415,12 @@ class MainActivity : ComponentActivity() {
                             // since this is only ever passed to the `else` branch below,
                             // where it's already false.
                             val musicFab: @Composable BoxScope.() -> Unit = {
-                                if (!isBlanked && isActivityVisible && musicEnabled && musicPlaybackState != MusicPlaybackState.Stopped) {
+                                val showMusicFab =
+                                    !isBlanked &&
+                                        isActivityVisible &&
+                                        musicEnabled &&
+                                        musicPlaybackState != MusicPlaybackState.Stopped
+                                if (showMusicFab) {
                                     // BoxWithConstraints (not a plain fillMaxSize Box) so
                                     // the overlay's max width below can be computed from the
                                     // actual available screen width, capped short of
