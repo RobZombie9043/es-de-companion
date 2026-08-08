@@ -70,6 +70,7 @@ fun FolderContentsPopup(
     val otherScreenLaunchApps by viewModel.otherScreenLaunchApps.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val hapticFeedback = LocalHapticFeedback.current
+    val contentColor = drawerContentColor()
     var showRenameDialog by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onDismiss)
@@ -117,6 +118,7 @@ fun FolderContentsPopup(
                     app = app,
                     isOtherScreenPreferred = isOtherScreenPreferred,
                     isInsideFolder = true,
+                    contentColor = contentColor,
                     onClick = {
                         val displayId = if (isOtherScreenPreferred) {
                             SecondaryDisplayResolver.secondaryDisplayId(context)

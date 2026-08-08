@@ -942,46 +942,47 @@
         <error line="112" column="43" source="standard:function-signature" />
         <error line="120" column="5" source="standard:blank-line-before-declaration" />
         <error line="152" column="5" source="standard:function-naming" />
-        <error line="200" column="28" source="standard:multiline-expression-wrapping" />
-        <error line="227" column="53" source="standard:multiline-expression-wrapping" />
-        <error line="310" column="36" source="standard:multiline-expression-wrapping" />
-        <error line="321" column="40" source="standard:multiline-expression-wrapping" />
-        <error line="401" column="14" source="standard:function-naming" />
-        <error line="426" column="24" source="standard:multiline-expression-wrapping" />
-        <error line="447" column="36" source="standard:multiline-expression-wrapping" />
-        <error line="493" column="14" source="standard:function-naming" />
-        <error line="528" column="25" source="standard:statement-wrapping" />
-        <error line="528" column="37" source="standard:statement-wrapping" />
-        <error line="528" column="59" source="standard:statement-wrapping" />
-        <error line="538" column="25" source="standard:statement-wrapping" />
-        <error line="538" column="37" source="standard:statement-wrapping" />
-        <error line="538" column="60" source="standard:statement-wrapping" />
-        <error line="544" column="25" source="standard:statement-wrapping" />
-        <error line="544" column="37" source="standard:statement-wrapping" />
-        <error line="544" column="50" source="standard:statement-wrapping" />
-        <error line="550" column="29" source="standard:statement-wrapping" />
-        <error line="550" column="41" source="standard:statement-wrapping" />
-        <error line="550" column="63" source="standard:statement-wrapping" />
-        <error line="556" column="29" source="standard:statement-wrapping" />
-        <error line="556" column="41" source="standard:statement-wrapping" />
-        <error line="556" column="58" source="standard:statement-wrapping" />
-        <error line="586" column="13" source="standard:function-naming" />
-        <error line="597" column="24" source="standard:multiline-expression-wrapping" />
-        <error line="633" column="13" source="standard:function-naming" />
-        <error line="633" column="30" source="standard:function-signature" />
-        <error line="633" column="56" source="standard:function-signature" />
-        <error line="633" column="85" source="standard:function-signature" />
-        <error line="635" column="20" source="standard:multiline-expression-wrapping" />
-        <error line="661" column="13" source="standard:function-naming" />
-        <error line="670" column="13" source="standard:function-naming" />
-        <error line="700" column="13" source="standard:function-naming" />
-        <error line="702" column="20" source="standard:multiline-expression-wrapping" />
-        <error line="715" column="13" source="standard:function-naming" />
-        <error line="715" column="29" source="standard:function-signature" />
-        <error line="715" column="48" source="standard:function-signature" />
-        <error line="715" column="67" source="standard:function-signature" />
-        <error line="717" column="20" source="standard:multiline-expression-wrapping" />
-        <error line="740" column="14" source="standard:function-naming" />
+        <error line="209" column="28" source="standard:multiline-expression-wrapping" />
+        <error line="237" column="53" source="standard:multiline-expression-wrapping" />
+        <error line="321" column="36" source="standard:multiline-expression-wrapping" />
+        <error line="332" column="40" source="standard:multiline-expression-wrapping" />
+        <error line="412" column="14" source="standard:function-naming" />
+        <error line="438" column="24" source="standard:multiline-expression-wrapping" />
+        <error line="459" column="36" source="standard:multiline-expression-wrapping" />
+        <error line="505" column="14" source="standard:function-naming" />
+        <error line="540" column="25" source="standard:statement-wrapping" />
+        <error line="540" column="37" source="standard:statement-wrapping" />
+        <error line="540" column="59" source="standard:statement-wrapping" />
+        <error line="550" column="25" source="standard:statement-wrapping" />
+        <error line="550" column="37" source="standard:statement-wrapping" />
+        <error line="550" column="60" source="standard:statement-wrapping" />
+        <error line="556" column="25" source="standard:statement-wrapping" />
+        <error line="556" column="37" source="standard:statement-wrapping" />
+        <error line="556" column="50" source="standard:statement-wrapping" />
+        <error line="562" column="29" source="standard:statement-wrapping" />
+        <error line="562" column="41" source="standard:statement-wrapping" />
+        <error line="562" column="63" source="standard:statement-wrapping" />
+        <error line="568" column="29" source="standard:statement-wrapping" />
+        <error line="568" column="41" source="standard:statement-wrapping" />
+        <error line="568" column="58" source="standard:statement-wrapping" />
+        <error line="598" column="13" source="standard:function-naming" />
+        <error line="610" column="24" source="standard:multiline-expression-wrapping" />
+        <error line="646" column="13" source="standard:function-naming" />
+        <error line="646" column="30" source="standard:function-signature" />
+        <error line="646" column="56" source="standard:function-signature" />
+        <error line="646" column="77" source="standard:function-signature" />
+        <error line="646" column="106" source="standard:function-signature" />
+        <error line="648" column="20" source="standard:multiline-expression-wrapping" />
+        <error line="674" column="13" source="standard:function-naming" />
+        <error line="683" column="13" source="standard:function-naming" />
+        <error line="713" column="13" source="standard:function-naming" />
+        <error line="715" column="20" source="standard:multiline-expression-wrapping" />
+        <error line="728" column="13" source="standard:function-naming" />
+        <error line="728" column="29" source="standard:function-signature" />
+        <error line="728" column="48" source="standard:function-signature" />
+        <error line="728" column="67" source="standard:function-signature" />
+        <error line="730" column="20" source="standard:multiline-expression-wrapping" />
+        <error line="753" column="14" source="standard:function-naming" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/drawer/AppDrawerHandle.kt">
         <error line="1" column="1" source="standard:final-newline" />
@@ -1021,9 +1022,9 @@
     </file>
     <file name="src/main/java/com/esde/companion/ui/drawer/FolderContentsPopup.kt">
         <error line="63" column="5" source="standard:function-naming" />
-        <error line="79" column="24" source="standard:multiline-expression-wrapping" />
-        <error line="90" column="28" source="standard:multiline-expression-wrapping" />
-        <error line="121" column="41" source="standard:multiline-expression-wrapping" />
+        <error line="80" column="24" source="standard:multiline-expression-wrapping" />
+        <error line="91" column="28" source="standard:multiline-expression-wrapping" />
+        <error line="123" column="41" source="standard:multiline-expression-wrapping" />
     </file>
     <file name="src/main/java/com/esde/companion/ui/main/AutoCollectionAssets.kt">
         <error line="1" column="1" source="standard:final-newline" />

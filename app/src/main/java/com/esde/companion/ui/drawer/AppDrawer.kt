@@ -163,6 +163,15 @@ fun AppDrawer(
     val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    // Read once here, at AppDrawer's own top-level recomposition scope, rather than letting
+    // each grid item call drawerContentColor()/drawerBackgroundColor() internally deep inside
+    // SharedTransitionLayout/LazyVerticalGrid/AnimatedVisibility - items nested that far down
+    // were observed to keep their OLD color after a live theme switch until some unrelated
+    // recomposition (e.g. opening a folder) forced them to catch up. Computing it here and
+    // passing it down as a plain parameter sidesteps that instead of chasing the exact cause.
+    val contentColor = drawerContentColor()
+    val backgroundColor = drawerBackgroundColor()
+
     var folderPickerState by remember { mutableStateOf<FolderPickerState?>(null) }
     var openFolderId by remember { mutableStateOf<String?>(null) }
     var renamingFolder by remember { mutableStateOf<AppFolder?>(null) }
@@ -200,7 +209,7 @@ fun AppDrawer(
                 modifier = Modifier
                     .fillMaxSize()
                     // Standard convention: 0% = fully transparent, 100% = fully opaque.
-                    .background(drawerBackgroundColor().copy(alpha = drawerOpacityPercent / 100f)),
+                    .background(backgroundColor.copy(alpha = drawerOpacityPercent / 100f)),
                 contentPadding = PaddingValues(24.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -223,6 +232,7 @@ fun AppDrawer(
                                 app = app,
                                 isOtherScreenPreferred = isOtherScreenPreferred,
                                 isInsideFolder = false,
+                                contentColor = contentColor,
                                 onClick = {
                                     val displayId = if (isOtherScreenPreferred) {
                                         SecondaryDisplayResolver.secondaryDisplayId(context)
@@ -281,6 +291,7 @@ fun AppDrawer(
                                 FolderDrawerItem(
                                     folder = item.folder,
                                     apps = item.apps,
+                                    contentColor = contentColor,
                                     sharedTransitionScope = this@SharedTransitionLayout,
                                     animatedVisibilityScope = this@AnimatedVisibility,
                                     onClick = { openFolderId = item.folder.id },
@@ -402,6 +413,7 @@ internal fun AppDrawerItem(
     app: InstalledApp,
     isOtherScreenPreferred: Boolean,
     isInsideFolder: Boolean,
+    contentColor: Color,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
     onLaunchThisScreen: () -> Unit,
@@ -454,7 +466,7 @@ internal fun AppDrawerItem(
             Text(
                 text = app.label,
                 style = MaterialTheme.typography.bodySmall,
-                color = drawerContentColor(),
+                color = contentColor,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -586,6 +598,7 @@ internal fun AppLongPressMenu(
 private fun FolderDrawerItem(
     folder: AppFolder,
     apps: List<InstalledApp>,
+    contentColor: Color,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
@@ -611,11 +624,11 @@ private fun FolderDrawerItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            FolderMosaicIcon(apps = apps, modifier = Modifier.size(56.dp))
+            FolderMosaicIcon(apps = apps, contentColor = contentColor, modifier = Modifier.size(56.dp))
             Text(
                 text = folder.name,
                 style = MaterialTheme.typography.bodySmall,
-                color = drawerContentColor(),
+                color = contentColor,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -630,10 +643,10 @@ private fun FolderDrawerItem(
  * every member has been hidden/uninstalled (see buildDrawerItems), rather than rendering
  * an empty box. */
 @Composable
-private fun FolderMosaicIcon(apps: List<InstalledApp>, modifier: Modifier = Modifier) {
+private fun FolderMosaicIcon(apps: List<InstalledApp>, contentColor: Color, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.background(
-            color = drawerContentColor().copy(alpha = 0.12f),
+            color = contentColor.copy(alpha = 0.12f),
             shape = RoundedCornerShape(14.dp),
         ),
         contentAlignment = Alignment.Center,
@@ -642,7 +655,7 @@ private fun FolderMosaicIcon(apps: List<InstalledApp>, modifier: Modifier = Modi
             Icon(
                 imageVector = Icons.Filled.Folder,
                 contentDescription = null,
-                tint = drawerContentColor(),
+                tint = contentColor,
                 modifier = Modifier.size(32.dp),
             )
         } else {
