@@ -65,15 +65,22 @@ class PackageManagerAppsRepository(
             val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
             val packageManager = context.packageManager
 
-            packageManager.queryIntentActivities(launcherIntent, 0)
-                .filter { it.activityInfo.packageName != context.packageName }
-                .map { resolveInfo ->
-                    InstalledApp(
-                        packageName = resolveInfo.activityInfo.packageName,
-                        label = resolveInfo.loadLabel(packageManager).toString(),
-                    )
-                }
-                .distinctBy { it.packageName }
-                .sortedBy { it.label.lowercase() }
+            val apps =
+                packageManager.queryIntentActivities(launcherIntent, 0)
+                    .map { resolveInfo ->
+                        InstalledApp(
+                            packageName = resolveInfo.activityInfo.packageName,
+                            label = resolveInfo.loadLabel(packageManager).toString(),
+                        )
+                    }
+            dedupeAndSort(apps, context.packageName)
         }
 }
+
+internal fun dedupeAndSort(
+    apps: List<InstalledApp>,
+    excludePackageName: String,
+): List<InstalledApp> =
+    apps.filter { it.packageName != excludePackageName }
+        .distinctBy { it.packageName }
+        .sortedBy { it.label.lowercase() }

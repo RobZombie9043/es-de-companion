@@ -86,6 +86,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -153,7 +154,7 @@ private val MENU_SHAPE = RoundedCornerShape(16.dp)
  * carries sensible default config (scale mode, starting color/alpha) - these are exactly
  * what gets placed on add; per-widget reconfiguration is a later slice.
  */
-private fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
+internal fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
     when (stateGroup) {
         StateGroup.System ->
             listOf(
@@ -577,6 +578,57 @@ fun EditWidgetsOverlay(
     }
 }
 
+/** The furthest column/row a widget with [span] cells can be dragged to within a grid
+ * spanning [gridExtent] cells. coerceAtLeast(0) keeps callers' coerceIn from throwing on
+ * an empty range when a saved widget's span exceeds a live-measured smaller grid -
+ * pinning to the origin instead of crashing. */
+internal fun dragMaxCell(
+    gridExtent: Int,
+    span: Int,
+): Int = (gridExtent - span).coerceAtLeast(0)
+
+/** The result of feeding one drag tick's delta into [nextDragCell]. */
+internal data class DragStep(
+    val cell: IntOffset,
+    val accum: Offset,
+    val moved: Boolean,
+    val hitBoundary: Boolean,
+)
+
+/** Grid-snapped drag-to-move math for a single [detectDragGestures] tick: accumulates
+ * sub-cell drag distance in [accum] until it crosses a full cell (sized [cellSizePx]),
+ * then advances [currentCell] by that many cells (clamped to [maxCell]), carrying the
+ * leftover sub-cell remainder forward rather than discarding it. [DragStep.hitBoundary]
+ * is true only on the tick a coordinate transitions onto a boundary, not on every
+ * subsequent tick spent pinned against it. */
+internal fun nextDragCell(
+    dragAmount: Offset,
+    accum: Offset,
+    cellSizePx: Offset,
+    currentCell: IntOffset,
+    maxCell: IntOffset,
+): DragStep {
+    val newAccum = accum + dragAmount
+    val columnDelta = (newAccum.x / cellSizePx.x).toInt()
+    val rowDelta = (newAccum.y / cellSizePx.y).toInt()
+
+    if (columnDelta == 0 && rowDelta == 0) {
+        return DragStep(currentCell, newAccum, moved = false, hitBoundary = false)
+    }
+
+    val newColumn = (currentCell.x + columnDelta).coerceIn(0, maxCell.x)
+    val newRow = (currentCell.y + rowDelta).coerceIn(0, maxCell.y)
+    val hitBoundary =
+        (newColumn != currentCell.x && (newColumn == 0 || newColumn == maxCell.x)) ||
+            (newRow != currentCell.y && (newRow == 0 || newRow == maxCell.y))
+    return DragStep(
+        cell = IntOffset(newColumn, newRow),
+        accum = Offset(newAccum.x - columnDelta * cellSizePx.x, newAccum.y - rowDelta * cellSizePx.y),
+        moved = true,
+        hitBoundary = hitBoundary,
+    )
+}
+
 /**
  * Grid-snapped drag-to-move, plus tap-to-select (shows the resize handle, see
  * ResizeHandle). Tracks its own cumulative logical position and sub-cell drag remainder
@@ -655,28 +707,22 @@ private fun PlaceholderWidgetBox(
                 .then(
                     if (isSelected) {
                         Modifier.pointerInput(widget.id, cellWidth, cellHeight) {
-                            val cellWidthPx = with(density) { cellWidth.toPx() }
-                            val cellHeightPx = with(density) { cellHeight.toPx() }
-                            var currentColumn = 0
-                            var currentRow = 0
-                            var maxColumn = 0
-                            var maxRow = 0
-                            var accumX = 0f
-                            var accumY = 0f
+                            val cellSizePx =
+                                with(density) { Offset(cellWidth.toPx(), cellHeight.toPx()) }
+                            var currentCell = IntOffset.Zero
+                            var maxCell = IntOffset.Zero
+                            var accum = Offset.Zero
 
                             detectDragGestures(
                                 onDragStart = {
                                     val liveWidget = currentWidget
-                                    currentColumn = liveWidget.gridColumn
-                                    currentRow = liveWidget.gridRow
-                                    // A saved widget's span can exceed the live-measured grid (e.g.
-                                    // it was placed on a differently-sized canvas) - coerceAtLeast(0)
-                                    // keeps the coerceIn below from throwing on an empty range in
-                                    // that case, pinning the widget to the origin instead of crashing.
-                                    maxColumn = (grid.columns - liveWidget.columnSpan).coerceAtLeast(0)
-                                    maxRow = (grid.rows - liveWidget.rowSpan).coerceAtLeast(0)
-                                    accumX = 0f
-                                    accumY = 0f
+                                    currentCell = IntOffset(liveWidget.gridColumn, liveWidget.gridRow)
+                                    maxCell =
+                                        IntOffset(
+                                            dragMaxCell(grid.columns, liveWidget.columnSpan),
+                                            dragMaxCell(grid.rows, liveWidget.rowSpan),
+                                        )
+                                    accum = Offset.Zero
                                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onDragStateChanged(true)
                                 },
@@ -690,30 +736,19 @@ private fun PlaceholderWidgetBox(
                                 },
                             ) { change, dragAmount ->
                                 change.consume()
-                                accumX += dragAmount.x
-                                accumY += dragAmount.y
+                                val step = nextDragCell(dragAmount, accum, cellSizePx, currentCell, maxCell)
+                                accum = step.accum
 
-                                val columnDelta = (accumX / cellWidthPx).toInt()
-                                val rowDelta = (accumY / cellHeightPx).toInt()
-
-                                if (columnDelta != 0 || rowDelta != 0) {
-                                    val previousColumn = currentColumn
-                                    val previousRow = currentRow
-                                    currentColumn = (currentColumn + columnDelta).coerceIn(0, maxColumn)
-                                    currentRow = (currentRow + rowDelta).coerceIn(0, maxRow)
-                                    accumX -= columnDelta * cellWidthPx
-                                    accumY -= rowDelta * cellHeightPx
+                                if (step.moved) {
+                                    currentCell = step.cell
                                     // Fires once at the moment the drag is clamped onto a grid
                                     // boundary (a real transition, not every tick spent pinned
                                     // against it) - same "hit the wall" feedback as the resize
                                     // handles' edge-snap below.
-                                    val hitBoundary =
-                                        (currentColumn != previousColumn && (currentColumn == 0 || currentColumn == maxColumn)) ||
-                                            (currentRow != previousRow && (currentRow == 0 || currentRow == maxRow))
-                                    if (hitBoundary) {
+                                    if (step.hitBoundary) {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                     }
-                                    onMove(widget.id, currentColumn, currentRow)
+                                    onMove(widget.id, currentCell.x, currentCell.y)
                                 }
                             }
                         }
@@ -737,6 +772,146 @@ private fun PlaceholderWidgetBox(
                 textUserScrollEnabled = false,
             )
         }
+    }
+}
+
+/** The largest span a resize handle on [isFarEdge] can grow a widget to, given the
+ * anchored [start] cell, current [span], and a grid spanning [gridExtentCells] cells.
+ * coerceAtLeast(MIN_SPAN) keeps callers' coerceIn from throwing on an empty range when a
+ * saved widget's position leaves less room than MIN_SPAN on a live-measured smaller grid. */
+internal fun resizeMaxSpan(
+    gridExtentCells: Int,
+    start: Int,
+    span: Int,
+    isFarEdge: Boolean,
+): Int =
+    if (isFarEdge) {
+        (gridExtentCells - start).coerceAtLeast(MIN_SPAN)
+    } else {
+        (start + span).coerceAtLeast(MIN_SPAN)
+    }
+
+/** A resize handle's position/size state: the anchored [start] cell, current [span], and
+ * [maxSpan] it can grow to (see [resizeMaxSpan]). */
+internal data class ResizeBounds(
+    val start: Int,
+    val span: Int,
+    val maxSpan: Int,
+)
+
+/** The on-screen pixel geometry a resize handle needs to detect edge proximity: the size
+ * of one grid cell, the grid's total extent, how close counts as "near" ([edgeSnapThresholdPx]),
+ * and the gesture's starting pixel position for the near/far edge respectively. */
+internal data class ResizeGeometry(
+    val cellPx: Float,
+    val gridExtentPx: Float,
+    val edgeSnapThresholdPx: Float,
+    val initialStartPx: Float,
+    val initialFarEdgePx: Float,
+)
+
+/** A resize gesture's running sub-cell drag remainder ([accum], reset on each whole-cell
+ * step) and total on-screen displacement since the gesture began ([totalDrag], never
+ * reset - see [nextResizeSpan]). */
+internal data class ResizeAccumulator(
+    val accum: Float,
+    val totalDrag: Float,
+)
+
+/** The result of feeding one drag tick's delta into [nextResizeSpan]. [changed] is true
+ * whenever [start]/[span] moved, whether by a whole-cell step or an edge snap;
+ * [snapped] narrows that to just the edge-snap case, which fires its own haptic. */
+internal data class ResizeStep(
+    val start: Int,
+    val span: Int,
+    val accumulator: ResizeAccumulator,
+    val changed: Boolean,
+    val snapped: Boolean,
+)
+
+/** Grid-snapped drag-to-resize math for a single [detectDragGestures] tick, covering both
+ * a far-edge handle (Right/Bottom: [ResizeBounds.start] fixed, span grows/shrinks away
+ * from it) and a near-edge handle (Left/Top: span's far edge fixed, start moves and span
+ * compensates). Sub-cell [delta] accumulates until it crosses a full cell, same mechanism
+ * as [nextDragCell]. [ResizeAccumulator.totalDrag] is the gesture's total on-screen
+ * displacement - once it puts the moving edge within [ResizeGeometry.edgeSnapThresholdPx]
+ * of the grid boundary, this snaps straight to the limit rather than requiring the exact
+ * remaining per-cell delta to accumulate, since delta-based dragging alone can never reach
+ * a physical screen edge (no more room for the finger to keep moving). */
+internal fun nextResizeSpan(
+    isFarEdge: Boolean,
+    delta: Float,
+    accumulator: ResizeAccumulator,
+    bounds: ResizeBounds,
+    geometry: ResizeGeometry,
+): ResizeStep {
+    val newAccumulator = ResizeAccumulator(accumulator.accum + delta, accumulator.totalDrag + delta)
+    val resolved =
+        if (isFarEdge) {
+            resolveFarEdgeResize(bounds, geometry, newAccumulator)
+        } else {
+            resolveNearEdgeResize(bounds, geometry, newAccumulator)
+        }
+    val resolvedAccumulator = newAccumulator.copy(accum = resolved.accum)
+    return ResizeStep(resolved.start, resolved.span, resolvedAccumulator, resolved.changed, resolved.snapped)
+}
+
+private data class ResolvedResize(
+    val start: Int,
+    val span: Int,
+    val accum: Float,
+    val changed: Boolean,
+    val snapped: Boolean,
+)
+
+/** Right/Bottom: the far edge moves with the drag, [ResizeBounds.start] is fixed. */
+private fun resolveFarEdgeResize(
+    bounds: ResizeBounds,
+    geometry: ResizeGeometry,
+    accumulator: ResizeAccumulator,
+): ResolvedResize {
+    val farEdgePx = geometry.initialFarEdgePx + accumulator.totalDrag
+    val nearGridBoundary = geometry.gridExtentPx - farEdgePx <= geometry.edgeSnapThresholdPx
+    val cellDelta = if (nearGridBoundary) 0 else (accumulator.accum / geometry.cellPx).toInt()
+    return when {
+        nearGridBoundary && bounds.span != bounds.maxSpan ->
+            ResolvedResize(bounds.start, bounds.maxSpan, accumulator.accum, changed = true, snapped = true)
+        cellDelta != 0 ->
+            ResolvedResize(
+                bounds.start,
+                (bounds.span + cellDelta).coerceIn(MIN_SPAN, bounds.maxSpan),
+                accumulator.accum - cellDelta * geometry.cellPx,
+                changed = true,
+                snapped = false,
+            )
+        else -> ResolvedResize(bounds.start, bounds.span, accumulator.accum, changed = false, snapped = false)
+    }
+}
+
+/** Left/Top: the near edge (start) moves with the drag, the far edge is fixed - start and
+ * span must update together. */
+private fun resolveNearEdgeResize(
+    bounds: ResizeBounds,
+    geometry: ResizeGeometry,
+    accumulator: ResizeAccumulator,
+): ResolvedResize {
+    val startPx = geometry.initialStartPx + accumulator.totalDrag
+    val nearGridBoundary = startPx <= geometry.edgeSnapThresholdPx
+    val cellDelta = if (nearGridBoundary) 0 else (accumulator.accum / geometry.cellPx).toInt()
+    return when {
+        nearGridBoundary && bounds.start != 0 ->
+            ResolvedResize(0, bounds.maxSpan, accumulator.accum, changed = true, snapped = true)
+        cellDelta != 0 -> {
+            val newStart = (bounds.start + cellDelta).coerceIn(0, bounds.maxSpan - MIN_SPAN)
+            ResolvedResize(
+                newStart,
+                bounds.maxSpan - newStart,
+                accumulator.accum - cellDelta * geometry.cellPx,
+                changed = true,
+                snapped = false,
+            )
+        }
+        else -> ResolvedResize(bounds.start, bounds.span, accumulator.accum, changed = false, snapped = false)
     }
 }
 
@@ -805,41 +980,29 @@ private fun ResizeHandle(
                     val cellHeightPx = with(density) { cellHeight.toPx() }
                     val cellPx = if (isColumnAxis) cellWidthPx else cellHeightPx
                     val gridExtentCells = if (isColumnAxis) grid.columns else grid.rows
-                    val gridExtentPx = cellPx * gridExtentCells
                     val edgeSnapThresholdPx = with(density) { EDGE_SNAP_THRESHOLD.toPx() }
 
-                    // maxSpan means different things per anchor: for a far-edge (Right/Bottom)
-                    // handle it's the largest span can grow to; for a near-edge (Left/Top)
-                    // handle it's the anchored far edge's fixed cell position, since span
-                    // there is derived as maxSpan - start.
-                    var maxSpan = 0
-                    var start = 0
-                    var span = 0
-                    var initialFarEdgePx = 0f
-                    var initialStartPx = 0f
-                    var accum = 0f
-                    var totalDrag = 0f
+                    var bounds = ResizeBounds(start = 0, span = 0, maxSpan = 0)
+                    var geometry = ResizeGeometry(cellPx, cellPx * gridExtentCells, edgeSnapThresholdPx, 0f, 0f)
+                    var accumulator = ResizeAccumulator(accum = 0f, totalDrag = 0f)
 
                     detectDragGestures(
                         onDragStart = {
                             val liveWidget = currentWidget
-                            start = if (isColumnAxis) liveWidget.gridColumn else liveWidget.gridRow
-                            span = if (isColumnAxis) liveWidget.columnSpan else liveWidget.rowSpan
-                            // Same reasoning as PlaceholderWidgetBox's onDragStart: a saved
-                            // widget's position can leave less room than MIN_SPAN on a
-                            // live-measured grid smaller than the one it was placed on -
-                            // coerceAtLeast(MIN_SPAN) keeps the coerceIn calls below from
-                            // throwing on an empty range in that case.
-                            maxSpan =
-                                if (isFarEdge) {
-                                    (gridExtentCells - start).coerceAtLeast(MIN_SPAN)
-                                } else {
-                                    (start + span).coerceAtLeast(MIN_SPAN)
-                                }
-                            initialFarEdgePx = (start + span) * cellPx
-                            initialStartPx = start * cellPx
-                            accum = 0f
-                            totalDrag = 0f
+                            val start = if (isColumnAxis) liveWidget.gridColumn else liveWidget.gridRow
+                            val span = if (isColumnAxis) liveWidget.columnSpan else liveWidget.rowSpan
+                            // maxSpan means different things per anchor: for a far-edge
+                            // (Right/Bottom) handle it's the largest span can grow to; for
+                            // a near-edge (Left/Top) handle it's the anchored far edge's
+                            // fixed cell position, since span there is derived as maxSpan - start.
+                            val maxSpan = resizeMaxSpan(gridExtentCells, start, span, isFarEdge)
+                            bounds = ResizeBounds(start, span, maxSpan)
+                            geometry =
+                                geometry.copy(
+                                    initialStartPx = start * cellPx,
+                                    initialFarEdgePx = (start + span) * cellPx,
+                                )
+                            accumulator = ResizeAccumulator(accum = 0f, totalDrag = 0f)
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                             onDragStateChanged(true)
                         },
@@ -854,56 +1017,22 @@ private fun ResizeHandle(
                     ) { change, dragAmount ->
                         change.consume()
                         val delta = if (isColumnAxis) dragAmount.x else dragAmount.y
-                        accum += delta
-                        totalDrag += delta
 
-                        var changed = false
+                        val step = nextResizeSpan(isFarEdge, delta, accumulator, bounds, geometry)
+                        accumulator = step.accumulator
 
-                        if (isFarEdge) {
-                            // Right/Bottom: the far edge moves with the drag, start is fixed.
-                            val farEdgePx = initialFarEdgePx + totalDrag
-                            val nearGridBoundary = gridExtentPx - farEdgePx <= edgeSnapThresholdPx
-                            if (nearGridBoundary && span != maxSpan) {
-                                span = maxSpan
-                                changed = true
+                        if (step.changed) {
+                            bounds = bounds.copy(start = step.start, span = step.span)
+                            if (step.snapped) {
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            } else if (!nearGridBoundary) {
-                                val cellDelta = (accum / cellPx).toInt()
-                                if (cellDelta != 0) {
-                                    span = (span + cellDelta).coerceIn(MIN_SPAN, maxSpan)
-                                    accum -= cellDelta * cellPx
-                                    changed = true
-                                }
                             }
-                        } else {
-                            // Left/Top: the near edge (start) moves with the drag, the far
-                            // edge is fixed - start and span must update together.
-                            val startPx = initialStartPx + totalDrag
-                            val nearGridBoundary = startPx <= edgeSnapThresholdPx
-                            if (nearGridBoundary && start != 0) {
-                                start = 0
-                                span = maxSpan
-                                changed = true
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            } else if (!nearGridBoundary) {
-                                val cellDelta = (accum / cellPx).toInt()
-                                if (cellDelta != 0) {
-                                    start = (start + cellDelta).coerceIn(0, maxSpan - MIN_SPAN)
-                                    span = maxSpan - start
-                                    accum -= cellDelta * cellPx
-                                    changed = true
-                                }
-                            }
-                        }
-
-                        if (changed) {
                             val liveWidget = currentWidget
                             onResize(
                                 widget.id,
-                                if (isColumnAxis) start else liveWidget.gridColumn,
-                                if (isColumnAxis) liveWidget.gridRow else start,
-                                if (isColumnAxis) span else liveWidget.columnSpan,
-                                if (isColumnAxis) liveWidget.rowSpan else span,
+                                if (isColumnAxis) bounds.start else liveWidget.gridColumn,
+                                if (isColumnAxis) liveWidget.gridRow else bounds.start,
+                                if (isColumnAxis) bounds.span else liveWidget.columnSpan,
+                                if (isColumnAxis) liveWidget.rowSpan else bounds.span,
                             )
                         }
                     }
@@ -1538,9 +1667,9 @@ private fun HexColorInput(
     )
 }
 
-private fun Long.toHexRgbString(): String = String.format(Locale.ROOT, "%06X", this and 0xFFFFFF)
+internal fun Long.toHexRgbString(): String = String.format(Locale.ROOT, "%06X", this and 0xFFFFFF)
 
-private fun parseHexColor(text: String): Long? {
+internal fun parseHexColor(text: String): Long? {
     val cleaned = text.removePrefix("#").trim()
     if (cleaned.length != 6 || cleaned.any { it !in HEX_CHARS }) return null
     return cleaned.toLongOrNull(16)?.let { 0xFF000000L or it }

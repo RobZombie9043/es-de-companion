@@ -17,10 +17,13 @@ object SecondaryDisplayResolver {
         val displayManager = context.getSystemService(DisplayManager::class.java) ?: return null
         val currentDisplayId = currentDisplayId(context)
 
-        return displayManager.displays
-            .firstOrNull { it.displayId != currentDisplayId }
-            ?.displayId
+        return pickSecondary(displayManager.displays.map { it.displayId }, currentDisplayId)
     }
+
+    internal fun pickSecondary(
+        displayIds: List<Int>,
+        currentId: Int,
+    ): Int? = displayIds.firstOrNull { it != currentId }
 
     private fun currentDisplayId(context: Context): Int =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

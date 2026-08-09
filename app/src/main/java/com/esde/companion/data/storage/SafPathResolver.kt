@@ -34,19 +34,17 @@ object SafPathResolver {
         return resolveFromDocumentId(docId)
     }
 
-    private fun resolveFromDocumentId(docId: String): String? {
+    internal fun resolveFromDocumentId(
+        docId: String,
+        primaryRoot: () -> String = { Environment.getExternalStorageDirectory().absolutePath },
+    ): String? {
         val separatorIndex = docId.indexOf(':')
         if (separatorIndex == -1) return null
 
         val volumeId = docId.substring(0, separatorIndex)
         val relativePath = docId.substring(separatorIndex + 1)
 
-        val root =
-            if (volumeId.equals("primary", ignoreCase = true)) {
-                Environment.getExternalStorageDirectory().absolutePath
-            } else {
-                "/storage/$volumeId"
-            }
+        val root = if (volumeId.equals("primary", ignoreCase = true)) primaryRoot() else "/storage/$volumeId"
 
         return if (relativePath.isEmpty()) root else "$root/$relativePath"
     }

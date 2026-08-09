@@ -39,13 +39,12 @@ class PdfManualRenderer private constructor(
         targetWidthPx: Int,
     ): ImageBitmap? =
         withContext(Dispatchers.IO) {
-            if (index !in 0 until renderer.pageCount || targetWidthPx <= 0) return@withContext null
+            if (index !in 0 until renderer.pageCount) return@withContext null
             mutex.withLock {
                 runCatching {
                     renderer.openPage(index).use { page ->
-                        val scale = targetWidthPx.toFloat() / page.width
-                        val targetHeightPx = (page.height * scale).toInt().coerceAtLeast(1)
-                        val bitmap = Bitmap.createBitmap(targetWidthPx, targetHeightPx, Bitmap.Config.ARGB_8888)
+                        val (width, height) = scaledSize(page.width, page.height, targetWidthPx) ?: return@use null
+                        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         bitmap.asImageBitmap()
                     }
@@ -68,4 +67,16 @@ class PdfManualRenderer private constructor(
                 }.getOrNull()
             }
     }
+}
+
+/** The pixel size to render a page at, preserving its aspect ratio at [targetWidthPx] wide.
+ * Null if [targetWidthPx] isn't positive. */
+internal fun scaledSize(
+    pageWidth: Int,
+    pageHeight: Int,
+    targetWidthPx: Int,
+): Pair<Int, Int>? {
+    if (targetWidthPx <= 0) return null
+    val scale = targetWidthPx.toFloat() / pageWidth
+    return targetWidthPx to (pageHeight * scale).toInt().coerceAtLeast(1)
 }
