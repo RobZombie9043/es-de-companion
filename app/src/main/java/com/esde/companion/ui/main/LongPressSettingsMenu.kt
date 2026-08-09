@@ -276,6 +276,10 @@ fun LongPressSettingsMenu(
                                         onGamePlayingBehaviorChanged = settingsViewModel::onGamePlayingBehaviorChanged,
                                         screensaverBehavior = uiState.screensaverBehavior,
                                         onScreensaverBehaviorChanged = settingsViewModel::onScreensaverBehaviorChanged,
+                                        fabAssignments = uiState.fabAssignments,
+                                        installedApps = uiState.installedApps,
+                                        onFabTypeChanged = settingsViewModel::onFabTypeChanged,
+                                        onFabCustomAppChanged = settingsViewModel::onFabCustomAppChanged,
                                     )
                                 SettingsCategory.VideoPlayback ->
                                     VideoPlaybackSettingsContent(
@@ -317,8 +321,6 @@ fun LongPressSettingsMenu(
                                     OtherSettingsContent(
                                         closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
                                         onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
-                                        settingsFabVisible = uiState.settingsFabVisible,
-                                        onSettingsFabVisibleChanged = settingsViewModel::onSettingsFabVisibleChanged,
                                         launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
                                         onLaunchEsdeOnStartEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
                                         debugLoggingEnabled = uiState.debugLoggingEnabled,

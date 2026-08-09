@@ -3,13 +3,19 @@ package com.esde.companion.ui.settings
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.BrandingWatermark
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Brightness4
@@ -33,6 +40,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Movie
@@ -52,7 +60,10 @@ import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,19 +75,33 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.FabPosition
+import com.esde.companion.domain.model.FabSlot
+import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -348,6 +373,10 @@ internal fun UISettingsContent(
     onGamePlayingBehaviorChanged: (ScreenBehavior) -> Unit,
     screensaverBehavior: ScreenBehavior,
     onScreensaverBehaviorChanged: (ScreenBehavior) -> Unit,
+    fabAssignments: FabAssignments,
+    installedApps: List<InstalledApp>,
+    onFabTypeChanged: (FabPosition, FabType) -> Unit,
+    onFabCustomAppChanged: (FabPosition, String) -> Unit,
 ) {
     Column(
         modifier =
@@ -373,8 +402,22 @@ internal fun UISettingsContent(
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
         )
+        FabControlSetting(
+            fabAssignments = fabAssignments,
+            installedApps = installedApps,
+            onFabTypeChanged = onFabTypeChanged,
+            onFabCustomAppChanged = onFabCustomAppChanged,
+        )
     }
 }
+
+// Bottom corners never offer Music - it can only occupy one of the two top corners (see
+// FabAssignments.with) - so the picker itself simply never presents the option there
+// rather than needing runtime validation to reject an invalid selection.
+private val TOP_FAB_OPTIONS =
+    listOf(FabType.Music, FabType.Settings, FabType.GameManual, FabType.AppDrawer, FabType.CustomApp, FabType.None)
+private val BOTTOM_FAB_OPTIONS =
+    listOf(FabType.Settings, FabType.GameManual, FabType.AppDrawer, FabType.CustomApp, FabType.None)
 
 /**
  * Widgets category content - just hands off to the full-screen widget editor, same
@@ -564,8 +607,6 @@ private fun VideoAudioSetting(
 internal fun OtherSettingsContent(
     closeCompanionOnQuitEnabled: Boolean,
     onCloseCompanionOnQuitEnabledChanged: (Boolean) -> Unit,
-    settingsFabVisible: Boolean,
-    onSettingsFabVisibleChanged: (Boolean) -> Unit,
     launchEsdeOnStartEnabled: Boolean,
     onLaunchEsdeOnStartEnabledChanged: (Boolean) -> Unit,
     debugLoggingEnabled: Boolean,
@@ -586,10 +627,6 @@ internal fun OtherSettingsContent(
         LaunchEsdeOnStartSetting(
             enabled = launchEsdeOnStartEnabled,
             onEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
-        )
-        SettingsFabVisibleSetting(
-            enabled = settingsFabVisible,
-            onEnabledChanged = onSettingsFabVisibleChanged,
         )
         DebugLoggingSetting(
             enabled = debugLoggingEnabled,
@@ -712,46 +749,6 @@ private fun DebugLoggingSetting(
     }
 }
 
-@Composable
-private fun SettingsFabVisibleSetting(
-    enabled: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SettingsLabel(icon = Icons.Filled.Settings, text = "Show Settings Button")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text =
-                        "Show the Settings gear on the main screen. It's always reachable via the " +
-                            "long-press menu regardless of this setting.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onEnabledChanged(it)
-                    },
-                )
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScreenBehaviorPicker(
@@ -815,6 +812,231 @@ private val ScreenBehavior.label: String
             ScreenBehavior.Dim -> "Dim"
             ScreenBehavior.Black -> "Off"
             ScreenBehavior.GameManual -> "Manual"
+        }
+
+/**
+ * Settings > UI Settings > Floating Action Buttons - one panel covering all four corners
+ * (see [UISettingsContent]), rather than four separate cards. Each corner is a dropdown
+ * (see [FabTypeDropdown]) rather than a [SingleChoiceSegmentedButtonRow] - once
+ * [FabType.AppDrawer]/[FabType.CustomApp] joined the original four options, a segmented
+ * row of 5-6 icon+label buttons per corner no longer fit comfortably; a dropdown scales to
+ * any option count without the row wrapping or shrinking illegibly.
+ */
+@Composable
+private fun FabControlSetting(
+    fabAssignments: FabAssignments,
+    installedApps: List<InstalledApp>,
+    onFabTypeChanged: (FabPosition, FabType) -> Unit,
+    onFabCustomAppChanged: (FabPosition, String) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            SettingsLabel(icon = Icons.Filled.Apps, text = "Floating Action Buttons")
+            FabPositionRow(
+                title = "Top Left",
+                options = TOP_FAB_OPTIONS,
+                slot = fabAssignments[FabPosition.TopStart],
+                installedApps = installedApps,
+                onTypeSelected = { onFabTypeChanged(FabPosition.TopStart, it) },
+                onAppSelected = { onFabCustomAppChanged(FabPosition.TopStart, it) },
+            )
+            FabPositionRow(
+                title = "Top Right",
+                options = TOP_FAB_OPTIONS,
+                slot = fabAssignments[FabPosition.TopEnd],
+                installedApps = installedApps,
+                onTypeSelected = { onFabTypeChanged(FabPosition.TopEnd, it) },
+                onAppSelected = { onFabCustomAppChanged(FabPosition.TopEnd, it) },
+            )
+            FabPositionRow(
+                title = "Bottom Left",
+                options = BOTTOM_FAB_OPTIONS,
+                slot = fabAssignments[FabPosition.BottomStart],
+                installedApps = installedApps,
+                onTypeSelected = { onFabTypeChanged(FabPosition.BottomStart, it) },
+                onAppSelected = { onFabCustomAppChanged(FabPosition.BottomStart, it) },
+            )
+            FabPositionRow(
+                title = "Bottom Right",
+                options = BOTTOM_FAB_OPTIONS,
+                slot = fabAssignments[FabPosition.BottomEnd],
+                installedApps = installedApps,
+                onTypeSelected = { onFabTypeChanged(FabPosition.BottomEnd, it) },
+                onAppSelected = { onFabCustomAppChanged(FabPosition.BottomEnd, it) },
+            )
+        }
+    }
+}
+
+/** One corner's worth of controls: its type dropdown, plus an app-picker row that only
+ * appears once [FabType.CustomApp] is selected. */
+@Composable
+private fun FabPositionRow(
+    title: String,
+    options: List<FabType>,
+    slot: FabSlot,
+    installedApps: List<InstalledApp>,
+    onTypeSelected: (FabType) -> Unit,
+    onAppSelected: (String) -> Unit,
+) {
+    var showAppPicker by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(text = title, style = MaterialTheme.typography.labelLarge)
+        FabTypeDropdown(options = options, selected = slot.type, onSelected = onTypeSelected)
+        if (slot.type == FabType.CustomApp) {
+            val selectedApp = installedApps.firstOrNull { it.packageName == slot.customAppPackageName }
+            FabRowSurface(onClick = { showAppPicker = true }) {
+                Text(text = selectedApp?.label ?: "Select App", style = MaterialTheme.typography.bodyMedium)
+                Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
+            }
+        }
+    }
+
+    if (showAppPicker) {
+        SelectAppDialog(
+            installedApps = installedApps,
+            onAppPicked = {
+                onAppSelected(it)
+                showAppPicker = false
+            },
+            onDismiss = { showAppPicker = false },
+        )
+    }
+}
+
+@Composable
+private fun FabTypeDropdown(
+    options: List<FabType>,
+    selected: FabType,
+    onSelected: (FabType) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        FabRowSurface(onClick = { expanded = true }) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = selected.icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(text = selected.label, style = MaterialTheme.typography.bodyMedium)
+            }
+            Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    leadingIcon = { Icon(imageVector = option.icon, contentDescription = null) },
+                    onClick = {
+                        expanded = false
+                        onSelected(option)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Shared row chrome for [FabTypeDropdown]'s trigger and the Custom App selector row - a
+ * tappable surface a shade lighter than the panel behind it, with its content spaced to
+ * the edges. */
+@Composable
+private fun FabRowSurface(
+    onClick: () -> Unit,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun SelectAppDialog(
+    installedApps: List<InstalledApp>,
+    onAppPicked: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select app") },
+        text = {
+            // Same fillMaxWidth-on-every-row reasoning as AppDock's AddAppDialog - without
+            // it, varying label widths make the dialog visibly wobble side to side while
+            // scrolling.
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 8.dp),
+            ) {
+                items(installedApps, key = { it.packageName }) { app ->
+                    SelectAppRow(app = app, onClick = { onAppPicked(app.packageName) })
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun SelectAppRow(
+    app: InstalledApp,
+    onClick: () -> Unit,
+) {
+    val context = LocalContext.current
+    val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
+        value = AppIconLoader.loadIcon(context, app.packageName)
+    }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(40.dp))
+        Text(text = app.label, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+// Presentation-only icon/label, same reasoning as ScreenBehavior.icon/label above.
+private val FabType.icon: ImageVector
+    get() =
+        when (this) {
+            FabType.Music -> Icons.Filled.MusicNote
+            FabType.Settings -> Icons.Filled.Settings
+            FabType.GameManual -> Icons.Filled.MenuBook
+            FabType.AppDrawer -> Icons.Filled.Apps
+            FabType.CustomApp -> Icons.Filled.Launch
+            FabType.None -> Icons.Filled.Clear
+        }
+
+private val FabType.label: String
+    get() =
+        when (this) {
+            FabType.Music -> "Music"
+            FabType.Settings -> "Settings"
+            FabType.GameManual -> "Manual"
+            FabType.AppDrawer -> "App Drawer"
+            FabType.CustomApp -> "App"
+            FabType.None -> "None"
         }
 
 @Composable

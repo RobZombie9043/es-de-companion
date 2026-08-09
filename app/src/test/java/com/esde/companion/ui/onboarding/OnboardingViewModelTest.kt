@@ -2,6 +2,7 @@ package com.esde.companion.ui.onboarding
 
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.EsdeEventScriptSettings
+import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -167,9 +168,9 @@ class OnboardingViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
-        override suspend fun setSettingsFabVisible(visible: Boolean) {}
+        override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
-        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
+        override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)
     }
 
     private class FakeEsdeInstallationRepository : EsdeInstallationRepository {

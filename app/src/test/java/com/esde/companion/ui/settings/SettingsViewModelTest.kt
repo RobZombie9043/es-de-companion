@@ -1,6 +1,11 @@
 package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.FabPosition
+import com.esde.companion.domain.model.FabSlot
+import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -8,14 +13,17 @@ import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
+import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
@@ -24,7 +32,6 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
-import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -35,6 +42,7 @@ import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
+import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
@@ -45,7 +53,6 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
-import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -82,7 +89,7 @@ class SettingsViewModelTest {
         var musicDuckingMode = MusicDuckingMode.LowerVolume
         var overlayOpacityPercent = 80
         var closeCompanionOnQuitEnabled = false
-        var settingsFabVisible = true
+        var fabAssignments = FabAssignments.Default
         var launchEsdeOnStartEnabled = false
         var debugLoggingEnabled = false
 
@@ -202,11 +209,11 @@ class SettingsViewModelTest {
 
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(closeCompanionOnQuitEnabled)
 
-        override suspend fun setSettingsFabVisible(visible: Boolean) {
-            settingsFabVisible = visible
+        override suspend fun setFabAssignments(assignments: FabAssignments) {
+            fabAssignments = assignments
         }
 
-        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(settingsFabVisible)
+        override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(fabAssignments)
 
         override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {
             launchEsdeOnStartEnabled = enabled
@@ -281,6 +288,12 @@ class SettingsViewModelTest {
         override fun observeDockApps(): Flow<List<String>> = flowOf(emptyList())
     }
 
+    private class FakeInstalledAppsRepository(
+        private val apps: List<InstalledApp> = emptyList(),
+    ) : InstalledAppsRepository {
+        override fun observeInstalledApps(): Flow<List<InstalledApp>> = flowOf(apps)
+    }
+
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -297,6 +310,7 @@ class SettingsViewModelTest {
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
+        installedAppsRepository: FakeInstalledAppsRepository = FakeInstalledAppsRepository(),
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
         val viewModel =
             SettingsViewModel(
@@ -339,8 +353,9 @@ class SettingsViewModelTest {
                 setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository),
                 observeCloseCompanionOnQuitEnabledUseCase = ObserveCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
                 setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
-                observeSettingsFabVisibleUseCase = ObserveSettingsFabVisibleUseCase(onboardingRepository),
-                setSettingsFabVisibleUseCase = SetSettingsFabVisibleUseCase(onboardingRepository),
+                observeFabAssignmentsUseCase = ObserveFabAssignmentsUseCase(onboardingRepository),
+                setFabAssignmentUseCase = SetFabAssignmentUseCase(onboardingRepository),
+                observeInstalledAppsUseCase = ObserveInstalledAppsUseCase(installedAppsRepository),
                 observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
                 setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
                 observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository),
@@ -394,6 +409,39 @@ class SettingsViewModelTest {
 
             advanceUntilIdle()
             assertEquals(true, onboardingRepository.launchEsdeOnStartEnabled)
+        }
+
+    @Test
+    fun `onFabTypeChanged persists the swapped result and reflects it in ui state`() =
+        runTest(testDispatcher) {
+            // Defaults: topStart = Music, topEnd = Settings - assigning Music to topEnd
+            // should swap topStart to Settings rather than just overwriting topEnd.
+            val onboardingRepository = FakeOnboardingRepository()
+            val (viewModel, _) = buildViewModel(onboardingRepository = onboardingRepository)
+            advanceUntilIdle()
+
+            viewModel.onFabTypeChanged(FabPosition.TopEnd, FabType.Music)
+            advanceUntilIdle()
+
+            val expected =
+                FabAssignments.Default.copy(topStart = FabSlot(FabType.Settings), topEnd = FabSlot(FabType.Music))
+            assertEquals(expected, viewModel.uiState.value.fabAssignments)
+            assertEquals(expected, onboardingRepository.fabAssignments)
+        }
+
+    @Test
+    fun `onFabCustomAppChanged sets CustomApp type and package for that corner`() =
+        runTest(testDispatcher) {
+            val onboardingRepository = FakeOnboardingRepository()
+            val (viewModel, _) = buildViewModel(onboardingRepository = onboardingRepository)
+            advanceUntilIdle()
+
+            viewModel.onFabCustomAppChanged(FabPosition.BottomStart, "com.example.app")
+            advanceUntilIdle()
+
+            val expected = FabAssignments.Default.copy(bottomStart = FabSlot(FabType.CustomApp, "com.example.app"))
+            assertEquals(expected, viewModel.uiState.value.fabAssignments)
+            assertEquals(expected, onboardingRepository.fabAssignments)
         }
 
     @Test

@@ -2,6 +2,7 @@ package com.esde.companion.data.debug
 
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeEvent
+import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -128,9 +129,9 @@ class DebugFileLoggerTest {
 
         override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> = flowOf(false)
 
-        override suspend fun setSettingsFabVisible(visible: Boolean) {}
+        override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
-        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
+        override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)
 
         override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {}
 

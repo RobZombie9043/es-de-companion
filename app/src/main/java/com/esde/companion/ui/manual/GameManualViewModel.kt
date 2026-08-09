@@ -4,52 +4,45 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.pdf.PdfManualRenderer
-import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
-import com.esde.companion.domain.model.ScreenBehavior
+import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
-import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Drives the GameManual screen behavior (Settings > UI Settings > Game Playing Behavior).
- * Resolves the current game's manual PDF path via ResolveGameMediaUseCase (MediaType.
- * Manuals), then owns paging through it with PdfManualRenderer.
+ * Drives the Game Manual viewer, used both by the on-demand Game Manual FAB (Settings >
+ * UI Settings > FAB Control) and the automatic full-screen display (Settings > UI Settings
+ * > Game Playing Behavior > Manual). Resolves the current game's manual PDF path via
+ * ResolveGameMediaUseCase (MediaType.Manuals), then owns paging through it with
+ * PdfManualRenderer.
  *
- * [pdfPath] being null - no manual found for this game - is what MainActivity checks to
- * decide whether the GameManual cover applies at all; it falls through to the plain main
- * screen in that case, same as ScreenBehavior.Nothing.
+ * [pdfPath] being null - no manual found for this game - is what both the FAB (visibility)
+ * and MainActivity's automatic GameManual cover (whether it applies at all) check.
  *
- * Manual media is only ever resolved (and therefore only ever shows up in the opt-in
- * debug log - see LoggingGameMediaRepository) while AppState is exactly
- * AppState.PlayingGame AND the Game Playing Behavior setting is GameManual - deliberately
- * narrower than currentGameReference() (which also covers BrowsingGame/Screensaver),
- * since a manual is never actually displayed in either of those cases (see MainActivity's
- * showGameManual).
+ * Resolution follows [currentGameReference] - PlayingGame/BrowsingGame directly, or a
+ * Screensaver's currentGame - covering every AppState the manual FAB or auto-display could
+ * legitimately show in, so every resolution (and therefore every entry in the opt-in debug
+ * log - see LoggingGameMediaRepository) reflects a situation where the manual could
+ * actually be viewed.
  */
 class GameManualViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
-    observeGamePlayingBehavior: ObserveGamePlayingBehaviorUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
 ) : ViewModel() {
     private val currentGameReference: Flow<GameReference?> =
-        combine(observeConnectionState(), observeGamePlayingBehavior()) { connection, behavior ->
-            val appState = (connection as? EsdeConnectionState.Connected)?.appState
-            (appState as? AppState.PlayingGame)
-                .takeIf { behavior == ScreenBehavior.GameManual }
-                ?.let { GameReference(it.systemShortName, it.romPath) }
-        }.distinctUntilChanged()
+        observeConnectionState()
+            .map { connection -> (connection as? EsdeConnectionState.Connected)?.appState?.currentGameReference() }
+            .distinctUntilChanged()
 
     val pdfPath: StateFlow<String?> =
         currentGameReference

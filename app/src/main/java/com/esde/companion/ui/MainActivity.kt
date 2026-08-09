@@ -18,16 +18,21 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,12 +50,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import coil3.compose.AsyncImage
 import com.esde.companion.CompanionApplication
+import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.apps.AppLauncher
 import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.FabPosition
+import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.InstalledApp
+import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.MusicPlaybackState
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
@@ -93,6 +105,7 @@ import com.esde.companion.ui.widgets.edit.EditWidgetsViewModel
 import com.esde.companion.ui.widgets.edit.EditWidgetsViewModelFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private object Destinations {
     const val ONBOARDING = "onboarding"
@@ -114,18 +127,17 @@ private data class OnboardingStartupInfo(
     val savedMediaFolderPath: String?,
 )
 
-// Layout constants for the music FAB + MusicControlsOverlay pairing - see their usage
-// site for why these are needed rather than a plain Row (the FAB and overlay are
+// Layout constant for the music FAB + MusicControlsOverlay pairing - see their usage
+// site for why this is needed rather than a plain Row (the FAB and overlay are
 // independently aligned children of a BoxWithConstraints, not siblings in a Row, since
 // the overlay's visibility is conditional and shouldn't reflow the FAB's own position).
-// Size/edge padding come from CornerButtonMetrics, shared with MainScreen's Settings
-// button so all three corner controls stay aligned by construction.
+// Size/edge padding come from CornerButtonMetrics, shared with every other corner FAB so
+// they all stay aligned by construction.
 private val MUSIC_OVERLAY_GAP = 12.dp
 
-// MainScreen's Settings button is sized/positioned from the same CornerButtonMetrics
-// constants as the music FAB, so its footprint in the opposite corner is exactly
-// CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE - no guessing needed.
-private val SETTINGS_BUTTON_RESERVED_WIDTH = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE
+// Slightly larger than a system Icon's default 24dp - a real app icon reads better with a
+// bit more room inside the 56dp CornerFab, same reasoning as AppDock's larger dock icons.
+private val CUSTOM_APP_ICON_SIZE = 32.dp
 
 // How strongly the widget backdrop/MainScreen chrome blurs behind the long-press menu -
 // see longPressMenuOpen below. Modifier.blur() only actually renders a blur on API 31+
@@ -270,10 +282,17 @@ class MainActivity : ComponentActivity() {
                             val manualPdfPath by gameManualViewModel.pdfPath.collectAsStateWithLifecycle()
 
                             // Manual "exit" dismissal for the GameManual cover - separate
-                            // from isBlanked since it's specific to this one behavior.
-                            // Reset below whenever PlayingGame ends, so dismissing it once
-                            // doesn't suppress the manual for every future game too.
+                            // from isBlanked since it's specific to this one behavior. Reset
+                            // below whenever the resolved manual itself changes, so
+                            // dismissing it once doesn't suppress the manual for every
+                            // future game too.
                             var manualDismissed by rememberSaveable { mutableStateOf(false) }
+
+                            // Set by tapping the Game Manual FAB (FAB Control) - opens the
+                            // same GameManualScreen the automatic Game Playing Behavior >
+                            // Manual setting does, independent of that setting. Reset
+                            // together with manualDismissed below.
+                            var manualViewerOpenedViaFab by rememberSaveable { mutableStateOf(false) }
 
                             val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
 
@@ -332,11 +351,46 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
-                            // Settings > Other Settings: whether the Settings gear shows
-                            // on the main screen. Settings stays reachable regardless via
+                            // Settings > UI Settings > FAB Control: which FabType occupies
+                            // each screen corner. Settings stays reachable regardless via
                             // the long-press menu - see MainScreen.
-                            val settingsFabVisible by produceState(initialValue = true) {
-                                appContainer.observeSettingsFabVisibleUseCase().collect { value = it }
+                            val fabAssignments by produceState(initialValue = FabAssignments.Default) {
+                                appContainer.observeFabAssignmentsUseCase().collect { value = it }
+                            }
+
+                            // Backs the Custom App FAB (FAB Control) - resolving its icon/
+                            // label needs the full installed-apps list, same source the App
+                            // Drawer/App Dock already use.
+                            val installedApps by produceState(initialValue = emptyList<InstalledApp>()) {
+                                appContainer.observeInstalledAppsUseCase().collect { value = it }
+                            }
+
+                            // Same shared this-screen/other-screen preference set the App
+                            // Dock and App Drawer read/write - an app's remembered launch
+                            // location is one global preference, not something the Custom
+                            // App FAB tracks separately. A single tap always launches on
+                            // whichever screen is currently preferred; a double tap flips
+                            // the preference to the other screen and launches there (see
+                            // CustomAppFabContent), mirroring AppDock's FilledDockSlot.
+                            val otherScreenLaunchApps by produceState(initialValue = emptySet<String>()) {
+                                appContainer.observeOtherScreenLaunchAppsUseCase().collect { value = it }
+                            }
+                            val fabLaunchLocationScope = rememberCoroutineScope()
+
+                            fun recordFabLaunchLocation(
+                                packageName: String,
+                                location: LaunchLocation,
+                            ) {
+                                fabLaunchLocationScope.launch {
+                                    val current = appContainer.observeOtherScreenLaunchAppsUseCase().first()
+                                    val updated =
+                                        if (location == LaunchLocation.OtherScreen) {
+                                            current + packageName
+                                        } else {
+                                            current - packageName
+                                        }
+                                    appContainer.setOtherScreenLaunchAppsUseCase(updated)
+                                }
                             }
 
                             // Tapping the FAB toggles this; the timer alone controls
@@ -377,11 +431,6 @@ class MainActivity : ComponentActivity() {
                                     else -> ScreenBehavior.Nothing
                                 }
 
-                            val isPlayingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
-                            LaunchedEffect(isPlayingGame) {
-                                if (!isPlayingGame) manualDismissed = false
-                            }
-
                             val isBrowsingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
                             val showVideoOverlay =
                                 videoPlaybackEnabled &&
@@ -390,13 +439,21 @@ class MainActivity : ComponentActivity() {
                                     mainScreenActive &&
                                     isActivityVisible
 
-                            // GameManual selected but no manual resolved for this game, or
-                            // the user tapped exit on it -> falls through to the plain
-                            // main screen, same as ScreenBehavior.Nothing.
+                            // Shows either because Game Playing Behavior is set to Manual
+                            // (and the user hasn't dismissed it for this game), or because
+                            // the Game Manual FAB was tapped - either way, only if a manual
+                            // actually resolved for the current game. Resets below
+                            // (LaunchedEffect(manualPdfPath)) whenever the resolved manual
+                            // itself changes.
+                            val autoShowGameManual =
+                                activeScreenBehavior == ScreenBehavior.GameManual && !manualDismissed
                             val showGameManual =
-                                activeScreenBehavior == ScreenBehavior.GameManual &&
-                                    manualPdfPath != null &&
-                                    !manualDismissed
+                                (autoShowGameManual || manualViewerOpenedViaFab) && manualPdfPath != null
+
+                            LaunchedEffect(manualPdfPath) {
+                                manualDismissed = false
+                                manualViewerOpenedViaFab = false
+                            }
 
                             val autoBlackTrigger = activeScreenBehavior == ScreenBehavior.Black && !showGameManual
                             val isDimmed = activeScreenBehavior == ScreenBehavior.Dim && !showGameManual
@@ -405,64 +462,60 @@ class MainActivity : ComponentActivity() {
                                 isBlanked = autoBlackTrigger
                             }
 
-                            // Extracted so it can be handed to MainScreen as a slot
-                            // rendered INSIDE its own gesture-handling Box (see
-                            // topStartOverlay's kdoc in MainScreen.kt for why a sibling
-                            // composed elsewhere, even one ordered to draw underneath the
-                            // App Drawer, silently loses every touch to MainScreen's
-                            // full-screen drag/tap detectors - Compose only gives a
-                            // descendant the touch-priority edge, not a same-level
-                            // sibling). Still gating on showEditWidgets isn't needed here
-                            // since this is only ever passed to the `else` branch below,
-                            // where it's already false.
-                            val musicFab: @Composable BoxScope.() -> Unit = {
-                                val showMusicFab =
-                                    !isBlanked &&
-                                        isActivityVisible &&
-                                        musicEnabled &&
-                                        musicPlaybackState != MusicPlaybackState.Stopped
-                                if (showMusicFab) {
-                                    // BoxWithConstraints (not a plain fillMaxSize Box) so
-                                    // the overlay's max width below can be computed from the
-                                    // actual available screen width, capped short of
-                                    // MainScreen's Settings gear in the opposite corner
-                                    // (that button lives in a different composable/file, so
-                                    // there's no shared layout to measure it against - a
-                                    // fixed reserved width is the simplest way to guarantee
-                                    // no overlap regardless of screen size).
-                                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                                        CornerFab(
-                                            onClick = { musicControlsRevealed = !musicControlsRevealed },
-                                            opacityPercent = overlayOpacityPercent,
-                                            modifier =
-                                                Modifier
-                                                    .align(Alignment.TopStart)
-                                                    .padding(CORNER_BUTTON_EDGE_PADDING),
-                                        ) {
-                                            Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
-                                        }
-
-                                        AnimatedVisibility(visible = musicControlsRevealed, enter = fadeIn(), exit = fadeOut()) {
-                                            val overlayStart = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP
-                                            val overlayMaxWidth = maxWidth - overlayStart - SETTINGS_BUTTON_RESERVED_WIDTH
-                                            MusicControlsOverlay(
-                                                viewModel = musicControlsViewModel,
-                                                opacityPercent = overlayOpacityPercent,
-                                                modifier =
-                                                    Modifier
-                                                        .align(Alignment.TopStart)
-                                                        .padding(start = overlayStart, top = CORNER_BUTTON_EDGE_PADDING)
-                                                        .widthIn(max = overlayMaxWidth.coerceAtLeast(0.dp))
-                                                        // min, not exact - a wrapped two-line
-                                                        // title (see MusicControlsOverlay) needs
-                                                        // to grow taller than the FAB, not be
-                                                        // clipped to match it.
-                                                        .heightIn(min = CORNER_BUTTON_SIZE),
+                            // Extracted so each corner's content can be handed to
+                            // MainScreen as a slot rendered INSIDE its own
+                            // gesture-handling Box (see topStartOverlay's kdoc in
+                            // MainScreen.kt for why a sibling composed elsewhere, even one
+                            // ordered to draw underneath the App Drawer, silently loses
+                            // every touch to MainScreen's full-screen drag/tap detectors -
+                            // Compose only gives a descendant the touch-priority edge, not
+                            // a same-level sibling). Still gating on showEditWidgets isn't
+                            // needed here since this is only ever passed to the `else`
+                            // branch below, where it's already false. Dispatches on
+                            // whichever FabType (Settings > UI Settings > FAB Control)
+                            // occupies `position` - Settings itself isn't handled here
+                            // since its click handler is a local closure inside
+                            // MainScreen, not something reachable from here (see
+                            // MainScreen's own FabPosition.entries loop). The actual
+                            // content per type is a top-level composable (see
+                            // MusicFabContent/GameManualFabContent below this class) so
+                            // this dispatcher itself stays a short, single-purpose `when`.
+                            fun fabSlotContent(position: FabPosition): @Composable BoxScope.() -> Unit =
+                                {
+                                    val slot = fabAssignments[position]
+                                    when (slot.type) {
+                                        FabType.Music ->
+                                            MusicFabContent(
+                                                position = position,
+                                                fabAssignments = fabAssignments,
+                                                visible =
+                                                    !isBlanked && isActivityVisible && musicEnabled &&
+                                                        musicPlaybackState != MusicPlaybackState.Stopped,
+                                                controlsRevealed = musicControlsRevealed,
+                                                onControlsRevealedChanged = { musicControlsRevealed = it },
+                                                overlayOpacityPercent = overlayOpacityPercent,
+                                                musicControlsViewModel = musicControlsViewModel,
                                             )
-                                        }
+                                        FabType.GameManual ->
+                                            GameManualFabContent(
+                                                position = position,
+                                                visible = !isBlanked && isActivityVisible && manualPdfPath != null,
+                                                overlayOpacityPercent = overlayOpacityPercent,
+                                                onClick = { manualViewerOpenedViaFab = true },
+                                            )
+                                        FabType.CustomApp ->
+                                            CustomAppFabContent(
+                                                position = position,
+                                                packageName = slot.customAppPackageName,
+                                                installedApps = installedApps,
+                                                visible = !isBlanked && isActivityVisible,
+                                                overlayOpacityPercent = overlayOpacityPercent,
+                                                otherScreenLaunchApps = otherScreenLaunchApps,
+                                                onRecordLaunchLocation = ::recordFabLaunchLocation,
+                                            )
+                                        FabType.Settings, FabType.AppDrawer, FabType.None -> {}
                                     }
                                 }
-                            }
 
                             // Blurs everything behind the long-press menu (the widget
                             // backdrop, and MainScreen's own dock/corner buttons) while it's
@@ -505,7 +558,7 @@ class MainActivity : ComponentActivity() {
                                             settingsViewModel = settingsViewModel,
                                             manageAppsViewModel = manageAppsViewModel,
                                             updateViewModel = updateViewModel,
-                                            showSettingsFab = settingsFabVisible,
+                                            fabAssignments = fabAssignments,
                                             overlayOpacityPercent = overlayOpacityPercent,
                                             onOpenEditWidgets = { showEditWidgets = true },
                                             onToggleBlankScreen = { isBlanked = !isBlanked },
@@ -513,7 +566,10 @@ class MainActivity : ComponentActivity() {
                                             onDrawerOpenChanged = { drawerOpen = it },
                                             onLongPressMenuOpenChanged = { longPressMenuOpen = it },
                                             onFolderOpenChanged = { folderOpen = it },
-                                            topStartOverlay = musicFab,
+                                            topStartOverlay = fabSlotContent(FabPosition.TopStart),
+                                            topEndOverlay = fabSlotContent(FabPosition.TopEnd),
+                                            bottomStartOverlay = fabSlotContent(FabPosition.BottomStart),
+                                            bottomEndOverlay = fabSlotContent(FabPosition.BottomEnd),
                                         )
                                     }
                                 }
@@ -573,7 +629,10 @@ class MainActivity : ComponentActivity() {
                                 AnimatedVisibility(visible = showGameManual && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
                                     GameManualScreen(
                                         viewModel = gameManualViewModel,
-                                        onExit = { manualDismissed = true },
+                                        onExit = {
+                                            manualDismissed = true
+                                            manualViewerOpenedViaFab = false
+                                        },
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
@@ -657,6 +716,175 @@ class MainActivity : ComponentActivity() {
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.statusBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+}
+
+/**
+ * Content for a corner assigned [FabType.Music] (see MainActivity's fabSlotContent) -
+ * a FAB that toggles [MusicControlsOverlay]'s expanded track/controls panel. Position-aware:
+ * aligns to whichever corner it's in, and expands toward the screen's inner edge (padding
+ * from `start` at [FabPosition.TopStart], from `end` at [FabPosition.TopEnd]) so the panel
+ * never runs off the opposite side of the screen, reserving width for whatever FAB (if any)
+ * occupies the opposite top corner. At [FabPosition.TopEnd] this means the panel itself is
+ * right-aligned (`Alignment.TopEnd` + `padding(end = expansionGap)` pins its trailing edge
+ * a fixed gap from the FAB's own leading edge, so both sit flush against the screen's right
+ * side as one visual unit) and grows leftward, the mirror image of the TopStart case rather
+ * than always expanding rightward regardless of which corner the FAB is actually in.
+ */
+@Composable
+private fun BoxScope.MusicFabContent(
+    position: FabPosition,
+    fabAssignments: FabAssignments,
+    visible: Boolean,
+    controlsRevealed: Boolean,
+    onControlsRevealedChanged: (Boolean) -> Unit,
+    overlayOpacityPercent: Int,
+    musicControlsViewModel: MusicControlsViewModel,
+) {
+    if (!visible) return
+
+    // BoxWithConstraints (not a plain fillMaxSize Box) so the overlay's max width below can
+    // be computed from the actual available screen width.
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val alignment = position.toAlignment()
+        val opposite = position.topOpposite
+        val reservedWidth =
+            if (opposite != null && fabAssignments[opposite].type != FabType.None) {
+                CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE
+            } else {
+                0.dp
+            }
+        val expansionGap = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP
+
+        CornerFab(
+            onClick = { onControlsRevealedChanged(!controlsRevealed) },
+            opacityPercent = overlayOpacityPercent,
+            modifier = Modifier.align(alignment).padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
+        }
+
+        val overlayMaxWidth = maxWidth - expansionGap - reservedWidth
+        val overlayPadding =
+            if (position == FabPosition.TopStart) {
+                Modifier.padding(start = expansionGap, top = CORNER_BUTTON_EDGE_PADDING)
+            } else {
+                Modifier.padding(end = expansionGap, top = CORNER_BUTTON_EDGE_PADDING)
+            }
+        // align/padding/widthIn must live on AnimatedVisibility's own modifier, not on a
+        // composable nested inside its content lambda - Box only reads alignment
+        // parent-data from its direct children, and AnimatedVisibility (not its content)
+        // is that direct child here. Putting align() further down silently falls back to
+        // Box's default TopStart regardless of `position` - confirmed on-device (the panel
+        // stuck to the screen's left edge and covered the Top Left FAB even with this FAB
+        // set to Top Right). Hoisted to a local val, same ktlintFormat/detekt Indentation
+        // mismatch workaround as elsewhere in this file.
+        val animatedVisibilityModifier =
+            Modifier
+                .align(alignment)
+                .then(overlayPadding)
+                .widthIn(max = overlayMaxWidth.coerceAtLeast(0.dp))
+        AnimatedVisibility(
+            visible = controlsRevealed,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = animatedVisibilityModifier,
+        ) {
+            MusicControlsOverlay(
+                viewModel = musicControlsViewModel,
+                opacityPercent = overlayOpacityPercent,
+                // min, not exact - a wrapped two-line title (see MusicControlsOverlay)
+                // needs to grow taller than the FAB, not be clipped to match it.
+                modifier = Modifier.heightIn(min = CORNER_BUTTON_SIZE),
+            )
+        }
+    }
+}
+
+/**
+ * Content for a corner assigned [FabType.GameManual] (see MainActivity's fabSlotContent) -
+ * a FAB shown whenever the current game has a resolved manual, opening the Game Manual
+ * viewer on tap (see MainActivity's manualViewerOpenedViaFab).
+ */
+@Composable
+private fun BoxScope.GameManualFabContent(
+    position: FabPosition,
+    visible: Boolean,
+    overlayOpacityPercent: Int,
+    onClick: () -> Unit,
+) {
+    if (!visible) return
+    CornerFab(
+        onClick = onClick,
+        opacityPercent = overlayOpacityPercent,
+        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
+    ) {
+        Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+    }
+}
+
+/**
+ * Content for a corner assigned [FabType.CustomApp] (see MainActivity's fabSlotContent) -
+ * a FAB showing the selected app's own icon. Renders nothing if [packageName] is null (
+ * Custom App selected but no app chosen yet in Settings > UI Settings > FAB Control) or the
+ * app's since been uninstalled out from under a stale selection.
+ *
+ * Same this-screen/other-screen launch convention (and remembered preference) as the App
+ * Dock and App Drawer: a single tap always launches on whichever screen [packageName] is
+ * currently preferred on (per [otherScreenLaunchApps], the same shared preference set both
+ * of those surfaces read/write), and a double tap flips that preference to the other
+ * screen - via [onRecordLaunchLocation] - and launches there.
+ */
+@Composable
+private fun BoxScope.CustomAppFabContent(
+    position: FabPosition,
+    packageName: String?,
+    installedApps: List<InstalledApp>,
+    visible: Boolean,
+    overlayOpacityPercent: Int,
+    otherScreenLaunchApps: Set<String>,
+    onRecordLaunchLocation: (packageName: String, location: LaunchLocation) -> Unit,
+) {
+    if (!visible || packageName == null) return
+    val app = installedApps.firstOrNull { it.packageName == packageName } ?: return
+    val context = LocalContext.current
+    val icon by produceState<Any?>(initialValue = null, key1 = packageName) {
+        value = AppIconLoader.loadIcon(context, packageName)
+    }
+    val isOtherScreenPreferred = packageName in otherScreenLaunchApps
+    CornerFab(
+        onClick = {
+            val displayId = if (isOtherScreenPreferred) SecondaryDisplayResolver.secondaryDisplayId(context) else null
+            AppLauncher.launch(context, packageName, displayId = displayId)
+        },
+        onDoubleClick = {
+            if (isOtherScreenPreferred) {
+                onRecordLaunchLocation(packageName, LaunchLocation.ThisScreen)
+                AppLauncher.launch(context, packageName)
+            } else {
+                val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
+                if (secondaryDisplayId != null) {
+                    onRecordLaunchLocation(packageName, LaunchLocation.OtherScreen)
+                }
+                AppLauncher.launch(context, packageName, displayId = secondaryDisplayId)
+            }
+        },
+        opacityPercent = overlayOpacityPercent,
+        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
+    ) {
+        // Same indicator dot (size/color/placement) as AppDock's FilledDockSlot, so an
+        // app's other-screen preference reads identically wherever it's shown.
+        Box(contentAlignment = Alignment.Center) {
+            AsyncImage(model = icon, contentDescription = app.label, modifier = Modifier.size(CUSTOM_APP_ICON_SIZE))
+            if (isOtherScreenPreferred) {
+                val dotModifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(10.dp)
+                        .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+                Box(modifier = dotModifier)
+            }
         }
     }
 }

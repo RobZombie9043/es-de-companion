@@ -1,5 +1,6 @@
 package com.esde.companion.domain.repository
 
+import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -147,14 +148,15 @@ interface OnboardingRepository {
     fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean>
 
     /**
-     * Settings > Other Settings: whether the Settings gear (CornerFab) is shown on the
-     * main screen. Defaults to true - this replaces what was previously always-on
-     * behavior. Settings stays reachable regardless of this setting via the main
-     * screen's long-press menu.
+     * Settings > UI Settings > FAB Control: which [com.esde.companion.domain.model.FabType]
+     * occupies each of the four screen corners. Defaults to
+     * [FabAssignments.Default] (Music top-left, Settings top-right, Game Manual
+     * bottom-right, None bottom-left). Settings stays reachable regardless of this setting
+     * via the main screen's long-press menu.
      */
-    suspend fun setSettingsFabVisible(visible: Boolean)
+    suspend fun setFabAssignments(assignments: FabAssignments)
 
-    fun observeSettingsFabVisible(): Flow<Boolean>
+    fun observeFabAssignments(): Flow<FabAssignments>
 
     /**
      * Settings > Other Settings: whether ES-DE Companion should launch ES-DE itself, on

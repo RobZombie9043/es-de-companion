@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.FabPosition
+import com.esde.companion.domain.model.FabType
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
 import com.esde.companion.ui.CornerFab
 import com.esde.companion.ui.dock.AppDock
@@ -53,6 +57,7 @@ import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.SettingsViewModel
+import com.esde.companion.ui.toAlignment
 import com.esde.companion.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -101,7 +106,7 @@ fun MainScreen(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
     updateViewModel: UpdateViewModel,
-    showSettingsFab: Boolean,
+    fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
@@ -110,6 +115,9 @@ fun MainScreen(
     onLongPressMenuOpenChanged: (Boolean) -> Unit = {},
     onFolderOpenChanged: (Boolean) -> Unit = {},
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
+    topEndOverlay: @Composable BoxScope.() -> Unit = {},
+    bottomStartOverlay: @Composable BoxScope.() -> Unit = {},
+    bottomEndOverlay: @Composable BoxScope.() -> Unit = {},
 ) {
     MainScreenContent(
         appDrawerViewModel = appDrawerViewModel,
@@ -117,7 +125,7 @@ fun MainScreen(
         settingsViewModel = settingsViewModel,
         manageAppsViewModel = manageAppsViewModel,
         updateViewModel = updateViewModel,
-        showSettingsFab = showSettingsFab,
+        fabAssignments = fabAssignments,
         overlayOpacityPercent = overlayOpacityPercent,
         onOpenEditWidgets = onOpenEditWidgets,
         onToggleBlankScreen = onToggleBlankScreen,
@@ -126,6 +134,9 @@ fun MainScreen(
         onLongPressMenuOpenChanged = onLongPressMenuOpenChanged,
         onFolderOpenChanged = onFolderOpenChanged,
         topStartOverlay = topStartOverlay,
+        topEndOverlay = topEndOverlay,
+        bottomStartOverlay = bottomStartOverlay,
+        bottomEndOverlay = bottomEndOverlay,
     )
 }
 
@@ -145,7 +156,7 @@ private fun MainScreenContent(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
     updateViewModel: UpdateViewModel,
-    showSettingsFab: Boolean,
+    fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
     onOpenEditWidgets: () -> Unit,
     onToggleBlankScreen: () -> Unit,
@@ -154,6 +165,9 @@ private fun MainScreenContent(
     onLongPressMenuOpenChanged: (Boolean) -> Unit,
     onFolderOpenChanged: (Boolean) -> Unit,
     topStartOverlay: @Composable BoxScope.() -> Unit,
+    topEndOverlay: @Composable BoxScope.() -> Unit,
+    bottomStartOverlay: @Composable BoxScope.() -> Unit,
+    bottomEndOverlay: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -325,29 +339,44 @@ private fun MainScreenContent(
                     },
         ) {
             // CornerFab, not a plain IconButton with a Settings icon - same composable as
-            // MainActivity's music FAB (opposite corner) and EditWidgetsOverlay's options
-            // button, so all three pick up the exact same theme-driven container/content
+            // MainActivity's music/Game Manual/Custom App FABs and EditWidgetsOverlay's
+            // options button, so all pick up the exact same theme-driven container/content
             // colors (black-in-dark/white-in-light, matching the App Dock/App Drawer/music
             // panel) for free rather than needing their own color logic to match. Sized/
             // positioned from the same CornerButtonMetrics constants too - see its kdoc -
-            // so all three stay vertically aligned by construction. Previously lived in a
-            // Material3 TopAppBar purely to get a corner button; that added a whole
-            // Scaffold+TopAppBar (with an otherwise-unused empty content slot) just to
-            // reach a vertical centering that never actually matched the FAB's. Hidden
-            // entirely when showSettingsFab is off (Settings > Other Settings) - Settings
-            // stays reachable regardless, via the long-press menu below. Opens the same
-            // popup the long-press gesture does (setLongPressMenuOpen), not a separate
+            // so all stay aligned by construction. Settings and App Drawer are rendered
+            // here (rather than as one of MainActivity's overlay slots below) because
+            // their click handlers (setLongPressMenuOpen/openDrawer) are local closures
+            // MainActivity can't reach. Renders at every corner FAB Control (Settings >
+            // UI Settings) assigns to one of these two types - typically one each, but
+            // not enforced, matching how the other FAB types are "freely positioned".
+            // Settings opens the same popup the long-press gesture does, not a separate
             // full-screen Settings destination - there is no such destination anymore.
-            if (showSettingsFab) {
-                CornerFab(
-                    onClick = { setLongPressMenuOpen(true) },
-                    opacityPercent = overlayOpacityPercent,
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(CORNER_BUTTON_EDGE_PADDING),
-                ) {
-                    Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
+            FabPosition.entries.forEach { position ->
+                when (fabAssignments[position].type) {
+                    FabType.Settings ->
+                        CornerFab(
+                            onClick = { setLongPressMenuOpen(true) },
+                            opacityPercent = overlayOpacityPercent,
+                            modifier =
+                                Modifier
+                                    .align(position.toAlignment())
+                                    .padding(CORNER_BUTTON_EDGE_PADDING),
+                        ) {
+                            Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
+                        }
+                    FabType.AppDrawer ->
+                        CornerFab(
+                            onClick = { openDrawer() },
+                            opacityPercent = overlayOpacityPercent,
+                            modifier =
+                                Modifier
+                                    .align(position.toAlignment())
+                                    .padding(CORNER_BUTTON_EDGE_PADDING),
+                        ) {
+                            Icon(imageVector = Icons.Filled.Apps, contentDescription = "App Drawer")
+                        }
+                    FabType.Music, FabType.GameManual, FabType.CustomApp, FabType.None -> {}
                 }
             }
 
@@ -424,8 +453,8 @@ private fun MainScreenContent(
                 }
             }
 
-            // Rendered as a genuine child of this same gesture-handling Box - not a
-            // sibling composed elsewhere - for the same reason the Settings CornerFab
+            // Rendered as genuine children of this same gesture-handling Box - not
+            // siblings composed elsewhere - for the same reason the Settings CornerFab
             // above works reliably: Compose's Main pointer-input pass runs leaf-to-root,
             // so a descendant's own clickable/pointerInput gets first crack at a touch
             // before this Box's detectVerticalDragGestures/detectTapGestures do. Two
@@ -436,8 +465,13 @@ private fun MainScreenContent(
             // draw underneath the App Drawer) untappable: MainScreen, composed after it,
             // silently absorbed the touch via this Box's own gesture detectors. Placed
             // here, before the App Drawer's Box below, so the drawer sheet still slides
-            // up over it exactly as before.
+            // up over all four exactly as before. Each slot is MainActivity's content for
+            // whatever FabType (Music/Game Manual) FAB Control assigned to that corner -
+            // see MainActivity's fabSlotContent.
             topStartOverlay()
+            topEndOverlay()
+            bottomStartOverlay()
+            bottomEndOverlay()
 
             // Slides up from below the bottom edge as openFraction goes 0 -> 1. At
             // openFraction = 0 this sits entirely below the visible screen (offset =

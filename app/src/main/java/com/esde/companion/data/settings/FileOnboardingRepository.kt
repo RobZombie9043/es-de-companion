@@ -1,10 +1,15 @@
 package com.esde.companion.data.settings
 
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.FabSlot
+import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -13,6 +18,7 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -214,11 +220,49 @@ class FileOnboardingRepository(
     override fun observeCloseCompanionOnQuitEnabled(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[CLOSE_COMPANION_ON_QUIT_ENABLED_KEY] ?: false }
 
-    override suspend fun setSettingsFabVisible(visible: Boolean) {
-        context.onboardingDataStore.edit { it[SETTINGS_FAB_VISIBLE_KEY] = visible }
+    override suspend fun setFabAssignments(assignments: FabAssignments) {
+        context.onboardingDataStore.edit {
+            it.putFabSlot(FAB_TOP_START_KEY, FAB_TOP_START_CUSTOM_APP_KEY, assignments.topStart)
+            it.putFabSlot(FAB_TOP_END_KEY, FAB_TOP_END_CUSTOM_APP_KEY, assignments.topEnd)
+            it.putFabSlot(FAB_BOTTOM_START_KEY, FAB_BOTTOM_START_CUSTOM_APP_KEY, assignments.bottomStart)
+            it.putFabSlot(FAB_BOTTOM_END_KEY, FAB_BOTTOM_END_CUSTOM_APP_KEY, assignments.bottomEnd)
+        }
     }
 
-    override fun observeSettingsFabVisible(): Flow<Boolean> = context.onboardingDataStore.data.map { it[SETTINGS_FAB_VISIBLE_KEY] ?: true }
+    private fun MutablePreferences.putFabSlot(
+        typeKey: Preferences.Key<String>,
+        customAppKey: Preferences.Key<String>,
+        slot: FabSlot,
+    ) {
+        this[typeKey] = slot.type.name
+        if (slot.customAppPackageName != null) this[customAppKey] = slot.customAppPackageName else remove(customAppKey)
+    }
+
+    override fun observeFabAssignments(): Flow<FabAssignments> =
+        combine(
+            observeFabSlot(FAB_TOP_START_KEY, FAB_TOP_START_CUSTOM_APP_KEY, FabAssignments.Default.topStart),
+            observeFabSlot(FAB_TOP_END_KEY, FAB_TOP_END_CUSTOM_APP_KEY, FabAssignments.Default.topEnd),
+            observeFabSlot(FAB_BOTTOM_START_KEY, FAB_BOTTOM_START_CUSTOM_APP_KEY, FabAssignments.Default.bottomStart),
+            observeFabSlot(FAB_BOTTOM_END_KEY, FAB_BOTTOM_END_CUSTOM_APP_KEY, FabAssignments.Default.bottomEnd),
+        ) { topStart, topEnd, bottomStart, bottomEnd ->
+            FabAssignments(topStart = topStart, topEnd = topEnd, bottomStart = bottomStart, bottomEnd = bottomEnd)
+        }
+
+    // Falls back to `default` for both the unset case and any unrecognized stored value -
+    // same reasoning as observeThemePreference. customAppKey is only ever meaningful when
+    // the resolved type is CustomApp, but is read unconditionally regardless - a leftover
+    // value from a prior CustomApp selection, still present after switching to a different
+    // type and back, is harmless since FabSlot itself only assigns it meaning in that case.
+    private fun observeFabSlot(
+        typeKey: Preferences.Key<String>,
+        customAppKey: Preferences.Key<String>,
+        default: FabSlot,
+    ): Flow<FabSlot> =
+        context.onboardingDataStore.data.map { prefs ->
+            val stored = prefs[typeKey]
+            val type = stored?.let { runCatching { FabType.valueOf(it) }.getOrNull() } ?: default.type
+            FabSlot(type = type, customAppPackageName = prefs[customAppKey])
+        }
 
     override suspend fun setLaunchEsdeOnStartEnabled(enabled: Boolean) {
         context.onboardingDataStore.edit { it[LAUNCH_ESDE_ON_START_ENABLED_KEY] = enabled }
@@ -259,7 +303,14 @@ class FileOnboardingRepository(
         val OVERLAY_OPACITY_KEY = intPreferencesKey("overlay_opacity_percent")
         val CUSTOM_MUSIC_FOLDER_PATH_KEY = stringPreferencesKey("custom_music_folder_path")
         val CLOSE_COMPANION_ON_QUIT_ENABLED_KEY = booleanPreferencesKey("close_companion_on_quit_enabled")
-        val SETTINGS_FAB_VISIBLE_KEY = booleanPreferencesKey("settings_fab_visible")
+        val FAB_TOP_START_KEY = stringPreferencesKey("fab_top_start")
+        val FAB_TOP_END_KEY = stringPreferencesKey("fab_top_end")
+        val FAB_BOTTOM_START_KEY = stringPreferencesKey("fab_bottom_start")
+        val FAB_BOTTOM_END_KEY = stringPreferencesKey("fab_bottom_end")
+        val FAB_TOP_START_CUSTOM_APP_KEY = stringPreferencesKey("fab_top_start_custom_app")
+        val FAB_TOP_END_CUSTOM_APP_KEY = stringPreferencesKey("fab_top_end_custom_app")
+        val FAB_BOTTOM_START_CUSTOM_APP_KEY = stringPreferencesKey("fab_bottom_start_custom_app")
+        val FAB_BOTTOM_END_CUSTOM_APP_KEY = stringPreferencesKey("fab_bottom_end_custom_app")
         val LAUNCH_ESDE_ON_START_ENABLED_KEY = booleanPreferencesKey("launch_esde_on_start_enabled")
         val DEBUG_LOGGING_ENABLED_KEY = booleanPreferencesKey("debug_logging_enabled")
     }

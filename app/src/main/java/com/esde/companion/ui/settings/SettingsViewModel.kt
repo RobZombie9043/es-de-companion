@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.FabPosition
+import com.esde.companion.domain.model.FabSlot
+import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
@@ -13,8 +16,10 @@ import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
+import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
@@ -23,7 +28,6 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
-import com.esde.companion.domain.usecase.ObserveSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -34,6 +38,7 @@ import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
+import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
@@ -44,7 +49,6 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
-import com.esde.companion.domain.usecase.SetSettingsFabVisibleUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -98,8 +102,9 @@ class SettingsViewModel(
     private val setMusicDuckingModeUseCase: SetMusicDuckingModeUseCase,
     private val observeCloseCompanionOnQuitEnabledUseCase: ObserveCloseCompanionOnQuitEnabledUseCase,
     private val setCloseCompanionOnQuitEnabledUseCase: SetCloseCompanionOnQuitEnabledUseCase,
-    private val observeSettingsFabVisibleUseCase: ObserveSettingsFabVisibleUseCase,
-    private val setSettingsFabVisibleUseCase: SetSettingsFabVisibleUseCase,
+    private val observeFabAssignmentsUseCase: ObserveFabAssignmentsUseCase,
+    private val setFabAssignmentUseCase: SetFabAssignmentUseCase,
+    private val observeInstalledAppsUseCase: ObserveInstalledAppsUseCase,
     private val observeLaunchEsdeOnStartEnabledUseCase: ObserveLaunchEsdeOnStartEnabledUseCase,
     private val setLaunchEsdeOnStartEnabledUseCase: SetLaunchEsdeOnStartEnabledUseCase,
     private val observeDebugLoggingEnabledUseCase: ObserveDebugLoggingEnabledUseCase,
@@ -114,6 +119,15 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
+        // Continuously collected, unlike everything else loaded once below - installed
+        // apps can change independently of any setting this screen itself changes (the
+        // user installing/uninstalling something while Settings happens to be open), so a
+        // one-shot snapshot would go stale. Backs the Custom App FAB's app picker.
+        viewModelScope.launch {
+            observeInstalledAppsUseCase().collect { apps ->
+                _uiState.value = _uiState.value.copy(installedApps = apps)
+            }
+        }
         viewModelScope.launch {
             val logPath =
                 onboardingRepository.observeLogFolderPath().first()
@@ -142,7 +156,7 @@ class SettingsViewModel(
             val musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first()
             val musicDuckingMode = observeMusicDuckingModeUseCase().first()
             val closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first()
-            val settingsFabVisible = observeSettingsFabVisibleUseCase().first()
+            val fabAssignments = observeFabAssignmentsUseCase().first()
             val launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first()
             val debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first()
             _uiState.value =
@@ -170,7 +184,7 @@ class SettingsViewModel(
                     musicPlayDuringScreensaver = musicPlayDuringScreensaver,
                     musicDuckingMode = musicDuckingMode,
                     closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
-                    settingsFabVisible = settingsFabVisible,
+                    fabAssignments = fabAssignments,
                     launchEsdeOnStartEnabled = launchEsdeOnStartEnabled,
                     debugLoggingEnabled = debugLoggingEnabled,
                 )
@@ -257,9 +271,26 @@ class SettingsViewModel(
         viewModelScope.launch { setCloseCompanionOnQuitEnabledUseCase(enabled) }
     }
 
-    fun onSettingsFabVisibleChanged(visible: Boolean) {
-        _uiState.value = _uiState.value.copy(settingsFabVisible = visible)
-        viewModelScope.launch { setSettingsFabVisibleUseCase(visible) }
+    // Resets any previously-selected custom app - switching type away from CustomApp and
+    // back always starts from an unset selection rather than silently resurrecting a
+    // stale one.
+    fun onFabTypeChanged(
+        position: FabPosition,
+        fabType: FabType,
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(fabAssignments = setFabAssignmentUseCase(position, FabSlot(fabType)))
+        }
+    }
+
+    fun onFabCustomAppChanged(
+        position: FabPosition,
+        packageName: String,
+    ) {
+        viewModelScope.launch {
+            val slot = FabSlot(FabType.CustomApp, packageName)
+            _uiState.value = _uiState.value.copy(fabAssignments = setFabAssignmentUseCase(position, slot))
+        }
     }
 
     fun onLaunchEsdeOnStartEnabledChanged(enabled: Boolean) {

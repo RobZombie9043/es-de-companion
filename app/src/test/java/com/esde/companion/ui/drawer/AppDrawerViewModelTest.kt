@@ -2,6 +2,7 @@ package com.esde.companion.ui.drawer
 
 import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DrawerItem
+import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.LogFolderValidation
@@ -192,9 +193,9 @@ class AppDrawerViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
-        override suspend fun setSettingsFabVisible(visible: Boolean) {}
+        override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
-        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
+        override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)
     }
 
     private val testDispatcher = StandardTestDispatcher()

@@ -1,7 +1,8 @@
 package com.esde.companion.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import com.esde.companion.domain.model.FabPosition
 
 /**
  * Shared sizing for the small always-on-top corner controls that float over MainScreen
@@ -39,12 +41,20 @@ private val CORNER_BUTTON_SHAPE = RoundedCornerShape(16.dp)
  * background/black icon in light theme - rather than Material3's default purple FAB
  * colors, at the shared Settings > UI Settings > Overlay Opacity value rather than fully
  * opaque.
+ *
+ * [onDoubleClick], when non-null, adds Compose's usual tap/double-tap disambiguation delay
+ * to every click on this button (see [combinedClickable]) - used only by the Custom App
+ * FAB (single tap launches on this screen, double tap on the other, mirroring the App
+ * Dock's launch convention). Left null for every other caller (Settings, Music, App
+ * Drawer, Game Manual), which keeps their existing immediate single-tap response.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CornerFab(
     onClick: () -> Unit,
     opacityPercent: Int,
     modifier: Modifier = Modifier,
+    onDoubleClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -57,7 +67,7 @@ fun CornerFab(
                 .size(CORNER_BUTTON_SIZE)
                 .clip(CORNER_BUTTON_SHAPE)
                 .background(backgroundColor.copy(alpha = opacityPercent / 100f))
-                .clickable(onClick = onClick),
+                .combinedClickable(onClick = onClick, onDoubleClick = onDoubleClick),
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(LocalContentColor provides contentColor) {
@@ -65,3 +75,12 @@ fun CornerFab(
         }
     }
 }
+
+/** Maps a [FabPosition] onto the [Alignment] a corner-anchored composable aligns itself by. */
+fun FabPosition.toAlignment(): Alignment =
+    when (this) {
+        FabPosition.TopStart -> Alignment.TopStart
+        FabPosition.TopEnd -> Alignment.TopEnd
+        FabPosition.BottomStart -> Alignment.BottomStart
+        FabPosition.BottomEnd -> Alignment.BottomEnd
+    }

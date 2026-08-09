@@ -1,6 +1,7 @@
 package com.esde.companion.ui.widgets.edit
 
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameReference
@@ -283,9 +284,9 @@ class EditWidgetsViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
-        override suspend fun setSettingsFabVisible(visible: Boolean) {}
+        override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
-        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
+        override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)
     }
 
     private class FakeDockSettingsRepository(

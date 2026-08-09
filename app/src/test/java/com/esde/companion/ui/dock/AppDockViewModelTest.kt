@@ -2,6 +2,7 @@ package com.esde.companion.ui.dock
 
 import com.esde.companion.domain.model.AppDrawerShortcut
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.LogFolderValidation
@@ -200,9 +201,9 @@ class AppDockViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
-        override suspend fun setSettingsFabVisible(visible: Boolean) {}
+        override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
-        override fun observeSettingsFabVisible(): Flow<Boolean> = flowOf(true)
+        override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)
     }
 
     private val testDispatcher = StandardTestDispatcher()
