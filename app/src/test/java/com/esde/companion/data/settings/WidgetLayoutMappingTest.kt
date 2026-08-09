@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -124,7 +125,7 @@ class WidgetLayoutMappingTest {
         // JSON from before these fields existed (or encoded today with them at their
         // default) never actually contains these keys.
         val json = """{"scaleMode":"Fill"}"""
-        val decoded = kotlinx.serialization.json.Json.decodeFromString(WidgetTypeDto.SystemImage.serializer(), json)
+        val decoded = Json.decodeFromString(WidgetTypeDto.SystemImage.serializer(), json)
         assertEquals(WidgetTypeDto.SystemImage(scaleMode = "Fill", imageTransitionMode = "None"), decoded)
     }
 
@@ -135,7 +136,92 @@ class WidgetLayoutMappingTest {
         // with it left false - never actually contains this key. Decoding must still
         // succeed and default it to false, without a migration step.
         val json = """{"scaleMode":"Fill"}"""
-        val decoded = kotlinx.serialization.json.Json.decodeFromString(WidgetTypeDto.SystemImage.serializer(), json)
+        val decoded = Json.decodeFromString(WidgetTypeDto.SystemImage.serializer(), json)
         assertEquals(WidgetTypeDto.SystemImage(scaleMode = "Fill", panZoomEnabled = false), decoded)
+    }
+
+    @Test
+    fun `raw JSON for SystemLogo without optional keys decodes to their defaults`() {
+        val json = """{"scaleMode":"Fit"}"""
+        val decoded = Json.decodeFromString(WidgetTypeDto.SystemLogo.serializer(), json)
+        assertEquals(
+            WidgetTypeDto.SystemLogo(
+                scaleMode = "Fit",
+                blurAmount = 0f,
+                darkenAmount = 0f,
+                logoTransitionMode = "None",
+                glintEnabled = false,
+            ),
+            decoded,
+        )
+    }
+
+    @Test
+    fun `raw JSON for SystemMedia without optional keys decodes to their defaults`() {
+        val json = """{"mediaType":"FanArt","scaleMode":"Fill"}"""
+        val decoded = Json.decodeFromString(WidgetTypeDto.SystemMedia.serializer(), json)
+        assertEquals(
+            WidgetTypeDto.SystemMedia(
+                mediaType = "FanArt",
+                scaleMode = "Fill",
+                blurAmount = 0f,
+                darkenAmount = 0f,
+                panZoomEnabled = false,
+                imageTransitionMode = "None",
+                logoTransitionMode = "None",
+                glintEnabled = false,
+            ),
+            decoded,
+        )
+    }
+
+    @Test
+    fun `raw JSON for GameMedia without optional keys decodes to their defaults`() {
+        val json = """{"mediaType":"Screenshots","scaleMode":"Fill"}"""
+        val decoded = Json.decodeFromString(WidgetTypeDto.GameMedia.serializer(), json)
+        assertEquals(
+            WidgetTypeDto.GameMedia(
+                mediaType = "Screenshots",
+                scaleMode = "Fill",
+                blurAmount = 0f,
+                darkenAmount = 0f,
+                panZoomEnabled = false,
+                imageTransitionMode = "None",
+                logoTransitionMode = "None",
+                glintEnabled = false,
+            ),
+            decoded,
+        )
+    }
+
+    @Test
+    fun `raw JSON for CustomImage without optional keys decodes to their defaults`() {
+        val json = """{"path":"/path/to/image.png","scaleMode":"Fill"}"""
+        val decoded = Json.decodeFromString(WidgetTypeDto.CustomImage.serializer(), json)
+        assertEquals(
+            WidgetTypeDto.CustomImage(
+                path = "/path/to/image.png",
+                scaleMode = "Fill",
+                blurAmount = 0f,
+                darkenAmount = 0f,
+                panZoomEnabled = false,
+                imageTransitionMode = "None",
+            ),
+            decoded,
+        )
+    }
+
+    @Test
+    fun `raw JSON for GameDescription with no keys decodes to its defaults`() {
+        val decoded = Json.decodeFromString(WidgetTypeDto.GameDescription.serializer(), "{}")
+        assertEquals(
+            WidgetTypeDto.GameDescription(
+                fontSizeSp = 16f,
+                textColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            decoded,
+        )
     }
 }

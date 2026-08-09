@@ -40,7 +40,7 @@ class FileWidgetLayoutRepository(
      * so fall back to the old array format with grid = null (meaning "assume it already
      * matches the current grid", see SavedWidgetCanvas's kdoc).
      */
-    private fun decodeCanvas(json: String): SavedWidgetCanvas =
+    internal fun decodeCanvas(json: String): SavedWidgetCanvas =
         try {
             Json.decodeFromString<CanvasDto>(json).toDomain()
         } catch (

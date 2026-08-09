@@ -29,6 +29,15 @@ import kotlinx.coroutines.flow.stateIn
  * caller sees the same correctly-reconstructed state immediately, not just whichever
  * caller happened to be first.
  *
+ * Started [SharingStarted.Eagerly], not `WhileSubscribed`: `Flow.scan`'s accumulator
+ * restarts from its seed on every *new* collection, so a `WhileSubscribed` upstream would
+ * re-emit `AppState.Idle` and clobber the shared value whenever every downstream
+ * subscriber happened to go quiet at once for longer than its stop timeout - the exact
+ * failure mode this class exists to prevent, just reached via a different path. This is
+ * an application-scoped singleton meant to always reflect ES-DE's current state, so there
+ * is no meaningful "nobody's watching" period worth optimizing for - the fold should just
+ * run for the lifetime of [scope].
+ *
  * [reducer] defaults to [AppStateReducer.reduce] itself; callers that need to observe
  * every (previousState, event) -> newState transition (e.g. debug logging) can supply a
  * wrapping function instead, without [AppStateReducer] ever needing to know about it.
@@ -43,7 +52,7 @@ class ObserveAppStateUseCase(
             .scan(AppState.Idle as AppState) { state, event -> reducer(state, event) }
             .stateIn(
                 scope = scope,
-                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                started = SharingStarted.Eagerly,
                 initialValue = AppState.Idle,
             )
 

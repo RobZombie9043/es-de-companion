@@ -38,13 +38,14 @@ private const val PERCENT_MULTIPLIER = 100
  */
 class GitHubUpdateRepository(
     private val context: Context,
+    private val apiBase: String = API_BASE,
 ) : UpdateRepository {
     private val json = Json { ignoreUnknownKeys = true }
 
-    override suspend fun fetchLatestRelease(): ReleaseFetchResult = fetchRelease("$API_BASE/releases/latest")
+    override suspend fun fetchLatestRelease(): ReleaseFetchResult = fetchRelease("$apiBase/releases/latest")
 
     override suspend fun fetchReleaseForVersion(versionName: String): ReleaseFetchResult =
-        fetchRelease("$API_BASE/releases/tags/v$versionName")
+        fetchRelease("$apiBase/releases/tags/v$versionName")
 
     private suspend fun fetchRelease(url: String): ReleaseFetchResult =
         withContext(Dispatchers.IO) {

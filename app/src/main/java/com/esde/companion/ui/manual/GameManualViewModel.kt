@@ -3,6 +3,7 @@ package com.esde.companion.ui.manual
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.esde.companion.data.pdf.ManualRenderer
 import com.esde.companion.data.pdf.PdfManualRenderer
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
@@ -38,6 +39,7 @@ import kotlinx.coroutines.launch
 class GameManualViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     private val resolveGameMedia: ResolveGameMediaUseCase,
+    private val openRenderer: suspend (String) -> ManualRenderer? = { path -> PdfManualRenderer.open(path) },
 ) : ViewModel() {
     private val currentGameReference: Flow<GameReference?> =
         observeConnectionState()
@@ -58,7 +60,7 @@ class GameManualViewModel(
                 initialValue = null,
             )
 
-    private var renderer: PdfManualRenderer? = null
+    private var renderer: ManualRenderer? = null
     private var openedForPath: String? = null
     private var targetWidthPx: Int = 0
 
@@ -95,7 +97,7 @@ class GameManualViewModel(
         _nextBitmap.value = null
         _pageCount.value = 0
 
-        val opened = path?.let { PdfManualRenderer.open(it) } ?: return
+        val opened = path?.let { openRenderer(it) } ?: return
         renderer = opened
         _pageCount.value = opened.pageCount
         renderCurrentAndPrefetch()
