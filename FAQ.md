@@ -26,7 +26,11 @@ ES-DE Companion is free and open source. The full source code is available on Gi
 
 ### Is this app finished?
 
-The app is a ground-up rebuild and is currently at v0.7.0-RC1 — a release candidate. Core features (log sync, widgets, app drawer/dock, video, music) all work, but expect some rough edges.
+As of v1.0.0, yes — this is the first stable release of the ground-up rebuild. All core features (log sync, widgets, app drawer/dock, video, music, FAB Control, in-app updates) are built and working. Development continues, but there's no longer a "release candidate" caveat.
+
+### I'm coming from v0.6.0 — what changed, and do I need to do anything?
+
+Quite a lot changed — the app was rebuilt from the ground up. The short version: installing 1.0.0 over 0.6.0 works as a normal in-place update (same package), but the old script-based integration is gone, ES-DE now needs one additional toggle enabled ("Debug Mode"), Settings moved from a dedicated screen to a long-press popup, and widget layouts reset to new defaults since the widget system itself was rebuilt. See [Upgrading from 0.6.0](README.md#upgrading-from-060) in the README for the full list.
 
 ## Setup and Installation
 

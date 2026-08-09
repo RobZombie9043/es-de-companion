@@ -8,12 +8,12 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-0.7.0--RC1-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 ES-DE Companion is a companion application for [ES-DE](https://es-de.org) that enhances your gaming experience by transforming dual-screen Android devices into immersive retro gaming setups. The app displays beautiful game artwork, videos, and customizable overlay widgets on a secondary screen while you browse and play games in ES-DE.
 
-> **Note**: ES-DE Companion is currently a release candidate for the ground-up rebuild (v0.7.0-RC1). The app was rebuilt from the ground up with a new architecture and a new integration mechanism (see [How It Works](#how-it-works)) — core features work end-to-end, but expect rough edges.
+> **Note**: v1.0.0 is the first stable release of the ground-up rebuild that replaced the old script-writing integration with direct `es_log.txt` reading (see [How It Works](#how-it-works)). **Coming from 0.6.0 or earlier?** See [Upgrading from 0.6.0](#upgrading-from-060) before you install.
 
 The goal of this companion app is to provide a high-quality second-screen experience that seamlessly integrates with ES-DE, requires minimal setup, and offers extensive customization options for your gaming display.
 
@@ -158,6 +158,19 @@ _ES-DE Companion checks GitHub for newer releases itself — no need to watch th
 4. **Start Browsing**
    - Browse games in ES-DE on your primary screen
    - Watch the companion display automatically update with artwork
+
+## Upgrading from 0.6.0
+
+Version 1.0.0 is a ground-up rebuild — same app (`com.esde.companion`), so installing the new APK over 0.6.0 works as a normal in-place update, but the integration mechanism underneath changed completely. A few things to know before/after you upgrade:
+
+- **No more scripts.** The old app generated shell scripts into ES-DE's `scripts/` folder and had ES-DE call them on each event. That's gone — the app now only *reads* ES-DE's own `es_log.txt`. The onboarding wizard detects leftover script files from the old version on first launch and offers a one-tap "Delete these files" cleanup step.
+- **One more ES-DE toggle required.** The old app needed "Custom Event Scripts" and "Browsing Custom Event Scripts" enabled in ES-DE. This version also requires **"Debug Mode"** — onboarding won't finish until all three are on (see [Quick Start](#quick-start), step 3).
+- **Settings moved.** There's no dedicated Settings screen anymore. Long-press anywhere on the companion screen (or tap a corner button assigned to Settings — see [Floating Action Buttons](#floating-action-buttons)) to open it as a popup. The old "Show Settings Button" toggle and widget "lock mode" are both gone — widget editing is always reachable this way, with no separate unlock step.
+- **Widget layouts reset to new defaults.** The widget system was rebuilt on new grid-based canvases (System View / Game View) with its own persistence, so your old widget positions don't carry forward — you'll start from the new fresh-install defaults and can re-customize from there.
+- **Corner buttons are now fully configurable.** The old fixed Settings/Music corner buttons are replaced by [Floating Action Buttons](#floating-action-buttons) — assign any of Music, Settings, Game Manual, App Drawer, a specific app, or none to each of the four corners.
+- **New since 0.6.0, worth trying:** the App Dock (an optional persistent pinned-apps row), App Drawer folders, per-widget transitions/Logo Glint/Pan & Zoom, in-app update checking (see [Automatic Updates](#automatic-updates)), and opt-in debug logging for troubleshooting.
+
+Your ES-DE folder, media folder, and other Setup paths are unaffected — you shouldn't need to reconfigure those unless onboarding prompts you to confirm them.
 
 ## How It Works
 
