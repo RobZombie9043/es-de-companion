@@ -403,7 +403,7 @@ Configured in **Settings → Background Music** (plus the Custom Music Folder, w
 
 Settings isn't a dedicated screen — it's a popup reached by long-pressing anywhere on the main screen (or tapping a corner button assigned to Settings, if any; see [Screen Gestures](#screen-gestures) and [Floating Action Buttons](#floating-action-buttons)). This section describes every setting, organized by the category it appears under in that popup, in the order they're listed there.
 
-Below the category list itself, a **Quit Companion App** row closes the app outright (equivalent to what "Close Companion App on ES-DE Quit" does automatically — see [Other Settings](#other-settings)) — useful if you want to exit manually without waiting for ES-DE to quit.
+Below the category list itself, a **Quit Companion App** row closes the app outright (equivalent to what "Close Companion App on ES-DE Quit" does automatically — see [Other Settings](#other-settings)) — useful if you want to exit manually without waiting for ES-DE to quit. Tapping it shows a "Really Quit?" confirmation prompt first, so it's not one accidental tap away from closing the app.
 
 ### Widgets
 
@@ -466,11 +466,12 @@ See [Floating Action Buttons](#floating-action-buttons) for what each corner opt
 
 | Setting | Control | Default |
 |---|---|---|
+| Check for Updates | Runs a manual update check; shows "Up to date," "Update available," or "Check failed" | n/a |
 | Close Companion App on ES-DE Quit | Toggle | Off |
 | Launch ES-DE on Companion App Start | Toggle | Off |
 | Debug Logging | Toggle | Off |
 
-**Close Companion App on ES-DE Quit** closes ES-DE Companion when ES-DE fires its quit event. **Launch ES-DE on Companion App Start** launches ES-DE on the other display as soon as Companion starts up — useful alongside Companion's own boot auto-start for bringing both apps up together with no manual step. **Debug Logging** writes an opt-in diagnostic log to help track down reported issues — see [Debug Logging](#debug-logging).
+**Check for Updates** is the top row of this category — see [In-App Updates](#in-app-updates) for what happens when an update is found. **Close Companion App on ES-DE Quit** closes ES-DE Companion when ES-DE fires its quit event. **Launch ES-DE on Companion App Start** launches ES-DE on the other display as soon as Companion starts up — useful alongside Companion's own boot auto-start for bringing both apps up together with no manual step. **Debug Logging** writes an opt-in diagnostic log to help track down reported issues — see [Debug Logging](#debug-logging).
 
 There's no "Show Settings Button" toggle anymore — Settings visibility on the main screen is controlled per corner via [Floating Action Buttons](#floating-action-buttons) instead (assign a corner to Settings, or to None to hide it from a given corner). Long-press always opens Settings regardless.
 
@@ -478,14 +479,11 @@ There's no "Show Settings Button" toggle anymore — Settings visibility on the 
 
 | Setting | Control | Default |
 |---|---|---|
-| Check for Updates | Runs a manual update check; shows "Up to date," "Update available," or "Check failed" | n/a |
 | ES-DE folder | Required folder picker | `/storage/emulated/0/ES-DE` |
 | Media folder | Required folder picker | `/storage/emulated/0/ES-DE/downloaded_media` |
 | Custom System Images Folder | Optional folder picker | Not set |
 | Custom Logos Folder | Optional folder picker | Not set |
 | Custom Music Folder | Optional folder picker | Not set |
-
-See [In-App Updates](#in-app-updates) for what happens when an update is found.
 
 ---
 
@@ -576,7 +574,7 @@ If nothing has happened yet since the companion app started, it stays idle and s
 ES-DE Companion checks GitHub for newer releases itself — no need to check the Releases page manually.
 
 - **Automatic check**: a silent check runs in the background every time the app starts. If a newer version is available, an "Update available" dialog appears on its own, showing that release's notes.
-- **Manual check**: Settings → Setup → Check for Updates (the top row of that category) runs the same check on demand, showing "Up to date," "Update available," or "Check failed" next to it once it completes.
+- **Manual check**: Settings → Other Settings → Check for Updates (the top row of that category) runs the same check on demand, showing "Up to date," "Update available," or "Check failed" next to it once it completes.
 - **Installing**: confirming "Download & Install" in the dialog requires granting Android's "Install unknown apps" permission for ES-DE Companion the first time — the dialog walks you through the permission prompt, then downloads the APK and opens the system installer automatically once it finishes.
 - **"What's new"**: separately from the update dialog, the first time the app starts after actually being updated, a one-time "What's new" dialog shows that version's release notes — so you still see them even if you installed the update some other way (e.g. sideloading a new APK manually) rather than through the in-app prompt.
 

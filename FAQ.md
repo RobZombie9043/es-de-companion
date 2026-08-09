@@ -75,7 +75,7 @@ There's no dedicated "hide the gear" toggle anymore — Settings → UI Settings
 
 ### Does ES-DE Companion check for updates automatically?
 
-Yes: a silent check runs every time the app starts, and shows an "Update available" dialog automatically if a newer release exists on GitHub. You can also check manually any time via Settings → Setup → Check for Updates (the top row of that category). Confirming a download prompts for Android's "Install unknown apps" permission the first time, then installs the downloaded APK through the system installer automatically. See [In-App Updates](USERGUIDE.md#in-app-updates) in the User Guide for the full flow, including the separate one-time "What's new" dialog that shows after an update actually installs.
+Yes: a silent check runs every time the app starts, and shows an "Update available" dialog automatically if a newer release exists on GitHub. You can also check manually any time via Settings → Other Settings → Check for Updates (the top row of that category). Confirming a download prompts for Android's "Install unknown apps" permission the first time, then installs the downloaded APK through the system installer automatically. See [In-App Updates](USERGUIDE.md#in-app-updates) in the User Guide for the full flow, including the separate one-time "What's new" dialog that shows after an update actually installs.
 
 ### What is Debug Logging and when should I turn it on?
 
@@ -91,7 +91,7 @@ Yes: Settings → Other Settings → "Launch ES-DE on Companion App Start," off 
 
 ### Can I quit Companion manually?
 
-Yes: the Settings popup has a "Quit Companion App" row below the category list that closes the app immediately — no need to wait for "Close Companion App on ES-DE Quit" to trigger.
+Yes: the Settings popup has a "Quit Companion App" row below the category list — tap it, then confirm "Yes" on the "Really Quit?" prompt, and the app closes immediately. No need to wait for "Close Companion App on ES-DE Quit" to trigger.
 
 ## Floating Action Buttons
 

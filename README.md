@@ -120,7 +120,7 @@ _ES-DE Companion checks GitHub for newer releases itself — no need to watch th
 
 **Update Features:**
 - Silent check on every app start, auto-showing a dialog when a newer version is found
-- Manual "Check for Updates" entry in Settings → Setup
+- Manual "Check for Updates" entry in Settings → Other Settings
 - One-tap download and install, handling the Android "install unknown apps" permission prompt for you
 - A one-time "what's new" dialog with that release's notes after the app actually updates
 

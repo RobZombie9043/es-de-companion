@@ -245,8 +245,8 @@ internal fun SettingsQuitRow(onClick: () -> Unit) {
 }
 
 /**
- * Top item of Setup - manual "Check for Updates" entry. [checkResult] is null until the
- * first manual check completes (the silent startup check never sets it - see
+ * Top item of Other Settings - manual "Check for Updates" entry. [checkResult] is null
+ * until the first manual check completes (the silent startup check never sets it - see
  * UpdateUiState's kdoc), in which case no status text is shown yet.
  */
 @Composable
@@ -296,9 +296,6 @@ internal fun SetupSettingsContent(
     onCustomLogosFolderCleared: () -> Unit,
     onCustomMusicFolderPicked: (String) -> Unit,
     onCustomMusicFolderCleared: () -> Unit,
-    updateCheckResult: UpdateCheckResult?,
-    isCheckingForUpdate: Boolean,
-    onCheckForUpdatesClicked: () -> Unit,
 ) {
     Column(
         modifier =
@@ -308,8 +305,6 @@ internal fun SetupSettingsContent(
                 .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        CheckForUpdatesRow(updateCheckResult, isCheckingForUpdate, onCheckForUpdatesClicked)
-
         if (!uiState.permissionGranted) {
             Text(
                 "All files access isn't currently granted - folder changes below " +
@@ -605,6 +600,9 @@ private fun VideoAudioSetting(
 
 @Composable
 internal fun OtherSettingsContent(
+    updateCheckResult: UpdateCheckResult?,
+    isCheckingForUpdate: Boolean,
+    onCheckForUpdatesClicked: () -> Unit,
     closeCompanionOnQuitEnabled: Boolean,
     onCloseCompanionOnQuitEnabledChanged: (Boolean) -> Unit,
     launchEsdeOnStartEnabled: Boolean,
@@ -620,6 +618,7 @@ internal fun OtherSettingsContent(
                 .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
+        CheckForUpdatesRow(updateCheckResult, isCheckingForUpdate, onCheckForUpdatesClicked)
         CloseCompanionOnQuitSetting(
             enabled = closeCompanionOnQuitEnabled,
             onEnabledChanged = onCloseCompanionOnQuitEnabledChanged,
@@ -1032,7 +1031,7 @@ private val FabType.label: String
     get() =
         when (this) {
             FabType.Music -> "Music"
-            FabType.Settings -> "Settings"
+            FabType.Settings -> "Main Menu"
             FabType.GameManual -> "Manual"
             FabType.AppDrawer -> "App Drawer"
             FabType.CustomApp -> "App"

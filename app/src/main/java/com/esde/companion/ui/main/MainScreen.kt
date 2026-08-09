@@ -363,7 +363,7 @@ private fun MainScreenContent(
                                     .align(position.toAlignment())
                                     .padding(CORNER_BUTTON_EDGE_PADDING),
                         ) {
-                            Icon(imageVector = Icons.Filled.Settings, contentDescription = "Settings")
+                            Icon(imageVector = Icons.Filled.Settings, contentDescription = "Main Menu")
                         }
                     FabType.AppDrawer ->
                         CornerFab(

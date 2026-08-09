@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -193,12 +195,12 @@ fun LongPressSettingsMenu(
     // which no longer needs a case for the long-press menu at all because of this.
     BackHandler(onBack = onBack)
 
-    // Always shown, unlike a plain drill-down title - the top level reads "Settings" (the
+    // Always shown, unlike a plain drill-down title - the top level reads "Main Menu" (the
     // popup's own identity) rather than having no header at all, matching how
     // SettingsScreen's TopAppBar looked before it was retired.
     val title =
         when (val current = page) {
-            MenuPage.Home -> "Settings"
+            MenuPage.Home -> "Main Menu"
             is MenuPage.Category -> current.category.title
             is MenuPage.ManageApps -> "Manage Apps"
         }
@@ -262,9 +264,6 @@ fun LongPressSettingsMenu(
                                         onCustomLogosFolderCleared = settingsViewModel::onCustomLogosFolderCleared,
                                         onCustomMusicFolderPicked = settingsViewModel::onCustomMusicFolderPicked,
                                         onCustomMusicFolderCleared = settingsViewModel::onCustomMusicFolderCleared,
-                                        updateCheckResult = updateUiState.lastManualCheckResult,
-                                        isCheckingForUpdate = updateUiState.isCheckingForUpdate,
-                                        onCheckForUpdatesClicked = updateViewModel::checkForUpdatesManually,
                                     )
                                 SettingsCategory.UI ->
                                     UISettingsContent(
@@ -319,6 +318,9 @@ fun LongPressSettingsMenu(
                                     )
                                 SettingsCategory.Other ->
                                     OtherSettingsContent(
+                                        updateCheckResult = updateUiState.lastManualCheckResult,
+                                        isCheckingForUpdate = updateUiState.isCheckingForUpdate,
+                                        onCheckForUpdatesClicked = updateViewModel::checkForUpdatesManually,
                                         closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
                                         onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
                                         launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
@@ -406,7 +408,20 @@ private fun SettingsMenuHome(
             )
         }
 
-        SettingsQuitRow(onClick = onQuitClick)
+        // Quitting is destructive/terminal (see SettingsQuitRow's kdoc) and easy to hit
+        // by accident so close to the category list above it - a confirmation dialog
+        // gates the actual onQuitClick call rather than firing it directly from the row.
+        var showQuitConfirmation by remember { mutableStateOf(false) }
+        SettingsQuitRow(onClick = { showQuitConfirmation = true })
+        if (showQuitConfirmation) {
+            QuitConfirmationDialog(
+                onConfirm = {
+                    showQuitConfirmation = false
+                    onQuitClick()
+                },
+                onDismiss = { showQuitConfirmation = false },
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -435,4 +450,17 @@ private fun SettingsMenuHome(
                     ),
         )
     }
+}
+
+@Composable
+private fun QuitConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Really Quit?") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Yes") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("No") } },
+    )
 }
