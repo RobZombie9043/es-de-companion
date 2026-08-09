@@ -71,7 +71,15 @@ Check these in order:
 
 ### How do I hide the Settings gear icon?
 
-ES-DE Companion's own Settings → Other Settings category (not ES-DE's own "Other Settings" menu — see above) has a "Show Settings Button" toggle, on by default. Turning it off just hides the gear icon on the main screen — Settings stays reachable via long-press regardless.
+There's no dedicated "hide the gear" toggle anymore — Settings → UI Settings → Floating Action Buttons controls what (if anything) appears in each of the four screen corners, including Settings. Set a corner to "None" to remove it, or assign Settings to a different corner. Long-press anywhere on the screen still opens Settings regardless of what's assigned to a corner. See [What are Floating Action Buttons?](#what-are-floating-action-buttons) below.
+
+### Does ES-DE Companion check for updates automatically?
+
+Yes: a silent check runs every time the app starts, and shows an "Update available" dialog automatically if a newer release exists on GitHub. You can also check manually any time via Settings → Setup → Check for Updates (the top row of that category). Confirming a download prompts for Android's "Install unknown apps" permission the first time, then installs the downloaded APK through the system installer automatically. See [In-App Updates](USERGUIDE.md#in-app-updates) in the User Guide for the full flow, including the separate one-time "What's new" dialog that shows after an update actually installs.
+
+### What is Debug Logging and when should I turn it on?
+
+Settings → Other Settings → Debug Logging (off by default) writes an opt-in diagnostic log to `ES-DE Companion/logs/esde_companion_log.txt`, recording parsed state transitions, media resolution outcomes, and playback events. Turn it on if you're asked to when reporting a hard-to-reproduce bug — see [Debug Logging](USERGUIDE.md#debug-logging) in the User Guide for exactly what it records and where the file lives.
 
 ### Can ES-DE Companion close itself when I quit ES-DE?
 
@@ -85,11 +93,29 @@ Yes: Settings → Other Settings → "Launch ES-DE on Companion App Start," off 
 
 Yes: the Settings popup has a "Quit Companion App" row below the category list that closes the app immediately — no need to wait for "Close Companion App on ES-DE Quit" to trigger.
 
+## Floating Action Buttons
+
+### What are Floating Action Buttons?
+
+Up to four small buttons ES-DE Companion can show on the main screen, one per corner, each independently configurable in Settings → UI Settings → Floating Action Buttons. Each corner can be set to Music, Settings, Manual, App Drawer, App, or None. See [Floating Action Buttons](USERGUIDE.md#floating-action-buttons) in the User Guide for what each option does.
+
+### Why can't I put Music in the bottom corners?
+
+Music is only offered as an option for the two top corners. It can occupy just one of them at a time — assigning it to the other top corner swaps whatever was already there into the newly-vacated corner rather than removing it.
+
+### Can I put a shortcut to a specific app as a corner button?
+
+Yes: assign a corner to "App," then tap the "Select App" row that appears underneath to pick from every installed app. The button then shows that app's own icon. Tapping it follows the same this-screen/other-screen launch convention (and remembered preference, with the same indicator dot) as the App Drawer and App Dock — see [How do I launch apps on the other screen?](#how-do-i-launch-apps-on-the-other-screen).
+
+### When does the Manual button show up?
+
+Whenever the game you're currently playing, browsing, or that the screensaver is showing has a scanned manual PDF (`manuals/` in that game's media folder). Tapping it opens the manual viewer immediately, independent of the "Game Playing Screen Behavior" setting — it works even if that's not set to "Manual."
+
 ## Widget System
 
 ### How do I create widgets?
 
-1. Long-press anywhere on the companion screen (or tap the Settings gear, if shown) to open the Settings popup
+1. Long-press anywhere on the companion screen (or tap a corner button assigned to Settings, if any) to open the Settings popup
 2. Tap "Widgets" at the top of the list — this jumps straight into the widget editor
 3. Tap the ⋮ menu button in the corner
 4. Tap "Add Widget"
@@ -99,7 +125,7 @@ Yes: the Settings popup has a "Quit Companion App" row below the category list t
 
 ### Why can't I move or resize widgets?
 
-There's no lock setting anymore — widget editing is always reachable. If long-press/the gear icon isn't opening the Settings popup at all, or the popup opens but tapping "Widgets" doesn't land you in the editor, that's worth reporting as a bug (see [How do I report a bug?](#how-do-i-report-a-bug)).
+There's no lock setting anymore — widget editing is always reachable. If long-press (or a corner button assigned to Settings) isn't opening the Settings popup at all, or the popup opens but tapping "Widgets" doesn't land you in the editor, that's worth reporting as a bug (see [How do I report a bug?](#how-do-i-report-a-bug)).
 
 ### What's the difference between System View and Game View widgets?
 

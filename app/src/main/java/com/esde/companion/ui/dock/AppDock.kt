@@ -96,7 +96,7 @@ private fun DockSize.iconDp(): Dp =
     when (this) {
         DockSize.Small -> 40.dp
         DockSize.Medium -> 48.dp
-        DockSize.Large -> 60.dp
+        DockSize.Large -> 56.dp
     }
 
 /**

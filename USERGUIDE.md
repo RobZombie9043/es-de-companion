@@ -9,14 +9,16 @@ This comprehensive guide covers everything you need to know about ES-DE Companio
 1. [Getting Started](#getting-started)
 2. [Onboarding Wizard](#onboarding-wizard)
 3. [Screen Gestures](#screen-gestures)
-4. [Widget Overlay System](#widget-overlay-system)
-5. [App Drawer](#app-drawer)
-6. [App Dock](#app-dock)
-7. [Video & Music](#video--music)
-8. [Settings Reference](#settings-reference)
-9. [File Structure](#file-structure)
-10. [How Log Events Work](#how-log-events-work)
-11. [Advanced Topics](#advanced-topics)
+4. [Floating Action Buttons](#floating-action-buttons)
+5. [Widget Overlay System](#widget-overlay-system)
+6. [App Drawer](#app-drawer)
+7. [App Dock](#app-dock)
+8. [Video & Music](#video--music)
+9. [Settings Reference](#settings-reference)
+10. [File Structure](#file-structure)
+11. [How Log Events Work](#how-log-events-work)
+12. [In-App Updates](#in-app-updates)
+13. [Advanced Topics](#advanced-topics)
 
 ---
 
@@ -149,10 +151,48 @@ Three gestures work anywhere on the main companion screen (when the App Drawer i
 | Gesture | Result |
 |---|---|
 | **Swipe up** | Opens the [App Drawer](#app-drawer) |
-| **Long-press** (or tap the Settings gear, if shown) | Opens the Settings/Widgets popup menu — see [Widget Edit Mode](#widget-edit-mode) and [Settings Reference](#settings-reference) |
+| **Long-press** (or tap a corner button assigned to Settings, if any) | Opens the Settings/Widgets popup menu — see [Widget Edit Mode](#widget-edit-mode) and [Settings Reference](#settings-reference) |
 | **Double-tap** | Manually blanks the screen to black; double-tap again to restore |
 
 The double-tap blank gesture is always available, independent of the automatic Game Playing/Screensaver Screen Behavior settings (see [Settings Reference](#settings-reference)) — it uses the same black cover, so it also restores with a double-tap when triggered automatically by a Screen Behavior set to "Off."
+
+Long-press always opens Settings regardless of whether a corner button is also assigned to it — see [Floating Action Buttons](#floating-action-buttons) for the configurable corner buttons themselves.
+
+---
+
+## Floating Action Buttons
+
+ES-DE Companion can show up to four small floating buttons on the main screen — one per corner — each independently configurable in **Settings → UI Settings → Floating Action Buttons**.
+
+### Available Types
+
+| Type | Behavior |
+|---|---|
+| **Music** | Toggles the floating music controls panel (title, play/pause, skip). Only offered for the two *top* corners — see [Music Placement](#music-placement) — and only actually shown once a track is loaded. |
+| **Settings** | Opens the same long-press Settings/Widgets popup described in [Screen Gestures](#screen-gestures). |
+| **Manual** | Shown whenever the game currently playing, browsing, or displayed by the screensaver has a scanned manual PDF. Tapping opens it in the manual viewer — the same viewer the "Manual" Game Playing Screen Behavior option (see [Settings Reference](#settings-reference)) shows automatically, but on demand and independent of that setting. |
+| **App Drawer** | Opens the [App Drawer](#app-drawer), the same as swiping up. |
+| **App** | Launches a specific app you choose. See [Launching a Custom App](#launching-a-custom-app) below. |
+| **None** | No button shown in that corner. |
+
+### Defaults
+
+| Corner | Default |
+|---|---|
+| Top Left | Music |
+| Top Right | Settings |
+| Bottom Left | None |
+| Bottom Right | Manual |
+
+### Music Placement
+
+Music can occupy only one of the two top corners at a time. Assigning it to the other top corner swaps whatever was already there into the newly-vacated corner instead of discarding it — for example, with the defaults above, setting Top Right to Music moves Settings to Top Left. Music is never offered as an option for either bottom corner.
+
+### Launching a Custom App
+
+Assigning **App** to a corner adds a second row underneath its type dropdown for picking which app — tap it to open a "Select App" list of every installed app (independent of the App Drawer's own hidden-apps list — an app hidden from the drawer can still be picked here). Once picked, the corner button shows that app's own icon instead of a generic one.
+
+Tapping it follows the same this-screen/other-screen launch convention as the App Drawer and App Dock (see [App Drawer](#app-drawer)), and shares the same remembered preference: a single tap launches on whichever screen that app last launched on (this screen, by default), and a double tap launches it on the *other* screen and remembers that as the new preference. A small dot appears on the icon — identical to the App Drawer/App Dock indicator — whenever the other screen is currently preferred.
 
 ---
 
@@ -220,7 +260,7 @@ All of the above is set per widget instance, from that widget's own Configure Wi
 ### Widget Edit Mode
 
 **To enter edit mode:**
-1. Long-press anywhere on the companion screen (or tap the Settings gear, if shown) to open the Settings popup
+1. Long-press anywhere on the companion screen (or tap a corner button assigned to Settings, if any — see [Floating Action Buttons](#floating-action-buttons)) to open the Settings popup
 2. Tap **Widgets** at the top of the list — this jumps straight into the widget editor rather than showing a subpage, since there's nothing else in that category
 3. Edit mode opens, showing the last system/game you browsed as a preview (not necessarily what's live right now)
 
@@ -361,7 +401,7 @@ Configured in **Settings → Background Music** (plus the Custom Music Folder, w
 
 ## Settings Reference
 
-Settings isn't a dedicated screen — it's a popup reached by long-pressing anywhere on the main screen (or tapping the Settings gear, if shown; see [Screen Gestures](#screen-gestures)). This section describes every setting, organized by the category it appears under in that popup, in the order they're listed there.
+Settings isn't a dedicated screen — it's a popup reached by long-pressing anywhere on the main screen (or tapping a corner button assigned to Settings, if any; see [Screen Gestures](#screen-gestures) and [Floating Action Buttons](#floating-action-buttons)). This section describes every setting, organized by the category it appears under in that popup, in the order they're listed there.
 
 Below the category list itself, a **Quit Companion App** row closes the app outright (equivalent to what "Close Companion App on ES-DE Quit" does automatically — see [Other Settings](#other-settings)) — useful if you want to exit manually without waiting for ES-DE to quit.
 
@@ -381,10 +421,13 @@ Tapping this category in the Settings popup jumps straight to the widget editor 
 | Overlay Opacity | Slider | 0-100% | 80% — applies to the App Drawer, App Dock, and other overlay surfaces |
 | Game Playing Screen Behavior | Segmented control | On / Dim / Off / Manual | On |
 | Screensaver Screen Behavior | Segmented control | On / Dim / Off | On |
+| Floating Action Buttons | Four dropdowns, one per corner | Music / Settings / Manual / App Drawer / App / None | Top Left: Music, Top Right: Settings, Bottom Left: None, Bottom Right: Manual |
 
 `Screen Behavior` options: **On** leaves the screen as normal; **Dim** overlays a translucent black scrim (touches still pass through); **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
 
 Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — they're configured per widget from the Configure Widget dialog. See [Per-Widget Configuration](#per-widget-configuration).
+
+See [Floating Action Buttons](#floating-action-buttons) for what each corner option does, the Music-in-top-corners-only rule, and how the App option's app picker works.
 
 ### App Drawer and Dock
 
@@ -425,19 +468,24 @@ Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — th
 |---|---|---|
 | Close Companion App on ES-DE Quit | Toggle | Off |
 | Launch ES-DE on Companion App Start | Toggle | Off |
-| Show Settings Button | Toggle | On |
+| Debug Logging | Toggle | Off |
 
-**Close Companion App on ES-DE Quit** closes ES-DE Companion when ES-DE fires its quit event. **Launch ES-DE on Companion App Start** launches ES-DE on the other display as soon as Companion starts up — useful alongside Companion's own boot auto-start for bringing both apps up together with no manual step. **Show Settings Button** controls whether the Settings gear icon appears on the main screen — turning it off doesn't reduce what's reachable, since Settings stays available via long-press regardless (see [Screen Gestures](#screen-gestures)).
+**Close Companion App on ES-DE Quit** closes ES-DE Companion when ES-DE fires its quit event. **Launch ES-DE on Companion App Start** launches ES-DE on the other display as soon as Companion starts up — useful alongside Companion's own boot auto-start for bringing both apps up together with no manual step. **Debug Logging** writes an opt-in diagnostic log to help track down reported issues — see [Debug Logging](#debug-logging).
+
+There's no "Show Settings Button" toggle anymore — Settings visibility on the main screen is controlled per corner via [Floating Action Buttons](#floating-action-buttons) instead (assign a corner to Settings, or to None to hide it from a given corner). Long-press always opens Settings regardless.
 
 ### Setup
 
 | Setting | Control | Default |
 |---|---|---|
+| Check for Updates | Runs a manual update check; shows "Up to date," "Update available," or "Check failed" | n/a |
 | ES-DE folder | Required folder picker | `/storage/emulated/0/ES-DE` |
 | Media folder | Required folder picker | `/storage/emulated/0/ES-DE/downloaded_media` |
 | Custom System Images Folder | Optional folder picker | Not set |
 | Custom Logos Folder | Optional folder picker | Not set |
 | Custom Music Folder | Optional folder picker | Not set |
+
+See [In-App Updates](#in-app-updates) for what happens when an update is found.
 
 ---
 
@@ -485,7 +533,7 @@ Custom System Images, Custom Logos, and Custom Music folders are wherever you po
 | `backcovers/` | Back box covers | Box Back Cover |
 | `physicalmedia/` | Disc/cartridge art | Physical Media |
 | `videos/` | Game videos | (video playback, not a widget) |
-| `manuals/` | Game manual PDFs | Used by the "Manual" Game Playing Screen Behavior option, not a widget |
+| `manuals/` | Game manual PDFs | Used by the "Manual" Game Playing Screen Behavior option and the Manual floating action button, not a widget |
 
 ### Custom Media
 
@@ -523,7 +571,29 @@ If nothing has happened yet since the companion app started, it stays idle and s
 
 ---
 
+## In-App Updates
+
+ES-DE Companion checks GitHub for newer releases itself — no need to check the Releases page manually.
+
+- **Automatic check**: a silent check runs in the background every time the app starts. If a newer version is available, an "Update available" dialog appears on its own, showing that release's notes.
+- **Manual check**: Settings → Setup → Check for Updates (the top row of that category) runs the same check on demand, showing "Up to date," "Update available," or "Check failed" next to it once it completes.
+- **Installing**: confirming "Download & Install" in the dialog requires granting Android's "Install unknown apps" permission for ES-DE Companion the first time — the dialog walks you through the permission prompt, then downloads the APK and opens the system installer automatically once it finishes.
+- **"What's new"**: separately from the update dialog, the first time the app starts after actually being updated, a one-time "What's new" dialog shows that version's release notes — so you still see them even if you installed the update some other way (e.g. sideloading a new APK manually) rather than through the in-app prompt.
+
+---
+
 ## Advanced Topics
+
+### Debug Logging
+
+An opt-in diagnostic log (Settings → Other Settings → Debug Logging, off by default) to help track down reported issues without needing a live repro session.
+
+- **Where it's written**: `ES-DE Companion/logs/esde_companion_log.txt`, in a top-level `ES-DE Companion` folder on the same storage root as your `ES-DE` folder — not nested inside it, and not affected by whatever custom ES-DE folder path you've configured. Requires the same "All files access" permission the app already needs to work at all.
+- **What it records**: parsed app-state transitions, media resolution outcomes (found/not found, including the exact path checked), and music/video playback start and error events — each as its own timestamped line.
+- **Truncated on each start**: like ES-DE's own `es_log.txt`, the file is cleared and rewritten fresh the first time something is logged after the app starts with the toggle on — it isn't an ever-growing history across app restarts.
+- Turning the toggle off stops new writes immediately but doesn't delete whatever's already in the file.
+
+Attach this file when reporting a bug that's hard to reproduce from a description alone — see [How do I report a bug?](FAQ.md#how-do-i-report-a-bug) in the FAQ.
 
 ### Version History
 

@@ -62,7 +62,7 @@ _Create fully customizable overlay widgets to display game artwork - marquees, b
 - Independent Left/Right/Top/Bottom resize handles with edge-snapping near the screen boundary
 - Layer ordering (move forward/backward)
 - Per-widget transitions (Slide/Scale for logos and marquees, Fade for backdrop images), an optional Logo Glint sweep, and a Pan & Zoom effect on full-bleed backgrounds — all configured per widget, not globally
-- Reached anytime via long-press anywhere on the screen (or the optional Settings gear) — no lock setting to fight with
+- Reached anytime via long-press anywhere on the screen (or an optional corner button — see [Floating Action Buttons](#floating-action-buttons)) — no lock setting to fight with
 
 ### App Drawer & App Dock
 
@@ -90,7 +90,18 @@ _The built-in onboarding wizard guides you through configuration on first launch
 - Auto-detects your ES-DE and media folders where possible
 - Watches ES-DE's own settings file to confirm the three required toggles are enabled
 - Live confirmation step that waits for real activity from ES-DE before finishing
-- Afterward, Settings and the widget editor are both one long-press away — long-press anywhere on the screen (or tap the optional gear icon) to open a popup menu; there's no separate Settings screen to hunt for
+- Afterward, Settings and the widget editor are both one long-press away — long-press anywhere on the screen (or tap a corner button assigned to Settings) to open a popup menu; there's no separate Settings screen to hunt for
+- Checks for app updates automatically on every launch, with one-tap download/install and a "what's new" prompt after each update — see [Automatic Updates](#automatic-updates)
+
+### Floating Action Buttons
+
+_Up to four small buttons — one per screen corner — each independently configurable to whatever's most useful to you._
+
+**FAB Features:**
+- Six types per corner: Music Playback, Settings, Game Manual, App Drawer, a specific app you pick, or none
+- Music Playback can occupy either top corner (but only one at a time) — assigning it to the other top corner swaps the displaced button into place rather than discarding it
+- The Game Manual button appears automatically whenever the current game has a scanned manual, independent of the automatic "Manual" screen behavior setting
+- A custom-app button follows the same this-screen/other-screen launch preference (and indicator dot) as the App Drawer and App Dock
 
 ### Visual Customization
 
@@ -102,6 +113,16 @@ _Extensive customization options let you tailor the companion display to your pr
 - Custom system images, system logos, and background music folders
 - Screen behavior control during gameplay and the screensaver (on, dimmed, off, or the game's manual) — plus a manual double-tap-anywhere gesture to blank/unblank the screen at any time
 - Adjustable overlay opacity shared across the App Drawer, App Dock, and other overlay surfaces
+
+### Automatic Updates
+
+_ES-DE Companion checks GitHub for newer releases itself — no need to watch the Releases page._
+
+**Update Features:**
+- Silent check on every app start, auto-showing a dialog when a newer version is found
+- Manual "Check for Updates" entry in Settings → Setup
+- One-tap download and install, handling the Android "install unknown apps" permission prompt for you
+- A one-time "what's new" dialog with that release's notes after the app actually updates
 
 ## Requirements
 
