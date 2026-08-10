@@ -8,7 +8,7 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.1-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 ES-DE Companion is a companion application for [ES-DE](https://es-de.org) that enhances your gaming experience by transforming dual-screen Android devices into immersive retro gaming setups. The app displays beautiful game artwork, videos, and customizable overlay widgets on a secondary screen while you browse and play games in ES-DE.
@@ -123,6 +123,15 @@ _ES-DE Companion checks GitHub for newer releases itself — no need to watch th
 - Manual "Check for Updates" entry in Settings → Other Settings
 - One-tap download and install, handling the Android "install unknown apps" permission prompt for you
 - A one-time "what's new" dialog with that release's notes after the app actually updates
+
+### Backup & Restore
+
+_Export your entire configuration to a file, and bring it back with one restore — handy before a reinstall, a factory reset, or setting up a replacement device._
+
+**Backup Features:**
+- Settings → Setup → "Backup & Restore" exports every setting — Setup folder paths, UI/Video/Music/Other Settings, Floating Action Button assignments, App Drawer/Dock configuration and folders, and both widget canvases — to a single JSON file you choose the name and location for
+- Restoring reads a previously exported file back, with a confirmation step first since it overwrites every current setting
+- No extra permissions or setup required beyond picking where the file goes
 
 ## Requirements
 

@@ -18,7 +18,8 @@ This comprehensive guide covers everything you need to know about ES-DE Companio
 10. [File Structure](#file-structure)
 11. [How Log Events Work](#how-log-events-work)
 12. [In-App Updates](#in-app-updates)
-13. [Advanced Topics](#advanced-topics)
+13. [Backup & Restore](#backup--restore)
+14. [Advanced Topics](#advanced-topics)
 
 ---
 
@@ -484,6 +485,9 @@ There's no "Show Settings Button" toggle anymore — Settings visibility on the 
 | Custom System Images Folder | Optional folder picker | Not set |
 | Custom Logos Folder | Optional folder picker | Not set |
 | Custom Music Folder | Optional folder picker | Not set |
+| Backup & Restore | Export Backup / Restore Backup buttons | n/a |
+
+**Backup & Restore** is the bottom row of this category — see [Backup & Restore](#backup--restore) for the full export/restore flow.
 
 ---
 
@@ -577,6 +581,44 @@ ES-DE Companion checks GitHub for newer releases itself — no need to check the
 - **Manual check**: Settings → Other Settings → Check for Updates (the top row of that category) runs the same check on demand, showing "Up to date," "Update available," or "Check failed" next to it once it completes.
 - **Installing**: confirming "Download & Install" in the dialog requires granting Android's "Install unknown apps" permission for ES-DE Companion the first time — the dialog walks you through the permission prompt, then downloads the APK and opens the system installer automatically once it finishes.
 - **"What's new"**: separately from the update dialog, the first time the app starts after actually being updated, a one-time "What's new" dialog shows that version's release notes — so you still see them even if you installed the update some other way (e.g. sideloading a new APK manually) rather than through the in-app prompt.
+
+---
+
+## Backup & Restore
+
+Settings → Setup → "Backup & Restore" lets you export your entire configuration to a file and bring it back with one restore — useful before a reinstall, a factory reset, or setting up a replacement device the same way.
+
+### What Gets Backed Up
+
+Everything this app persists as a user setting:
+
+- Setup folder paths (ES-DE folder, Media folder, Custom System Images/Logos/Music folders)
+- UI Settings (theme, overlay opacity, Screen Behavior, Floating Action Button assignments)
+- Video Playback and Background Music settings
+- Other Settings (Close Companion App on ES-DE Quit, Launch ES-DE on Companion App Start, Debug Logging)
+- App Drawer and Dock settings — hidden apps, grid columns, other-screen launch preferences, folders, and Dock configuration
+- Both widget canvases (System View and Game View), including every placed widget and its per-widget configuration
+
+Not included: the onboarding-complete flag, the "what's new" last-seen-version marker, and other purely internal bookkeeping that isn't really a user setting.
+
+### Exporting
+
+1. Go to Settings → Setup and tap **Export Backup**
+2. Pick where to save the file and what to name it — this uses Android's standard "Save As" file picker, so it works with local storage, cloud-backed providers, or anywhere else the picker offers
+3. The file is a plain JSON file — safe to inspect, rename, or move around
+
+### Restoring
+
+1. Go to Settings → Setup and tap **Restore Backup**
+2. Pick a previously exported file
+3. Confirm — restoring **overwrites every current setting** with what's in the file, so review the confirmation prompt before continuing
+4. Settings update immediately; no restart required
+
+### Things to Know
+
+- Restoring is a full overwrite of everything a backup covers, not a selective merge — you can't restore just one setting from a file
+- Folder paths and package names (hidden apps, Dock apps, App Drawer folders) restore exactly as saved. If you're restoring onto a different device or after uninstalling an app that was referenced, that reference just has no effect rather than causing an error — the same as if you'd removed it normally
+- A backup made by a newer version of the app is rejected if restored into an older version, with a clear error, rather than silently applying only part of it
 
 ---
 

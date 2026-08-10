@@ -66,6 +66,10 @@ Not a blocker — it's advisory only, and it doesn't stop onboarding from finish
 
 Folder paths can be changed any time from Settings → Setup — there's no need to redo the whole wizard. There's no manual "redo setup" button; the onboarding wizard only reappears automatically if "All files access" gets revoked, in which case it restarts with your previous folder choices already filled in.
 
+### Can I back up and restore my settings?
+
+Yes: Settings → Setup → "Backup & Restore" exports every setting (folder paths, UI/Video/Music/Other Settings, Floating Action Buttons, App Drawer/Dock configuration and folders, and both widget canvases) to a JSON file you choose the name and location for. Restoring reads a previously exported file back, after a confirmation prompt since it overwrites every current setting. Handy before a reinstall, a factory reset, or setting up a replacement device the same way. See [Backup & Restore](USERGUIDE.md#backup--restore) in the User Guide for the full details, including what's deliberately left out.
+
 ### The app isn't updating when I browse games in ES-DE. What's wrong?
 
 Check these in order:
