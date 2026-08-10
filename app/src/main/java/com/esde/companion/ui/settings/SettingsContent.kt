@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -1044,6 +1045,8 @@ internal fun AppDrawerSettingsContent(
     onGridColumnsChanged: (Int) -> Unit,
     sortFoldersOnTop: Boolean,
     onSortFoldersOnTopChanged: (Boolean) -> Unit,
+    showSearchBar: Boolean,
+    onShowSearchBarChanged: (Boolean) -> Unit,
     onManageAppsClick: () -> Unit,
     dockEnabled: Boolean,
     onDockEnabledChanged: (Boolean) -> Unit,
@@ -1061,12 +1064,50 @@ internal fun AppDrawerSettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ManageAppsEntry(onClick = onManageAppsClick)
+        ShowSearchBarSetting(enabled = showSearchBar, onEnabledChanged = onShowSearchBarChanged)
         GridColumnsSetting(columns = gridColumns, onColumnsChanged = onGridColumnsChanged)
         SortFoldersOnTopSetting(enabled = sortFoldersOnTop, onEnabledChanged = onSortFoldersOnTopChanged)
         DockEnabledSetting(enabled = dockEnabled, onEnabledChanged = onDockEnabledChanged)
         if (dockEnabled) {
             DockMaxAppsSetting(maxApps = dockMaxApps, onMaxAppsChanged = onDockMaxAppsChanged)
             DockSizeSetting(size = dockSize, onSizeChanged = onDockSizeChanged)
+        }
+    }
+}
+
+@Composable
+private fun ShowSearchBarSetting(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                SettingsLabel(icon = Icons.Filled.Search, text = "Show Search Bar")
+                Text(
+                    text = "Search bar and settings shortcuts at the top of the app drawer",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnabledChanged(it)
+                },
+            )
         }
     }
 }

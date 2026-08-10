@@ -20,6 +20,7 @@ import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
@@ -49,11 +50,13 @@ class AppDrawerViewModelTest {
         initialColumns: Int = 4,
         initialOtherScreenLaunchApps: Set<String> = emptySet(),
         initialSortFoldersOnTop: Boolean = true,
+        initialShowSearchBar: Boolean = true,
     ) : AppDrawerSettingsRepository {
         val hiddenApps = MutableStateFlow(initialHiddenApps)
         val columns = MutableStateFlow(initialColumns)
         val otherScreenLaunchApps = MutableStateFlow(initialOtherScreenLaunchApps)
         val sortFoldersOnTop = MutableStateFlow(initialSortFoldersOnTop)
+        val showSearchBar = MutableStateFlow(initialShowSearchBar)
 
         override suspend fun setHiddenApps(packageNames: Set<String>) {
             hiddenApps.value = packageNames
@@ -78,6 +81,12 @@ class AppDrawerViewModelTest {
         }
 
         override fun observeSortFoldersOnTop(): Flow<Boolean> = sortFoldersOnTop
+
+        override suspend fun setShowSearchBar(show: Boolean) {
+            showSearchBar.value = show
+        }
+
+        override fun observeShowSearchBar(): Flow<Boolean> = showSearchBar
     }
 
     private class FakeAppFolderRepository(initialFolders: List<AppFolder> = emptyList()) : AppFolderRepository {
@@ -235,8 +244,62 @@ class AppDrawerViewModelTest {
             observeAppFolders = ObserveAppFoldersUseCase(folderRepository),
             setAppFolders = SetAppFoldersUseCase(folderRepository),
             observeSortFoldersOnTop = ObserveSortFoldersOnTopUseCase(settingsRepository),
+            observeShowSearchBar = ObserveShowSearchBarUseCase(settingsRepository),
         )
     }
+
+    @Test
+    fun `setSearchQuery filters drawerItems to matching apps including hidden ones`() =
+        runTest(testDispatcher) {
+            val settingsRepository = FakeAppDrawerSettingsRepository(initialHiddenApps = setOf("com.example.b"))
+            val viewModel = buildViewModel(settingsRepository = settingsRepository)
+
+            val collectJob = launch { viewModel.drawerItems.collect {} }
+            advanceUntilIdle()
+
+            viewModel.setSearchQuery("App B")
+            advanceUntilIdle()
+
+            assertEquals(listOf(DrawerItem.App(allApps[1])), viewModel.drawerItems.value)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `clearSearchQuery restores the unfiltered drawer list`() =
+        runTest(testDispatcher) {
+            val viewModel = buildViewModel()
+
+            val collectJob = launch { viewModel.drawerItems.collect {} }
+            advanceUntilIdle()
+
+            viewModel.setSearchQuery("App C")
+            advanceUntilIdle()
+            assertEquals(listOf(DrawerItem.App(allApps[2])), viewModel.drawerItems.value)
+
+            viewModel.clearSearchQuery()
+            advanceUntilIdle()
+
+            assertEquals(allApps.map(DrawerItem::App), viewModel.drawerItems.value)
+            assertEquals("", viewModel.searchQuery.value)
+            collectJob.cancel()
+        }
+
+    @Test
+    fun `showSearchBar reflects the persisted setting`() =
+        runTest(testDispatcher) {
+            val settingsRepository = FakeAppDrawerSettingsRepository(initialShowSearchBar = false)
+            val viewModel = buildViewModel(settingsRepository = settingsRepository)
+
+            val collectJob = launch { viewModel.showSearchBar.collect {} }
+            advanceUntilIdle()
+            assertEquals(false, viewModel.showSearchBar.value)
+
+            settingsRepository.setShowSearchBar(true)
+            advanceUntilIdle()
+
+            assertEquals(true, viewModel.showSearchBar.value)
+            collectJob.cancel()
+        }
 
     @Test
     fun `drawerItems excludes hidden packages`() =

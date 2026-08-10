@@ -20,6 +20,11 @@ object AppLauncher {
         context.startActivity(intent, options?.toBundle())
     }
 
+    /** Opens Android's top-level system Settings app (not this app's own settings). */
+    fun openSystemSettings(context: Context) {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+    }
+
     /** Opens Android's own "App info" system screen for [packageName]. */
     fun openAppInfo(
         context: Context,

@@ -65,7 +65,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -146,6 +148,16 @@ private sealed interface FolderPickerState {
  * folder panel (and an in-progress add-to-folder dialog) when the drawer itself is dragged
  * closed, since both would otherwise float over an invisible drawer sheet - see the
  * `LaunchedEffect(isDrawerOpen)` below.
+ *
+ * Above the grid sits [AppDrawerHeader] (search + Android/companion settings shortcuts),
+ * toggleable via Settings > App Drawer and Dock > "Show Search Bar". A non-empty search
+ * query flattens [drawerItems] to matching apps *including hidden ones* (searching is how
+ * a hidden app gets found again - see searchDrawerApps); those results keep the normal
+ * [AppLongPressMenu], where "Hide App" on an already-hidden app is an idempotent no-op.
+ * The query is cleared whenever the drawer closes, which also covers every launch path
+ * (they all end in [onAppLaunched] closing the drawer). [onOpenSettings] opens the Main
+ * Menu popup over the still-open drawer - its own BackHandler wins LIFO, so back closes
+ * the menu first, then the drawer.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -154,6 +166,7 @@ fun AppDrawer(
     onAppLaunched: () -> Unit,
     onFolderOpenChanged: (Boolean) -> Unit = {},
     isDrawerOpen: Boolean = true,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val drawerItems by viewModel.drawerItems.collectAsStateWithLifecycle()
@@ -161,7 +174,11 @@ fun AppDrawer(
     val otherScreenLaunchApps by viewModel.otherScreenLaunchApps.collectAsStateWithLifecycle()
     val drawerOpacityPercent by viewModel.drawerOpacityPercent.collectAsStateWithLifecycle()
     val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val showSearchBar by viewModel.showSearchBar.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Read once here, at AppDrawer's own top-level recomposition scope, rather than letting
     // each grid item call drawerContentColor()/drawerBackgroundColor() internally deep inside
@@ -190,6 +207,11 @@ fun AppDrawer(
             openFolderId = null
             folderPickerState = null
             renamingFolder = null
+            // Legacy parity: closing the drawer (including via launching an app, which
+            // always closes it) resets the search, so it reopens showing the full grid.
+            viewModel.clearSearchQuery()
+            keyboardController?.hide()
+            focusManager.clearFocus()
         }
     }
 
@@ -204,101 +226,135 @@ fun AppDrawer(
 
     SharedTransitionLayout(modifier = modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize()) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(gridColumns),
+            // The translucent sheet background lives on this Column (not the grid) so the
+            // header and grid share one surface with no seam between them.
+            Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         // Standard convention: 0% = fully transparent, 100% = fully opaque.
                         .background(backgroundColor.copy(alpha = drawerOpacityPercent / 100f)),
-                contentPadding = PaddingValues(24.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                items(
-                    drawerItems,
-                    key = { item ->
+                if (showSearchBar) {
+                    val headerModifier =
+                        Modifier
+                            .fillMaxWidth()
+                            // Top padding clears the AppDrawerHandle pill MainScreen overlays
+                            // on the top edge of this same sheet.
+                            .padding(start = 24.dp, end = 24.dp, top = 36.dp)
+                    AppDrawerHeader(
+                        searchQuery = searchQuery,
+                        onSearchQueryChange = viewModel::setSearchQuery,
+                        onOpenAndroidSettings = {
+                            AppLauncher.openSystemSettings(context)
+                            onAppLaunched()
+                        },
+                        onOpenAppSettings = onOpenSettings,
+                        contentColor = contentColor,
+                        modifier = headerModifier,
+                    )
+                }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(gridColumns),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding =
+                        if (showSearchBar) {
+                            PaddingValues(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 24.dp)
+                        } else {
+                            PaddingValues(24.dp)
+                        },
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(
+                        drawerItems,
+                        key = { item ->
+                            when (item) {
+                                is DrawerItem.App -> item.app.packageName
+                                is DrawerItem.Folder -> item.folder.id
+                            }
+                        },
+                    ) { item ->
                         when (item) {
-                            is DrawerItem.App -> item.app.packageName
-                            is DrawerItem.Folder -> item.folder.id
-                        }
-                    },
-                ) { item ->
-                    when (item) {
-                        is DrawerItem.App -> {
-                            val app = item.app
-                            val isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName)
+                            is DrawerItem.App -> {
+                                val app = item.app
+                                val isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName)
 
-                            AppDrawerItem(
-                                app = app,
-                                isOtherScreenPreferred = isOtherScreenPreferred,
-                                isInsideFolder = false,
-                                contentColor = contentColor,
-                                onClick = {
-                                    val displayId =
+                                AppDrawerItem(
+                                    app = app,
+                                    isOtherScreenPreferred = isOtherScreenPreferred,
+                                    isInsideFolder = false,
+                                    contentColor = contentColor,
+                                    onClick = {
+                                        val displayId =
+                                            if (isOtherScreenPreferred) {
+                                                SecondaryDisplayResolver.secondaryDisplayId(context)
+                                            } else {
+                                                null
+                                            }
+                                        AppLauncher.launch(context, app.packageName, displayId = displayId)
+                                        onAppLaunched()
+                                    },
+                                    onDoubleClick = {
+                                        // Toggle: double-tap always does the opposite of the app's current
+                                        // saved preference, not "always other screen" - so double-tapping
+                                        // twice in a row round-trips back to where it started.
                                         if (isOtherScreenPreferred) {
-                                            SecondaryDisplayResolver.secondaryDisplayId(context)
+                                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
+                                            AppLauncher.launch(context, app.packageName)
                                         } else {
-                                            null
+                                            val secondaryDisplayId =
+                                                SecondaryDisplayResolver.secondaryDisplayId(context)
+                                            if (secondaryDisplayId != null) {
+                                                viewModel.recordLaunchLocation(
+                                                    app.packageName,
+                                                    LaunchLocation.OtherScreen,
+                                                )
+                                            }
+                                            AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
                                         }
-                                    AppLauncher.launch(context, app.packageName, displayId = displayId)
-                                    onAppLaunched()
-                                },
-                                onDoubleClick = {
-                                    // Toggle: double-tap always does the opposite of the app's current
-                                    // saved preference, not "always other screen" - so double-tapping
-                                    // twice in a row round-trips back to where it started.
-                                    if (isOtherScreenPreferred) {
+                                        onAppLaunched()
+                                    },
+                                    onLaunchThisScreen = {
                                         viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
                                         AppLauncher.launch(context, app.packageName)
-                                    } else {
+                                        onAppLaunched()
+                                    },
+                                    onLaunchOtherScreen = {
+                                        viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
                                         val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
-                                        if (secondaryDisplayId != null) {
-                                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
-                                        }
                                         AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
-                                    }
-                                    onAppLaunched()
-                                },
-                                onLaunchThisScreen = {
-                                    viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
-                                    AppLauncher.launch(context, app.packageName)
-                                    onAppLaunched()
-                                },
-                                onLaunchOtherScreen = {
-                                    viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
-                                    val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
-                                    AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
-                                    onAppLaunched()
-                                },
-                                onAppInfo = {
-                                    AppLauncher.openAppInfo(context, app.packageName)
-                                    onAppLaunched()
-                                },
-                                onHideApp = { viewModel.hideApp(app.packageName) },
-                                onAddToFolder = { folderPickerState = FolderPickerState.Picking(app.packageName) },
-                                onRemoveFromFolder = {},
-                            )
-                        }
-                        is DrawerItem.Folder -> {
-                            // Fades out (no size animation) rather than disposing immediately, so
-                            // the tile's own sharedBounds has a moment to hand off to the panel's -
-                            // see FolderDrawerItem's kdoc for the "other tiles reflow once this
-                            // finishes" tradeoff this accepts.
-                            AnimatedVisibility(
-                                visible = item.folder.id != openFolderId,
-                                enter = fadeIn(),
-                                exit = fadeOut(),
-                            ) {
-                                FolderDrawerItem(
-                                    folder = item.folder,
-                                    apps = item.apps,
-                                    contentColor = contentColor,
-                                    sharedTransitionScope = this@SharedTransitionLayout,
-                                    animatedVisibilityScope = this@AnimatedVisibility,
-                                    onClick = { openFolderId = item.folder.id },
-                                    onLongClick = { renamingFolder = item.folder },
+                                        onAppLaunched()
+                                    },
+                                    onAppInfo = {
+                                        AppLauncher.openAppInfo(context, app.packageName)
+                                        onAppLaunched()
+                                    },
+                                    onHideApp = { viewModel.hideApp(app.packageName) },
+                                    onAddToFolder = { folderPickerState = FolderPickerState.Picking(app.packageName) },
+                                    onRemoveFromFolder = {},
                                 )
+                            }
+                            is DrawerItem.Folder -> {
+                                // Fades out (no size animation) rather than disposing immediately, so
+                                // the tile's own sharedBounds has a moment to hand off to the panel's -
+                                // see FolderDrawerItem's kdoc for the "other tiles reflow once this
+                                // finishes" tradeoff this accepts.
+                                AnimatedVisibility(
+                                    visible = item.folder.id != openFolderId,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    FolderDrawerItem(
+                                        folder = item.folder,
+                                        apps = item.apps,
+                                        contentColor = contentColor,
+                                        sharedTransitionScope = this@SharedTransitionLayout,
+                                        animatedVisibilityScope = this@AnimatedVisibility,
+                                        onClick = { openFolderId = item.folder.id },
+                                        onLongClick = { renamingFolder = item.folder },
+                                    )
+                                }
                             }
                         }
                     }

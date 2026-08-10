@@ -48,6 +48,10 @@ class ManageAppsViewModelTest {
         override suspend fun setSortFoldersOnTop(sortOnTop: Boolean) { /* not under test */ }
 
         override fun observeSortFoldersOnTop(): Flow<Boolean> = MutableStateFlow(true)
+
+        override suspend fun setShowSearchBar(show: Boolean) { /* not under test */ }
+
+        override fun observeShowSearchBar(): Flow<Boolean> = MutableStateFlow(true)
     }
 
     private val testDispatcher = StandardTestDispatcher()

@@ -12,12 +12,15 @@ import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -35,7 +38,13 @@ class AppDrawerViewModel(
     private val observeAppFolders: ObserveAppFoldersUseCase,
     private val setAppFolders: SetAppFoldersUseCase,
     observeSortFoldersOnTop: ObserveSortFoldersOnTopUseCase,
+    observeShowSearchBar: ObserveShowSearchBarUseCase,
 ) : ViewModel() {
+    /** Live search text typed into the drawer header - VM-local, never persisted. A
+     * non-empty value switches [drawerItems] to buildDrawerItems' flat search branch. */
+    private val searchQueryFlow = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = searchQueryFlow.asStateFlow()
+
     // Merges installed apps (minus hidden ones) with persisted folders into the flat
     // grid - see buildDrawerItems for the actual merge/filter/sort logic, and
     // ObserveSortFoldersOnTopUseCase for the App Drawer setting that picks between
@@ -46,12 +55,23 @@ class AppDrawerViewModel(
             observeHiddenApps(),
             observeAppFolders(),
             observeSortFoldersOnTop(),
+            searchQueryFlow,
             ::buildDrawerItems,
         ).stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
             initialValue = emptyList(),
         )
+
+    /** Whether the drawer renders its header (search bar + settings shortcuts) - the
+     * Settings > App Drawer and Dock > "Show Search Bar" toggle. */
+    val showSearchBar: StateFlow<Boolean> =
+        observeShowSearchBar()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = true,
+            )
 
     /** Raw folder list (id/name/membership) - feeds the "add to folder" picker, kept
      * separate from [drawerItems] rather than derived via filterIsInstance since it's the
@@ -104,6 +124,14 @@ class AppDrawerViewModel(
             val updated = if (location == LaunchLocation.OtherScreen) current + packageName else current - packageName
             setOtherScreenLaunchApps(updated)
         }
+    }
+
+    fun setSearchQuery(query: String) {
+        searchQueryFlow.value = query
+    }
+
+    fun clearSearchQuery() {
+        searchQueryFlow.value = ""
     }
 
     fun hideApp(packageName: String) {
