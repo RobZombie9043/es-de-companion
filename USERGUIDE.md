@@ -308,18 +308,23 @@ The app drawer provides full access to all installed Android apps directly from 
 
 ### Using the App Drawer
 
+**Search and shortcuts:**
+- A search field sits above the grid by default (Settings → App Drawer and Dock → "Show Search Bar" toggle, on by default — see [Settings Reference](#settings-reference)) — type to filter the grid by app name, case-insensitive
+- Search matches *every* app, including hidden ones — it's the way to find a hidden app again without going to Settings → Manage Apps. A hidden app found this way carries a small bold **H** mark on its icon
+- Apps that belong to a folder show up as ordinary flat tiles when they match a search, not nested inside a folder tile — folder tiles themselves never appear in search results
+- Tap the **×** in the field to clear it, or just close the drawer — the query always resets when the drawer closes (and also when the "Show Search Bar" toggle itself is turned off)
+- Two icon buttons sit to the right of the search field: a gear opens Android's own system Settings, and a hamburger opens this app's own Settings/Main Menu popup on top of the still-open drawer
+
 **Launching apps:**
 - **Single tap** launches the app at whichever screen it last launched on (defaults to "this screen" the first time).
 - **Double tap** launches it on the *other* screen than the single-tap default, and remembers that as the new preference. If no secondary display is available, this just launches on the current screen instead, without changing the saved preference.
-- **Long-press** opens a menu: "Launch on this screen," "Launch on other screen," "App Info," "Add to Folder" (or "Remove from Folder" for an app already inside one — see [Folders](#folders)), and "Hide App."
+- **Long-press** opens a menu: "Launch on this screen," "Launch on other screen," "App Info," then either "Remove from Folder" (an app already inside one, including a folder member found via search — see [Folders](#folders)) or "Add to Folder" (omitted for a hidden app found via search), and finally "Hide App" (or "Unhide App" for a hidden app found via search).
 
 Launching any app automatically closes the drawer.
 
-There is no search box in the drawer — it lists every visible installed app in the grid.
-
 ### Managing App Visibility
 
-Go to **Settings → App Drawer and Dock → Manage Apps** to see every installed app with a checkbox — unchecking an app hides it from the drawer (and from the dock's add-app picker). There's no in-drawer "unhide" option; that's done from this same Settings screen.
+Go to **Settings → App Drawer and Dock → Manage Apps** to see every installed app with a checkbox — unchecking an app hides it from the drawer (and from the dock's add-app picker). You can also unhide an app directly from the drawer: search for it by name (search matches hidden apps too — see [Using the App Drawer](#using-the-app-drawer)) and choose "Unhide App" from its long-press menu.
 
 ### Folders
 
@@ -437,11 +442,14 @@ See [Floating Action Buttons](#floating-action-buttons) for what each corner opt
 | Manage Apps | Opens a checklist of every installed app | Checked = visible in App Drawer | All visible |
 | Grid columns | Slider | 3-6 | 5 |
 | Sort folders on top of apps | Toggle | On/Off | On |
+| Show Search Bar | Toggle | On/Off | On |
 | Enable Dock | Toggle | On/Off | Off |
 | Maximum dock apps | Slider (shown only if dock enabled) | 2-5 | 5 |
 | Dock size | Segmented control (shown only if dock enabled) | Small / Medium / Large | Medium |
 
 `Sort folders on top of apps`: when on, folders are grouped ahead of all ungrouped apps; when off, folders and apps are interleaved into one alphabetical list by name/label. See [Folders](#folders).
+
+`Show Search Bar`: shows or hides the search field and Android/App Settings shortcut buttons above the drawer grid. Turning it off clears any in-progress search query. See [Using the App Drawer](#using-the-app-drawer).
 
 ### Video Playback
 

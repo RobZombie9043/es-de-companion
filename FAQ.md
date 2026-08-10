@@ -211,6 +211,10 @@ Swipe up anywhere on the companion screen.
 
 Yes: Settings → App Drawer and Dock → Manage Apps shows every installed app with a checkbox; unchecking one hides it from both the App Drawer and the App Dock's add-app picker.
 
+### Is there a search bar in the App Drawer?
+
+Yes, on by default — a search field above the grid filters by app name as you type, case-insensitive. It's controlled by Settings → App Drawer and Dock → "Show Search Bar." Search also matches hidden apps (marked with a small "H"), so it's the quickest way to find one again without going to Manage Apps — long-press it and choose "Unhide App." Two shortcut buttons next to the field open Android's system Settings and this app's own Settings menu. The query clears automatically whenever the drawer closes.
+
 ### How do I launch apps on the other screen?
 
 - **Double-tap** an app in the drawer or dock to launch it on the other screen (and remember that as the new default for that app), or

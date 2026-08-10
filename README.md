@@ -70,6 +70,7 @@ _A full Android app launcher accessible from the companion screen, plus an optio
 
 **Drawer Features:**
 - Swipe up anywhere on the companion screen to open
+- Optional search field (on by default) that filters by name as you type, including hidden apps — the way to find one again without leaving the drawer — plus one-tap shortcuts to Android's system Settings and this app's own Settings menu
 - Customizable grid layout (3-6 columns)
 - App visibility control (hide unwanted apps)
 - Per-app display preferences (launch on this screen or the other screen)
