@@ -19,6 +19,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
@@ -29,6 +30,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
@@ -43,6 +45,7 @@ import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
@@ -52,6 +55,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
@@ -72,8 +76,12 @@ class SettingsViewModel(
     private val validateMediaFolderUseCase: ValidateEsdeMediaFolderUseCase,
     private val observeGamePlayingBehaviorUseCase: ObserveGamePlayingBehaviorUseCase,
     private val setGamePlayingBehaviorUseCase: SetGamePlayingBehaviorUseCase,
+    private val observeGamePlayingDimPercentUseCase: ObserveGamePlayingDimPercentUseCase,
+    private val setGamePlayingDimPercentUseCase: SetGamePlayingDimPercentUseCase,
     private val observeScreensaverBehaviorUseCase: ObserveScreensaverBehaviorUseCase,
     private val setScreensaverBehaviorUseCase: SetScreensaverBehaviorUseCase,
+    private val observeScreensaverDimPercentUseCase: ObserveScreensaverDimPercentUseCase,
+    private val setScreensaverDimPercentUseCase: SetScreensaverDimPercentUseCase,
     private val observeThemePreferenceUseCase: ObserveThemePreferenceUseCase,
     private val setThemePreferenceUseCase: SetThemePreferenceUseCase,
     private val observeOverlayOpacityUseCase: ObserveOverlayOpacityUseCase,
@@ -172,7 +180,9 @@ class SettingsViewModel(
             customLogosFolderPath = onboardingRepository.observeCustomLogosFolderPath().first(),
             customMusicFolderPath = onboardingRepository.observeCustomMusicFolderPath().first(),
             gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first(),
+            gamePlayingDimPercent = observeGamePlayingDimPercentUseCase().first(),
             screensaverBehavior = observeScreensaverBehaviorUseCase().first(),
+            screensaverDimPercent = observeScreensaverDimPercentUseCase().first(),
             themePreference = observeThemePreferenceUseCase().first(),
             overlayOpacityPercent = observeOverlayOpacityUseCase().first(),
             gridColumns = observeGridColumnsUseCase().first(),
@@ -236,9 +246,19 @@ class SettingsViewModel(
         viewModelScope.launch { setGamePlayingBehaviorUseCase(behavior) }
     }
 
+    fun onGamePlayingDimPercentChanged(percent: Int) {
+        _uiState.value = _uiState.value.copy(gamePlayingDimPercent = percent)
+        viewModelScope.launch { setGamePlayingDimPercentUseCase(percent) }
+    }
+
     fun onScreensaverBehaviorChanged(behavior: ScreenBehavior) {
         _uiState.value = _uiState.value.copy(screensaverBehavior = behavior)
         viewModelScope.launch { setScreensaverBehaviorUseCase(behavior) }
+    }
+
+    fun onScreensaverDimPercentChanged(percent: Int) {
+        _uiState.value = _uiState.value.copy(screensaverDimPercent = percent)
+        viewModelScope.launch { setScreensaverDimPercentUseCase(percent) }
     }
 
     fun onVideoPlaybackEnabledChanged(enabled: Boolean) {

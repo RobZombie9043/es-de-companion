@@ -36,7 +36,9 @@ internal class FakeOnboardingRepository(
     customMusicFolderPath: String? = null,
     themePreference: ThemePreference = ThemePreference.Auto,
     gamePlayingBehavior: ScreenBehavior = ScreenBehavior.Nothing,
+    gamePlayingDimPercent: Int = 50,
     screensaverBehavior: ScreenBehavior = ScreenBehavior.Nothing,
+    screensaverDimPercent: Int = 50,
     overlayOpacityPercent: Int = 80,
     fabAssignments: FabAssignments = FabAssignments.Default,
     videoPlaybackEnabled: Boolean = false,
@@ -58,7 +60,9 @@ internal class FakeOnboardingRepository(
     private val customMusicFolderPathFlow = MutableStateFlow(customMusicFolderPath)
     private val themePreferenceFlow = MutableStateFlow(themePreference)
     private val gamePlayingBehaviorFlow = MutableStateFlow(gamePlayingBehavior)
+    private val gamePlayingDimPercentFlow = MutableStateFlow(gamePlayingDimPercent)
     private val screensaverBehaviorFlow = MutableStateFlow(screensaverBehavior)
+    private val screensaverDimPercentFlow = MutableStateFlow(screensaverDimPercent)
     private val overlayOpacityPercentFlow = MutableStateFlow(overlayOpacityPercent)
     private val fabAssignmentsFlow = MutableStateFlow(fabAssignments)
     private val videoPlaybackEnabledFlow = MutableStateFlow(videoPlaybackEnabled)
@@ -129,11 +133,23 @@ internal class FakeOnboardingRepository(
 
     override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = gamePlayingBehaviorFlow
 
+    override suspend fun setGamePlayingDimPercent(percent: Int) {
+        gamePlayingDimPercentFlow.value = percent
+    }
+
+    override fun observeGamePlayingDimPercent(): Flow<Int> = gamePlayingDimPercentFlow
+
     override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {
         screensaverBehaviorFlow.value = behavior
     }
 
     override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = screensaverBehaviorFlow
+
+    override suspend fun setScreensaverDimPercent(percent: Int) {
+        screensaverDimPercentFlow.value = percent
+    }
+
+    override fun observeScreensaverDimPercent(): Flow<Int> = screensaverDimPercentFlow
 
     override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
         videoPlaybackEnabledFlow.value = enabled

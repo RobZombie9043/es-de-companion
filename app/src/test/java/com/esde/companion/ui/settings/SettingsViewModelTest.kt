@@ -26,6 +26,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
@@ -36,6 +37,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
@@ -50,6 +52,7 @@ import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
@@ -59,6 +62,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
@@ -84,10 +88,12 @@ import org.junit.Test
 class SettingsViewModelTest {
     private class FakeOnboardingRepository : OnboardingRepository {
         var gamePlayingBehavior = ScreenBehavior.Nothing
+        var gamePlayingDimPercent = 50
         var videoPlaybackEnabled = false
         var videoDelaySeconds = 0
         var videoAudioEnabled = true
         var screensaverBehavior = ScreenBehavior.Nothing
+        var screensaverDimPercent = 50
         var themePreference = ThemePreference.Auto
         var musicEnabled = true
         var musicPlayWhileBrowsingSystems = true
@@ -156,11 +162,23 @@ class SettingsViewModelTest {
 
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(gamePlayingBehavior)
 
+        override suspend fun setGamePlayingDimPercent(percent: Int) {
+            gamePlayingDimPercent = percent
+        }
+
+        override fun observeGamePlayingDimPercent(): Flow<Int> = flowOf(gamePlayingDimPercent)
+
         override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {
             screensaverBehavior = behavior
         }
 
         override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(screensaverBehavior)
+
+        override suspend fun setScreensaverDimPercent(percent: Int) {
+            screensaverDimPercent = percent
+        }
+
+        override fun observeScreensaverDimPercent(): Flow<Int> = flowOf(screensaverDimPercent)
 
         override suspend fun setThemePreference(preference: ThemePreference) {
             themePreference = preference
@@ -374,8 +392,12 @@ class SettingsViewModelTest {
                 observeVideoAudioEnabledUseCase = ObserveVideoAudioEnabledUseCase(onboardingRepository),
                 setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository),
                 setGamePlayingBehaviorUseCase = SetGamePlayingBehaviorUseCase(onboardingRepository),
+                observeGamePlayingDimPercentUseCase = ObserveGamePlayingDimPercentUseCase(onboardingRepository),
+                setGamePlayingDimPercentUseCase = SetGamePlayingDimPercentUseCase(onboardingRepository),
                 observeScreensaverBehaviorUseCase = ObserveScreensaverBehaviorUseCase(onboardingRepository),
                 setScreensaverBehaviorUseCase = SetScreensaverBehaviorUseCase(onboardingRepository),
+                observeScreensaverDimPercentUseCase = ObserveScreensaverDimPercentUseCase(onboardingRepository),
+                setScreensaverDimPercentUseCase = SetScreensaverDimPercentUseCase(onboardingRepository),
                 observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository),
                 setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository),
                 observeOverlayOpacityUseCase = ObserveOverlayOpacityUseCase(onboardingRepository),
@@ -446,6 +468,24 @@ class SettingsViewModelTest {
 
             advanceUntilIdle()
             assertEquals(85, onboardingRepository.overlayOpacityPercent)
+        }
+
+    @Test
+    fun `onGamePlayingDimPercentChanged and onScreensaverDimPercentChanged update ui state immediately and persist`() =
+        runTest(testDispatcher) {
+            val onboardingRepository = FakeOnboardingRepository()
+            val (viewModel, _) = buildViewModel(onboardingRepository = onboardingRepository)
+            advanceUntilIdle()
+
+            viewModel.onGamePlayingDimPercentChanged(65)
+            viewModel.onScreensaverDimPercentChanged(30)
+
+            assertEquals(65, viewModel.uiState.value.gamePlayingDimPercent)
+            assertEquals(30, viewModel.uiState.value.screensaverDimPercent)
+
+            advanceUntilIdle()
+            assertEquals(65, onboardingRepository.gamePlayingDimPercent)
+            assertEquals(30, onboardingRepository.screensaverDimPercent)
         }
 
     @Test

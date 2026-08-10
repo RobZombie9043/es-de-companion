@@ -275,6 +275,8 @@ class MainActivity : ComponentActivity() {
                             // while a game is playing / the screensaver is active.
                             val gamePlayingBehavior by viewModel.gamePlayingBehavior.collectAsStateWithLifecycle()
                             val screensaverBehavior by viewModel.screensaverBehavior.collectAsStateWithLifecycle()
+                            val gamePlayingDimPercent by viewModel.gamePlayingDimPercent.collectAsStateWithLifecycle()
+                            val screensaverDimPercent by viewModel.screensaverDimPercent.collectAsStateWithLifecycle()
 
                             val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))
 
@@ -430,6 +432,12 @@ class MainActivity : ComponentActivity() {
                                     is AppState.Screensaver -> screensaverBehavior
                                     else -> ScreenBehavior.Nothing
                                 }
+                            val activeDimPercent =
+                                when ((connectionState as? EsdeConnectionState.Connected)?.appState) {
+                                    is AppState.PlayingGame -> gamePlayingDimPercent
+                                    is AppState.Screensaver -> screensaverDimPercent
+                                    else -> 0
+                                }
 
                             val isBrowsingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
                             val showVideoOverlay =
@@ -583,7 +591,7 @@ class MainActivity : ComponentActivity() {
                                         modifier =
                                             Modifier
                                                 .fillMaxSize()
-                                                .background(Color.Black.copy(alpha = 0.5f)),
+                                                .background(Color.Black.copy(alpha = activeDimPercent / 100f)),
                                     )
                                 }
 

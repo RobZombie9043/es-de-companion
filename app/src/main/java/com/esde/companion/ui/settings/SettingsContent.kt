@@ -523,8 +523,12 @@ internal fun UISettingsContent(
     onOverlayOpacityChanged: (Int) -> Unit,
     gamePlayingBehavior: ScreenBehavior,
     onGamePlayingBehaviorChanged: (ScreenBehavior) -> Unit,
+    gamePlayingDimPercent: Int,
+    onGamePlayingDimPercentChanged: (Int) -> Unit,
     screensaverBehavior: ScreenBehavior,
     onScreensaverBehaviorChanged: (ScreenBehavior) -> Unit,
+    screensaverDimPercent: Int,
+    onScreensaverDimPercentChanged: (Int) -> Unit,
     fabAssignments: FabAssignments,
     installedApps: List<InstalledApp>,
     onFabTypeChanged: (FabPosition, FabType) -> Unit,
@@ -546,6 +550,7 @@ internal fun UISettingsContent(
             options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual),
             selected = gamePlayingBehavior,
             onSelected = onGamePlayingBehaviorChanged,
+            dimAmount = DimAmountControl(gamePlayingDimPercent, onGamePlayingDimPercentChanged),
         )
         ScreenBehaviorPicker(
             title = "Screensaver Screen Behavior",
@@ -553,6 +558,7 @@ internal fun UISettingsContent(
             options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black),
             selected = screensaverBehavior,
             onSelected = onScreensaverBehaviorChanged,
+            dimAmount = DimAmountControl(screensaverDimPercent, onScreensaverDimPercentChanged),
         )
         FabControlSetting(
             fabAssignments = fabAssignments,
@@ -913,6 +919,7 @@ private fun ScreenBehaviorPicker(
     options: List<ScreenBehavior>,
     selected: ScreenBehavior,
     onSelected: (ScreenBehavior) -> Unit,
+    dimAmount: DimAmountControl,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -947,7 +954,40 @@ private fun ScreenBehaviorPicker(
                     )
                 }
             }
+            if (selected == ScreenBehavior.Dim) {
+                DimAmountSlider(percent = dimAmount.percent, onPercentChanged = dimAmount.onPercentChanged)
+            }
         }
+    }
+}
+
+/** Bundles a Dim amount with its change handler into one [ScreenBehaviorPicker] parameter,
+ * keeping that function's parameter count under detekt's LongParameterList threshold. */
+private data class DimAmountControl(
+    val percent: Int,
+    val onPercentChanged: (Int) -> Unit,
+)
+
+/**
+ * Strength of the translucent black scrim MainActivity draws when a Screen Behavior
+ * picker above is set to Dim - only shown while that's the current selection, same
+ * on-demand-reveal idiom as VideoDelaySetting appearing only once video playback is
+ * enabled.
+ */
+@Composable
+private fun DimAmountSlider(
+    percent: Int,
+    onPercentChanged: (Int) -> Unit,
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(text = "Dim Amount: $percent%", style = MaterialTheme.typography.bodyMedium)
+        Slider(
+            value = percent.toFloat(),
+            onValueChange = { onPercentChanged(it.roundToInt()) },
+            onValueChangeFinished = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) },
+            valueRange = 0f..100f,
+        )
     }
 }
 

@@ -6,7 +6,9 @@ import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,9 @@ import kotlinx.coroutines.flow.stateIn
 class MainViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeGamePlayingBehavior: ObserveGamePlayingBehaviorUseCase,
+    observeGamePlayingDimPercent: ObserveGamePlayingDimPercentUseCase,
     observeScreensaverBehavior: ObserveScreensaverBehaviorUseCase,
+    observeScreensaverDimPercent: ObserveScreensaverDimPercentUseCase,
     observeVideoPlaybackEnabled: ObserveVideoPlaybackEnabledUseCase,
 ) : ViewModel() {
     val connectionState: StateFlow<EsdeConnectionState> =
@@ -59,4 +63,27 @@ class MainViewModel(
                 started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
                 initialValue = ScreenBehavior.Nothing,
             )
+
+    // Strength of the Dim scrim above, 0-100 - see OnboardingRepository.
+    // setGamePlayingDimPercent's kdoc. Only consulted by MainActivity while the
+    // corresponding behavior is actually ScreenBehavior.Dim.
+    val gamePlayingDimPercent: StateFlow<Int> =
+        observeGamePlayingDimPercent()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = DEFAULT_DIM_PERCENT,
+            )
+
+    val screensaverDimPercent: StateFlow<Int> =
+        observeScreensaverDimPercent()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = DEFAULT_DIM_PERCENT,
+            )
+
+    private companion object {
+        const val DEFAULT_DIM_PERCENT = 50
+    }
 }

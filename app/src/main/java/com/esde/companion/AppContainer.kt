@@ -75,6 +75,7 @@ import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeQuitEventUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
@@ -91,6 +92,7 @@ import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
@@ -117,6 +119,7 @@ import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
+import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import com.esde.companion.domain.usecase.SetLastGameReferenceUseCase
@@ -131,6 +134,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
@@ -339,8 +343,12 @@ class AppContainer(context: Context) {
 
     val observeGamePlayingBehaviorUseCase = ObserveGamePlayingBehaviorUseCase(onboardingRepository)
     val setGamePlayingBehaviorUseCase = SetGamePlayingBehaviorUseCase(onboardingRepository)
+    val observeGamePlayingDimPercentUseCase = ObserveGamePlayingDimPercentUseCase(onboardingRepository)
+    val setGamePlayingDimPercentUseCase = SetGamePlayingDimPercentUseCase(onboardingRepository)
     val observeScreensaverBehaviorUseCase = ObserveScreensaverBehaviorUseCase(onboardingRepository)
     val setScreensaverBehaviorUseCase = SetScreensaverBehaviorUseCase(onboardingRepository)
+    val observeScreensaverDimPercentUseCase = ObserveScreensaverDimPercentUseCase(onboardingRepository)
+    val setScreensaverDimPercentUseCase = SetScreensaverDimPercentUseCase(onboardingRepository)
     val observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository)
     val setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository)
     val observeVideoPlaybackEnabledUseCase = ObserveVideoPlaybackEnabledUseCase(onboardingRepository)

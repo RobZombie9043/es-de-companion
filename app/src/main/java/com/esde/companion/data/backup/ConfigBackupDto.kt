@@ -29,7 +29,9 @@ internal data class ConfigBackupDto(
     val customMusicFolderPath: String? = null,
     val themePreference: String,
     val gamePlayingBehavior: String,
+    val gamePlayingDimPercent: Int = DEFAULT_DIM_PERCENT,
     val screensaverBehavior: String,
+    val screensaverDimPercent: Int = DEFAULT_DIM_PERCENT,
     val overlayOpacityPercent: Int,
     val fabTopStartType: String,
     val fabTopStartCustomApp: String? = null,
@@ -69,3 +71,7 @@ internal data class AppFolderDto(
     val name: String,
     val memberPackageNames: Set<String>,
 )
+
+/** Matches [com.esde.companion.data.settings.FileOnboardingRepository]'s own default,
+ * used when decoding a pre-Dim-slider backup that has no dim percent fields at all. */
+private const val DEFAULT_DIM_PERCENT = 50

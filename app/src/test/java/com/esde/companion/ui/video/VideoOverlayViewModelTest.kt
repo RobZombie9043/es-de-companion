@@ -117,9 +117,17 @@ class VideoOverlayViewModelTest {
 
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
 
+        override suspend fun setGamePlayingDimPercent(percent: Int) {}
+
+        override fun observeGamePlayingDimPercent(): Flow<Int> = flowOf(50)
+
         override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {}
 
         override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
+
+        override suspend fun setScreensaverDimPercent(percent: Int) {}
+
+        override fun observeScreensaverDimPercent(): Flow<Int> = flowOf(50)
 
         override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
             playbackEnabled.value = enabled

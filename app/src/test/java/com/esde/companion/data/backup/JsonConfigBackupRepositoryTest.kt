@@ -22,7 +22,9 @@ class JsonConfigBackupRepositoryTest {
             customMusicFolderPath = null,
             themePreference = ThemePreference.Auto,
             gamePlayingBehavior = ScreenBehavior.Nothing,
+            gamePlayingDimPercent = 50,
             screensaverBehavior = ScreenBehavior.Nothing,
+            screensaverDimPercent = 50,
             overlayOpacityPercent = 80,
             fabAssignments = FabAssignments.Default,
             videoPlaybackEnabled = false,
@@ -79,6 +81,19 @@ class JsonConfigBackupRepositoryTest {
         val result = repository.deserialize(json)
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `a backup from before the Dim slider existed decodes with the default dim percent`() {
+        val repository = JsonConfigBackupRepository()
+        val json =
+            repository.serialize(minimalSnapshot())
+                .replace("\"gamePlayingDimPercent\":50,", "")
+                .replace("\"screensaverDimPercent\":50,", "")
+
+        val result = repository.deserialize(json)
+
+        assertEquals(Result.success(minimalSnapshot()), result)
     }
 
     @Test

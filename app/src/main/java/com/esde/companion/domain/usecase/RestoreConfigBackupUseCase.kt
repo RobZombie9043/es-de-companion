@@ -72,7 +72,9 @@ class RestoreConfigBackupUseCase(
             }
             setThemePreference(snapshot.themePreference)
             setGamePlayingBehavior(snapshot.gamePlayingBehavior)
+            setGamePlayingDimPercent(snapshot.gamePlayingDimPercent)
             setScreensaverBehavior(snapshot.screensaverBehavior)
+            setScreensaverDimPercent(snapshot.screensaverDimPercent)
             setOverlayOpacityPercent(snapshot.overlayOpacityPercent)
             setFabAssignments(snapshot.fabAssignments)
             setVideoPlaybackEnabled(snapshot.videoPlaybackEnabled)

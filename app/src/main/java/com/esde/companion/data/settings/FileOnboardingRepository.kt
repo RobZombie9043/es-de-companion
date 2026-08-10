@@ -125,6 +125,13 @@ class FileOnboardingRepository(
             } ?: ScreenBehavior.Nothing
         }
 
+    override suspend fun setGamePlayingDimPercent(percent: Int) {
+        context.onboardingDataStore.edit { it[GAME_PLAYING_DIM_PERCENT_KEY] = percent.coerceIn(0, 100) }
+    }
+
+    override fun observeGamePlayingDimPercent(): Flow<Int> =
+        context.onboardingDataStore.data.map { it[GAME_PLAYING_DIM_PERCENT_KEY] ?: DEFAULT_DIM_PERCENT }
+
     override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {
         context.onboardingDataStore.edit { it[SCREENSAVER_BEHAVIOR_KEY] = behavior.name }
     }
@@ -135,6 +142,13 @@ class FileOnboardingRepository(
                 runCatching { ScreenBehavior.valueOf(stored) }.getOrNull()
             } ?: ScreenBehavior.Nothing
         }
+
+    override suspend fun setScreensaverDimPercent(percent: Int) {
+        context.onboardingDataStore.edit { it[SCREENSAVER_DIM_PERCENT_KEY] = percent.coerceIn(0, 100) }
+    }
+
+    override fun observeScreensaverDimPercent(): Flow<Int> =
+        context.onboardingDataStore.data.map { it[SCREENSAVER_DIM_PERCENT_KEY] ?: DEFAULT_DIM_PERCENT }
 
     override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
         context.onboardingDataStore.edit { it[VIDEO_PLAYBACK_ENABLED_KEY] = enabled }
@@ -283,6 +297,7 @@ class FileOnboardingRepository(
         const val MAX_VIDEO_DELAY_SECONDS = 10
         const val DEFAULT_VIDEO_DELAY_SECONDS = 3
         const val DEFAULT_OVERLAY_OPACITY_PERCENT = 80
+        const val DEFAULT_DIM_PERCENT = 50
 
         val LOG_FOLDER_PATH_KEY = stringPreferencesKey("log_folder_path")
         val MEDIA_FOLDER_PATH_KEY = stringPreferencesKey("media_folder_path")
@@ -291,7 +306,9 @@ class FileOnboardingRepository(
         val ONBOARDING_COMPLETE_KEY = booleanPreferencesKey("onboarding_complete")
         val THEME_PREFERENCE_KEY = stringPreferencesKey("theme_preference")
         val GAME_PLAYING_BEHAVIOR_KEY = stringPreferencesKey("game_playing_behavior")
+        val GAME_PLAYING_DIM_PERCENT_KEY = intPreferencesKey("game_playing_dim_percent")
         val SCREENSAVER_BEHAVIOR_KEY = stringPreferencesKey("screensaver_behavior")
+        val SCREENSAVER_DIM_PERCENT_KEY = intPreferencesKey("screensaver_dim_percent")
         val VIDEO_PLAYBACK_ENABLED_KEY = booleanPreferencesKey("video_playback_enabled")
         val VIDEO_DELAY_SECONDS_KEY = intPreferencesKey("video_delay_seconds")
         val VIDEO_AUDIO_ENABLED_KEY = booleanPreferencesKey("video_audio_enabled")

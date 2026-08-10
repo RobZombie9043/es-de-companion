@@ -21,10 +21,12 @@ class CompleteOnboardingUseCaseTest {
         val savedCustomLogosPaths = mutableListOf<String>()
         var markedComplete = false
         var gamePlayingBehavior = ScreenBehavior.Nothing
+        var gamePlayingDimPercent = 50
         var videoPlaybackEnabled = false
         var videoDelaySeconds = 0
         var videoAudioEnabled = true
         var screensaverBehavior = ScreenBehavior.Nothing
+        var screensaverDimPercent = 50
         var themePreference = ThemePreference.Auto
         var musicEnabled = true
         var musicPlayWhileBrowsingSystems = true
@@ -98,11 +100,23 @@ class CompleteOnboardingUseCaseTest {
 
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(gamePlayingBehavior)
 
+        override suspend fun setGamePlayingDimPercent(percent: Int) {
+            gamePlayingDimPercent = percent
+        }
+
+        override fun observeGamePlayingDimPercent(): Flow<Int> = flowOf(gamePlayingDimPercent)
+
         override suspend fun setScreensaverBehavior(behavior: ScreenBehavior) {
             screensaverBehavior = behavior
         }
 
         override fun observeScreensaverBehavior(): Flow<ScreenBehavior> = flowOf(screensaverBehavior)
+
+        override suspend fun setScreensaverDimPercent(percent: Int) {
+            screensaverDimPercent = percent
+        }
+
+        override fun observeScreensaverDimPercent(): Flow<Int> = flowOf(screensaverDimPercent)
 
         override suspend fun setThemePreference(preference: ThemePreference) {
             themePreference = preference

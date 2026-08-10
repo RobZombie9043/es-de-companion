@@ -15,7 +15,9 @@ class MainViewModelFactory(
         return MainViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeGamePlayingBehavior = appContainer.observeGamePlayingBehaviorUseCase,
+            observeGamePlayingDimPercent = appContainer.observeGamePlayingDimPercentUseCase,
             observeScreensaverBehavior = appContainer.observeScreensaverBehaviorUseCase,
+            observeScreensaverDimPercent = appContainer.observeScreensaverDimPercentUseCase,
             observeVideoPlaybackEnabled = appContainer.observeVideoPlaybackEnabledUseCase,
         ) as T
     }

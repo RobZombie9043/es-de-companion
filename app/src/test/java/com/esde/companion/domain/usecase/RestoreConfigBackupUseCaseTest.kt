@@ -31,7 +31,9 @@ private class SourceFixture {
             logFolderPath = "/storage/emulated/0/CustomESDE",
             themePreference = ThemePreference.Dark,
             gamePlayingBehavior = ScreenBehavior.Dim,
+            gamePlayingDimPercent = 70,
             screensaverBehavior = ScreenBehavior.Black,
+            screensaverDimPercent = 25,
             overlayOpacityPercent = 33,
             fabAssignments = fabAssignments,
             videoPlaybackEnabled = true,
@@ -97,6 +99,8 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals("/storage/emulated/0/CustomESDE", targetOnboarding.observeLogFolderPath().first())
             assertEquals(ThemePreference.Dark, targetOnboarding.observeThemePreference().first())
             assertEquals(ScreenBehavior.Dim, targetOnboarding.observeGamePlayingBehavior().first())
+            assertEquals(70, targetOnboarding.observeGamePlayingDimPercent().first())
+            assertEquals(25, targetOnboarding.observeScreensaverDimPercent().first())
             assertEquals(33, targetOnboarding.observeOverlayOpacityPercent().first())
             assertEquals(FabType.CustomApp, targetOnboarding.observeFabAssignments().first().bottomEnd.type)
             assertEquals(MusicDuckingMode.Pause, targetOnboarding.observeMusicDuckingMode().first())

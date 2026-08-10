@@ -426,10 +426,12 @@ Tapping this category in the Settings popup jumps straight to the widget editor 
 | Theme | Segmented control | Auto / Light / Dark | Auto |
 | Overlay Opacity | Slider | 0-100% | 80% — applies to the App Drawer, App Dock, and other overlay surfaces |
 | Game Playing Screen Behavior | Segmented control | On / Dim / Off / Manual | On |
+| Game Playing Dim Amount | Slider (shown only when Game Playing Screen Behavior is Dim) | 0-100% | 50% |
 | Screensaver Screen Behavior | Segmented control | On / Dim / Off | On |
+| Screensaver Dim Amount | Slider (shown only when Screensaver Screen Behavior is Dim) | 0-100% | 50% |
 | Floating Action Buttons | Four dropdowns, one per corner | Music / Settings / Manual / App Drawer / App / None | Top Left: Music, Top Right: Settings, Bottom Left: None, Bottom Right: Manual |
 
-`Screen Behavior` options: **On** leaves the screen as normal; **Dim** overlays a translucent black scrim (touches still pass through); **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
+`Screen Behavior` options: **On** leaves the screen as normal; **Dim** overlays a translucent black scrim (touches still pass through), with its darkness set independently by the matching Dim Amount slider; **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
 
 Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — they're configured per widget from the Configure Widget dialog. See [Per-Widget Configuration](#per-widget-configuration).
 

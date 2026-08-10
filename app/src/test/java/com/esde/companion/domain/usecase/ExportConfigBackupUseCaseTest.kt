@@ -40,7 +40,9 @@ class ExportConfigBackupUseCaseTest {
             customMusicFolderPath = "/storage/emulated/0/Music",
             themePreference = ThemePreference.Dark,
             gamePlayingBehavior = ScreenBehavior.Dim,
+            gamePlayingDimPercent = 65,
             screensaverBehavior = ScreenBehavior.Black,
+            screensaverDimPercent = 20,
             overlayOpacityPercent = 42,
             fabAssignments = fabAssignments,
             videoPlaybackEnabled = true,
@@ -93,6 +95,8 @@ class ExportConfigBackupUseCaseTest {
             assertEquals("/storage/emulated/0/CustomESDE", snapshot.logFolderPath)
             assertEquals(ThemePreference.Dark, snapshot.themePreference)
             assertEquals(ScreenBehavior.Dim, snapshot.gamePlayingBehavior)
+            assertEquals(65, snapshot.gamePlayingDimPercent)
+            assertEquals(20, snapshot.screensaverDimPercent)
             assertEquals(42, snapshot.overlayOpacityPercent)
             assertEquals(FabType.CustomApp, snapshot.fabAssignments.bottomStart.type)
             assertEquals("com.example.app", snapshot.fabAssignments.bottomStart.customAppPackageName)

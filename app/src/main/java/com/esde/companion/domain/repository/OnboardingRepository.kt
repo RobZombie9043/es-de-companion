@@ -67,12 +67,27 @@ interface OnboardingRepository {
     fun observeGamePlayingBehavior(): Flow<ScreenBehavior>
 
     /**
+     * Strength of the translucent black scrim applied when [setGamePlayingBehavior] is
+     * [ScreenBehavior.Dim], 0-100 (0 = no dimming, 100 = fully opaque). Only meaningful
+     * while that behavior is Dim; stored independently so switching away from and back to
+     * Dim remembers the chosen amount. Defaults to 50.
+     */
+    suspend fun setGamePlayingDimPercent(percent: Int)
+
+    fun observeGamePlayingDimPercent(): Flow<Int>
+
+    /**
      * How the main screen should react while the ES-DE screensaver is active
      * (AppState.Screensaver). Defaults to [ScreenBehavior.Nothing].
      */
     suspend fun setScreensaverBehavior(behavior: ScreenBehavior)
 
     fun observeScreensaverBehavior(): Flow<ScreenBehavior>
+
+    /** Same as [setGamePlayingDimPercent], but for [setScreensaverBehavior]'s Dim scrim. */
+    suspend fun setScreensaverDimPercent(percent: Int)
+
+    fun observeScreensaverDimPercent(): Flow<Int>
 
     /**
      * Settings > Video Playback: whether game videos auto-play while AppState is
