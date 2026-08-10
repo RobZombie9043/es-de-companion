@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -153,11 +154,13 @@ private sealed interface FolderPickerState {
  *
  * Above the grid sits [AppDrawerHeader] (search + Android/companion settings shortcuts),
  * toggleable via Settings > App Drawer and Dock > "Show Search Bar". A non-empty search
- * query flattens [drawerItems] to matching apps *including hidden ones* (searching is how
- * a hidden app gets found again - see searchDrawerApps); a hidden result carries a small
- * "H" badge (see [AppDrawerItem]) and its [AppLongPressMenu] swaps "Hide App" for
- * "Unhide App" and drops "Add to Folder" (see [AppLongPressMenu]'s kdoc). The query is
- * cleared whenever the drawer closes, which also covers every launch path
+ * query flattens [drawerItems] to matching apps *including hidden and folder-member ones*
+ * (searching is how a hidden app gets found again - see searchDrawerApps); a hidden result
+ * carries a small "H" mark (see [AppDrawerItem]) and its [AppLongPressMenu] swaps
+ * "Hide App" for "Unhide App" and drops "Add to Folder", while a result that's a member of
+ * some folder gets "Remove from Folder" instead of "Add to Folder" even though its tile
+ * renders flat, not nested (see [AppLongPressMenu]'s kdoc and the `containingFolder` lookup
+ * below). The query is cleared whenever the drawer closes, which also covers every launch path
  * (they all end in [onAppLaunched] closing the drawer). [onOpenSettings] opens the Main
  * Menu popup over the still-open drawer - its own BackHandler wins LIFO, so back closes
  * the menu first, then the drawer.
@@ -292,11 +295,19 @@ fun AppDrawer(
                                 val app = item.app
                                 val isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName)
                                 val isHidden = hiddenApps.contains(app.packageName)
+                                // Normal browsing never surfaces a folder member as a flat
+                                // DrawerItem.App (buildDrawerItems routes it into a folder
+                                // tile instead), so this only ever resolves to non-null for
+                                // a search result - search flattens folder members out as
+                                // plain results (see buildDrawerItems), so the long-press
+                                // menu needs its own membership check to offer "Remove from
+                                // Folder" instead of "Add to Folder" for one.
+                                val containingFolder = folders.find { app.packageName in it.memberPackageNames }
 
                                 AppDrawerItem(
                                     app = app,
                                     isOtherScreenPreferred = isOtherScreenPreferred,
-                                    isInsideFolder = false,
+                                    isInsideFolder = containingFolder != null,
                                     isHidden = isHidden,
                                     contentColor = contentColor,
                                     onClick = {
@@ -346,7 +357,9 @@ fun AppDrawer(
                                     },
                                     onToggleHidden = { viewModel.setAppHidden(app.packageName, hidden = !isHidden) },
                                     onAddToFolder = { folderPickerState = FolderPickerState.Picking(app.packageName) },
-                                    onRemoveFromFolder = {},
+                                    onRemoveFromFolder = {
+                                        containingFolder?.let { viewModel.removeAppFromFolder(it.id, app.packageName) }
+                                    },
                                 )
                             }
                             is DrawerItem.Folder -> {
@@ -543,21 +556,13 @@ internal fun AppDrawerItem(
                 // hidden apps out entirely (see buildDrawerItems), so this is how a
                 // hidden app found via search is distinguished from a visible one.
                 if (isHidden) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .size(14.dp)
-                                .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "H",
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontSize = 9.sp,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                    Text(
+                        text = "H",
+                        modifier = Modifier.align(Alignment.TopEnd),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             }
             Text(
@@ -597,11 +602,14 @@ internal fun AppDrawerItem(
  *
  * [isInsideFolder] swaps "Add to Folder" for "Remove from Folder" - everything else stays
  * available in both contexts, since an app inside a folder is still an ordinary,
- * fully-launchable [InstalledApp]. [isHidden] is only ever true for a search result (see
- * [AppDrawerItem]) - it swaps "Hide App" for "Unhide App" and drops "Add to Folder"
- * entirely, since a hidden app was already pulled out of its folder when it was hidden
- * (see AppDrawerViewModel.setAppHidden) and re-adding it while still hidden would just
- * create a membership the grid can never show.
+ * fully-launchable [InstalledApp]. True either for a tile opened from inside a
+ * [FolderContentsPopup], or - despite rendering as a flat tile, not a nested one - a
+ * search result whose app happens to already belong to a folder (see the
+ * `containingFolder` lookup in [AppDrawer]'s item loop). [isHidden] is only ever true for
+ * a search result (see [AppDrawerItem]) - it swaps "Hide App" for "Unhide App" and drops
+ * "Add to Folder" entirely, since a hidden app was already pulled out of its folder when
+ * it was hidden (see AppDrawerViewModel.setAppHidden) and re-adding it while still hidden
+ * would just create a membership the grid can never show.
  */
 @Composable
 internal fun AppLongPressMenu(
