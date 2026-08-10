@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -365,7 +365,7 @@ private fun MainScreenContent(
                                     .align(position.toAlignment())
                                     .padding(CORNER_BUTTON_EDGE_PADDING),
                         ) {
-                            Icon(imageVector = Icons.Filled.Settings, contentDescription = "Main Menu")
+                            Icon(imageVector = Icons.Filled.Menu, contentDescription = "Main Menu")
                         }
                     FabType.AppDrawer ->
                         CornerFab(

@@ -94,6 +94,17 @@ class AppDrawerViewModel(
                 initialValue = emptySet(),
             )
 
+    /** Packages hidden from the normal grid - still reachable via search (see
+     * [buildDrawerItems]), which is where the App Drawer's "H" badge and the long-press
+     * menu's hidden-aware options actually come into play. */
+    val hiddenApps: StateFlow<Set<String>> =
+        observeHiddenApps()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = emptySet(),
+            )
+
     val drawerOpacityPercent: StateFlow<Int> =
         observeOverlayOpacity()
             .stateIn(
@@ -134,11 +145,35 @@ class AppDrawerViewModel(
         searchQueryFlow.value = ""
     }
 
-    fun hideApp(packageName: String) {
+    /** [hidden] is the new hidden state to apply for [packageName] - same shape as
+     * ManageAppsViewModel's onVisibilityToggled, since both mutate the same setting.
+     * Hiding also pulls the app out of whatever folder it belongs to (see
+     * [removeFromAnyFolder]) rather than leaving a stale membership that only
+     * buildDrawerItems' display-time filtering hides. */
+    fun setAppHidden(
+        packageName: String,
+        hidden: Boolean,
+    ) {
         viewModelScope.launch {
             val current = observeHiddenApps().first()
-            setHiddenApps(current + packageName)
+            val updated = if (hidden) current + packageName else current - packageName
+            setHiddenApps(updated)
+            if (hidden) removeFromAnyFolder(packageName)
         }
+    }
+
+    /** [packageName] belongs to at most one folder (see [addAppToFolder]'s
+     * single-membership invariant), so this just finds and empties it out of whichever
+     * one that is - emptying a folder entirely deletes it, same as explicit
+     * [removeAppFromFolder]. */
+    private suspend fun removeFromAnyFolder(packageName: String) {
+        val updated =
+            observeAppFolders().first().mapNotNull { folder ->
+                if (packageName !in folder.memberPackageNames) return@mapNotNull folder
+                val remaining = folder.memberPackageNames - packageName
+                remaining.ifEmpty { null }?.let { folder.copy(memberPackageNames = it) }
+            }
+        setAppFolders(updated)
     }
 
     fun createFolderAndAddApp(
@@ -171,9 +206,11 @@ class AppDrawerViewModel(
         }
     }
 
-    /** Explicit removal that empties a folder deletes it outright - unlike hiding/
-     * uninstalling its last member, which is filtered at display time only (see
-     * buildDrawerItems) and never mutates storage. */
+    /** Explicit removal that empties a folder deletes it outright - unlike an
+     * uninstalled last member, which is filtered at display time only (see
+     * buildDrawerItems) and never mutates storage. Hiding a member goes through
+     * [setAppHidden] instead, which performs this same removal explicitly rather than
+     * relying on display-time filtering. */
     fun removeAppFromFolder(
         folderId: String,
         packageName: String,

@@ -120,6 +120,10 @@ fun FolderContentsPopup(
                     app = app,
                     isOtherScreenPreferred = isOtherScreenPreferred,
                     isInsideFolder = true,
+                    // A folder's members are never hidden - buildDrawerItems already
+                    // filters hidden apps out of visibleByPackage before folder
+                    // membership is resolved - so this is always false here.
+                    isHidden = false,
                     contentColor = contentColor,
                     onClick = {
                         val displayId =
@@ -159,7 +163,7 @@ fun FolderContentsPopup(
                         AppLauncher.openAppInfo(context, app.packageName)
                         onAppLaunched()
                     },
-                    onHideApp = { viewModel.hideApp(app.packageName) },
+                    onToggleHidden = { viewModel.setAppHidden(app.packageName, hidden = true) },
                     onAddToFolder = {},
                     onRemoveFromFolder = { viewModel.removeAppFromFolder(folder.id, app.packageName) },
                 )

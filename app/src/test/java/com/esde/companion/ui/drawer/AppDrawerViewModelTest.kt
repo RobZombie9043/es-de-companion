@@ -523,14 +523,74 @@ class AppDrawerViewModelTest {
         }
 
     @Test
-    fun `hideApp adds the package to the hidden set without disturbing others`() =
+    fun `setAppHidden true adds the package to the hidden set without disturbing others`() =
         runTest(testDispatcher) {
             val settingsRepository = FakeAppDrawerSettingsRepository(initialHiddenApps = setOf("com.example.b"))
             val viewModel = buildViewModel(settingsRepository = settingsRepository)
 
-            viewModel.hideApp("com.example.a")
+            viewModel.setAppHidden("com.example.a", hidden = true)
             advanceUntilIdle()
 
             assertEquals(setOf("com.example.a", "com.example.b"), settingsRepository.hiddenApps.value)
+        }
+
+    @Test
+    fun `setAppHidden false removes the package from the hidden set`() =
+        runTest(testDispatcher) {
+            val settingsRepository =
+                FakeAppDrawerSettingsRepository(initialHiddenApps = setOf("com.example.a", "com.example.b"))
+            val viewModel = buildViewModel(settingsRepository = settingsRepository)
+
+            viewModel.setAppHidden("com.example.a", hidden = false)
+            advanceUntilIdle()
+
+            assertEquals(setOf("com.example.b"), settingsRepository.hiddenApps.value)
+        }
+
+    @Test
+    fun `setAppHidden true removes the app from its folder`() =
+        runTest(testDispatcher) {
+            val folder =
+                AppFolder(
+                    id = "folder-1",
+                    name = "Games",
+                    memberPackageNames = setOf("com.example.a", "com.example.b"),
+                )
+            val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
+            val viewModel = buildViewModel(folderRepository = folderRepository)
+
+            viewModel.setAppHidden("com.example.a", hidden = true)
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(folder.copy(memberPackageNames = setOf("com.example.b"))),
+                folderRepository.folders.value,
+            )
+        }
+
+    @Test
+    fun `setAppHidden true deletes the folder entirely if it was the only member`() =
+        runTest(testDispatcher) {
+            val folder = AppFolder(id = "folder-1", name = "Games", memberPackageNames = setOf("com.example.a"))
+            val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
+            val viewModel = buildViewModel(folderRepository = folderRepository)
+
+            viewModel.setAppHidden("com.example.a", hidden = true)
+            advanceUntilIdle()
+
+            assertEquals(emptyList<AppFolder>(), folderRepository.folders.value)
+        }
+
+    @Test
+    fun `setAppHidden true leaves folders untouched when the app is not a member of any`() =
+        runTest(testDispatcher) {
+            val folder = AppFolder(id = "folder-1", name = "Games", memberPackageNames = setOf("com.example.b"))
+            val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
+            val viewModel = buildViewModel(folderRepository = folderRepository)
+
+            viewModel.setAppHidden("com.example.a", hidden = true)
+            advanceUntilIdle()
+
+            assertEquals(listOf(folder), folderRepository.folders.value)
         }
 }

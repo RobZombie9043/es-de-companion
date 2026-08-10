@@ -1,10 +1,3 @@
 naming:
   FunctionNaming:
     ignoreAnnotated: ['Composable']
-
-# Composable functions idiomatically take one parameter per piece of state/callback plus
-# a trailing modifier - bundling them into holder classes to duck the count would hurt,
-# not help. Same reasoning as the FunctionNaming exemption above.
-complexity:
-  LongParameterList:
-    ignoreAnnotated: ['Composable']

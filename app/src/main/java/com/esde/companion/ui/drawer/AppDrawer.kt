@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -71,6 +72,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
@@ -152,9 +154,10 @@ private sealed interface FolderPickerState {
  * Above the grid sits [AppDrawerHeader] (search + Android/companion settings shortcuts),
  * toggleable via Settings > App Drawer and Dock > "Show Search Bar". A non-empty search
  * query flattens [drawerItems] to matching apps *including hidden ones* (searching is how
- * a hidden app gets found again - see searchDrawerApps); those results keep the normal
- * [AppLongPressMenu], where "Hide App" on an already-hidden app is an idempotent no-op.
- * The query is cleared whenever the drawer closes, which also covers every launch path
+ * a hidden app gets found again - see searchDrawerApps); a hidden result carries a small
+ * "H" badge (see [AppDrawerItem]) and its [AppLongPressMenu] swaps "Hide App" for
+ * "Unhide App" and drops "Add to Folder" (see [AppLongPressMenu]'s kdoc). The query is
+ * cleared whenever the drawer closes, which also covers every launch path
  * (they all end in [onAppLaunched] closing the drawer). [onOpenSettings] opens the Main
  * Menu popup over the still-open drawer - its own BackHandler wins LIFO, so back closes
  * the menu first, then the drawer.
@@ -172,6 +175,7 @@ fun AppDrawer(
     val drawerItems by viewModel.drawerItems.collectAsStateWithLifecycle()
     val folders by viewModel.folders.collectAsStateWithLifecycle()
     val otherScreenLaunchApps by viewModel.otherScreenLaunchApps.collectAsStateWithLifecycle()
+    val hiddenApps by viewModel.hiddenApps.collectAsStateWithLifecycle()
     val drawerOpacityPercent by viewModel.drawerOpacityPercent.collectAsStateWithLifecycle()
     val gridColumns by viewModel.gridColumns.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -212,6 +216,14 @@ fun AppDrawer(
             viewModel.clearSearchQuery()
             keyboardController?.hide()
             focusManager.clearFocus()
+        }
+    }
+    // The header (search field + its clear button) is the only UI that can clear a
+    // search query - hiding it via this toggle without also clearing the query would
+    // leave drawerItems permanently filtered with no way left to reset it.
+    LaunchedEffect(showSearchBar) {
+        if (!showSearchBar) {
+            viewModel.clearSearchQuery()
         }
     }
 
@@ -279,11 +291,13 @@ fun AppDrawer(
                             is DrawerItem.App -> {
                                 val app = item.app
                                 val isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName)
+                                val isHidden = hiddenApps.contains(app.packageName)
 
                                 AppDrawerItem(
                                     app = app,
                                     isOtherScreenPreferred = isOtherScreenPreferred,
                                     isInsideFolder = false,
+                                    isHidden = isHidden,
                                     contentColor = contentColor,
                                     onClick = {
                                         val displayId =
@@ -330,7 +344,7 @@ fun AppDrawer(
                                         AppLauncher.openAppInfo(context, app.packageName)
                                         onAppLaunched()
                                     },
-                                    onHideApp = { viewModel.hideApp(app.packageName) },
+                                    onToggleHidden = { viewModel.setAppHidden(app.packageName, hidden = !isHidden) },
                                     onAddToFolder = { folderPickerState = FolderPickerState.Picking(app.packageName) },
                                     onRemoveFromFolder = {},
                                 )
@@ -473,13 +487,14 @@ internal fun AppDrawerItem(
     app: InstalledApp,
     isOtherScreenPreferred: Boolean,
     isInsideFolder: Boolean,
+    isHidden: Boolean,
     contentColor: Color,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
     onLaunchThisScreen: () -> Unit,
     onLaunchOtherScreen: () -> Unit,
     onAppInfo: () -> Unit,
-    onHideApp: () -> Unit,
+    onToggleHidden: () -> Unit,
     onAddToFolder: () -> Unit,
     onRemoveFromFolder: () -> Unit,
 ) {
@@ -524,6 +539,26 @@ internal fun AppDrawerItem(
                                 .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                     )
                 }
+                // Only ever true for a search result - the normal grid already filters
+                // hidden apps out entirely (see buildDrawerItems), so this is how a
+                // hidden app found via search is distinguished from a visible one.
+                if (isHidden) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .size(14.dp)
+                                .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "H",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontSize = 9.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
             }
             Text(
                 text = app.label,
@@ -541,11 +576,12 @@ internal fun AppDrawerItem(
             appLabel = app.label,
             isOtherScreenPreferred = isOtherScreenPreferred,
             isInsideFolder = isInsideFolder,
+            isHidden = isHidden,
             onDismiss = { menuExpanded = false },
             onLaunchThisScreen = onLaunchThisScreen,
             onLaunchOtherScreen = onLaunchOtherScreen,
             onAppInfo = onAppInfo,
-            onHideApp = onHideApp,
+            onToggleHidden = onToggleHidden,
             onAddToFolder = onAddToFolder,
             onRemoveFromFolder = onRemoveFromFolder,
         )
@@ -561,7 +597,11 @@ internal fun AppDrawerItem(
  *
  * [isInsideFolder] swaps "Add to Folder" for "Remove from Folder" - everything else stays
  * available in both contexts, since an app inside a folder is still an ordinary,
- * fully-launchable [InstalledApp].
+ * fully-launchable [InstalledApp]. [isHidden] is only ever true for a search result (see
+ * [AppDrawerItem]) - it swaps "Hide App" for "Unhide App" and drops "Add to Folder"
+ * entirely, since a hidden app was already pulled out of its folder when it was hidden
+ * (see AppDrawerViewModel.setAppHidden) and re-adding it while still hidden would just
+ * create a membership the grid can never show.
  */
 @Composable
 internal fun AppLongPressMenu(
@@ -569,11 +609,12 @@ internal fun AppLongPressMenu(
     appLabel: String,
     isOtherScreenPreferred: Boolean,
     isInsideFolder: Boolean,
+    isHidden: Boolean,
     onDismiss: () -> Unit,
     onLaunchThisScreen: () -> Unit,
     onLaunchOtherScreen: () -> Unit,
     onAppInfo: () -> Unit,
-    onHideApp: () -> Unit,
+    onToggleHidden: () -> Unit,
     onAddToFolder: () -> Unit,
     onRemoveFromFolder: () -> Unit,
 ) {
@@ -635,7 +676,7 @@ internal fun AppLongPressMenu(
                     onRemoveFromFolder()
                 },
             )
-        } else {
+        } else if (!isHidden) {
             DropdownMenuItem(
                 text = { Text("Add to Folder") },
                 leadingIcon = { Icon(Icons.Filled.Folder, contentDescription = null) },
@@ -646,12 +687,17 @@ internal fun AppLongPressMenu(
             )
         }
         DropdownMenuItem(
-            text = { Text("Hide App") },
-            leadingIcon = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
+            text = { Text(if (isHidden) "Unhide App" else "Hide App") },
+            leadingIcon = {
+                Icon(
+                    if (isHidden) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                    contentDescription = null,
+                )
+            },
             onClick = {
                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                 onDismiss()
-                onHideApp()
+                onToggleHidden()
             },
         )
     }

@@ -65,7 +65,7 @@ fun buildDrawerItems(
  * points users here) and folder membership (members appear as plain flat results, and folder
  * tiles are suppressed entirely while searching; folder names are not searchable).
  */
-fun searchDrawerApps(
+private fun searchDrawerApps(
     installedApps: List<InstalledApp>,
     query: String,
 ): List<DrawerItem> {
