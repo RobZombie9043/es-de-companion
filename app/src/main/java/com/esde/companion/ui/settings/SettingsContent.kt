@@ -981,7 +981,7 @@ private fun DimAmountSlider(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = "Dim Amount: $percent%", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "Dimming Amount: $percent%", style = MaterialTheme.typography.bodyMedium)
         Slider(
             value = percent.toFloat(),
             onValueChange = { onPercentChanged(it.roundToInt()) },
