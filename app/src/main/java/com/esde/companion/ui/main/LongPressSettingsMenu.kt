@@ -176,6 +176,11 @@ fun LongPressSettingsMenu(
     val onEasterEggUnlocked: () -> Unit = {
         coroutineScope.launch { snackbarHostState.showSnackbar(EasterEggMessages.random()) }
     }
+    // Result feedback for SetupSettingsContent's Backup & Restore action - same snackbar
+    // the Easter egg above uses, just a different trigger.
+    val onBackupMessage: (String) -> Unit = { message ->
+        coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+    }
 
     // Steps back one level at a time, same chain SettingsScreen used - just closing the
     // whole popup (onDismiss) instead of leaving a full-screen destination as the last
@@ -264,6 +269,9 @@ fun LongPressSettingsMenu(
                                         onCustomLogosFolderCleared = settingsViewModel::onCustomLogosFolderCleared,
                                         onCustomMusicFolderPicked = settingsViewModel::onCustomMusicFolderPicked,
                                         onCustomMusicFolderCleared = settingsViewModel::onCustomMusicFolderCleared,
+                                        onExportBackup = settingsViewModel::exportBackupJson,
+                                        onRestoreBackup = settingsViewModel::restoreBackup,
+                                        onBackupMessage = onBackupMessage,
                                     )
                                 SettingsCategory.UI ->
                                     UISettingsContent(

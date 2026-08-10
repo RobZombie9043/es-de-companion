@@ -11,6 +11,7 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
@@ -34,6 +35,7 @@ import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -113,6 +115,8 @@ class SettingsViewModel(
     private val setLaunchEsdeOnStartEnabledUseCase: SetLaunchEsdeOnStartEnabledUseCase,
     private val observeDebugLoggingEnabledUseCase: ObserveDebugLoggingEnabledUseCase,
     private val setDebugLoggingEnabledUseCase: SetDebugLoggingEnabledUseCase,
+    private val exportConfigBackupUseCase: ExportConfigBackupUseCase,
+    private val restoreConfigBackupUseCase: RestoreConfigBackupUseCase,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
     // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient.
@@ -132,75 +136,80 @@ class SettingsViewModel(
                 _uiState.value = _uiState.value.copy(installedApps = apps)
             }
         }
-        viewModelScope.launch {
-            val logPath =
-                onboardingRepository.observeLogFolderPath().first()
-                    ?: onboardingRepository.defaultLogFolderPath()
-            val mediaPath =
-                onboardingRepository.observeMediaFolderPath().first()
-                    ?: onboardingRepository.defaultMediaFolderPath()
-            val customSystemImagesPath = onboardingRepository.observeCustomSystemImagesFolderPath().first()
-            val customLogosPath = onboardingRepository.observeCustomLogosFolderPath().first()
-            val customMusicPath = onboardingRepository.observeCustomMusicFolderPath().first()
-            val gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first()
-            val screensaverBehavior = observeScreensaverBehaviorUseCase().first()
-            val themePreference = observeThemePreferenceUseCase().first()
-            val overlayOpacityPercent = observeOverlayOpacityUseCase().first()
-            val gridColumns = observeGridColumnsUseCase().first()
-            val sortFoldersOnTop = observeSortFoldersOnTopUseCase().first()
-            val showSearchBar = observeShowSearchBarUseCase().first()
-            val dockEnabled = observeDockEnabledUseCase().first()
-            val dockMaxApps = observeDockMaxAppsUseCase().first()
-            val dockSize = observeDockSizeUseCase().first()
-            val videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first()
-            val videoDelaySeconds = observeVideoDelaySecondsUseCase().first()
-            val videoAudioEnabled = observeVideoAudioEnabledUseCase().first()
-            val musicEnabled = observeMusicEnabledUseCase().first()
-            val musicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase().first()
-            val musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first()
-            val musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first()
-            val musicDuckingMode = observeMusicDuckingModeUseCase().first()
-            val closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first()
-            val fabAssignments = observeFabAssignmentsUseCase().first()
-            val launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first()
-            val debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first()
-            _uiState.value =
-                _uiState.value.copy(
-                    logFolderPath = logPath,
-                    mediaFolderPath = mediaPath,
-                    customSystemImagesFolderPath = customSystemImagesPath,
-                    customLogosFolderPath = customLogosPath,
-                    customMusicFolderPath = customMusicPath,
-                    gamePlayingBehavior = gamePlayingBehavior,
-                    screensaverBehavior = screensaverBehavior,
-                    themePreference = themePreference,
-                    overlayOpacityPercent = overlayOpacityPercent,
-                    gridColumns = gridColumns,
-                    sortFoldersOnTop = sortFoldersOnTop,
-                    showSearchBar = showSearchBar,
-                    dockEnabled = dockEnabled,
-                    dockMaxApps = dockMaxApps,
-                    dockSize = dockSize,
-                    videoPlaybackEnabled = videoPlaybackEnabled,
-                    videoDelaySeconds = videoDelaySeconds,
-                    videoAudioEnabled = videoAudioEnabled,
-                    musicEnabled = musicEnabled,
-                    musicPlayWhileBrowsingSystems = musicPlayWhileBrowsingSystems,
-                    musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
-                    musicPlayDuringScreensaver = musicPlayDuringScreensaver,
-                    musicDuckingMode = musicDuckingMode,
-                    closeCompanionOnQuitEnabled = closeCompanionOnQuitEnabled,
-                    fabAssignments = fabAssignments,
-                    launchEsdeOnStartEnabled = launchEsdeOnStartEnabled,
-                    debugLoggingEnabled = debugLoggingEnabled,
-                )
-            validateLogFolder(logPath)
-            validateMediaFolder(mediaPath)
-            customSystemImagesPath?.let { validateCustomSystemImagesFolder(it) }
-            customLogosPath?.let { validateCustomLogosFolder(it) }
-            customMusicPath?.let { validateCustomMusicFolder(it) }
-        }
+        viewModelScope.launch { reloadSettingsState() }
     }
+
+    /**
+     * Loads every setting this screen shows from its repository/use case, replacing
+     * whatever's currently in [_uiState]. Runs once at startup (see [init]) and again after
+     * a successful [restoreBackup] - a bulk restore changes settings out from under this
+     * ViewModel's own individual `onXChanged` mutators, so the UI state needs a full reload
+     * rather than trusting it's still in sync.
+     */
+    private suspend fun reloadSettingsState() {
+        val loaded = readSettingsFromRepositories()
+        _uiState.value = loaded
+        validateLogFolder(loaded.logFolderPath)
+        validateMediaFolder(loaded.mediaFolderPath)
+        loaded.customSystemImagesFolderPath?.let { validateCustomSystemImagesFolder(it) }
+        loaded.customLogosFolderPath?.let { validateCustomLogosFolder(it) }
+        loaded.customMusicFolderPath?.let { validateCustomMusicFolder(it) }
+    }
+
+    /** The read half of [reloadSettingsState] - split out purely to stay under detekt's
+     * LongMethod threshold once every field this ViewModel loads lives in one place. */
+    private suspend fun readSettingsFromRepositories(): SettingsUiState {
+        val logPath =
+            onboardingRepository.observeLogFolderPath().first()
+                ?: onboardingRepository.defaultLogFolderPath()
+        val mediaPath =
+            onboardingRepository.observeMediaFolderPath().first()
+                ?: onboardingRepository.defaultMediaFolderPath()
+        return _uiState.value.copy(
+            logFolderPath = logPath,
+            mediaFolderPath = mediaPath,
+            customSystemImagesFolderPath = onboardingRepository.observeCustomSystemImagesFolderPath().first(),
+            customLogosFolderPath = onboardingRepository.observeCustomLogosFolderPath().first(),
+            customMusicFolderPath = onboardingRepository.observeCustomMusicFolderPath().first(),
+            gamePlayingBehavior = observeGamePlayingBehaviorUseCase().first(),
+            screensaverBehavior = observeScreensaverBehaviorUseCase().first(),
+            themePreference = observeThemePreferenceUseCase().first(),
+            overlayOpacityPercent = observeOverlayOpacityUseCase().first(),
+            gridColumns = observeGridColumnsUseCase().first(),
+            sortFoldersOnTop = observeSortFoldersOnTopUseCase().first(),
+            showSearchBar = observeShowSearchBarUseCase().first(),
+            dockEnabled = observeDockEnabledUseCase().first(),
+            dockMaxApps = observeDockMaxAppsUseCase().first(),
+            dockSize = observeDockSizeUseCase().first(),
+            videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first(),
+            videoDelaySeconds = observeVideoDelaySecondsUseCase().first(),
+            videoAudioEnabled = observeVideoAudioEnabledUseCase().first(),
+            musicEnabled = observeMusicEnabledUseCase().first(),
+            musicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase().first(),
+            musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first(),
+            musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first(),
+            musicDuckingMode = observeMusicDuckingModeUseCase().first(),
+            closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first(),
+            fabAssignments = observeFabAssignmentsUseCase().first(),
+            launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first(),
+            debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first(),
+        )
+    }
+
+    /** Settings > Setup > Backup & Restore's Export Backup action - see
+     * [ExportConfigBackupUseCase]. Returns the serialized backup content; the caller (the
+     * Composable that owns the SAF "Save As" picker result) writes it to the chosen Uri. */
+    suspend fun exportBackupJson(): String = exportConfigBackupUseCase()
+
+    /** Settings > Setup > Backup & Restore's Restore Backup action - see
+     * [RestoreConfigBackupUseCase]. [jsonText] is the already-read contents of the
+     * user-picked file (the caller reads it via ConfigBackupFileIo). Reloads this screen's
+     * own state from the repositories on success, since a bulk restore changes settings
+     * this ViewModel didn't itself mutate. */
+    suspend fun restoreBackup(jsonText: String): Result<Unit> =
+        restoreConfigBackupUseCase(jsonText).also { result ->
+            if (result.isSuccess) reloadSettingsState()
+        }
 
     fun refreshPermissionState(granted: Boolean) {
         _uiState.value = _uiState.value.copy(permissionGranted = granted)

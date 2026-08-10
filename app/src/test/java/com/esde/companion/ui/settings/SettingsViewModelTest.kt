@@ -1,5 +1,6 @@
 package com.esde.companion.ui.settings
 
+import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
@@ -15,6 +16,9 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
+import com.esde.companion.domain.usecase.FakeAppFolderRepository
+import com.esde.companion.domain.usecase.FakeWidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
@@ -38,6 +42,7 @@ import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -316,12 +321,46 @@ class SettingsViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /** [buildViewModel]'s two config-backup use cases, split into their own function purely
+     * to stay under detekt's LongMethod threshold once every other use case it wires joins
+     * them in one place. */
+    private fun configBackupUseCases(
+        onboardingRepository: FakeOnboardingRepository,
+        appDrawerSettingsRepository: FakeAppDrawerSettingsRepository,
+        dockSettingsRepository: FakeDockSettingsRepository,
+    ): Pair<ExportConfigBackupUseCase, RestoreConfigBackupUseCase> {
+        val configBackupRepository = JsonConfigBackupRepository()
+        val appFolderRepository = FakeAppFolderRepository()
+        val widgetLayoutRepository = FakeWidgetLayoutRepository()
+        val export =
+            ExportConfigBackupUseCase(
+                onboardingRepository,
+                appDrawerSettingsRepository,
+                appFolderRepository,
+                dockSettingsRepository,
+                widgetLayoutRepository,
+                configBackupRepository,
+            )
+        val restore =
+            RestoreConfigBackupUseCase(
+                onboardingRepository,
+                appDrawerSettingsRepository,
+                appFolderRepository,
+                dockSettingsRepository,
+                widgetLayoutRepository,
+                configBackupRepository,
+            )
+        return export to restore
+    }
+
     private fun buildViewModel(
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
         installedAppsRepository: FakeInstalledAppsRepository = FakeInstalledAppsRepository(),
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
+        val (exportConfigBackupUseCase, restoreConfigBackupUseCase) =
+            configBackupUseCases(onboardingRepository, appDrawerSettingsRepository, dockSettingsRepository)
         val viewModel =
             SettingsViewModel(
                 onboardingRepository = onboardingRepository,
@@ -372,6 +411,8 @@ class SettingsViewModelTest {
                 setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
                 observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository),
                 setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository),
+                exportConfigBackupUseCase = exportConfigBackupUseCase,
+                restoreConfigBackupUseCase = restoreConfigBackupUseCase,
             )
         return viewModel to appDrawerSettingsRepository
     }

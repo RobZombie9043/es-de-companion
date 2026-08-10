@@ -61,6 +61,8 @@ class SettingsViewModelFactory(
             setLaunchEsdeOnStartEnabledUseCase = appContainer.setLaunchEsdeOnStartEnabledUseCase,
             observeDebugLoggingEnabledUseCase = appContainer.observeDebugLoggingEnabledUseCase,
             setDebugLoggingEnabledUseCase = appContainer.setDebugLoggingEnabledUseCase,
+            exportConfigBackupUseCase = appContainer.exportConfigBackupUseCase,
+            restoreConfigBackupUseCase = appContainer.restoreConfigBackupUseCase,
         ) as T
     }
 }

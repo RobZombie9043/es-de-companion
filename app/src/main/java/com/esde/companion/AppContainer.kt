@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Environment
 import com.esde.companion.data.activity.ProcessActivityVisibilityRepository
 import com.esde.companion.data.apps.PackageManagerAppsRepository
+import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
@@ -34,6 +35,7 @@ import com.esde.companion.domain.repository.ActivityVisibilityRepository
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.BundledSystemLogoRepository
+import com.esde.companion.domain.repository.ConfigBackupRepository
 import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
@@ -56,6 +58,7 @@ import com.esde.companion.domain.usecase.CheckForUpdateUseCase
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.DownloadApkUseCase
+import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FetchReleaseNotesForVersionUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
@@ -103,6 +106,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
@@ -282,6 +286,29 @@ class AppContainer(context: Context) {
     val setDockSizeUseCase = SetDockSizeUseCase(dockSettingsRepository)
     val observeDockAppsUseCase = ObserveDockAppsUseCase(dockSettingsRepository)
     val setDockAppsUseCase = SetDockAppsUseCase(dockSettingsRepository)
+
+    // Settings > Setup > Backup & Restore. Reaches directly into the settings repositories
+    // above (rather than through their narrower per-field use cases) since export/restore
+    // needs every field at once - see ExportConfigBackupUseCase/RestoreConfigBackupUseCase.
+    private val configBackupRepository: ConfigBackupRepository = JsonConfigBackupRepository()
+    val exportConfigBackupUseCase =
+        ExportConfigBackupUseCase(
+            onboardingRepository = onboardingRepository,
+            appDrawerSettingsRepository = appDrawerSettingsRepository,
+            appFolderRepository = appFolderRepository,
+            dockSettingsRepository = dockSettingsRepository,
+            widgetLayoutRepository = widgetLayoutRepository,
+            configBackupRepository = configBackupRepository,
+        )
+    val restoreConfigBackupUseCase =
+        RestoreConfigBackupUseCase(
+            onboardingRepository = onboardingRepository,
+            appDrawerSettingsRepository = appDrawerSettingsRepository,
+            appFolderRepository = appFolderRepository,
+            dockSettingsRepository = dockSettingsRepository,
+            widgetLayoutRepository = widgetLayoutRepository,
+            configBackupRepository = configBackupRepository,
+        )
 
     val observeAppStateUseCase =
         ObserveAppStateUseCase(
