@@ -27,6 +27,7 @@ data class SettingsUiState(
     val overlayOpacityPercent: Int = 80,
     val gridColumns: Int = 4,
     val sortFoldersOnTop: Boolean = true,
+    val showSearchBar: Boolean = true,
     val dockEnabled: Boolean = false,
     val dockMaxApps: Int = 5,
     val dockSize: DockSize = DockSize.Medium,

@@ -28,6 +28,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -49,6 +50,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -78,6 +80,8 @@ class SettingsViewModel(
     private val setGridColumnsUseCase: SetGridColumnsUseCase,
     private val observeSortFoldersOnTopUseCase: ObserveSortFoldersOnTopUseCase,
     private val setSortFoldersOnTopUseCase: SetSortFoldersOnTopUseCase,
+    private val observeShowSearchBarUseCase: ObserveShowSearchBarUseCase,
+    private val setShowSearchBarUseCase: SetShowSearchBarUseCase,
     private val observeDockEnabledUseCase: ObserveDockEnabledUseCase,
     private val setDockEnabledUseCase: SetDockEnabledUseCase,
     private val observeDockMaxAppsUseCase: ObserveDockMaxAppsUseCase,
@@ -144,6 +148,7 @@ class SettingsViewModel(
             val overlayOpacityPercent = observeOverlayOpacityUseCase().first()
             val gridColumns = observeGridColumnsUseCase().first()
             val sortFoldersOnTop = observeSortFoldersOnTopUseCase().first()
+            val showSearchBar = observeShowSearchBarUseCase().first()
             val dockEnabled = observeDockEnabledUseCase().first()
             val dockMaxApps = observeDockMaxAppsUseCase().first()
             val dockSize = observeDockSizeUseCase().first()
@@ -172,6 +177,7 @@ class SettingsViewModel(
                     overlayOpacityPercent = overlayOpacityPercent,
                     gridColumns = gridColumns,
                     sortFoldersOnTop = sortFoldersOnTop,
+                    showSearchBar = showSearchBar,
                     dockEnabled = dockEnabled,
                     dockMaxApps = dockMaxApps,
                     dockSize = dockSize,
@@ -340,6 +346,11 @@ class SettingsViewModel(
     fun onSortFoldersOnTopChanged(sortOnTop: Boolean) {
         _uiState.value = _uiState.value.copy(sortFoldersOnTop = sortOnTop)
         viewModelScope.launch { setSortFoldersOnTopUseCase(sortOnTop) }
+    }
+
+    fun onShowSearchBarChanged(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showSearchBar = show)
+        viewModelScope.launch { setShowSearchBarUseCase(show) }
     }
 
     fun onDockEnabledChanged(enabled: Boolean) {

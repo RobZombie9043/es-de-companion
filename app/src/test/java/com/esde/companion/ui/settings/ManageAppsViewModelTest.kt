@@ -1,10 +1,14 @@
 package com.esde.companion.ui.settings
 
+import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
+import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
+import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
+import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +52,20 @@ class ManageAppsViewModelTest {
         override suspend fun setSortFoldersOnTop(sortOnTop: Boolean) { /* not under test */ }
 
         override fun observeSortFoldersOnTop(): Flow<Boolean> = MutableStateFlow(true)
+
+        override suspend fun setShowSearchBar(show: Boolean) { /* not under test */ }
+
+        override fun observeShowSearchBar(): Flow<Boolean> = MutableStateFlow(true)
+    }
+
+    private class FakeAppFolderRepository(initialFolders: List<AppFolder> = emptyList()) : AppFolderRepository {
+        val folders = MutableStateFlow(initialFolders)
+
+        override suspend fun setFolders(folders: List<AppFolder>) {
+            this.folders.value = folders
+        }
+
+        override fun observeFolders(): Flow<List<AppFolder>> = folders
     }
 
     private val testDispatcher = StandardTestDispatcher()
@@ -71,6 +89,7 @@ class ManageAppsViewModelTest {
     private fun buildViewModel(
         apps: List<InstalledApp> = allApps,
         settingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
+        folderRepository: FakeAppFolderRepository = FakeAppFolderRepository(),
     ): Pair<ManageAppsViewModel, FakeAppDrawerSettingsRepository> {
         val installedAppsRepository = FakeInstalledAppsRepository(flowOf(apps))
         val viewModel =
@@ -78,6 +97,8 @@ class ManageAppsViewModelTest {
                 observeInstalledApps = ObserveInstalledAppsUseCase(installedAppsRepository),
                 observeHiddenApps = ObserveHiddenAppsUseCase(settingsRepository),
                 setHiddenApps = SetHiddenAppsUseCase(settingsRepository),
+                observeAppFolders = ObserveAppFoldersUseCase(folderRepository),
+                setAppFolders = SetAppFoldersUseCase(folderRepository),
             )
         return viewModel to settingsRepository
     }
@@ -162,5 +183,26 @@ class ManageAppsViewModelTest {
 
             assertEquals(setOf("com.example.a", "com.example.b"), settingsRepository.hiddenApps.value)
             collectJob.cancel()
+        }
+
+    @Test
+    fun `toggling an app to hidden removes it from its folder`() =
+        runTest(testDispatcher) {
+            val folder =
+                AppFolder(
+                    id = "folder-1",
+                    name = "Games",
+                    memberPackageNames = setOf("com.example.a", "com.example.b"),
+                )
+            val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
+            val (viewModel, _) = buildViewModel(folderRepository = folderRepository)
+
+            viewModel.onVisibilityToggled("com.example.a", hidden = true)
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(folder.copy(memberPackageNames = setOf("com.example.b"))),
+                folderRepository.folders.value,
+            )
         }
 }

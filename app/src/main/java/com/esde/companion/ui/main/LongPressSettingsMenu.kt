@@ -295,6 +295,8 @@ fun LongPressSettingsMenu(
                                         onGridColumnsChanged = settingsViewModel::onGridColumnsChanged,
                                         sortFoldersOnTop = uiState.sortFoldersOnTop,
                                         onSortFoldersOnTopChanged = settingsViewModel::onSortFoldersOnTopChanged,
+                                        showSearchBar = uiState.showSearchBar,
+                                        onShowSearchBarChanged = settingsViewModel::onShowSearchBarChanged,
                                         onManageAppsClick = { page = MenuPage.ManageApps(fromCategory = targetPage.category) },
                                         dockEnabled = uiState.dockEnabled,
                                         onDockEnabledChanged = settingsViewModel::onDockEnabledChanged,

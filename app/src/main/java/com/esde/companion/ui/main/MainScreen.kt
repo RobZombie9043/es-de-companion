@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -221,9 +221,11 @@ private fun MainScreenContent(
         // LongPressSettingsMenu registers its own BackHandler for as long as it's part of
         // composition (i.e. while the popup is open), and Compose dispatches back presses
         // LIFO by composition order, so that handler always intercepts first and this one
-        // never even sees the event while the popup is showing. The menu and drawer can't
-        // both be open at once - opening the menu is itself gated on the drawer being
-        // closed, see the long-press handler below.
+        // never even sees the event while the popup is showing. That LIFO dispatch also
+        // covers the menu being opened *over* the open drawer (via the drawer header's
+        // settings shortcut): back closes the menu first, then a second back reaches this
+        // handler and closes the drawer. The whole-screen long-press trigger, by contrast,
+        // is still gated on the drawer being closed - see the long-press handler below.
         BackHandler(enabled = true) {
             if (openFraction.value > 0f) {
                 coroutineScope.launch {
@@ -363,7 +365,7 @@ private fun MainScreenContent(
                                     .align(position.toAlignment())
                                     .padding(CORNER_BUTTON_EDGE_PADDING),
                         ) {
-                            Icon(imageVector = Icons.Filled.Settings, contentDescription = "Main Menu")
+                            Icon(imageVector = Icons.Filled.Menu, contentDescription = "Main Menu")
                         }
                     FabType.AppDrawer ->
                         CornerFab(
@@ -491,6 +493,7 @@ private fun MainScreenContent(
                     onAppLaunched = { closeDrawer() },
                     onFolderOpenChanged = onFolderOpenChanged,
                     isDrawerOpen = drawerOpen,
+                    onOpenSettings = { setLongPressMenuOpen(true) },
                 )
 
                 // Anchored to the top edge of this same offset Box (which is the App

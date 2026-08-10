@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
@@ -52,7 +53,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.RocketLaunch
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
@@ -1020,7 +1021,7 @@ private val FabType.icon: ImageVector
     get() =
         when (this) {
             FabType.Music -> Icons.Filled.MusicNote
-            FabType.Settings -> Icons.Filled.Settings
+            FabType.Settings -> Icons.Filled.Menu
             FabType.GameManual -> Icons.Filled.MenuBook
             FabType.AppDrawer -> Icons.Filled.Apps
             FabType.CustomApp -> Icons.Filled.Launch
@@ -1044,6 +1045,8 @@ internal fun AppDrawerSettingsContent(
     onGridColumnsChanged: (Int) -> Unit,
     sortFoldersOnTop: Boolean,
     onSortFoldersOnTopChanged: (Boolean) -> Unit,
+    showSearchBar: Boolean,
+    onShowSearchBarChanged: (Boolean) -> Unit,
     onManageAppsClick: () -> Unit,
     dockEnabled: Boolean,
     onDockEnabledChanged: (Boolean) -> Unit,
@@ -1061,86 +1064,31 @@ internal fun AppDrawerSettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         ManageAppsEntry(onClick = onManageAppsClick)
+        ToggleSettingRow(
+            icon = Icons.Filled.Search,
+            title = "Show Search Bar",
+            description = "Search bar and settings shortcuts at the top of the app drawer",
+            enabled = showSearchBar,
+            onEnabledChanged = onShowSearchBarChanged,
+        )
         GridColumnsSetting(columns = gridColumns, onColumnsChanged = onGridColumnsChanged)
-        SortFoldersOnTopSetting(enabled = sortFoldersOnTop, onEnabledChanged = onSortFoldersOnTopChanged)
-        DockEnabledSetting(enabled = dockEnabled, onEnabledChanged = onDockEnabledChanged)
+        ToggleSettingRow(
+            icon = Icons.AutoMirrored.Filled.Sort,
+            title = "Sort folders on top of apps",
+            description = "Group folders ahead of ungrouped apps instead of sorting them in alphabetically",
+            enabled = sortFoldersOnTop,
+            onEnabledChanged = onSortFoldersOnTopChanged,
+        )
+        ToggleSettingRow(
+            icon = Icons.Filled.Dock,
+            title = "Enable Dock",
+            description = "A row of pinned apps at the bottom of the main screen",
+            enabled = dockEnabled,
+            onEnabledChanged = onDockEnabledChanged,
+        )
         if (dockEnabled) {
             DockMaxAppsSetting(maxApps = dockMaxApps, onMaxAppsChanged = onDockMaxAppsChanged)
             DockSizeSetting(size = dockSize, onSizeChanged = onDockSizeChanged)
-        }
-    }
-}
-
-@Composable
-private fun SortFoldersOnTopSetting(
-    enabled: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                SettingsLabel(icon = Icons.AutoMirrored.Filled.Sort, text = "Sort folders on top of apps")
-                Text(
-                    text = "Group folders ahead of ungrouped apps instead of sorting them in alphabetically",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Switch(
-                checked = enabled,
-                onCheckedChange = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onEnabledChanged(it)
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun DockEnabledSetting(
-    enabled: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                SettingsLabel(icon = Icons.Filled.Dock, text = "Enable Dock")
-                Text(
-                    text = "A row of pinned apps at the bottom of the main screen",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Switch(
-                checked = enabled,
-                onCheckedChange = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onEnabledChanged(it)
-                },
-            )
         }
     }
 }
@@ -1292,15 +1240,24 @@ internal fun SoundSettingsContent(
     ) {
         MusicEnabledSetting(enabled = musicEnabled, onEnabledChanged = onMusicEnabledChanged)
         if (musicEnabled) {
-            MusicPlayWhileBrowsingSystemsSetting(
+            ToggleSettingRow(
+                icon = Icons.Filled.Devices,
+                title = "Play while browsing systems",
+                description = null,
                 enabled = musicPlayWhileBrowsingSystems,
                 onEnabledChanged = onMusicPlayWhileBrowsingSystemsChanged,
             )
-            MusicPlayWhileBrowsingGamesSetting(
+            ToggleSettingRow(
+                icon = Icons.Filled.SportsEsports,
+                title = "Play while browsing games",
+                description = null,
                 enabled = musicPlayWhileBrowsingGames,
                 onEnabledChanged = onMusicPlayWhileBrowsingGamesChanged,
             )
-            MusicPlayDuringScreensaverSetting(
+            ToggleSettingRow(
+                icon = Icons.Filled.Nightlight,
+                title = "Play during screensaver",
+                description = null,
                 enabled = musicPlayDuringScreensaver,
                 onEnabledChanged = onMusicPlayDuringScreensaverChanged,
             )
@@ -1348,13 +1305,17 @@ private fun MusicEnabledSetting(
 }
 
 @Composable
-private fun MusicPlayWhileBrowsingSystemsSetting(
+private fun ToggleSettingRow(
+    icon: ImageVector,
+    title: String,
+    description: String?,
     enabled: Boolean,
     onEnabledChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = SettingsItemShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
@@ -1366,81 +1327,14 @@ private fun MusicPlayWhileBrowsingSystemsSetting(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SettingsLabel(
-                icon = Icons.Filled.Devices,
-                text = "Play while browsing systems",
-                modifier = Modifier.weight(1f),
-            )
-            Switch(
-                checked = enabled,
-                onCheckedChange = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onEnabledChanged(it)
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun MusicPlayWhileBrowsingGamesSetting(
-    enabled: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SettingsLabel(
-                icon = Icons.Filled.SportsEsports,
-                text = "Play while browsing games",
-                modifier = Modifier.weight(1f),
-            )
-            Switch(
-                checked = enabled,
-                onCheckedChange = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onEnabledChanged(it)
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun MusicPlayDuringScreensaverSetting(
-    enabled: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = SettingsItemShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SettingsLabel(
-                icon = Icons.Filled.Nightlight,
-                text = "Play during screensaver",
-                modifier = Modifier.weight(1f),
-            )
+            if (description != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                    SettingsLabel(icon = icon, text = title)
+                    Text(text = description, style = MaterialTheme.typography.bodySmall)
+                }
+            } else {
+                SettingsLabel(icon = icon, text = title, modifier = Modifier.weight(1f))
+            }
             Switch(
                 checked = enabled,
                 onCheckedChange = {

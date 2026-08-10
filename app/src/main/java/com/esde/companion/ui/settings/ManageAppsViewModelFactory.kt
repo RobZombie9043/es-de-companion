@@ -16,6 +16,8 @@ class ManageAppsViewModelFactory(
             observeInstalledApps = appContainer.observeInstalledAppsUseCase,
             observeHiddenApps = appContainer.observeHiddenAppsUseCase,
             setHiddenApps = appContainer.setHiddenAppsUseCase,
+            observeAppFolders = appContainer.observeAppFoldersUseCase,
+            setAppFolders = appContainer.setAppFoldersUseCase,
         ) as T
     }
 }

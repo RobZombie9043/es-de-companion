@@ -143,6 +143,91 @@ class BuildDrawerItemsTest {
     }
 
     @Test
+    fun `search matches labels case-insensitively by substring`() {
+        val result =
+            buildDrawerItems(
+                installedApps = listOf(appA, appB, appC),
+                hiddenPackages = emptySet(),
+                folders = emptyList(),
+                searchQuery = "BAN",
+            )
+
+        assertEquals(listOf(DrawerItem.App(appB)), result)
+    }
+
+    @Test
+    fun `search includes hidden apps`() {
+        val result =
+            buildDrawerItems(
+                installedApps = listOf(appA, appB),
+                hiddenPackages = setOf(appB.packageName),
+                folders = emptyList(),
+                searchQuery = "banana",
+            )
+
+        assertEquals(listOf(DrawerItem.App(appB)), result)
+    }
+
+    @Test
+    fun `search flattens folder members and never emits folder tiles even on a name match`() {
+        // Folder "Cherry Pie" would itself match "cherry" - only the member app may appear.
+        val folder = AppFolder(id = "folder-1", name = "Cherry Pie", memberPackageNames = setOf(appC.packageName))
+
+        val result =
+            buildDrawerItems(
+                installedApps = listOf(appA, appC),
+                hiddenPackages = emptySet(),
+                folders = listOf(folder),
+                searchQuery = "cherry",
+            )
+
+        assertEquals(listOf(DrawerItem.App(appC)), result)
+    }
+
+    @Test
+    fun `search with no matches returns an empty list`() {
+        val result =
+            buildDrawerItems(
+                installedApps = listOf(appA, appB, appC),
+                hiddenPackages = emptySet(),
+                folders = emptyList(),
+                searchQuery = "zzz",
+            )
+
+        assertEquals(emptyList<DrawerItem>(), result)
+    }
+
+    @Test
+    fun `search results sort alphabetically by lowercase label`() {
+        val lowercaseApp = InstalledApp(packageName = "com.example.z", label = "apricot")
+
+        val result =
+            buildDrawerItems(
+                installedApps = listOf(appB, lowercaseApp, appA),
+                hiddenPackages = emptySet(),
+                folders = emptyList(),
+                searchQuery = "a",
+            )
+
+        assertEquals(listOf(DrawerItem.App(appA), DrawerItem.App(lowercaseApp), DrawerItem.App(appB)), result)
+    }
+
+    @Test
+    fun `an empty search query leaves normal drawer building untouched`() {
+        val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appC.packageName))
+
+        val result =
+            buildDrawerItems(
+                installedApps = listOf(appA, appB, appC),
+                hiddenPackages = setOf(appB.packageName),
+                folders = listOf(folder),
+                searchQuery = "",
+            )
+
+        assertEquals(listOf(DrawerItem.Folder(folder, listOf(appC)), DrawerItem.App(appA)), result)
+    }
+
+    @Test
     fun `sorting is case-insensitive`() {
         val lowercaseApp = InstalledApp(packageName = "com.example.z", label = "apple juice")
 

@@ -100,6 +100,10 @@ class AppDockViewModelTest {
         override suspend fun setSortFoldersOnTop(sortOnTop: Boolean) {}
 
         override fun observeSortFoldersOnTop(): Flow<Boolean> = flowOf(true)
+
+        override suspend fun setShowSearchBar(show: Boolean) {}
+
+        override fun observeShowSearchBar(): Flow<Boolean> = flowOf(true)
     }
 
     private class FakeOnboardingRepository : OnboardingRepository {

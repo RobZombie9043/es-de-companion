@@ -32,6 +32,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCa
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
@@ -53,6 +54,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
+import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
@@ -231,9 +233,11 @@ class SettingsViewModelTest {
     private class FakeAppDrawerSettingsRepository(
         initialColumns: Int = 4,
         initialSortFoldersOnTop: Boolean = true,
+        initialShowSearchBar: Boolean = true,
     ) : AppDrawerSettingsRepository {
         val columns = MutableStateFlow(initialColumns)
         val sortFoldersOnTop = MutableStateFlow(initialSortFoldersOnTop)
+        val showSearchBar = MutableStateFlow(initialShowSearchBar)
 
         override suspend fun setHiddenApps(packageNames: Set<String>) {}
 
@@ -254,6 +258,12 @@ class SettingsViewModelTest {
         }
 
         override fun observeSortFoldersOnTop(): Flow<Boolean> = sortFoldersOnTop
+
+        override suspend fun setShowSearchBar(show: Boolean) {
+            showSearchBar.value = show
+        }
+
+        override fun observeShowSearchBar(): Flow<Boolean> = showSearchBar
     }
 
     private class FakeDockSettingsRepository(
@@ -335,6 +345,8 @@ class SettingsViewModelTest {
                 setGridColumnsUseCase = SetGridColumnsUseCase(appDrawerSettingsRepository),
                 observeSortFoldersOnTopUseCase = ObserveSortFoldersOnTopUseCase(appDrawerSettingsRepository),
                 setSortFoldersOnTopUseCase = SetSortFoldersOnTopUseCase(appDrawerSettingsRepository),
+                observeShowSearchBarUseCase = ObserveShowSearchBarUseCase(appDrawerSettingsRepository),
+                setShowSearchBarUseCase = SetShowSearchBarUseCase(appDrawerSettingsRepository),
                 observeDockEnabledUseCase = ObserveDockEnabledUseCase(dockSettingsRepository),
                 setDockEnabledUseCase = SetDockEnabledUseCase(dockSettingsRepository),
                 observeDockMaxAppsUseCase = ObserveDockMaxAppsUseCase(dockSettingsRepository),
@@ -473,5 +485,34 @@ class SettingsViewModelTest {
 
             advanceUntilIdle()
             assertEquals(false, appDrawerSettingsRepository.sortFoldersOnTop.value)
+        }
+
+    @Test
+    fun `onShowSearchBarChanged updates ui state immediately and persists`() =
+        runTest(testDispatcher) {
+            val (viewModel, appDrawerSettingsRepository) =
+                buildViewModel(
+                    appDrawerSettingsRepository = FakeAppDrawerSettingsRepository(initialShowSearchBar = true),
+                )
+            advanceUntilIdle()
+
+            viewModel.onShowSearchBarChanged(false)
+
+            assertEquals(false, viewModel.uiState.value.showSearchBar)
+
+            advanceUntilIdle()
+            assertEquals(false, appDrawerSettingsRepository.showSearchBar.value)
+        }
+
+    @Test
+    fun `showSearchBar loads the persisted value into ui state`() =
+        runTest(testDispatcher) {
+            val (viewModel, _) =
+                buildViewModel(
+                    appDrawerSettingsRepository = FakeAppDrawerSettingsRepository(initialShowSearchBar = false),
+                )
+            advanceUntilIdle()
+
+            assertEquals(false, viewModel.uiState.value.showSearchBar)
         }
 }

@@ -28,6 +28,8 @@ class SettingsViewModelFactory(
             setGridColumnsUseCase = appContainer.setGridColumnsUseCase,
             observeSortFoldersOnTopUseCase = appContainer.observeSortFoldersOnTopUseCase,
             setSortFoldersOnTopUseCase = appContainer.setSortFoldersOnTopUseCase,
+            observeShowSearchBarUseCase = appContainer.observeShowSearchBarUseCase,
+            setShowSearchBarUseCase = appContainer.setShowSearchBarUseCase,
             observeDockEnabledUseCase = appContainer.observeDockEnabledUseCase,
             setDockEnabledUseCase = appContainer.setDockEnabledUseCase,
             observeDockMaxAppsUseCase = appContainer.observeDockMaxAppsUseCase,

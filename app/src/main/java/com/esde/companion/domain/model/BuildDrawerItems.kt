@@ -18,13 +18,18 @@ package com.esde.companion.domain.model
  *   `sortedBy { it.label.lowercase() }` convention either way. [sortFoldersOnTop] only
  *   decides whether those two already-sorted groups are then concatenated (folders first)
  *   or merged into one fully interleaved alphabetical list - see AppDrawerSettingsRepository.
+ * - A non-empty [searchQuery] bypasses all of the above and returns [searchDrawerApps]'s
+ *   flat result instead - including hidden apps, ignoring folders entirely. Matching on
+ *   isNotEmpty (not isBlank) is deliberate: a space-only query searches for the space.
  */
 fun buildDrawerItems(
     installedApps: List<InstalledApp>,
     hiddenPackages: Set<String>,
     folders: List<AppFolder>,
     sortFoldersOnTop: Boolean = true,
+    searchQuery: String = "",
 ): List<DrawerItem> {
+    if (searchQuery.isNotEmpty()) return searchDrawerApps(installedApps, searchQuery)
     val visibleByPackage =
         installedApps
             .filterNot { it.packageName in hiddenPackages }
@@ -52,4 +57,20 @@ fun buildDrawerItems(
     } else {
         (folderItems + ungroupedItems).sortedBy { it.label.lowercase() }
     }
+}
+
+/**
+ * Case-insensitive substring match on app label across every installed app - deliberately
+ * ignoring the hidden set (searching is how a hidden app is found again; the hide-app flow
+ * points users here) and folder membership (members appear as plain flat results, and folder
+ * tiles are suppressed entirely while searching; folder names are not searchable).
+ */
+private fun searchDrawerApps(
+    installedApps: List<InstalledApp>,
+    query: String,
+): List<DrawerItem> {
+    return installedApps
+        .filter { it.label.contains(query, ignoreCase = true) }
+        .sortedBy { it.label.lowercase() }
+        .map(DrawerItem::App)
 }

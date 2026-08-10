@@ -3,8 +3,10 @@ package com.esde.companion.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.InstalledApp
+import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveHiddenAppsUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
+import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetHiddenAppsUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +32,8 @@ class ManageAppsViewModel(
     observeInstalledApps: ObserveInstalledAppsUseCase,
     private val observeHiddenApps: ObserveHiddenAppsUseCase,
     private val setHiddenApps: SetHiddenAppsUseCase,
+    private val observeAppFolders: ObserveAppFoldersUseCase,
+    private val setAppFolders: SetAppFoldersUseCase,
 ) : ViewModel() {
     val rows: StateFlow<List<AppVisibilityRow>> =
         combine(observeInstalledApps(), observeHiddenApps()) { apps, hidden ->
@@ -40,7 +44,9 @@ class ManageAppsViewModel(
             initialValue = emptyList(),
         )
 
-    /** [hidden] is the new hidden state to apply for [packageName]. */
+    /** [hidden] is the new hidden state to apply for [packageName]. Hiding also pulls the
+     * app out of whatever folder it belongs to - same reasoning as
+     * AppDrawerViewModel.setAppHidden, which this mirrors. */
     fun onVisibilityToggled(
         packageName: String,
         hidden: Boolean,
@@ -49,6 +55,21 @@ class ManageAppsViewModel(
             val currentHidden = observeHiddenApps().first()
             val updated = if (hidden) currentHidden + packageName else currentHidden - packageName
             setHiddenApps(updated)
+            if (hidden) removeFromAnyFolder(packageName)
         }
+    }
+
+    /** [packageName] belongs to at most one folder (see
+     * AppDrawerViewModel.addAppToFolder's single-membership invariant), so this just
+     * finds and empties it out of whichever one that is - emptying a folder entirely
+     * deletes it, same as AppDrawerViewModel.removeAppFromFolder. */
+    private suspend fun removeFromAnyFolder(packageName: String) {
+        val updated =
+            observeAppFolders().first().mapNotNull { folder ->
+                if (packageName !in folder.memberPackageNames) return@mapNotNull folder
+                val remaining = folder.memberPackageNames - packageName
+                remaining.ifEmpty { null }?.let { folder.copy(memberPackageNames = it) }
+            }
+        setAppFolders(updated)
     }
 }

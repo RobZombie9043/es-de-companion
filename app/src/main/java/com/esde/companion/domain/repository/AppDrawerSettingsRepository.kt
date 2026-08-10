@@ -38,4 +38,10 @@ interface AppDrawerSettingsRepository {
     suspend fun setSortFoldersOnTop(sortOnTop: Boolean)
 
     fun observeSortFoldersOnTop(): Flow<Boolean>
+
+    /** Whether the App Drawer shows its header row (search bar plus Android/companion
+     * settings shortcuts) above the grid. Defaults to true. */
+    suspend fun setShowSearchBar(show: Boolean)
+
+    fun observeShowSearchBar(): Flow<Boolean>
 }

@@ -23,6 +23,7 @@ class AppDrawerViewModelFactory(
             observeAppFolders = appContainer.observeAppFoldersUseCase,
             setAppFolders = appContainer.setAppFoldersUseCase,
             observeSortFoldersOnTop = appContainer.observeSortFoldersOnTopUseCase,
+            observeShowSearchBar = appContainer.observeShowSearchBarUseCase,
         ) as T
     }
 }
