@@ -55,7 +55,8 @@ class FileGameDescriptionRepository(
                     file.readText().also { cache[file.path] = CacheEntry(lastModified, it) }
                 }
 
-            GameDescription(text = GameListDescriptionParser.findDescription(content, romPath))
+            val text = GameListDescriptionParser.findDescription(content, romPath)
+            GameDescription(text = text, gamelistPath = file.path)
         }
 
     private fun resolveGamelistFile(

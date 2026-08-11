@@ -115,7 +115,9 @@ class DebugFileLogger(
      * carry enough shape of their own to justify a dedicated function, the same reasoning
      * [logPlaybackStarted]/[logPlaybackError] give for sharing one pair of functions across
      * both music and video. Used for the Description widget's resolution outcome (tag
-     * "Desc", by LoggingGameDescriptionRepository) and for
+     * "Media", by LoggingGameDescriptionRepository - "Game Description" stands in for a
+     * media type name so it reads as one more line in the same FOUND/NOT FOUND log as
+     * [logMediaResolution]) and for
      * [EsdeLogFileRepository][com.esde.companion.data.log.EsdeLogFileRepository]'s
      * fallback-poll diagnostic (tag "Poll") - a fallback poll ever being the one to notice
      * new es_log.txt data, rather than FileObserver, means FileObserver silently missed a

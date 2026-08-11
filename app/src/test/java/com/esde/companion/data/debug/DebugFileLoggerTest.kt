@@ -357,16 +357,23 @@ class DebugFileLoggerTest {
             val logFile = File(tempFolder.root, "logs/esde_companion_log.txt")
             val logger = loggerFor(logFile, FakeOnboardingRepository(debugLoggingEnabled = MutableStateFlow(true)))
 
-            // Description-widget resolution outcome (LoggingGameDescriptionRepository).
-            logger.logInfo("Desc", "FOUND gc /roms/gc/game.iso")
-            logger.logInfo("Desc", "NOT FOUND gc /roms/gc/missing.iso")
+            // Description-widget resolution outcome (LoggingGameDescriptionRepository) -
+            // logged under the "Media" tag, same as logMediaResolution's own lines, with the
+            // gamelist.xml file's own path rather than the ROM's.
+            logger.logInfo("Media", "Game Description FOUND gc /storage/emulated/0/ES-DE/gamelists/gc/gamelist.xml")
+            logger.logInfo("Media", "Game Description NOT FOUND gc (no gamelist.xml found for gc)")
             // Fallback-poll diagnostic (EsdeLogFileRepository).
             logger.logInfo("Poll", "fallback poll (not FileObserver) picked up an es_log.txt update")
 
-            val descLines = logFile.readLines().filter { it.contains("Desc:") }
+            val descLines = logFile.readLines().filter { it.contains("Game Description") }
             assertEquals(2, descLines.size)
-            assertTrue(descLines[0].contains("FOUND gc /roms/gc/game.iso"))
-            assertTrue(descLines[1].contains("NOT FOUND gc /roms/gc/missing.iso"))
+            assertTrue(descLines[0].startsWith("Aug 09 14:23:01 Media:"))
+            assertTrue(
+                descLines[0].contains(
+                    "Game Description FOUND gc /storage/emulated/0/ES-DE/gamelists/gc/gamelist.xml",
+                ),
+            )
+            assertTrue(descLines[1].contains("Game Description NOT FOUND gc (no gamelist.xml found for gc)"))
 
             val pollLine = logFile.readLines().single { it.contains("Poll:") }
             assertTrue(pollLine.contains("fallback poll"))

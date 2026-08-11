@@ -35,32 +35,58 @@ class FileGameDescriptionRepositoryTest {
     @Test
     fun `resolves a matching game's description from the standard gamelist location`() =
         runTest {
-            writeStandardGamelist(
-                "a",
-                """
-                <gameList>
-                    <game>
-                        <path>./Cosmic Smash (Japan).chd</path>
-                        <desc>A description.</desc>
-                    </game>
-                </gameList>
-                """.trimIndent(),
-            )
+            val file =
+                writeStandardGamelist(
+                    "a",
+                    """
+                    <gameList>
+                        <game>
+                            <path>./Cosmic Smash (Japan).chd</path>
+                            <desc>A description.</desc>
+                        </game>
+                    </gameList>
+                    """.trimIndent(),
+                )
             val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
 
             val description = repository.resolveDescription("a", "/roms/a/Cosmic Smash (Japan).chd")
 
             assertEquals("A description.", description.text)
+            assertEquals(file.path, description.gamelistPath)
         }
 
     @Test
-    fun `returns null text when no gamelist file exists at either location`() =
+    fun `returns null text and null gamelistPath when no gamelist file exists at either location`() =
         runTest {
             val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
 
             val description = repository.resolveDescription("a", "/roms/a/Missing.chd")
 
             assertNull(description.text)
+            assertNull(description.gamelistPath)
+        }
+
+    @Test
+    fun `reports the gamelist path even when the file has no matching game`() =
+        runTest {
+            val file =
+                writeStandardGamelist(
+                    "a",
+                    """
+                    <gameList>
+                        <game>
+                            <path>./Some Other Game.chd</path>
+                            <desc>Not this one.</desc>
+                        </game>
+                    </gameList>
+                    """.trimIndent(),
+                )
+            val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
+
+            val description = repository.resolveDescription("a", "/roms/a/Missing.chd")
+
+            assertNull(description.text)
+            assertEquals(file.path, description.gamelistPath)
         }
 
     @Test
