@@ -7,7 +7,9 @@ import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
+import com.esde.companion.data.gamelist.LoggingGameDescriptionRepository
 import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
+import com.esde.companion.data.log.EsdeLogFileRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.log.SharedEsdeLogRepository
 import com.esde.companion.data.media.AssetBundledSystemLogoRepository
@@ -191,9 +193,26 @@ class AppContainer(context: Context) {
     val logVideoPlaybackError: (String, String) -> Unit =
         { path, message -> debugFileLogger.logPlaybackError("Video", path, message) }
 
+    // Named separately (rather than inlined into logRepository below) purely to keep that
+    // property's own nesting shallow - see CLAUDE.md's ktlint/detekt indentation gotcha.
+    private val esdeLogFileRepositoryFactory: (String) -> EsdeLogRepository = { folderPath ->
+        EsdeLogFileRepository(
+            logFilePath = "$folderPath/logs/es_log.txt",
+            onFallbackPollCaughtUpdate = {
+                debugFileLogger.logInfo("Poll", "fallback poll (not FileObserver) picked up an es_log.txt update")
+            },
+        )
+    }
+
+    private val reactiveEsdeLogRepository: EsdeLogRepository =
+        ReactiveEsdeLogRepository(
+            logFolderPath = onboardingRepository.observeLogFolderPath(),
+            repositoryFactory = esdeLogFileRepositoryFactory,
+        )
+
     private val logRepository: EsdeLogRepository =
         SharedEsdeLogRepository(
-            inner = ReactiveEsdeLogRepository(logFolderPath = onboardingRepository.observeLogFolderPath()),
+            inner = reactiveEsdeLogRepository,
             scope = applicationScope,
         )
 
@@ -207,7 +226,10 @@ class AppContainer(context: Context) {
     // gamelists/ lives alongside logs/ under the ES-DE root, so this reacts to the log
     // folder path, not the media folder path - see ReactiveGameDescriptionRepository.
     private val gameDescriptionRepository: GameDescriptionRepository =
-        ReactiveGameDescriptionRepository(esdeRootPath = onboardingRepository.observeLogFolderPath())
+        LoggingGameDescriptionRepository(
+            inner = ReactiveGameDescriptionRepository(esdeRootPath = onboardingRepository.observeLogFolderPath()),
+            debugFileLogger = debugFileLogger,
+        )
 
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())

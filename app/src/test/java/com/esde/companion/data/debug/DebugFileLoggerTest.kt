@@ -161,15 +161,21 @@ class DebugFileLoggerTest {
     // Unconfined everywhere (both the scope backing the init-block enabled-flag collector
     // and ioDispatcher) so every write/collection happens synchronously within the test
     // body itself - no advanceUntilIdle()/joins needed to observe file contents.
+    // Mirrors DebugFileLogger's private default - kept in sync manually, same reasoning
+    // as eventColumnWidth above.
+    private val defaultMaxLogFileSizeBytes = 5L * 1024 * 1024
+
     private fun loggerFor(
         logFile: File,
         onboardingRepository: OnboardingRepository,
+        maxLogFileSizeBytes: Long = defaultMaxLogFileSizeBytes,
     ) = DebugFileLogger(
         logFile = logFile,
         onboardingRepository = onboardingRepository,
         applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined),
         clock = fixedClock,
         ioDispatcher = UnconfinedTestDispatcher(),
+        maxLogFileSizeBytes = maxLogFileSizeBytes,
     )
 
     private val sampleTransition: (DebugFileLogger) -> Unit = { logger ->
@@ -343,6 +349,61 @@ class DebugFileLoggerTest {
 
             val videoLine = logFile.readLines().single { it.contains("Video:") }
             assertTrue(videoLine.contains("error playing /media/gc/videos/game.mp4: decoder init failed"))
+        }
+
+    @Test
+    fun `logInfo logs the given tag and message verbatim`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val logFile = File(tempFolder.root, "logs/esde_companion_log.txt")
+            val logger = loggerFor(logFile, FakeOnboardingRepository(debugLoggingEnabled = MutableStateFlow(true)))
+
+            // Description-widget resolution outcome (LoggingGameDescriptionRepository).
+            logger.logInfo("Desc", "FOUND gc /roms/gc/game.iso")
+            logger.logInfo("Desc", "NOT FOUND gc /roms/gc/missing.iso")
+            // Fallback-poll diagnostic (EsdeLogFileRepository).
+            logger.logInfo("Poll", "fallback poll (not FileObserver) picked up an es_log.txt update")
+
+            val descLines = logFile.readLines().filter { it.contains("Desc:") }
+            assertEquals(2, descLines.size)
+            assertTrue(descLines[0].contains("FOUND gc /roms/gc/game.iso"))
+            assertTrue(descLines[1].contains("NOT FOUND gc /roms/gc/missing.iso"))
+
+            val pollLine = logFile.readLines().single { it.contains("Poll:") }
+            assertTrue(pollLine.contains("fallback poll"))
+            assertTrue(pollLine.contains("FileObserver"))
+        }
+
+    @Test
+    fun `the log file is truncated and re-headered once it exceeds the size cap`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val logFile = File(tempFolder.root, "logs/esde_companion_log.txt")
+            val repository = FakeOnboardingRepository(debugLoggingEnabled = MutableStateFlow(true))
+            // A 1-byte cap is exceeded by the very first write, so every subsequent write
+            // resets (truncate + header) exactly like the first - the file's content never
+            // differs between writes, and never accumulates.
+            val logger = loggerFor(logFile, repository, maxLogFileSizeBytes = 1L)
+
+            sampleTransition(logger)
+            val firstWrite = logFile.readText()
+
+            sampleTransition(logger)
+            val secondWrite = logFile.readText()
+
+            assertEquals(firstWrite, secondWrite)
+        }
+
+    @Test
+    fun `writes under the size cap accumulate normally instead of resetting`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val logFile = File(tempFolder.root, "logs/esde_companion_log.txt")
+            val repository = FakeOnboardingRepository(debugLoggingEnabled = MutableStateFlow(true))
+            val logger = loggerFor(logFile, repository, maxLogFileSizeBytes = defaultMaxLogFileSizeBytes)
+
+            sampleTransition(logger)
+            sampleTransition(logger)
+
+            assertEquals(1, Regex("companion-version:").findAll(logFile.readText()).count())
+            assertEquals(2, Regex("SystemSelect").findAll(logFile.readText()).count())
         }
 
     @Test

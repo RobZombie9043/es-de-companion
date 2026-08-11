@@ -59,6 +59,7 @@ class EsdeLogFileRepository(
     private val bootTimeMillis: () -> Long = { System.currentTimeMillis() - SystemClock.elapsedRealtime() },
     private val watchDirectory: (targetPath: String, mask: Int, onChange: () -> Unit) -> DirectoryWatcher =
         ::FileObserverDirectoryWatcher,
+    private val onFallbackPollCaughtUpdate: () -> Unit = {},
 ) : EsdeLogRepository {
     override fun observeEvents(): Flow<EsdeEvent> =
         channelFlow {
@@ -80,23 +81,26 @@ class EsdeLogFileRepository(
             // Both the FileObserver callback and the fallback ticker just post "something may
             // have changed, go check" - CONFLATED because we always read from `position` to
             // current end-of-file regardless of how many signals coalesce into one wakeup.
-            val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
+            // The source is tagged (rather than a plain Unit) purely so a read triggered by
+            // the fallback ticker - meaning FileObserver silently missed its notification -
+            // can be reported via onFallbackPollCaughtUpdate; it plays no role in what gets
+            // read.
+            val checkSignal = Channel<CheckTrigger>(capacity = Channel.CONFLATED)
 
-            val fileObserver = watchDirectory(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+            val fileObserver =
+                watchDirectory(logFilePath, WRITE_EVENTS_MASK) { checkSignal.trySend(CheckTrigger.Observer) }
             fileObserver.startWatching()
 
             val fallbackJob =
                 launch {
                     while (isActive) {
                         delay(fallbackPollIntervalMs)
-                        checkSignal.trySend(Unit)
+                        checkSignal.trySend(CheckTrigger.Fallback)
                     }
                 }
 
             try {
-                // Loop variable is intentionally unused - see checkSignal's kdoc above.
-                @Suppress("UnusedPrivateProperty")
-                for (signal in checkSignal) {
+                for (trigger in checkSignal) {
                     val file = File(logFilePath)
                     if (!file.exists()) continue
 
@@ -109,6 +113,7 @@ class EsdeLogFileRepository(
                     }
 
                     if (length > position) {
+                        if (trigger == CheckTrigger.Fallback) onFallbackPollCaughtUpdate()
                         position = readNewLines(file, position, directionTracker) { event -> send(event) }
                     }
                 }
@@ -264,6 +269,9 @@ class EsdeLogFileRepository(
                 FileObserver.MOVED_FROM
     }
 }
+
+/** Which signal source woke up [EsdeLogFileRepository.observeEvents]'s check loop. */
+private enum class CheckTrigger { Observer, Fallback }
 
 /**
  * Seam for [EsdeLogFileRepository]'s directory-watching mechanism - injected the same way

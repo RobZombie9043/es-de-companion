@@ -27,7 +27,9 @@ import java.util.Locale
  * truncate-per-process-start behavior; line style is `<Mon dd HH:mm:ss> <Event>: <details>`,
  * with [Event] a capitalized tag (Info/Event/State/Media) identifying the kind of entry,
  * padded to a fixed column width (see [EVENT_COLUMN_WIDTH]) so every line's details line
- * up regardless of tag length.
+ * up regardless of tag length. Also re-truncates (same as a fresh process start) once the
+ * file grows past [maxLogFileSizeBytes] - this app runs continuously for the length of a
+ * kiosk session, potentially days, so without a cap the log would otherwise grow forever.
  *
  * All writes are fire-and-forget on [applicationScope]/[ioDispatcher], guarded by a
  * [Mutex], so callers on the hot reducer/media-resolution paths are never blocked by disk
@@ -41,6 +43,7 @@ class DebugFileLogger(
     private val applicationScope: CoroutineScope,
     private val clock: Clock,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val maxLogFileSizeBytes: Long = MAX_LOG_FILE_SIZE_BYTES,
 ) {
     @Volatile
     private var enabled = false
@@ -108,6 +111,22 @@ class DebugFileLogger(
     }
 
     /**
+     * Logs a single arbitrary (tag, message) line - for one-off diagnostics that don't
+     * carry enough shape of their own to justify a dedicated function, the same reasoning
+     * [logPlaybackStarted]/[logPlaybackError] give for sharing one pair of functions across
+     * both music and video. Used for the Description widget's resolution outcome (tag
+     * "Desc", by LoggingGameDescriptionRepository) and for
+     * [EsdeLogFileRepository][com.esde.companion.data.log.EsdeLogFileRepository]'s
+     * fallback-poll diagnostic (tag "Poll") - a fallback poll ever being the one to notice
+     * new es_log.txt data, rather than FileObserver, means FileObserver silently missed a
+     * notification, which is otherwise invisible.
+     */
+    fun logInfo(
+        tag: String,
+        message: String,
+    ) = log { listOf(tag to message) }
+
+    /**
      * Logged once a music track or video overlay actually starts playing - see
      * [MusicPlaybackCoordinator][com.esde.companion.domain.music.MusicPlaybackCoordinator]
      * (tag "Music") and VideoOverlayScreen's Player.Listener.onIsPlayingChanged (tag
@@ -159,7 +178,7 @@ class DebugFileLogger(
         applicationScope.launch(ioDispatcher) {
             if (!enabled || !AllFilesAccessPermission.isGranted()) return@launch
             writeMutex.withLock {
-                if (!hasResetThisProcess) {
+                if (!hasResetThisProcess || logFile.length() >= maxLogFileSizeBytes) {
                     resetFileAndWriteHeader()
                     hasResetThisProcess = true
                 }
@@ -201,5 +220,11 @@ class DebugFileLogger(
         // separating space, so every logged line's details start in the same column
         // regardless of which tag (Info/Event/State/Media) it uses.
         const val EVENT_COLUMN_WIDTH = 7
+
+        // Caps how large the debug log can grow across a single long-running kiosk
+        // session. Checked before every write; once exceeded, the file is truncated and
+        // re-headered exactly as it would be on a fresh process start (see log()), rather
+        // than growing without bound for the app's entire uptime.
+        const val MAX_LOG_FILE_SIZE_BYTES = 5L * 1024 * 1024
     }
 }

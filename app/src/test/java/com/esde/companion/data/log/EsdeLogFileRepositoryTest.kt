@@ -35,17 +35,30 @@ class EsdeLogFileRepositoryTest {
     private fun repositoryFor(
         logFile: File,
         bootTimeMillis: () -> Long = { 0L },
+        fallbackPollIntervalMs: Long = 3_000L,
+        onFallbackPollCaughtUpdate: () -> Unit = {},
     ): EsdeLogFileRepository =
         EsdeLogFileRepository(
             logFilePath = logFile.absolutePath,
+            fallbackPollIntervalMs = fallbackPollIntervalMs,
             bootTimeMillis = bootTimeMillis,
             watchDirectory = { _, _, _ -> NoOpDirectoryWatcher },
+            onFallbackPollCaughtUpdate = onFallbackPollCaughtUpdate,
         )
 
     private object NoOpDirectoryWatcher : DirectoryWatcher {
         override fun startWatching() = Unit
 
         override fun stopWatching() = Unit
+    }
+
+    /** Lets a test fire a simulated FileObserver notification on demand. */
+    private class CapturingDirectoryWatcher(private val onChange: () -> Unit) : DirectoryWatcher {
+        override fun startWatching() = Unit
+
+        override fun stopWatching() = Unit
+
+        fun fireChange() = onChange()
     }
 
     @Test
@@ -279,5 +292,89 @@ class EsdeLogFileRepositoryTest {
                 )
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    @Test
+    fun `a new line picked up only by the fallback poll invokes onFallbackPollCaughtUpdate`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): " +
+                    "system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+            )
+
+            // NoOpDirectoryWatcher (see repositoryFor) never invokes its onChange callback,
+            // so the only signal that can ever pick up the appended line below is the
+            // fallback ticker - a small real interval keeps the test fast without needing
+            // to fake time inside the flowOn(Dispatchers.IO) producer.
+            var fallbackCatchCount = 0
+            val repository =
+                repositoryFor(
+                    logFile,
+                    fallbackPollIntervalMs = 20L,
+                    onFallbackPollCaughtUpdate = { fallbackCatchCount++ },
+                )
+
+            repository.observeEvents().test {
+                assertEquals(
+                    EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
+                    awaitItem(),
+                )
+                assertEquals(0, fallbackCatchCount)
+
+                logFile.appendText(
+                    "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
+                        "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
+                )
+
+                assertEquals(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, fallbackCatchCount)
+        }
+
+    @Test
+    fun `a new line picked up by FileObserver does not invoke onFallbackPollCaughtUpdate`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): " +
+                    "system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+            )
+
+            var fallbackCatchCount = 0
+            lateinit var capturedWatcher: CapturingDirectoryWatcher
+            val repository =
+                EsdeLogFileRepository(
+                    logFilePath = logFile.absolutePath,
+                    // Long enough that the fallback ticker can't plausibly fire during the
+                    // test - the only signal reaching checkSignal is the manual fireChange()
+                    // below, standing in for a real FileObserver notification.
+                    fallbackPollIntervalMs = 3_600_000L,
+                    bootTimeMillis = { 0L },
+                    watchDirectory = { _, _, onChange ->
+                        CapturingDirectoryWatcher(onChange).also { capturedWatcher = it }
+                    },
+                    onFallbackPollCaughtUpdate = { fallbackCatchCount++ },
+                )
+
+            repository.observeEvents().test {
+                assertEquals(
+                    EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
+                    awaitItem(),
+                )
+
+                logFile.appendText(
+                    "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
+                        "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
+                )
+                capturedWatcher.fireChange()
+
+                assertEquals(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(0, fallbackCatchCount)
         }
 }
