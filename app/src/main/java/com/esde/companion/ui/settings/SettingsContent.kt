@@ -581,9 +581,24 @@ internal fun UISettingsContent(
 // FabAssignments.with) - so the picker itself simply never presents the option there
 // rather than needing runtime validation to reject an invalid selection.
 private val TOP_FAB_OPTIONS =
-    listOf(FabType.Music, FabType.Settings, FabType.GameManual, FabType.AppDrawer, FabType.CustomApp, FabType.None)
+    listOf(
+        FabType.Music,
+        FabType.Settings,
+        FabType.GameManual,
+        FabType.AppDrawer,
+        FabType.CustomApp,
+        FabType.RetroAchievements,
+        FabType.None,
+    )
 private val BOTTOM_FAB_OPTIONS =
-    listOf(FabType.Settings, FabType.GameManual, FabType.AppDrawer, FabType.CustomApp, FabType.None)
+    listOf(
+        FabType.Settings,
+        FabType.GameManual,
+        FabType.AppDrawer,
+        FabType.CustomApp,
+        FabType.RetroAchievements,
+        FabType.None,
+    )
 
 /**
  * Widgets category content - just hands off to the full-screen widget editor, same
@@ -1229,6 +1244,7 @@ private val FabType.icon: ImageVector
             FabType.GameManual -> Icons.Filled.MenuBook
             FabType.AppDrawer -> Icons.Filled.Apps
             FabType.CustomApp -> Icons.Filled.Launch
+            FabType.RetroAchievements -> Icons.Filled.EmojiEvents
             FabType.None -> Icons.Filled.Clear
         }
 
@@ -1240,6 +1256,7 @@ private val FabType.label: String
             FabType.GameManual -> "Manual"
             FabType.AppDrawer -> "App Drawer"
             FabType.CustomApp -> "App"
+            FabType.RetroAchievements -> "Achievements"
             FabType.None -> "None"
         }
 

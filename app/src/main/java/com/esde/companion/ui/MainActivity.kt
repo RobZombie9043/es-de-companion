@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,6 +85,10 @@ import com.esde.companion.ui.music.MusicControlsViewModelFactory
 import com.esde.companion.ui.onboarding.OnboardingScreen
 import com.esde.companion.ui.onboarding.OnboardingViewModel
 import com.esde.companion.ui.onboarding.OnboardingViewModelFactory
+import com.esde.companion.ui.retroachievements.RetroAchievementsResolutionState
+import com.esde.companion.ui.retroachievements.RetroAchievementsScreen
+import com.esde.companion.ui.retroachievements.RetroAchievementsViewModel
+import com.esde.companion.ui.retroachievements.RetroAchievementsViewModelFactory
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModelFactory
 import com.esde.companion.ui.settings.SettingsViewModel
@@ -295,6 +300,19 @@ class MainActivity : ComponentActivity() {
                             // Manual setting does, independent of that setting. Reset
                             // together with manualDismissed below.
                             var manualViewerOpenedViaFab by rememberSaveable { mutableStateOf(false) }
+
+                            val retroAchievementsViewModel: RetroAchievementsViewModel =
+                                viewModel(factory = RetroAchievementsViewModelFactory(appContainer))
+                            val retroAchievementsResolution by
+                                retroAchievementsViewModel.resolution.collectAsStateWithLifecycle()
+                            val retroAchievementsHasContent =
+                                retroAchievementsResolution != RetroAchievementsResolutionState.NotSignedIn &&
+                                    retroAchievementsResolution != RetroAchievementsResolutionState.NoGame
+
+                            // Set by tapping the RetroAchievements FAB (FAB Control); closed
+                            // via the screen's own close button. No automatic open-on-launch
+                            // in this phase (see CLAUDE.md's RetroAchievements section).
+                            var showRetroAchievements by rememberSaveable { mutableStateOf(false) }
 
                             val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
 
@@ -521,6 +539,14 @@ class MainActivity : ComponentActivity() {
                                                 otherScreenLaunchApps = otherScreenLaunchApps,
                                                 onRecordLaunchLocation = ::recordFabLaunchLocation,
                                             )
+                                        FabType.RetroAchievements ->
+                                            RetroAchievementsFabContent(
+                                                position = position,
+                                                visible =
+                                                    !isBlanked && isActivityVisible && retroAchievementsHasContent,
+                                                overlayOpacityPercent = overlayOpacityPercent,
+                                                onClick = { showRetroAchievements = true },
+                                            )
                                         FabType.Settings, FabType.AppDrawer, FabType.None -> {}
                                     }
                                 }
@@ -641,6 +667,22 @@ class MainActivity : ComponentActivity() {
                                             manualDismissed = true
                                             manualViewerOpenedViaFab = false
                                         },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+
+                                // RetroAchievements summary (RetroAchievements FAB) - same
+                                // placement/guard as GameManual above, opened/closed purely
+                                // via showRetroAchievements (no automatic Game Playing
+                                // Behavior-style trigger in this phase).
+                                AnimatedVisibility(
+                                    visible = showRetroAchievements && mainScreenActive,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    RetroAchievementsScreen(
+                                        viewModel = retroAchievementsViewModel,
+                                        onExit = { showRetroAchievements = false },
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
@@ -829,6 +871,29 @@ private fun BoxScope.GameManualFabContent(
         modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
     ) {
         Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+    }
+}
+
+/**
+ * Content for a corner assigned [FabType.RetroAchievements] (see MainActivity's
+ * fabSlotContent) - a FAB shown whenever the current game could plausibly have
+ * RetroAchievements data to show (signed in, and a game is selected - see
+ * RetroAchievementsViewModel.resolution), opening [RetroAchievementsScreen] on tap.
+ */
+@Composable
+private fun BoxScope.RetroAchievementsFabContent(
+    position: FabPosition,
+    visible: Boolean,
+    overlayOpacityPercent: Int,
+    onClick: () -> Unit,
+) {
+    if (!visible) return
+    CornerFab(
+        onClick = onClick,
+        opacityPercent = overlayOpacityPercent,
+        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
+    ) {
+        Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = "RetroAchievements")
     }
 }
 

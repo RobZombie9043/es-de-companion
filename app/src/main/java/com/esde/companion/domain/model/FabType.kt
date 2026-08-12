@@ -11,5 +11,6 @@ enum class FabType {
     GameManual,
     AppDrawer,
     CustomApp,
+    RetroAchievements,
     None,
 }

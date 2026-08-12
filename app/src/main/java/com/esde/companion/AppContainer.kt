@@ -23,6 +23,7 @@ import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
 import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
 import com.esde.companion.data.retroachievements.GameListCache
+import com.esde.companion.data.retroachievements.NoOpGameMatchOverrideRepository
 import com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImpl
 import com.esde.companion.data.retroachievements.RetroClientRetroAchievementsApi
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
@@ -49,6 +50,7 @@ import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.EsdeInstallationRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
@@ -71,6 +73,7 @@ import com.esde.companion.domain.usecase.DownloadApkUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FetchReleaseNotesForVersionUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
+import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
@@ -119,6 +122,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
@@ -433,12 +437,20 @@ class AppContainer(context: Context) {
             apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) },
         )
 
+    // Placeholder pending Phase 1 PR 6 (persisted overrides + the search/picker screen
+    // that's the only thing that would ever call setOverride) - see
+    // NoOpGameMatchOverrideRepository's kdoc.
+    private val gameMatchOverrideRepository: GameMatchOverrideRepository = NoOpGameMatchOverrideRepository()
+
     val observeRetroAchievementsCredentialsUseCase =
         ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
     val clearRetroAchievementsCredentialsUseCase =
         ClearRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
     val validateRetroAchievementsCredentialsUseCase =
         ValidateRetroAchievementsCredentialsUseCase(retroAchievementsRepository, retroAchievementsCredentialsRepository)
+    val resolveRetroAchievementsGameUseCase =
+        ResolveRetroAchievementsGameUseCase(gameMatchOverrideRepository, retroAchievementsRepository)
+    val getGameAchievementSummaryUseCase = GetGameAchievementSummaryUseCase(retroAchievementsRepository)
 
     // Update checker (GitHub Releases). The one sanctioned network use case in this app -
     // see CLAUDE.md's "What NOT to Do" entry on network layers.
