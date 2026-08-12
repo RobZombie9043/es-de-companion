@@ -49,5 +49,6 @@ class ResolveRetroAchievementsGameUseCase(
         when (this) {
             TitleMatchMethod.ExactTitle -> MatchMethod.ExactTitle
             TitleMatchMethod.NormalizedTitle -> MatchMethod.NormalizedTitle
+            TitleMatchMethod.PartialTitle -> MatchMethod.PartialTitle
         }
 }

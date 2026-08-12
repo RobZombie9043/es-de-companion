@@ -63,6 +63,7 @@ internal data class ConfigBackupDto(
     val dockSize: String,
     val dockApps: List<String>,
     val widgetCanvases: Map<String, CanvasDto>,
+    val gameMatchOverrides: List<GameMatchOverrideDto> = emptyList(),
 )
 
 @Serializable
@@ -70,6 +71,13 @@ internal data class AppFolderDto(
     val id: String,
     val name: String,
     val memberPackageNames: Set<String>,
+)
+
+@Serializable
+internal data class GameMatchOverrideDto(
+    val systemShortName: String,
+    val romPath: String,
+    val raGameId: Long,
 )
 
 /** Matches [com.esde.companion.data.settings.FileOnboardingRepository]'s own default,

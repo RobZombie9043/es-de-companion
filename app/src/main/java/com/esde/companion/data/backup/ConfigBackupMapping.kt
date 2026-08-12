@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
@@ -59,6 +60,7 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         dockSize = dockSize.name,
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDtoMap(),
+        gameMatchOverrides = gameMatchOverrides.map { it.toDto() },
     )
 
 internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
@@ -105,6 +107,7 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         dockSize = dockSize.toEnumOrDefault(DockSize.Medium),
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDomainMap(),
+        gameMatchOverrides = gameMatchOverrides.map { it.toDomain() },
     )
 }
 
@@ -132,3 +135,11 @@ private inline fun <reified T : Enum<T>> String.toEnumOrDefault(default: T): T {
 private fun AppFolder.toDto() = AppFolderDto(id = id, name = name, memberPackageNames = memberPackageNames)
 
 private fun AppFolderDto.toDomain() = AppFolder(id = id, name = name, memberPackageNames = memberPackageNames)
+
+private fun GameMatchOverride.toDto(): GameMatchOverrideDto {
+    return GameMatchOverrideDto(systemShortName = systemShortName, romPath = romPath, raGameId = raGameId)
+}
+
+private fun GameMatchOverrideDto.toDomain(): GameMatchOverride {
+    return GameMatchOverride(systemShortName = systemShortName, romPath = romPath, raGameId = raGameId)
+}

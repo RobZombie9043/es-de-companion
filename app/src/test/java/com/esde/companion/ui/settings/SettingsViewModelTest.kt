@@ -25,6 +25,7 @@ import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FakeAppFolderRepository
+import com.esde.companion.domain.usecase.FakeGameMatchOverrideRepository
 import com.esde.companion.domain.usecase.FakeWidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
@@ -385,6 +386,7 @@ class SettingsViewModelTest {
         val configBackupRepository = JsonConfigBackupRepository()
         val appFolderRepository = FakeAppFolderRepository()
         val widgetLayoutRepository = FakeWidgetLayoutRepository()
+        val gameMatchOverrideRepository = FakeGameMatchOverrideRepository()
         val export =
             ExportConfigBackupUseCase(
                 onboardingRepository,
@@ -392,6 +394,7 @@ class SettingsViewModelTest {
                 appFolderRepository,
                 dockSettingsRepository,
                 widgetLayoutRepository,
+                gameMatchOverrideRepository,
                 configBackupRepository,
             )
         val restore =
@@ -401,6 +404,7 @@ class SettingsViewModelTest {
                 appFolderRepository,
                 dockSettingsRepository,
                 widgetLayoutRepository,
+                gameMatchOverrideRepository,
                 configBackupRepository,
             )
         return export to restore

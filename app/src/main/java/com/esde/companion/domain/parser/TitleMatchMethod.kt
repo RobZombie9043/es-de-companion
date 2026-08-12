@@ -4,4 +4,5 @@ package com.esde.companion.domain.parser
 enum class TitleMatchMethod {
     ExactTitle,
     NormalizedTitle,
+    PartialTitle,
 }

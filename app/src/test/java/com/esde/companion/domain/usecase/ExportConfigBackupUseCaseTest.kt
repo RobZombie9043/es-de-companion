@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
@@ -84,10 +85,20 @@ class ExportConfigBackupUseCaseTest {
             val canvasGrid = GridDimensions(columns = 8, rows = 5)
             val canvas = SavedWidgetCanvas(grid = canvasGrid, widgets = listOf(placedWidget()))
             val widgets = FakeWidgetLayoutRepository(initial = mapOf(StateGroup.System to canvas))
+            val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
+            val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
             val configBackupRepository = JsonConfigBackupRepository()
 
             val useCase =
-                ExportConfigBackupUseCase(onboarding, appDrawer, appFolders, dock, widgets, configBackupRepository)
+                ExportConfigBackupUseCase(
+                    onboarding,
+                    appDrawer,
+                    appFolders,
+                    dock,
+                    widgets,
+                    gameMatchOverrides,
+                    configBackupRepository,
+                )
             val json = useCase()
             val snapshot = configBackupRepository.deserialize(json).getOrThrow()
             val emptyCanvas = SavedWidgetCanvas(grid = null, widgets = emptyList())
@@ -109,5 +120,6 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(listOf("com.dock.app"), snapshot.dockApps)
             assertEquals(canvas, snapshot.widgetCanvases[StateGroup.System])
             assertEquals(emptyCanvas, snapshot.widgetCanvases[StateGroup.Playing])
+            assertEquals(listOf(override), snapshot.gameMatchOverrides)
         }
 }

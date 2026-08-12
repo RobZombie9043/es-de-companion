@@ -13,10 +13,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +29,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,7 +41,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.esde.companion.domain.model.AchievementItem
 import com.esde.companion.domain.model.GameAchievementSummary
-import com.esde.companion.domain.model.MatchMethod
 import kotlin.math.roundToInt
 
 /**
@@ -43,8 +50,11 @@ import kotlin.math.roundToInt
  * independent stages (see [RetroAchievementsUiState.kt]) so a network failure never reads
  * as "wrong game" and vice versa.
  *
- * The match-method caption is informational only in this phase - the actual "wrong game?"
- * correction picker lands in a later PR (see CLAUDE.md's RetroAchievements section).
+ * The manual correction picker ([GameCorrectionDialog]) is deliberately tucked behind the
+ * top bar's kebab menu (see [RetroAchievementsTopBar]), the same "small options button
+ * rather than persistent chrome" idiom [com.esde.companion.ui.widgets.edit.EditWidgetsOverlay]
+ * uses - the option to fix a wrong/missing match needs to exist, but title matching is
+ * right often enough that it shouldn't compete for attention with the achievement list.
  */
 @Composable
 fun RetroAchievementsScreen(
@@ -54,17 +64,50 @@ fun RetroAchievementsScreen(
 ) {
     val resolution by viewModel.resolution.collectAsStateWithLifecycle()
     val fetch by viewModel.fetch.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    var showCorrectionDialog by remember { mutableStateOf(false) }
+
+    // A correction is only meaningful once a system/game is actually in play - not while
+    // signed out, no game selected, or the system has no RetroAchievements console mapping.
+    val canCorrect =
+        resolution is RetroAchievementsResolutionState.Found ||
+            resolution == RetroAchievementsResolutionState.NoMatch
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
-            RetroAchievementsTopBar(onExit = onExit)
+            RetroAchievementsTopBar(
+                onExit = onExit,
+                canCorrect = canCorrect,
+                onRequestCorrection = {
+                    viewModel.onSearchQueryChanged("")
+                    showCorrectionDialog = true
+                },
+            )
             RetroAchievementsBody(resolution = resolution, fetch = fetch, modifier = Modifier.fillMaxSize())
         }
+    }
+
+    if (showCorrectionDialog) {
+        GameCorrectionDialog(
+            query = searchQuery,
+            results = searchResults,
+            onQueryChanged = viewModel::onSearchQueryChanged,
+            onGameSelected = { candidate ->
+                viewModel.onGameCorrected(candidate)
+                showCorrectionDialog = false
+            },
+            onDismiss = { showCorrectionDialog = false },
+        )
     }
 }
 
 @Composable
-private fun RetroAchievementsTopBar(onExit: () -> Unit) {
+private fun RetroAchievementsTopBar(
+    onExit: () -> Unit,
+    canCorrect: Boolean,
+    onRequestCorrection: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -72,8 +115,42 @@ private fun RetroAchievementsTopBar(onExit: () -> Unit) {
         Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = null, modifier = Modifier.size(28.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Text(text = "Achievements", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        if (canCorrect) {
+            OptionsMenu(onRequestCorrection = onRequestCorrection)
+        }
         IconButton(onClick = onExit) {
             Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
+        }
+    }
+}
+
+/**
+ * The kebab button and its menu are wrapped in the same [Box] - not siblings directly in
+ * [RetroAchievementsTopBar]'s [Row] - so the [DropdownMenu] anchors to this button's own
+ * position rather than wherever the [Row] would otherwise place an empty composable, the
+ * same structure [com.esde.companion.ui.widgets.edit.EditWidgetsOverlay]'s options button
+ * uses to open reliably next to itself instead of drifting off to one side.
+ */
+@Composable
+private fun OptionsMenu(onRequestCorrection: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = "Achievement options")
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = MENU_SHAPE,
+        ) {
+            DropdownMenuItem(
+                text = { Text("Change Game") },
+                leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
+                onClick = {
+                    expanded = false
+                    onRequestCorrection()
+                },
+            )
         }
     }
 }
@@ -96,13 +173,12 @@ private fun RetroAchievementsBody(
         RetroAchievementsResolutionState.NoMatch ->
             RetroAchievementsMessage("No RetroAchievements entry found for this game.", modifier)
         is RetroAchievementsResolutionState.Found ->
-            RetroAchievementsFetchBody(method = resolution.method, fetch = fetch, modifier = modifier)
+            RetroAchievementsFetchBody(fetch = fetch, modifier = modifier)
     }
 }
 
 @Composable
 private fun RetroAchievementsFetchBody(
-    method: MatchMethod,
     fetch: RetroAchievementsFetchState,
     modifier: Modifier,
 ) {
@@ -110,7 +186,7 @@ private fun RetroAchievementsFetchBody(
         RetroAchievementsFetchState.Idle, RetroAchievementsFetchState.Loading ->
             Box(modifier = modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         is RetroAchievementsFetchState.Loaded ->
-            AchievementSummaryList(summary = fetch.summary, method = method, modifier = modifier)
+            AchievementSummaryList(summary = fetch.summary, modifier = modifier)
         RetroAchievementsFetchState.NotFound ->
             RetroAchievementsMessage("This game's RetroAchievements entry couldn't be found.", modifier)
         is RetroAchievementsFetchState.NetworkError ->
@@ -136,11 +212,10 @@ private fun RetroAchievementsMessage(
 @Composable
 private fun AchievementSummaryList(
     summary: GameAchievementSummary,
-    method: MatchMethod,
     modifier: Modifier,
 ) {
     Column(modifier = modifier) {
-        AchievementSummaryHeader(summary, method)
+        AchievementSummaryHeader(summary)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -152,33 +227,13 @@ private fun AchievementSummaryList(
 }
 
 @Composable
-private fun AchievementSummaryHeader(
-    summary: GameAchievementSummary,
-    method: MatchMethod,
-) {
+private fun AchievementSummaryHeader(summary: GameAchievementSummary) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(text = summary.gameTitle, style = MaterialTheme.typography.titleMedium)
         val completionPercent = summary.completionPercent.roundToInt()
         val pointsText = "${summary.earnedPoints} / ${summary.totalPoints} points - $completionPercent%"
         Text(text = pointsText, style = MaterialTheme.typography.bodyMedium)
-        MatchMethodCaption(method)
     }
-}
-
-@Composable
-private fun MatchMethodCaption(method: MatchMethod) {
-    val (text, alpha) =
-        when (method) {
-            MatchMethod.ExactTitle -> "Matched by title" to LOW_EMPHASIS_ALPHA
-            MatchMethod.NormalizedTitle -> "Matched by similar title - is this the right game?" to HIGH_EMPHASIS_ALPHA
-            MatchMethod.ManualOverride -> "Matched via your correction" to LOW_EMPHASIS_ALPHA
-        }
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = alpha),
-        modifier = Modifier.padding(top = 4.dp),
-    )
 }
 
 @Composable
@@ -203,6 +258,5 @@ private fun AchievementRow(achievement: AchievementItem) {
 }
 
 private val ACHIEVEMENT_BADGE_SIZE = 48.dp
+private val MENU_SHAPE = RoundedCornerShape(16.dp)
 private const val UNEARNED_ALPHA = 0.5f
-private const val LOW_EMPHASIS_ALPHA = 0.5f
-private const val HIGH_EMPHASIS_ALPHA = 0.9f

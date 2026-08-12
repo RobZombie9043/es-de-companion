@@ -5,6 +5,7 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.ConfigBackupRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 
@@ -15,12 +16,14 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
  * [Result] rather than throwing if [contents] isn't a valid/supported backup, without
  * touching any repository - callers can treat a failed restore as a no-op on current state.
  */
+@Suppress("LongParameterList")
 class RestoreConfigBackupUseCase(
     private val onboardingRepository: OnboardingRepository,
     private val appDrawerSettingsRepository: AppDrawerSettingsRepository,
     private val appFolderRepository: AppFolderRepository,
     private val dockSettingsRepository: DockSettingsRepository,
     private val widgetLayoutRepository: WidgetLayoutRepository,
+    private val gameMatchOverrideRepository: GameMatchOverrideRepository,
     private val configBackupRepository: ConfigBackupRepository,
 ) {
     suspend operator fun invoke(contents: String): Result<Unit> =
@@ -49,6 +52,11 @@ class RestoreConfigBackupUseCase(
             val grid = canvas.grid ?: return@forEach
             widgetLayoutRepository.saveCanvas(stateGroup, canvas.widgets, grid)
         }
+        // Re-applies each saved override rather than clearing every existing one first -
+        // GameMatchOverrideRepository has no bulk-clear operation, and a stray override
+        // this snapshot doesn't mention is harmless leftover corrective data, unlike a
+        // stale toggle/path the settings above would silently keep if not overwritten.
+        snapshot.gameMatchOverrides.forEach { gameMatchOverrideRepository.setOverride(it) }
     }
 
     private suspend fun applyOnboardingSettings(snapshot: AppConfigBackup) {

@@ -3,6 +3,8 @@ package com.esde.companion.domain.usecase
 import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.GameMatchOverride
+import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -15,6 +17,7 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import kotlinx.coroutines.flow.Flow
@@ -349,4 +352,29 @@ internal class FakeWidgetLayoutRepository(
     ) {
         canvases.getValue(stateGroup).value = SavedWidgetCanvas(grid = grid, widgets = widgets)
     }
+}
+
+internal class FakeGameMatchOverrideRepository(
+    initial: List<GameMatchOverride> = emptyList(),
+) : GameMatchOverrideRepository {
+    private val overridesFlow = MutableStateFlow(initial)
+
+    override suspend fun setOverride(override: GameMatchOverride) {
+        overridesFlow.value = overridesFlow.value.filterNot { it.matchesReference(override) } + override
+    }
+
+    override suspend fun clearOverride(gameReference: GameReference) {
+        overridesFlow.value = overridesFlow.value.filterNot { it.matchesReference(gameReference) }
+    }
+
+    override suspend fun getOverride(gameReference: GameReference): GameMatchOverride? =
+        overridesFlow.value.firstOrNull { it.matchesReference(gameReference) }
+
+    override fun observeAllOverrides(): Flow<List<GameMatchOverride>> = overridesFlow
+
+    private fun GameMatchOverride.matchesReference(other: GameMatchOverride) =
+        systemShortName == other.systemShortName && romPath == other.romPath
+
+    private fun GameMatchOverride.matchesReference(reference: GameReference) =
+        systemShortName == reference.systemShortName && romPath == reference.romPath
 }

@@ -62,6 +62,54 @@ class GameTitleMatcherTest {
     }
 
     @Test
+    fun `a title with one inserted word in the middle is matched as PartialTitle`() {
+        val matchingCandidate = candidate(1, "The Bugs Bunny Birthday Blowout")
+        val candidates = listOf(matchingCandidate)
+
+        val result = GameTitleMatcher.match("The Bugs Bunny Blowout", candidates)
+
+        assertEquals(TitleMatchResult.Matched(matchingCandidate, TitleMatchMethod.PartialTitle), result)
+    }
+
+    @Test
+    fun `the inserted word can be on either side of the comparison`() {
+        val matchingCandidate = candidate(1, "Bugs Bunny Blowout")
+        val candidates = listOf(matchingCandidate)
+
+        val result = GameTitleMatcher.match("The Bugs Bunny Birthday Blowout", candidates)
+
+        assertEquals(TitleMatchResult.Matched(matchingCandidate, TitleMatchMethod.PartialTitle), result)
+    }
+
+    @Test
+    fun `more than two inserted words is NoMatch rather than a partial match`() {
+        val candidates = listOf(candidate(1, "Bugs Bunny Has A Very Silly Birthday Blowout"))
+
+        val result = GameTitleMatcher.match("Bugs Bunny Blowout", candidates)
+
+        assertEquals(TitleMatchResult.NoMatch, result)
+    }
+
+    @Test
+    fun `a short one or two word title never qualifies for a partial match`() {
+        val candidates = listOf(candidate(1, "Pac-Man Championship Edition"))
+
+        val result = GameTitleMatcher.match("Pac-Man", candidates)
+
+        assertEquals(TitleMatchResult.NoMatch, result)
+    }
+
+    @Test
+    fun `an exact title takes precedence over a partial match when both exist`() {
+        val exactCandidate = candidate(1, "Bugs Bunny Blowout")
+        val candidates = listOf(candidate(2, "Bugs Bunny Birthday Blowout"), exactCandidate)
+
+        val result = GameTitleMatcher.match("Bugs Bunny Blowout", candidates)
+
+        assertEquals(TitleMatchResult.Matched(exactCandidate, TitleMatchMethod.ExactTitle), result)
+    }
+
+    @Test
     fun `a genuinely different title is NoMatch`() {
         val candidates = listOf(candidate(1, "Chrono Cross"), candidate(2, "Chrono Trigger"))
 

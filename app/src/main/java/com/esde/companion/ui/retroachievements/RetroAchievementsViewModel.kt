@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.EsdeConnectionState
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.currentGameName
 import com.esde.companion.domain.model.currentGameReference
@@ -12,6 +14,8 @@ import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
+import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
+import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -30,6 +34,11 @@ private data class CurrentGame(val reference: GameReference, val name: String)
  * stage (see [RetroAchievementsUiState.kt]) so a fetch failure is never confused with a
  * resolution problem.
  *
+ * Also owns the low-key manual-correction picker's state ([searchQuery]/[searchResults])
+ * and [onGameCorrected] - kept on this same ViewModel rather than a separate one, since
+ * both need "which game/system is currently showing", which only this ViewModel already
+ * tracks (see [lastKnownGame]).
+ *
  * [collectLatest] cancels an in-flight resolve/fetch as soon as the game or sign-in state
  * moves on, rather than letting a stale network call finish and overwrite newer state.
  */
@@ -38,6 +47,8 @@ class RetroAchievementsViewModel(
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
     private val resolveGame: ResolveRetroAchievementsGameUseCase,
     private val getAchievementSummary: GetGameAchievementSummaryUseCase,
+    private val searchGames: SearchRetroAchievementsGamesUseCase,
+    private val setGameMatchOverride: SetGameMatchOverrideUseCase,
 ) : ViewModel() {
     private val currentGame =
         observeConnectionState()
@@ -56,11 +67,43 @@ class RetroAchievementsViewModel(
     private val _fetch = MutableStateFlow<RetroAchievementsFetchState>(RetroAchievementsFetchState.Idle)
     val fetch: StateFlow<RetroAchievementsFetchState> = _fetch
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    private val _searchResults = MutableStateFlow<List<RetroAchievementsCandidateGame>>(emptyList())
+    val searchResults: StateFlow<List<RetroAchievementsCandidateGame>> = _searchResults
+
+    // Set at the start of every resolveAndFetch call (a single collectLatest coroutine, so
+    // no concurrent-write race) - the correction picker's search scope and onGameCorrected's
+    // target both need "which game is this screen currently about", which resolution/fetch
+    // alone don't expose to the UI layer.
+    private var lastKnownGame: CurrentGame? = null
+
+    // Bumped after onGameCorrected persists an override, to force a re-resolve even though
+    // neither currentGame nor the credentials flow actually changed.
+    private val refreshTrigger = MutableStateFlow(0)
+
     init {
         viewModelScope.launch {
-            combine(observeCredentials(), currentGame) { credentials, game -> (credentials != null) to game }
-                .distinctUntilChanged()
-                .collectLatest { (signedIn, game) -> resolveAndFetch(signedIn, game) }
+            combine(observeCredentials(), currentGame, refreshTrigger) { credentials, game, _ ->
+                (credentials != null) to game
+            }.collectLatest { (signedIn, game) -> resolveAndFetch(signedIn, game) }
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+        val systemShortName = lastKnownGame?.reference?.systemShortName ?: return
+        viewModelScope.launch {
+            _searchResults.value = searchGames(systemShortName, query)
+        }
+    }
+
+    fun onGameCorrected(candidate: RetroAchievementsCandidateGame) {
+        val reference = lastKnownGame?.reference ?: return
+        viewModelScope.launch {
+            setGameMatchOverride(GameMatchOverride(reference.systemShortName, reference.romPath, candidate.gameId))
+            refreshTrigger.value += 1
         }
     }
 
@@ -68,6 +111,10 @@ class RetroAchievementsViewModel(
         signedIn: Boolean,
         game: CurrentGame?,
     ) {
+        lastKnownGame = game
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+
         if (!signedIn) {
             _resolution.value = RetroAchievementsResolutionState.NotSignedIn
             _fetch.value = RetroAchievementsFetchState.Idle

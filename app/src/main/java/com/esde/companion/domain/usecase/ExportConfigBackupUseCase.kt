@@ -6,6 +6,7 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.ConfigBackupRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import kotlinx.coroutines.flow.first
@@ -16,12 +17,14 @@ import kotlinx.coroutines.flow.first
  * single `.first()` off its repository's observe `Flow` - a one-shot snapshot, not a live
  * subscription, matching what "export the current state" means.
  */
+@Suppress("LongParameterList")
 class ExportConfigBackupUseCase(
     private val onboardingRepository: OnboardingRepository,
     private val appDrawerSettingsRepository: AppDrawerSettingsRepository,
     private val appFolderRepository: AppFolderRepository,
     private val dockSettingsRepository: DockSettingsRepository,
     private val widgetLayoutRepository: WidgetLayoutRepository,
+    private val gameMatchOverrideRepository: GameMatchOverrideRepository,
     private val configBackupRepository: ConfigBackupRepository,
 ) {
     suspend operator fun invoke(): String {
@@ -61,6 +64,7 @@ class ExportConfigBackupUseCase(
                 dockSize = dockSettingsRepository.observeDockSize().first(),
                 dockApps = dockSettingsRepository.observeDockApps().first(),
                 widgetCanvases = StateGroup.entries.associateWith { widgetLayoutRepository.observeCanvas(it).first() },
+                gameMatchOverrides = gameMatchOverrideRepository.observeAllOverrides().first(),
             )
         return configBackupRepository.serialize(snapshot)
     }

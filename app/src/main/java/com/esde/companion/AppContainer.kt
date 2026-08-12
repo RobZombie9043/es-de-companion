@@ -21,9 +21,9 @@ import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
+import com.esde.companion.data.retroachievements.DataStoreGameMatchOverrideRepository
 import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
 import com.esde.companion.data.retroachievements.GameListCache
-import com.esde.companion.data.retroachievements.NoOpGameMatchOverrideRepository
 import com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImpl
 import com.esde.companion.data.retroachievements.RetroClientRetroAchievementsApi
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
@@ -125,6 +125,7 @@ import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
@@ -133,6 +134,7 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
+import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
@@ -327,6 +329,11 @@ class AppContainer(context: Context) {
     val observeDockAppsUseCase = ObserveDockAppsUseCase(dockSettingsRepository)
     val setDockAppsUseCase = SetDockAppsUseCase(dockSettingsRepository)
 
+    // Not a secret - plain DataStore, included in Backup & Restore below (unlike
+    // RetroAchievements' credentials repository, further down this file).
+    private val gameMatchOverrideRepository: GameMatchOverrideRepository =
+        DataStoreGameMatchOverrideRepository(appContext)
+
     // Settings > Setup > Backup & Restore. Reaches directly into the settings repositories
     // above (rather than through their narrower per-field use cases) since export/restore
     // needs every field at once - see ExportConfigBackupUseCase/RestoreConfigBackupUseCase.
@@ -338,6 +345,7 @@ class AppContainer(context: Context) {
             appFolderRepository = appFolderRepository,
             dockSettingsRepository = dockSettingsRepository,
             widgetLayoutRepository = widgetLayoutRepository,
+            gameMatchOverrideRepository = gameMatchOverrideRepository,
             configBackupRepository = configBackupRepository,
         )
     val restoreConfigBackupUseCase =
@@ -347,6 +355,7 @@ class AppContainer(context: Context) {
             appFolderRepository = appFolderRepository,
             dockSettingsRepository = dockSettingsRepository,
             widgetLayoutRepository = widgetLayoutRepository,
+            gameMatchOverrideRepository = gameMatchOverrideRepository,
             configBackupRepository = configBackupRepository,
         )
 
@@ -437,11 +446,6 @@ class AppContainer(context: Context) {
             apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) },
         )
 
-    // Placeholder pending Phase 1 PR 6 (persisted overrides + the search/picker screen
-    // that's the only thing that would ever call setOverride) - see
-    // NoOpGameMatchOverrideRepository's kdoc.
-    private val gameMatchOverrideRepository: GameMatchOverrideRepository = NoOpGameMatchOverrideRepository()
-
     val observeRetroAchievementsCredentialsUseCase =
         ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
     val clearRetroAchievementsCredentialsUseCase =
@@ -451,6 +455,8 @@ class AppContainer(context: Context) {
     val resolveRetroAchievementsGameUseCase =
         ResolveRetroAchievementsGameUseCase(gameMatchOverrideRepository, retroAchievementsRepository)
     val getGameAchievementSummaryUseCase = GetGameAchievementSummaryUseCase(retroAchievementsRepository)
+    val setGameMatchOverrideUseCase = SetGameMatchOverrideUseCase(gameMatchOverrideRepository)
+    val searchRetroAchievementsGamesUseCase = SearchRetroAchievementsGamesUseCase(retroAchievementsRepository)
 
     // Update checker (GitHub Releases). The one sanctioned network use case in this app -
     // see CLAUDE.md's "What NOT to Do" entry on network layers.

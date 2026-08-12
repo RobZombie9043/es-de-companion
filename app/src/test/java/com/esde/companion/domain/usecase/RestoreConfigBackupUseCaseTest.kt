@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
@@ -49,6 +50,8 @@ private class SourceFixture {
         FakeDockSettingsRepository(dockEnabled = true, dockSize = DockSize.Large, dockApps = listOf("com.dock.app"))
     val canvas = SavedWidgetCanvas(grid = GridDimensions(columns = 8, rows = 5), widgets = listOf(samplePlacedWidget()))
     val widgets = FakeWidgetLayoutRepository(initial = mapOf(StateGroup.System to canvas))
+    val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
+    val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
 
     private fun samplePlacedWidget() =
         PlacedWidget(
@@ -75,6 +78,7 @@ class RestoreConfigBackupUseCaseTest {
                     source.appFolders,
                     source.dock,
                     source.widgets,
+                    source.gameMatchOverrides,
                     configBackupRepository,
                 )()
 
@@ -83,6 +87,7 @@ class RestoreConfigBackupUseCaseTest {
             val targetAppFolders = FakeAppFolderRepository()
             val targetDock = FakeDockSettingsRepository()
             val targetWidgets = FakeWidgetLayoutRepository()
+            val targetGameMatchOverrides = FakeGameMatchOverrideRepository()
             val restoreUseCase =
                 RestoreConfigBackupUseCase(
                     targetOnboarding,
@@ -90,6 +95,7 @@ class RestoreConfigBackupUseCaseTest {
                     targetAppFolders,
                     targetDock,
                     targetWidgets,
+                    targetGameMatchOverrides,
                     configBackupRepository,
                 )
 
@@ -113,6 +119,7 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(DockSize.Large, targetDock.observeDockSize().first())
             assertEquals(listOf("com.dock.app"), targetDock.observeDockApps().first())
             assertEquals(source.canvas, targetWidgets.observeCanvas(StateGroup.System).first())
+            assertEquals(listOf(source.override), targetGameMatchOverrides.observeAllOverrides().first())
         }
 
     @Test
@@ -123,6 +130,7 @@ class RestoreConfigBackupUseCaseTest {
             val appFolders = FakeAppFolderRepository()
             val dock = FakeDockSettingsRepository()
             val widgets = FakeWidgetLayoutRepository()
+            val gameMatchOverrides = FakeGameMatchOverrideRepository()
             val useCase =
                 RestoreConfigBackupUseCase(
                     onboarding,
@@ -130,6 +138,7 @@ class RestoreConfigBackupUseCaseTest {
                     appFolders,
                     dock,
                     widgets,
+                    gameMatchOverrides,
                     JsonConfigBackupRepository(),
                 )
 
@@ -148,12 +157,28 @@ class RestoreConfigBackupUseCaseTest {
             val appFolders = FakeAppFolderRepository()
             val dock = FakeDockSettingsRepository()
             val widgets = FakeWidgetLayoutRepository()
+            val gameMatchOverrides = FakeGameMatchOverrideRepository()
             val configBackupRepository = JsonConfigBackupRepository()
             val useCase =
-                RestoreConfigBackupUseCase(onboarding, appDrawer, appFolders, dock, widgets, configBackupRepository)
+                RestoreConfigBackupUseCase(
+                    onboarding,
+                    appDrawer,
+                    appFolders,
+                    dock,
+                    widgets,
+                    gameMatchOverrides,
+                    configBackupRepository,
+                )
             val futureJson =
-                ExportConfigBackupUseCase(onboarding, appDrawer, appFolders, dock, widgets, configBackupRepository)()
-                    .replace("\"version\":1", "\"version\":999")
+                ExportConfigBackupUseCase(
+                    onboarding,
+                    appDrawer,
+                    appFolders,
+                    dock,
+                    widgets,
+                    gameMatchOverrides,
+                    configBackupRepository,
+                )().replace("\"version\":1", "\"version\":999")
 
             val result = useCase(futureJson)
 
