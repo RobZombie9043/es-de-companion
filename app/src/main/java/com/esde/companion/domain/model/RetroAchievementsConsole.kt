@@ -12,20 +12,20 @@ package com.esde.companion.domain.model
  * live API call.
  */
 @Suppress("MagicNumber")
-enum class RetroAchievementsConsole(val consoleId: Int) {
-    MegaDrive(1),
-    Nintendo64(2),
-    Snes(3),
-    GameBoy(4),
-    GameBoyAdvance(5),
-    GameBoyColor(6),
-    Nes(7),
-    PcEngine(8),
-    SegaCd(9),
-    Sega32X(10),
-    MasterSystem(11),
-    PlayStation(12),
-    AtariLynx(13),
-    NeoGeoPocket(14),
-    GameGear(15),
+enum class RetroAchievementsConsole(val consoleId: Long) {
+    MegaDrive(1L),
+    Nintendo64(2L),
+    Snes(3L),
+    GameBoy(4L),
+    GameBoyAdvance(5L),
+    GameBoyColor(6L),
+    Nes(7L),
+    PcEngine(8L),
+    SegaCd(9L),
+    Sega32X(10L),
+    MasterSystem(11L),
+    PlayStation(12L),
+    AtariLynx(13L),
+    NeoGeoPocket(14L),
+    GameGear(15L),
 }

@@ -5,20 +5,24 @@ import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsConsole
 import com.esde.companion.domain.model.RetroAchievementsCredentials
+import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
 import com.esde.companion.domain.repository.RetroAchievementsRepository
+import kotlinx.coroutines.flow.first
 
 /**
- * Real [RetroAchievementsRepository]. Only [validateCredentials] is backed by the live API
- * so far - [getCandidateGames]/[getAchievementSummary] still return placeholders, since
- * nothing calls them for real yet (no `GameListCache`, no identification/achievement UI -
- * see CLAUDE.md's RetroAchievements section for the remaining PRs that wire them up).
+ * Real [RetroAchievementsRepository], now fully wired to the live API.
  *
  * [apiFactory] builds a fresh [RetroAchievementsApi] for whichever [RetroAchievementsCredentials]
- * a call needs to run as, rather than this repository holding one fixed client - [validateCredentials]
- * is inherently about testing not-yet-stored, possibly-wrong credentials, so there is no
- * single "current" client to reuse for it.
+ * a call needs to run as, rather than this repository holding one fixed client:
+ * [validateCredentials] is inherently about testing not-yet-stored, possibly-wrong
+ * credentials, and [getCandidateGames]/[getAchievementSummary] need whichever credentials
+ * are *currently* signed in (read from [credentialsRepository] at call time, since sign-in
+ * state can change across this repository's lifetime) - there is no single "current" client
+ * to hold onto in either case.
  */
 class RetroAchievementsRepositoryImpl(
+    private val credentialsRepository: RetroAchievementsCredentialsRepository,
+    private val gameListCache: GameListCache,
     private val apiFactory: (RetroAchievementsCredentials) -> RetroAchievementsApi,
 ) : RetroAchievementsRepository {
     override suspend fun validateCredentials(credentials: RetroAchievementsCredentials): RetroAchievementsAuthState {
@@ -35,10 +39,20 @@ class RetroAchievementsRepositoryImpl(
     }
 
     override suspend fun getCandidateGames(console: RetroAchievementsConsole): List<RetroAchievementsCandidateGame> {
-        return emptyList()
+        val credentials = currentCredentials() ?: return emptyList()
+        return gameListCache.getGames(console, apiFactory(credentials))
     }
 
     override suspend fun getAchievementSummary(gameId: Long): AchievementSummaryFetchResult {
-        return AchievementSummaryFetchResult.NotFound
+        val credentials = currentCredentials() ?: return AchievementSummaryFetchResult.NotFound
+        val api = apiFactory(credentials)
+        return when (val result = api.getGameInfoAndUserProgress(credentials.username, gameId)) {
+            is RetroAchievementsApiResult.Success -> AchievementSummaryFetchResult.Success(result.data)
+            is RetroAchievementsApiResult.Error -> AchievementSummaryFetchResult.NetworkError(result.message)
+        }
+    }
+
+    private suspend fun currentCredentials(): RetroAchievementsCredentials? {
+        return credentialsRepository.observeCredentials().first()
     }
 }

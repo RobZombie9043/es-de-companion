@@ -20,7 +20,9 @@ import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
+import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
 import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
+import com.esde.companion.data.retroachievements.GameListCache
 import com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImpl
 import com.esde.companion.data.retroachievements.RetroClientRetroAchievementsApi
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
@@ -419,12 +421,17 @@ class AppContainer(context: Context) {
     // EncryptedRetroAchievementsCredentialsRepository's kdoc - and are deliberately never
     // passed into exportConfigBackupUseCase/restoreConfigBackupUseCase above, a structural
     // guarantee against a plaintext credential leak (the same mechanism lastKnownContextRepository
-    // relies on). Only credential validation is backed by the live API so far - see
-    // RetroAchievementsRepositoryImpl's kdoc for what's still a placeholder.
+    // relies on). The game list is cached (disk + memory, 24h TTL) since api-kotlin flags
+    // GetGameList as rate-limited/response-heavy - see GameListCache's kdoc.
     private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
         EncryptedRetroAchievementsCredentialsRepository(appContext)
+    private val gameListCache = GameListCache(store = DataStoreGameListCacheStore(appContext))
     private val retroAchievementsRepository: RetroAchievementsRepository =
-        RetroAchievementsRepositoryImpl(apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) })
+        RetroAchievementsRepositoryImpl(
+            credentialsRepository = retroAchievementsCredentialsRepository,
+            gameListCache = gameListCache,
+            apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) },
+        )
 
     val observeRetroAchievementsCredentialsUseCase =
         ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
