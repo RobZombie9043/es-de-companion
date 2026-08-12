@@ -10,12 +10,19 @@ import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.RetroAchievementsAuthState
+import com.esde.companion.domain.model.RetroAchievementsCandidateGame
+import com.esde.companion.domain.model.RetroAchievementsConsole
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
+import com.esde.companion.domain.repository.RetroAchievementsRepository
+import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FakeAppFolderRepository
 import com.esde.companion.domain.usecase.FakeWidgetLayoutRepository
@@ -36,6 +43,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCas
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
@@ -71,6 +79,7 @@ import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
+import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -327,6 +336,32 @@ class SettingsViewModelTest {
         override fun observeInstalledApps(): Flow<List<InstalledApp>> = flowOf(apps)
     }
 
+    private class FakeRetroAchievementsCredentialsRepository : RetroAchievementsCredentialsRepository {
+        private val credentialsFlow = MutableStateFlow<RetroAchievementsCredentials?>(null)
+
+        override suspend fun setCredentials(credentials: RetroAchievementsCredentials) {
+            credentialsFlow.value = credentials
+        }
+
+        override suspend fun clearCredentials() {
+            credentialsFlow.value = null
+        }
+
+        override fun observeCredentials(): Flow<RetroAchievementsCredentials?> = credentialsFlow
+    }
+
+    private class FakeRetroAchievementsRepository : RetroAchievementsRepository {
+        override suspend fun validateCredentials(creds: RetroAchievementsCredentials): RetroAchievementsAuthState {
+            return RetroAchievementsAuthState.Error("not implemented in this test")
+        }
+
+        override suspend fun getCandidateGames(c: RetroAchievementsConsole): List<RetroAchievementsCandidateGame> {
+            return emptyList()
+        }
+
+        override suspend fun getAchievementSummary(gameId: Long) = error("not used in this test")
+    }
+
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -379,6 +414,16 @@ class SettingsViewModelTest {
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
         val (exportConfigBackupUseCase, restoreConfigBackupUseCase) =
             configBackupUseCases(onboardingRepository, appDrawerSettingsRepository, dockSettingsRepository)
+        val retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository()
+        val observeRetroAchievementsCredentialsUseCase =
+            ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+        val validateRetroAchievementsCredentialsUseCase =
+            ValidateRetroAchievementsCredentialsUseCase(
+                FakeRetroAchievementsRepository(),
+                retroAchievementsCredentialsRepository,
+            )
+        val clearRetroAchievementsCredentialsUseCase =
+            ClearRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
         val viewModel =
             SettingsViewModel(
                 onboardingRepository = onboardingRepository,
@@ -435,6 +480,9 @@ class SettingsViewModelTest {
                 setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository),
                 exportConfigBackupUseCase = exportConfigBackupUseCase,
                 restoreConfigBackupUseCase = restoreConfigBackupUseCase,
+                observeRetroAchievementsCredentialsUseCase = observeRetroAchievementsCredentialsUseCase,
+                validateRetroAchievementsCredentialsUseCase = validateRetroAchievementsCredentialsUseCase,
+                clearRetroAchievementsCredentialsUseCase = clearRetroAchievementsCredentialsUseCase,
             )
         return viewModel to appDrawerSettingsRepository
     }

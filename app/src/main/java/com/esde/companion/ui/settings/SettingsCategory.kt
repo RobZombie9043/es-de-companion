@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
@@ -53,5 +54,10 @@ enum class SettingsCategory(val title: String, val description: String, val icon
         title = "Setup",
         description = "ES-DE and media folder locations",
         icon = Icons.Filled.Folder,
+    ),
+    RetroAchievements(
+        title = "RetroAchievements",
+        description = "Sign in and manage the RetroAchievements connection",
+        icon = Icons.Filled.EmojiEvents,
     ),
 }

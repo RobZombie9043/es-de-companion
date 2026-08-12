@@ -58,6 +58,9 @@ import com.esde.companion.ui.settings.AppDrawerSettingsContent
 import com.esde.companion.ui.settings.ManageAppsScreen
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.OtherSettingsContent
+import com.esde.companion.ui.settings.RetroAchievementsConnectStatus
+import com.esde.companion.ui.settings.RetroAchievementsCredentialsInput
+import com.esde.companion.ui.settings.RetroAchievementsSettingsContent
 import com.esde.companion.ui.settings.SettingsCategory
 import com.esde.companion.ui.settings.SettingsCategoryRow
 import com.esde.companion.ui.settings.SettingsQuitRow
@@ -343,6 +346,26 @@ fun LongPressSettingsMenu(
                                         onDebugLoggingEnabledChanged = settingsViewModel::onDebugLoggingEnabledChanged,
                                     )
                                 SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
+                                SettingsCategory.RetroAchievements ->
+                                    RetroAchievementsSettingsContent(
+                                        credentials = uiState.retroAchievementsCredentials,
+                                        input =
+                                            RetroAchievementsCredentialsInput(
+                                                username = uiState.retroAchievementsUsernameInput,
+                                                onUsernameChanged =
+                                                    settingsViewModel::onRetroAchievementsUsernameInputChanged,
+                                                webApiKey = uiState.retroAchievementsWebApiKeyInput,
+                                                onWebApiKeyChanged =
+                                                    settingsViewModel::onRetroAchievementsWebApiKeyInputChanged,
+                                            ),
+                                        connectStatus =
+                                            RetroAchievementsConnectStatus(
+                                                isConnecting = uiState.isConnectingToRetroAchievements,
+                                                connectError = uiState.retroAchievementsConnectError,
+                                            ),
+                                        onConnectClicked = settingsViewModel::onConnectToRetroAchievementsClicked,
+                                        onSignOutClicked = settingsViewModel::onSignOutOfRetroAchievementsClicked,
+                                    )
                             }
                     }
                 }

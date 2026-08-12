@@ -8,9 +8,12 @@ import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.RetroAchievementsAuthState
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
@@ -29,6 +32,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCas
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
@@ -64,6 +68,7 @@ import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
+import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -125,6 +130,9 @@ class SettingsViewModel(
     private val setDebugLoggingEnabledUseCase: SetDebugLoggingEnabledUseCase,
     private val exportConfigBackupUseCase: ExportConfigBackupUseCase,
     private val restoreConfigBackupUseCase: RestoreConfigBackupUseCase,
+    private val observeRetroAchievementsCredentialsUseCase: ObserveRetroAchievementsCredentialsUseCase,
+    private val validateRetroAchievementsCredentialsUseCase: ValidateRetroAchievementsCredentialsUseCase,
+    private val clearRetroAchievementsCredentialsUseCase: ClearRetroAchievementsCredentialsUseCase,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
     // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient.
@@ -162,6 +170,13 @@ class SettingsViewModel(
         loaded.customSystemImagesFolderPath?.let { validateCustomSystemImagesFolder(it) }
         loaded.customLogosFolderPath?.let { validateCustomLogosFolder(it) }
         loaded.customMusicFolderPath?.let { validateCustomMusicFolder(it) }
+        loaded.retroAchievementsCredentials?.let { credentials ->
+            _uiState.value =
+                _uiState.value.copy(
+                    retroAchievementsUsernameInput = credentials.username,
+                    retroAchievementsWebApiKeyInput = credentials.webApiKey,
+                )
+        }
     }
 
     /** The read half of [reloadSettingsState] - split out purely to stay under detekt's
@@ -203,6 +218,7 @@ class SettingsViewModel(
             fabAssignments = observeFabAssignmentsUseCase().first(),
             launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first(),
             debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first(),
+            retroAchievementsCredentials = observeRetroAchievementsCredentialsUseCase().first(),
         )
     }
 
@@ -453,5 +469,58 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = true)
         val result = validateMediaFolderUseCase(path)
         _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = false, customLogosFolderValidation = result)
+    }
+
+    fun onRetroAchievementsUsernameInputChanged(username: String) {
+        _uiState.value = _uiState.value.copy(retroAchievementsUsernameInput = username)
+    }
+
+    fun onRetroAchievementsWebApiKeyInputChanged(webApiKey: String) {
+        _uiState.value = _uiState.value.copy(retroAchievementsWebApiKeyInput = webApiKey)
+    }
+
+    /**
+     * Settings > RetroAchievements' "Connect" action - validates first and only persists on
+     * success, per [ValidateRetroAchievementsCredentialsUseCase]'s contract. A failed attempt
+     * surfaces [SettingsUiState.retroAchievementsConnectError] and leaves any previously
+     * stored (valid) credentials untouched.
+     */
+    fun onConnectToRetroAchievementsClicked() {
+        val credentials =
+            RetroAchievementsCredentials(
+                username = _uiState.value.retroAchievementsUsernameInput.trim(),
+                webApiKey = _uiState.value.retroAchievementsWebApiKeyInput.trim(),
+            )
+        _uiState.value =
+            _uiState.value.copy(isConnectingToRetroAchievements = true, retroAchievementsConnectError = null)
+        viewModelScope.launch {
+            val result = validateRetroAchievementsCredentialsUseCase(credentials)
+            val notConnecting = _uiState.value.copy(isConnectingToRetroAchievements = false)
+            _uiState.value = notConnecting.withConnectResult(credentials, result)
+        }
+    }
+
+    private fun SettingsUiState.withConnectResult(
+        credentials: RetroAchievementsCredentials,
+        result: RetroAchievementsAuthState,
+    ): SettingsUiState =
+        when (result) {
+            is RetroAchievementsAuthState.SignedIn ->
+                copy(retroAchievementsCredentials = credentials, retroAchievementsConnectError = null)
+            is RetroAchievementsAuthState.Error -> copy(retroAchievementsConnectError = result.message)
+            RetroAchievementsAuthState.SignedOut -> this
+        }
+
+    fun onSignOutOfRetroAchievementsClicked() {
+        viewModelScope.launch {
+            clearRetroAchievementsCredentialsUseCase()
+            _uiState.value =
+                _uiState.value.copy(
+                    retroAchievementsCredentials = null,
+                    retroAchievementsUsernameInput = "",
+                    retroAchievementsWebApiKeyInput = "",
+                    retroAchievementsConnectError = null,
+                )
+        }
     }
 }

@@ -20,6 +20,8 @@ import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
+import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
+import com.esde.companion.data.retroachievements.StubRetroAchievementsRepository
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileAppFolderRepository
 import com.esde.companion.data.settings.FileDockSettingsRepository
@@ -50,6 +52,8 @@ import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.MusicLibraryRepository
 import com.esde.companion.domain.repository.MusicPlayerController
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
+import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.UpdateRepository
 import com.esde.companion.domain.repository.UpdateStateRepository
@@ -57,6 +61,7 @@ import com.esde.companion.domain.repository.VideoPlaybackStateRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.state.AppStateReducer
 import com.esde.companion.domain.usecase.CheckForUpdateUseCase
+import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.DownloadApkUseCase
@@ -93,6 +98,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUse
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
@@ -145,6 +151,7 @@ import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
+import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -405,6 +412,24 @@ class AppContainer(context: Context) {
     val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository)
     val setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository)
+
+    // RetroAchievements sign-in (Settings > RetroAchievements). Credentials get their own
+    // EncryptedSharedPreferences-backed repository rather than DataStore - see CLAUDE.md and
+    // EncryptedRetroAchievementsCredentialsRepository's kdoc - and are deliberately never
+    // passed into exportConfigBackupUseCase/restoreConfigBackupUseCase above, a structural
+    // guarantee against a plaintext credential leak (the same mechanism lastKnownContextRepository
+    // relies on). retroAchievementsRepository is a stub until the real api-kotlin client is
+    // wired in; see StubRetroAchievementsRepository's kdoc.
+    private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
+        EncryptedRetroAchievementsCredentialsRepository(appContext)
+    private val retroAchievementsRepository: RetroAchievementsRepository = StubRetroAchievementsRepository()
+
+    val observeRetroAchievementsCredentialsUseCase =
+        ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+    val clearRetroAchievementsCredentialsUseCase =
+        ClearRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+    val validateRetroAchievementsCredentialsUseCase =
+        ValidateRetroAchievementsCredentialsUseCase(retroAchievementsRepository, retroAchievementsCredentialsRepository)
 
     // Update checker (GitHub Releases). The one sanctioned network use case in this app -
     // see CLAUDE.md's "What NOT to Do" entry on network layers.

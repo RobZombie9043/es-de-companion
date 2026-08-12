@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Dock
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.GridView
@@ -60,10 +61,13 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -71,6 +75,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -96,6 +101,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
@@ -110,6 +117,7 @@ import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.UpdateCheckResult
@@ -1828,3 +1836,151 @@ private fun MediaFolderValidation?.toStatusText(): String =
         is MediaFolderValidation.FolderNotFound -> "Folder not found"
         is MediaFolderValidation.FolderFound -> "Folder found"
     }
+
+/**
+ * Bundles the two credential text fields and their change handlers into one parameter,
+ * keeping [RetroAchievementsSettingsContent]/[RetroAchievementsCredentialsForm] under
+ * detekt's LongParameterList threshold - same reasoning as [DimAmountControl].
+ */
+internal data class RetroAchievementsCredentialsInput(
+    val username: String,
+    val onUsernameChanged: (String) -> Unit,
+    val webApiKey: String,
+    val onWebApiKeyChanged: (String) -> Unit,
+)
+
+/** Bundles the Connect action's transient state - same reasoning as [RetroAchievementsCredentialsInput]. */
+internal data class RetroAchievementsConnectStatus(
+    val isConnecting: Boolean,
+    val connectError: String?,
+)
+
+@Composable
+internal fun RetroAchievementsSettingsContent(
+    credentials: RetroAchievementsCredentials?,
+    input: RetroAchievementsCredentialsInput,
+    connectStatus: RetroAchievementsConnectStatus,
+    onConnectClicked: () -> Unit,
+    onSignOutClicked: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        RetroAchievementsConnectionStatus(credentials, onSignOutClicked)
+        RetroAchievementsCredentialsForm(
+            input = input,
+            connectStatus = connectStatus,
+            onConnectClicked = onConnectClicked,
+        )
+    }
+}
+
+@Composable
+private fun RetroAchievementsConnectionStatus(
+    credentials: RetroAchievementsCredentials?,
+    onSignOutClicked: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsLabel(
+                icon = Icons.Filled.EmojiEvents,
+                text = if (credentials != null) "Signed in as ${credentials.username}" else "Not signed in",
+            )
+            if (credentials != null) {
+                TextButton(onClick = onSignOutClicked) { Text("Sign Out") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RetroAchievementsCredentialsForm(
+    input: RetroAchievementsCredentialsInput,
+    connectStatus: RetroAchievementsConnectStatus,
+    onConnectClicked: () -> Unit,
+) {
+    var webApiKeyVisible by remember { mutableStateOf(false) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SettingsLabel(icon = Icons.Filled.EmojiEvents, text = "RetroAchievements Account")
+            OutlinedTextField(
+                value = input.username,
+                onValueChange = input.onUsernameChanged,
+                label = { Text("Username") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            val webApiKeyTransformation =
+                if (webApiKeyVisible) VisualTransformation.None else PasswordVisualTransformation()
+            OutlinedTextField(
+                value = input.webApiKey,
+                onValueChange = input.onWebApiKeyChanged,
+                label = { Text("Web API Key") },
+                singleLine = true,
+                visualTransformation = webApiKeyTransformation,
+                trailingIcon = {
+                    WebApiKeyVisibilityToggle(
+                        visible = webApiKeyVisible,
+                        onToggle = { webApiKeyVisible = !webApiKeyVisible },
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (connectStatus.connectError != null) {
+                Text(
+                    text = connectStatus.connectError,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Button(
+                onClick = onConnectClicked,
+                enabled = !connectStatus.isConnecting && input.username.isNotBlank() && input.webApiKey.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (connectStatus.isConnecting) {
+                    val spinnerColor = MaterialTheme.colorScheme.onPrimary
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = spinnerColor)
+                } else {
+                    Text("Connect")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebApiKeyVisibilityToggle(
+    visible: Boolean,
+    onToggle: () -> Unit,
+) {
+    IconButton(onClick = onToggle) {
+        Icon(
+            imageVector = if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+            contentDescription = if (visible) "Hide Web API Key" else "Show Web API Key",
+        )
+    }
+}

@@ -67,6 +67,9 @@ class SettingsViewModelFactory(
             setDebugLoggingEnabledUseCase = appContainer.setDebugLoggingEnabledUseCase,
             exportConfigBackupUseCase = appContainer.exportConfigBackupUseCase,
             restoreConfigBackupUseCase = appContainer.restoreConfigBackupUseCase,
+            observeRetroAchievementsCredentialsUseCase = appContainer.observeRetroAchievementsCredentialsUseCase,
+            validateRetroAchievementsCredentialsUseCase = appContainer.validateRetroAchievementsCredentialsUseCase,
+            clearRetroAchievementsCredentialsUseCase = appContainer.clearRetroAchievementsCredentialsUseCase,
         ) as T
     }
 }

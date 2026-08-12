@@ -102,6 +102,7 @@ dependencies {
     implementation(libs.coil.gif)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.security.crypto)
     debugImplementation(libs.androidx.ui.tooling)
 
     // Local unit tests: app/src/test/
