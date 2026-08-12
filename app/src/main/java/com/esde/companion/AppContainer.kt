@@ -21,7 +21,8 @@ import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
-import com.esde.companion.data.retroachievements.StubRetroAchievementsRepository
+import com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImpl
+import com.esde.companion.data.retroachievements.RetroClientRetroAchievementsApi
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileAppFolderRepository
 import com.esde.companion.data.settings.FileDockSettingsRepository
@@ -418,11 +419,12 @@ class AppContainer(context: Context) {
     // EncryptedRetroAchievementsCredentialsRepository's kdoc - and are deliberately never
     // passed into exportConfigBackupUseCase/restoreConfigBackupUseCase above, a structural
     // guarantee against a plaintext credential leak (the same mechanism lastKnownContextRepository
-    // relies on). retroAchievementsRepository is a stub until the real api-kotlin client is
-    // wired in; see StubRetroAchievementsRepository's kdoc.
+    // relies on). Only credential validation is backed by the live API so far - see
+    // RetroAchievementsRepositoryImpl's kdoc for what's still a placeholder.
     private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
         EncryptedRetroAchievementsCredentialsRepository(appContext)
-    private val retroAchievementsRepository: RetroAchievementsRepository = StubRetroAchievementsRepository()
+    private val retroAchievementsRepository: RetroAchievementsRepository =
+        RetroAchievementsRepositoryImpl(apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) })
 
     val observeRetroAchievementsCredentialsUseCase =
         ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)

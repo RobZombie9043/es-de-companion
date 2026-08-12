@@ -19,3 +19,14 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# RetroAchievements/api-kotlin (see CLAUDE.md's RetroAchievements section) - its response
+# models are deserialized by Gson via reflection, so their fields must survive
+# minification/obfuscation unchanged, and its RetroInterface is a Retrofit dynamic-proxy
+# interface whose method/annotation shapes Retrofit needs at runtime. This is a best-effort
+# starting point, not yet verified against a real minified build - see CLAUDE.md's open risk
+# on this.
+-keep class org.retroachivements.api.data.** { *; }
+-keep interface org.retroachivements.api.RetroInterface { *; }
+-keepattributes Signature
+-keepattributes *Annotation*

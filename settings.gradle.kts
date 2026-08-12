@@ -14,6 +14,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // RetroAchievements/api-kotlin is only published via JitPack - see CLAUDE.md's
+        // RetroAchievements networking exception. repositoriesMode is FAIL_ON_PROJECT_REPOS,
+        // so this has to live here rather than at the module level.
+        maven(url = "https://www.jitpack.io")
     }
 }
 
