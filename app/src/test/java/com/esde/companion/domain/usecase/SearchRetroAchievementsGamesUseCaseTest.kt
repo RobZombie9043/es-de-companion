@@ -21,7 +21,10 @@ class SearchRetroAchievementsGamesUseCaseTest {
 
         override suspend fun getCandidateGames(console: RetroAchievementsConsole) = candidates
 
-        override suspend fun getAchievementSummary(gameId: Long): AchievementSummaryFetchResult {
+        override suspend fun getAchievementSummary(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ): AchievementSummaryFetchResult {
             error("not used in this test")
         }
 

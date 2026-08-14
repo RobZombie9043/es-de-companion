@@ -49,6 +49,31 @@ class RetroAchievementsRepositoryImplTest {
         }
     }
 
+    private class CountingGameInfoApi(
+        private val summaryResult: RetroAchievementsApiResult<GameAchievementSummary>,
+    ) : RetroAchievementsApi {
+        var callCount = 0
+            private set
+
+        override suspend fun getUserSummary(username: String) = error("not used in this test")
+
+        override suspend fun getGameList(consoleId: Long) = error("not used in this test")
+
+        override suspend fun getGameInfoAndUserProgress(
+            username: String,
+            gameId: Long,
+        ): RetroAchievementsApiResult<GameAchievementSummary> {
+            callCount++
+            return summaryResult
+        }
+
+        override suspend fun getUserCompletionProgress(
+            username: String,
+            offset: Int,
+            count: Int,
+        ) = error("not used in this test")
+    }
+
     private class FakeGameListCacheStore : GameListCacheStore {
         override suspend fun read(consoleId: Long): CachedGameList? = null
 
@@ -86,6 +111,7 @@ class RetroAchievementsRepositoryImplTest {
         credentialsRepository = FakeCredentialsRepository(signedInAs),
         gameListCache = GameListCache(FakeGameListCacheStore()),
         userProgressCache = UserProgressCache(FakeUserProgressCacheStore()),
+        achievementSummaryCache = AchievementSummaryCache(),
         apiFactory = { api },
     )
 
@@ -192,6 +218,34 @@ class RetroAchievementsRepositoryImplTest {
             val result = repository.getAchievementSummary(gameId = 1L)
 
             assertEquals(AchievementSummaryFetchResult.NetworkError("offline"), result)
+        }
+
+    @Test
+    fun `getAchievementSummary caches a successful fetch and does not re-query the api on a second call`() =
+        runTest {
+            val summary = GameAchievementSummary(1L, "Chrono Trigger", 100, 0, 0f, achievements = emptyList())
+            val fakeApi =
+                CountingGameInfoApi(RetroAchievementsApiResult.Success(summary))
+            val repository = repositoryWith(fakeApi)
+
+            repository.getAchievementSummary(gameId = 1L)
+            repository.getAchievementSummary(gameId = 1L)
+
+            assertEquals(1, fakeApi.callCount)
+        }
+
+    @Test
+    fun `getAchievementSummary with forceRefresh re-queries the api even when a fresh cache entry exists`() =
+        runTest {
+            val summary = GameAchievementSummary(1L, "Chrono Trigger", 100, 0, 0f, achievements = emptyList())
+            val fakeApi =
+                CountingGameInfoApi(RetroAchievementsApiResult.Success(summary))
+            val repository = repositoryWith(fakeApi)
+
+            repository.getAchievementSummary(gameId = 1L)
+            repository.getAchievementSummary(gameId = 1L, forceRefresh = true)
+
+            assertEquals(2, fakeApi.callCount)
         }
 
     @Test

@@ -7,7 +7,10 @@ import com.esde.companion.domain.repository.RetroAchievementsRepository
 class GetGameAchievementSummaryUseCase(
     private val retroAchievementsRepository: RetroAchievementsRepository,
 ) {
-    suspend operator fun invoke(gameId: Long): AchievementSummaryFetchResult {
-        return retroAchievementsRepository.getAchievementSummary(gameId)
+    suspend operator fun invoke(
+        gameId: Long,
+        forceRefresh: Boolean = false,
+    ): AchievementSummaryFetchResult {
+        return retroAchievementsRepository.getAchievementSummary(gameId, forceRefresh)
     }
 }

@@ -27,7 +27,14 @@ interface RetroAchievementsRepository {
      */
     suspend fun getCandidateGames(console: RetroAchievementsConsole): List<RetroAchievementsCandidateGame>
 
-    suspend fun getAchievementSummary(gameId: Long): AchievementSummaryFetchResult
+    /**
+     * [forceRefresh] bypasses whatever caching the implementation applies, so a user can
+     * manually pull fresh unlock status instead of waiting out its TTL.
+     */
+    suspend fun getAchievementSummary(
+        gameId: Long,
+        forceRefresh: Boolean = false,
+    ): AchievementSummaryFetchResult
 
     /**
      * The signed-in user's cross-console completion progress, keyed by RA gameId. Returns

@@ -25,6 +25,7 @@ class RetroAchievementsRepositoryImpl(
     private val credentialsRepository: RetroAchievementsCredentialsRepository,
     private val gameListCache: GameListCache,
     private val userProgressCache: UserProgressCache,
+    private val achievementSummaryCache: AchievementSummaryCache,
     private val apiFactory: (RetroAchievementsCredentials) -> RetroAchievementsApi,
 ) : RetroAchievementsRepository {
     override suspend fun validateCredentials(credentials: RetroAchievementsCredentials): RetroAchievementsAuthState {
@@ -45,12 +46,17 @@ class RetroAchievementsRepositoryImpl(
         return gameListCache.getGames(console, apiFactory(credentials))
     }
 
-    override suspend fun getAchievementSummary(gameId: Long): AchievementSummaryFetchResult {
+    override suspend fun getAchievementSummary(
+        gameId: Long,
+        forceRefresh: Boolean,
+    ): AchievementSummaryFetchResult {
         val credentials = currentCredentials() ?: return AchievementSummaryFetchResult.NotFound
         val api = apiFactory(credentials)
-        return when (val result = api.getGameInfoAndUserProgress(credentials.username, gameId)) {
-            is RetroAchievementsApiResult.Success -> AchievementSummaryFetchResult.Success(result.data)
-            is RetroAchievementsApiResult.Error -> AchievementSummaryFetchResult.NetworkError(result.message)
+        return achievementSummaryCache.getSummary(credentials.username, gameId, forceRefresh) {
+            when (val result = api.getGameInfoAndUserProgress(credentials.username, gameId)) {
+                is RetroAchievementsApiResult.Success -> AchievementSummaryFetchResult.Success(result.data)
+                is RetroAchievementsApiResult.Error -> AchievementSummaryFetchResult.NetworkError(result.message)
+            }
         }
     }
 

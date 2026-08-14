@@ -23,6 +23,7 @@ import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
+import com.esde.companion.data.retroachievements.AchievementSummaryCache
 import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
 import com.esde.companion.data.retroachievements.DataStoreGameMatchOverrideRepository
 import com.esde.companion.data.retroachievements.DataStoreUserProgressCacheStore
@@ -479,16 +480,22 @@ class AppContainer(context: Context) {
     // user's cross-console completion progress (system browser's Progress sort/filter) is a
     // separate cache with its own 1h TTL and its own DataStore file - see UserProgressCache's
     // and DataStoreUserProgressCacheStore's kdocs for why it can't share GameListCache's TTL
-    // or file. Neither cache is covered by Backup & Restore, same as the credentials.
+    // or file. A third cache, AchievementSummaryCache, covers the per-game achievement summary
+    // (the achievement screen's data) - in-memory only, keyed by (username, gameId), 15-minute
+    // TTL, with a manual forceRefresh bypass wired to that screen's kebab "Refresh" entry - see
+    // its kdoc for why it isn't disk-backed like the other two. None of the three caches are
+    // covered by Backup & Restore, same as the credentials.
     private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
         EncryptedRetroAchievementsCredentialsRepository(appContext)
     private val gameListCache = GameListCache(store = DataStoreGameListCacheStore(appContext))
     private val userProgressCache = UserProgressCache(store = DataStoreUserProgressCacheStore(appContext))
+    private val achievementSummaryCache = AchievementSummaryCache()
     private val retroAchievementsRepository: RetroAchievementsRepository =
         RetroAchievementsRepositoryImpl(
             credentialsRepository = retroAchievementsCredentialsRepository,
             gameListCache = gameListCache,
             userProgressCache = userProgressCache,
+            achievementSummaryCache = achievementSummaryCache,
             apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) },
         )
 

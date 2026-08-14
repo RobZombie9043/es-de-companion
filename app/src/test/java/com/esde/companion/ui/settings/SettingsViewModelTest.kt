@@ -360,7 +360,10 @@ class SettingsViewModelTest {
             return emptyList()
         }
 
-        override suspend fun getAchievementSummary(gameId: Long) = error("not used in this test")
+        override suspend fun getAchievementSummary(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("not used in this test")
 
         override suspend fun getUserGameProgress() = error("not used in this test")
     }

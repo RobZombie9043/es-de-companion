@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -85,6 +86,10 @@ fun RetroAchievementsScreen(
     // which only exists once resolution has landed on Found - NoMatch has nothing to look up.
     val canShowHashSupport = resolution is RetroAchievementsResolutionState.Found
 
+    // Same "needs a resolved gameId" gate as canShowHashSupport - kept as its own named val for
+    // clarity even though the underlying condition is currently identical.
+    val canRefresh = resolution is RetroAchievementsResolutionState.Found
+
     // One theme-derived content color for everything in this screen (title text, icons,
     // achievement titles, messages) - white against the dark background image, black
     // against the light one - rather than each piece of text/icon picking its own default
@@ -100,16 +105,19 @@ fun RetroAchievementsScreen(
         )
         CompositionLocalProvider(LocalContentColor provides contentColor) {
             Column(modifier = Modifier.fillMaxSize()) {
-                RetroAchievementsTopBar(
-                    onExit = onExit,
-                    canCorrect = canCorrect,
-                    onRequestCorrection = {
-                        viewModel.onSearchQueryChanged("")
-                        showCorrectionDialog = true
-                    },
-                    canShowHashSupport = canShowHashSupport,
-                    onRequestHashSupport = viewModel::onRequestHashSupport,
-                )
+                val menuActions =
+                    OptionsMenuActions(
+                        canCorrect = canCorrect,
+                        onRequestCorrection = {
+                            viewModel.onSearchQueryChanged("")
+                            showCorrectionDialog = true
+                        },
+                        canShowHashSupport = canShowHashSupport,
+                        onRequestHashSupport = viewModel::onRequestHashSupport,
+                        canRefresh = canRefresh,
+                        onRequestRefresh = viewModel::onRefreshRequested,
+                    )
+                RetroAchievementsTopBar(onExit = onExit, menuActions = menuActions)
                 val listControls =
                     AchievementListControls(
                         sort = DropdownSelection(sortOrder, viewModel::onSortOrderChanged),
@@ -162,13 +170,24 @@ private fun RetroAchievementsDialogs(
     }
 }
 
+/**
+ * Bundles [OptionsMenu]'s three independent enabled/action pairs into one param - the same
+ * "bundle related params to stay under detekt's LongParameterList limit" convention
+ * [AchievementListControls]/`RetroAchievementsDetailUseCases` use.
+ */
+private data class OptionsMenuActions(
+    val canCorrect: Boolean,
+    val onRequestCorrection: () -> Unit,
+    val canShowHashSupport: Boolean,
+    val onRequestHashSupport: () -> Unit,
+    val canRefresh: Boolean,
+    val onRequestRefresh: () -> Unit,
+)
+
 @Composable
 private fun RetroAchievementsTopBar(
     onExit: () -> Unit,
-    canCorrect: Boolean,
-    onRequestCorrection: () -> Unit,
-    canShowHashSupport: Boolean,
-    onRequestHashSupport: () -> Unit,
+    menuActions: OptionsMenuActions,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = CORNER_BUTTON_EDGE_PADDING),
@@ -179,13 +198,9 @@ private fun RetroAchievementsTopBar(
         Text(text = "Achievements", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         // Kebab sits left of Close, but its menu still opens flush with the true screen
         // edge (see OptionsMenu's kdoc) rather than sliding left along with the icon.
-        if (canCorrect || canShowHashSupport) {
-            OptionsMenu(
-                canCorrect = canCorrect,
-                onRequestCorrection = onRequestCorrection,
-                canShowHashSupport = canShowHashSupport,
-                onRequestHashSupport = onRequestHashSupport,
-            )
+        val showKebab = menuActions.canCorrect || menuActions.canShowHashSupport || menuActions.canRefresh
+        if (showKebab) {
+            OptionsMenu(menuActions)
         }
         IconButton(onClick = onExit) {
             Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
@@ -205,12 +220,7 @@ private fun RetroAchievementsTopBar(
  * options button uses to open reliably next to itself instead of drifting off to one side.
  */
 @Composable
-private fun OptionsMenu(
-    canCorrect: Boolean,
-    onRequestCorrection: () -> Unit,
-    canShowHashSupport: Boolean,
-    onRequestHashSupport: () -> Unit,
-) {
+private fun OptionsMenu(actions: OptionsMenuActions) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
@@ -222,23 +232,33 @@ private fun OptionsMenu(
             offset = DpOffset(x = ICON_BUTTON_WIDTH, y = 0.dp),
             shape = MENU_SHAPE,
         ) {
-            if (canCorrect) {
+            if (actions.canCorrect) {
                 DropdownMenuItem(
                     text = { Text("Change Game") },
                     leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
                     onClick = {
                         expanded = false
-                        onRequestCorrection()
+                        actions.onRequestCorrection()
                     },
                 )
             }
-            if (canShowHashSupport) {
+            if (actions.canShowHashSupport) {
                 DropdownMenuItem(
                     text = { Text("Supported Hashes") },
                     leadingIcon = { Icon(imageVector = Icons.Filled.Fingerprint, contentDescription = null) },
                     onClick = {
                         expanded = false
-                        onRequestHashSupport()
+                        actions.onRequestHashSupport()
+                    },
+                )
+            }
+            if (actions.canRefresh) {
+                DropdownMenuItem(
+                    text = { Text("Refresh") },
+                    leadingIcon = { Icon(imageVector = Icons.Filled.Refresh, contentDescription = null) },
+                    onClick = {
+                        expanded = false
+                        actions.onRequestRefresh()
                     },
                 )
             }

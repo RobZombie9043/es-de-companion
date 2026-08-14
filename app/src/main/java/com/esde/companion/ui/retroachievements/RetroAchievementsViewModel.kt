@@ -97,9 +97,14 @@ class RetroAchievementsViewModel(
     // doesn't carry (it only exposes the match method).
     private var lastGameId: Long? = null
 
-    // Bumped after onGameCorrected persists an override, to force a re-resolve even though
-    // neither currentGame nor the credentials flow actually changed.
+    // Bumped after onGameCorrected persists an override, or after onRefreshRequested, to force
+    // a re-resolve even though neither currentGame nor the credentials flow actually changed.
     private val refreshTrigger = MutableStateFlow(0)
+
+    // Set by onRefreshRequested and read-and-cleared inside resolveAndFetch - safe without a
+    // lock since resolveAndFetch only ever runs inside the single collectLatest coroutine below,
+    // same reasoning as lastKnownGame/lastGameId.
+    private var pendingForceRefresh = false
 
     init {
         viewModelScope.launch {
@@ -150,6 +155,12 @@ class RetroAchievementsViewModel(
         _hashSupport.value = HashSupportState.Hidden
     }
 
+    /** Forces the next fetch to bypass [RetroAchievementsDetailUseCases.getAchievementSummary]'s cache. */
+    fun onRefreshRequested() {
+        pendingForceRefresh = true
+        refreshTrigger.value += 1
+    }
+
     private suspend fun resolveAndFetch(
         signedIn: Boolean,
         game: CurrentGame?,
@@ -183,7 +194,8 @@ class RetroAchievementsViewModel(
                 lastGameId = match.gameId
                 _resolution.value = RetroAchievementsResolutionState.Found(match.method)
                 _fetch.value = RetroAchievementsFetchState.Loading
-                _fetch.value = detailUseCases.getAchievementSummary(match.gameId).toFetchState()
+                val forceRefresh = pendingForceRefresh.also { pendingForceRefresh = false }
+                _fetch.value = detailUseCases.getAchievementSummary(match.gameId, forceRefresh).toFetchState()
             }
         }
     }
