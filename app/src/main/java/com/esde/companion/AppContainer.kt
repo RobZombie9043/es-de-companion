@@ -37,6 +37,8 @@ import com.esde.companion.data.settings.FileDockSettingsRepository
 import com.esde.companion.data.settings.FileEsdeInstallationRepository
 import com.esde.companion.data.settings.FileOnboardingRepository
 import com.esde.companion.data.settings.FileWidgetLayoutRepository
+import com.esde.companion.data.storage.SelfHealConfig
+import com.esde.companion.data.storage.StorageMountEvents
 import com.esde.companion.data.update.FileUpdateStateRepository
 import com.esde.companion.data.update.GitHubUpdateRepository
 import com.esde.companion.data.video.ProcessVideoPlaybackStateRepository
@@ -190,7 +192,15 @@ class AppContainer(context: Context) {
 
     val onboardingRepository: OnboardingRepository = FileOnboardingRepository(appContext)
 
-    val esdeInstallationRepository: EsdeInstallationRepository = FileEsdeInstallationRepository()
+    // Fed by StorageMountReceiver (manifest-registered - see AndroidManifest.xml) so the
+    // log/settings directory watchers below can rearm promptly once removable storage (e.g.
+    // an SD card holding the ES-DE folder) mounts after being unavailable at app startup, or
+    // tear down cleanly on removal. Public: the receiver reaches this via
+    // (application as CompanionApplication).appContainer.storageMountEvents.
+    val storageMountEvents = StorageMountEvents()
+
+    val esdeInstallationRepository: EsdeInstallationRepository =
+        FileEsdeInstallationRepository(storageEvents = storageMountEvents.events)
 
     val activityVisibilityRepository: ActivityVisibilityRepository = ProcessActivityVisibilityRepository()
 
@@ -219,12 +229,21 @@ class AppContainer(context: Context) {
 
     // Named separately (rather than inlined into logRepository below) purely to keep that
     // property's own nesting shallow - see CLAUDE.md's ktlint/detekt indentation gotcha.
-    private val esdeLogFileRepositoryFactory: (String) -> EsdeLogRepository = { folderPath ->
-        EsdeLogFileRepository(
-            logFilePath = "$folderPath/logs/es_log.txt",
+    private val logRepositorySelfHeal =
+        SelfHealConfig(
+            storageEvents = storageMountEvents.events,
             onFallbackPollCaughtUpdate = {
                 debugFileLogger.logInfo("Poll", "fallback poll (not FileObserver) picked up an es_log.txt update")
             },
+            onStorageMountEvent = {
+                debugFileLogger.logInfo("Storage", "mount/unmount broadcast received, rearming directory watcher")
+            },
+        )
+
+    private val esdeLogFileRepositoryFactory: (String) -> EsdeLogRepository = { folderPath ->
+        EsdeLogFileRepository(
+            logFilePath = "$folderPath/logs/es_log.txt",
+            selfHeal = logRepositorySelfHeal,
         )
     }
 

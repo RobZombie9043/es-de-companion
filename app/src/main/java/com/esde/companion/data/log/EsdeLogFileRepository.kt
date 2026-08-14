@@ -2,6 +2,9 @@ package com.esde.companion.data.log
 
 import android.os.FileObserver
 import android.os.SystemClock
+import com.esde.companion.data.storage.DirectoryWatcher
+import com.esde.companion.data.storage.SelfHealConfig
+import com.esde.companion.data.storage.SelfHealingDirectoryWatcher
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.isStartupAnchor
 import com.esde.companion.domain.model.withDirection
@@ -58,8 +61,8 @@ class EsdeLogFileRepository(
     private val fallbackPollIntervalMs: Long = DEFAULT_FALLBACK_POLL_INTERVAL_MS,
     private val bootTimeMillis: () -> Long = { System.currentTimeMillis() - SystemClock.elapsedRealtime() },
     private val watchDirectory: (targetPath: String, mask: Int, onChange: () -> Unit) -> DirectoryWatcher =
-        ::FileObserverDirectoryWatcher,
-    private val onFallbackPollCaughtUpdate: () -> Unit = {},
+        { path, mask, onChange -> SelfHealingDirectoryWatcher(path, mask, onChange) },
+    private val selfHeal: SelfHealConfig = SelfHealConfig(),
 ) : EsdeLogRepository {
     override fun observeEvents(): Flow<EsdeEvent> =
         channelFlow {
@@ -99,6 +102,15 @@ class EsdeLogFileRepository(
                     }
                 }
 
+            val storageEventsJob =
+                launch {
+                    selfHeal.storageEvents.collect {
+                        selfHeal.onStorageMountEvent()
+                        fileObserver.recheck(forceRearm = true)
+                        checkSignal.trySend(CheckTrigger.StorageChanged)
+                    }
+                }
+
             try {
                 for (trigger in checkSignal) {
                     val file = File(logFilePath)
@@ -113,11 +125,18 @@ class EsdeLogFileRepository(
                     }
 
                     if (length > position) {
-                        if (trigger == CheckTrigger.Fallback) onFallbackPollCaughtUpdate()
+                        if (trigger == CheckTrigger.Fallback) {
+                            // The fallback poll caught a real change FileObserver should
+                            // have caught but didn't - direct proof the current watch (if
+                            // any) has gone stale, so force it to tear down and rearm.
+                            selfHeal.onFallbackPollCaughtUpdate()
+                            fileObserver.recheck(forceRearm = true)
+                        }
                         position = readNewLines(file, position, directionTracker) { event -> send(event) }
                     }
                 }
             } finally {
+                storageEventsJob.cancel()
                 fallbackJob.cancel()
                 fileObserver.stopWatching()
             }
@@ -135,30 +154,43 @@ class EsdeLogFileRepository(
             var lastKnown = File(logFilePath).exists()
             send(lastKnown)
 
-            val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
-            val fileObserver = watchDirectory(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(Unit) }
+            val checkSignal = Channel<CheckTrigger>(capacity = Channel.CONFLATED)
+            val fileObserver =
+                watchDirectory(logFilePath, EXISTENCE_EVENTS_MASK) { checkSignal.trySend(CheckTrigger.Observer) }
             fileObserver.startWatching()
 
             val fallbackJob =
                 launch {
                     while (isActive) {
                         delay(fallbackPollIntervalMs)
-                        checkSignal.trySend(Unit)
+                        checkSignal.trySend(CheckTrigger.Fallback)
+                    }
+                }
+
+            val storageEventsJob =
+                launch {
+                    selfHeal.storageEvents.collect {
+                        selfHeal.onStorageMountEvent()
+                        fileObserver.recheck(forceRearm = true)
+                        checkSignal.trySend(CheckTrigger.StorageChanged)
                     }
                 }
 
             try {
-                // Loop variable is intentionally unused - same CONFLATED-channel,
-                // re-check-on-any-signal pattern as observeEvents() above.
-                @Suppress("UnusedPrivateProperty")
-                for (signal in checkSignal) {
+                for (trigger in checkSignal) {
                     val exists = File(logFilePath).exists()
                     if (exists != lastKnown) {
+                        // An existence flip the fallback poll caught is proof the watch
+                        // (if any) missed a CREATE/DELETE/MOVED_* event it should have
+                        // caught - same "prove it's stale, force a rearm" reasoning as
+                        // observeEvents() above.
+                        if (trigger == CheckTrigger.Fallback) fileObserver.recheck(forceRearm = true)
                         lastKnown = exists
                         send(exists)
                     }
                 }
             } finally {
+                storageEventsJob.cancel()
                 fallbackJob.cancel()
                 fileObserver.stopWatching()
             }
@@ -270,46 +302,11 @@ class EsdeLogFileRepository(
     }
 }
 
-/** Which signal source woke up [EsdeLogFileRepository.observeEvents]'s check loop. */
-private enum class CheckTrigger { Observer, Fallback }
-
 /**
- * Seam for [EsdeLogFileRepository]'s directory-watching mechanism - injected the same way
- * as its `bootTimeMillis` parameter, so tests can substitute a no-op fake instead of
- * touching real [FileObserver]. [FileObserver]'s method bodies are stubbed to throw under
- * a plain JUnit unit test (no Robolectric, no Android runtime), so without this seam every
- * call to `observeEvents()`/`observeLogFileExists()` in a test races the producer
- * coroutine's real `Dispatchers.IO` thread against the test's own cancellation to reach
- * `startWatching()` before it throws - a genuine, observed flake, not a hypothetical one.
+ * Which signal source woke up [EsdeLogFileRepository.observeEvents]'s (or
+ * [EsdeLogFileRepository.observeLogFileExists]'s) check loop. [StorageChanged] is tagged
+ * separately from [Fallback] so a mount-event-driven re-read never spuriously invokes
+ * `onFallbackPollCaughtUpdate()`, whose contract is specifically "the periodic poll caught
+ * something the directory watcher missed."
  */
-interface DirectoryWatcher {
-    fun startWatching()
-
-    fun stopWatching()
-}
-
-/**
- * Watches [targetPath]'s parent directory and invokes [onChange] for any event in [mask]
- * on an entry matching its file name. See [EsdeLogFileRepository]'s class doc for why this
- * watches the directory rather than the file itself.
- */
-private class FileObserverDirectoryWatcher(
-    targetPath: String,
-    mask: Int,
-    onChange: () -> Unit,
-) : DirectoryWatcher {
-    private val targetFile = File(targetPath)
-    private val observer =
-        object : FileObserver(targetFile.parentFile ?: File("/"), mask) {
-            override fun onEvent(
-                event: Int,
-                path: String?,
-            ) {
-                if (path == null || path == targetFile.name) onChange()
-            }
-        }
-
-    override fun startWatching() = observer.startWatching()
-
-    override fun stopWatching() = observer.stopWatching()
-}
+private enum class CheckTrigger { Observer, Fallback, StorageChanged }

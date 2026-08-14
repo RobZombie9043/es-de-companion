@@ -76,6 +76,7 @@ Check these in order:
 1. **ES-DE settings not enabled**: Verify Custom Event Scripts, Browsing Custom Event Scripts, and Debug Mode are all on in ES-DE, and that you backed out of ES-DE's settings menu after enabling them
 2. **Wrong ES-DE folder**: Settings → Setup → ES-DE folder must be the exact folder ES-DE itself is configured to use — the app looks for `settings/es_settings.xml` and `logs/es_log.txt` inside it
 3. **Wrong media folder**: Settings → Setup → Media folder must match ES-DE's downloaded media location
+4. **ES-DE folder on an SD card, right after a reboot**: As of v1.0.2, the app automatically detects when a removable SD card mounts and recovers on its own — just give the card a few seconds to mount after rebooting. If you're on an older version, a full app restart after the SD card is mounted works around it
 
 ### How do I hide the Settings gear icon?
 
