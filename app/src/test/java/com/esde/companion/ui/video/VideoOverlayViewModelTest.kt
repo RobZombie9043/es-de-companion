@@ -189,6 +189,10 @@ class VideoOverlayViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
+
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
         override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)

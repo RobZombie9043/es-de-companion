@@ -122,6 +122,7 @@ import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -167,6 +168,7 @@ import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
@@ -469,6 +471,13 @@ class AppContainer(context: Context) {
     val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository)
     val setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository)
+
+    // Settings > RetroAchievements: whether the achievement pages follow ES-DE's screensaver
+    // to whatever game it's showing, or freeze on the pre-screensaver game/system instead.
+    val observeUpdateAchievementsOnScreensaverEnabledUseCase =
+        ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+    val setUpdateAchievementsOnScreensaverEnabledUseCase =
+        SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
 
     // RetroAchievements sign-in (Settings > RetroAchievements). Credentials get their own
     // EncryptedSharedPreferences-backed repository rather than DataStore - see CLAUDE.md and

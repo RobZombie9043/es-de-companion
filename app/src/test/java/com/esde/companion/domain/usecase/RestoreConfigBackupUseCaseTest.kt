@@ -41,6 +41,7 @@ private class SourceFixture {
             videoDelaySeconds = 9,
             musicDuckingMode = MusicDuckingMode.Pause,
             debugLoggingEnabled = true,
+            updateAchievementsOnScreensaverEnabled = false,
         )
     val appDrawer =
         FakeAppDrawerSettingsRepository(hiddenApps = setOf("com.hidden.app"), gridColumns = 6, showSearchBar = false)
@@ -111,6 +112,7 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(FabType.CustomApp, targetOnboarding.observeFabAssignments().first().bottomEnd.type)
             assertEquals(MusicDuckingMode.Pause, targetOnboarding.observeMusicDuckingMode().first())
             assertTrue(targetOnboarding.observeDebugLoggingEnabled().first())
+            assertFalse(targetOnboarding.observeUpdateAchievementsOnScreensaverEnabled().first())
             assertEquals(setOf("com.hidden.app"), targetAppDrawer.observeHiddenApps().first())
             assertEquals(6, targetAppDrawer.observeGridColumns().first())
             assertFalse(targetAppDrawer.observeShowSearchBar().first())

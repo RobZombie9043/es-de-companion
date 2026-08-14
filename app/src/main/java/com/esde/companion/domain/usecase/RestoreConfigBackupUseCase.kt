@@ -96,6 +96,7 @@ class RestoreConfigBackupUseCase(
             setCloseCompanionOnQuitEnabled(snapshot.closeCompanionOnQuitEnabled)
             setLaunchEsdeOnStartEnabled(snapshot.launchEsdeOnStartEnabled)
             setDebugLoggingEnabled(snapshot.debugLoggingEnabled)
+            setUpdateAchievementsOnScreensaverEnabled(snapshot.updateAchievementsOnScreensaverEnabled)
         }
     }
 }

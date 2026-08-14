@@ -60,6 +60,7 @@ import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.OtherSettingsContent
 import com.esde.companion.ui.settings.RetroAchievementsConnectStatus
 import com.esde.companion.ui.settings.RetroAchievementsCredentialsInput
+import com.esde.companion.ui.settings.RetroAchievementsScreensaverToggle
 import com.esde.companion.ui.settings.RetroAchievementsSettingsContent
 import com.esde.companion.ui.settings.SettingsCategory
 import com.esde.companion.ui.settings.SettingsCategoryRow
@@ -362,9 +363,16 @@ fun LongPressSettingsMenu(
                                             RetroAchievementsConnectStatus(
                                                 isConnecting = uiState.isConnectingToRetroAchievements,
                                                 connectError = uiState.retroAchievementsConnectError,
+                                                onConnectClicked =
+                                                    settingsViewModel::onConnectToRetroAchievementsClicked,
                                             ),
-                                        onConnectClicked = settingsViewModel::onConnectToRetroAchievementsClicked,
                                         onSignOutClicked = settingsViewModel::onSignOutOfRetroAchievementsClicked,
+                                        screensaverToggle =
+                                            RetroAchievementsScreensaverToggle(
+                                                enabled = uiState.updateAchievementsOnScreensaverEnabled,
+                                                onEnabledChanged =
+                                                    settingsViewModel::onUpdateAchievementsOnScreensaverEnabledChanged,
+                                            ),
                                     )
                             }
                     }

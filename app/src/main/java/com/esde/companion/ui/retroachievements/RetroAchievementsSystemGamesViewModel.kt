@@ -13,6 +13,7 @@ import com.esde.companion.domain.model.RetroGameType
 import com.esde.companion.domain.model.SystemGameFilters
 import com.esde.companion.domain.model.UserGameProgress
 import com.esde.companion.domain.model.filteredBySystemGameFilters
+import com.esde.companion.domain.model.resolveAchievementsSystem
 import com.esde.companion.domain.model.retroGameTypes
 import com.esde.companion.domain.model.sortedBySystemGameOrder
 import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
@@ -20,6 +21,7 @@ import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -41,6 +44,11 @@ private data class CurrentSystem(val systemShortName: String, val systemFullName
  * [RetroAchievementsViewModel], which tracks the current *game*, not the current *system*.
  * Re-loads whenever the signed-in state or the browsed system changes, via the same
  * [ObserveConnectionStateUseCase] source every other RetroAchievements ViewModel follows.
+ * [currentSystem] is folded through
+ * [com.esde.companion.domain.model.resolveAchievementsSystem] the same way
+ * [RetroAchievementsViewModel.currentGame] is - when Settings > RetroAchievements >
+ * "Update on Screensaver" is off, a screensaver starting holds the previously browsed
+ * system instead of dropping to "no system".
  *
  * [searchQuery]/[filters]/[filteredGames] filter+sort the already-fetched list client-side -
  * unlike the manual correction picker's
@@ -64,16 +72,20 @@ private data class CurrentSystem(val systemShortName: String, val systemFullName
 class RetroAchievementsSystemGamesViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
+    observeUpdateAchievementsOnScreensaverEnabled: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
     private val getSystemGames: GetRetroAchievementsSystemGamesUseCase,
     private val getAchievementSummary: GetGameAchievementSummaryUseCase,
     private val getUserGameProgress: GetUserGameProgressUseCase,
 ) : ViewModel() {
     private val currentSystem =
-        observeConnectionState()
-            .map { connection -> (connection as? EsdeConnectionState.Connected)?.appState }
-            .map { appState ->
-                (appState as? AppState.BrowsingSystem)?.let { CurrentSystem(it.systemShortName, it.systemFullName) }
+        combine(
+            observeConnectionState().map { connection -> (connection as? EsdeConnectionState.Connected)?.appState },
+            observeUpdateAchievementsOnScreensaverEnabled(),
+        ) { appState, updateOnScreensaver -> appState to updateOnScreensaver }
+            .scan(null as AppState.BrowsingSystem?) { previous, (appState, updateOnScreensaver) ->
+                resolveAchievementsSystem(appState, previous, updateOnScreensaver)
             }
+            .map { browsingSystem -> browsingSystem?.let { CurrentSystem(it.systemShortName, it.systemFullName) } }
             .distinctUntilChanged()
 
     private val _state = MutableStateFlow<SystemGamesUiState>(SystemGamesUiState.NoSystem)

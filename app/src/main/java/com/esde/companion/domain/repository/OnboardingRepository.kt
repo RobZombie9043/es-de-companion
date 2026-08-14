@@ -191,4 +191,15 @@ interface OnboardingRepository {
     suspend fun setDebugLoggingEnabled(enabled: Boolean)
 
     fun observeDebugLoggingEnabled(): Flow<Boolean>
+
+    /**
+     * Settings > RetroAchievements: whether the achievement pages (per-game and the system
+     * games browser) switch to whatever ES-DE's screensaver is showing while it's active.
+     * Defaults to true - matches the pre-existing behavior of always following the live
+     * [com.esde.companion.domain.model.AppState]. Turning it off freezes both screens on
+     * whatever they were showing immediately before the screensaver started.
+     */
+    suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean)
+
+    fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean>
 }

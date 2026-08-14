@@ -70,6 +70,8 @@ class SettingsViewModelFactory(
             observeRetroAchievementsCredentialsUseCase = appContainer.observeRetroAchievementsCredentialsUseCase,
             validateRetroAchievementsCredentialsUseCase = appContainer.validateRetroAchievementsCredentialsUseCase,
             clearRetroAchievementsCredentialsUseCase = appContainer.clearRetroAchievementsCredentialsUseCase,
+            observeUpdateOnScreensaverUseCase = appContainer.observeUpdateAchievementsOnScreensaverEnabledUseCase,
+            setUpdateOnScreensaverUseCase = appContainer.setUpdateAchievementsOnScreensaverEnabledUseCase,
         ) as T
     }
 }

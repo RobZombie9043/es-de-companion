@@ -12,9 +12,11 @@ class RetroAchievementsSystemGamesViewModelFactory(
         require(modelClass.isAssignableFrom(RetroAchievementsSystemGamesViewModel::class.java)) {
             "Unknown ViewModel class: $modelClass"
         }
+        val observeUpdateOnScreensaver = appContainer.observeUpdateAchievementsOnScreensaverEnabledUseCase
         return RetroAchievementsSystemGamesViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeCredentials = appContainer.observeRetroAchievementsCredentialsUseCase,
+            observeUpdateAchievementsOnScreensaverEnabled = observeUpdateOnScreensaver,
             getSystemGames = appContainer.getRetroAchievementsSystemGamesUseCase,
             getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
             getUserGameProgress = appContainer.getUserGameProgressUseCase,

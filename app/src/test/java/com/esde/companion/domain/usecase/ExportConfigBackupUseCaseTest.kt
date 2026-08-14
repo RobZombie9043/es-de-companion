@@ -57,6 +57,7 @@ class ExportConfigBackupUseCaseTest {
             closeCompanionOnQuitEnabled = true,
             launchEsdeOnStartEnabled = true,
             debugLoggingEnabled = true,
+            updateAchievementsOnScreensaverEnabled = false,
         )
 
     @Test
@@ -99,8 +100,7 @@ class ExportConfigBackupUseCaseTest {
                     gameMatchOverrides,
                     configBackupRepository,
                 )
-            val json = useCase()
-            val snapshot = configBackupRepository.deserialize(json).getOrThrow()
+            val snapshot = configBackupRepository.deserialize(useCase()).getOrThrow()
             val emptyCanvas = SavedWidgetCanvas(grid = null, widgets = emptyList())
 
             assertEquals("/storage/emulated/0/CustomESDE", snapshot.logFolderPath)
@@ -121,5 +121,6 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(canvas, snapshot.widgetCanvases[StateGroup.System])
             assertEquals(emptyCanvas, snapshot.widgetCanvases[StateGroup.Playing])
             assertEquals(listOf(override), snapshot.gameMatchOverrides)
+            assertEquals(false, snapshot.updateAchievementsOnScreensaverEnabled)
         }
 }

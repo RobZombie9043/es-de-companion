@@ -57,4 +57,5 @@ data class SettingsUiState(
     val retroAchievementsWebApiKeyInput: String = "",
     val isConnectingToRetroAchievements: Boolean = false,
     val retroAchievementsConnectError: String? = null,
+    val updateAchievementsOnScreensaverEnabled: Boolean = true,
 )

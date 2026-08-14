@@ -50,6 +50,7 @@ import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -75,6 +76,7 @@ import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
@@ -115,6 +117,7 @@ class SettingsViewModelTest {
         var fabAssignments = FabAssignments.Default
         var launchEsdeOnStartEnabled = false
         var debugLoggingEnabled = false
+        var updateAchievementsOnScreensaverEnabled = true
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
 
@@ -261,6 +264,14 @@ class SettingsViewModelTest {
         }
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(debugLoggingEnabled)
+
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {
+            updateAchievementsOnScreensaverEnabled = enabled
+        }
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
+            return flowOf(updateAchievementsOnScreensaverEnabled)
+        }
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -433,6 +444,9 @@ class SettingsViewModelTest {
             )
         val clearRetroAchievementsCredentialsUseCase =
             ClearRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+        val observeUpdateOnScreensaverUseCase =
+            ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+        val setUpdateOnScreensaverUseCase = SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
         val viewModel =
             SettingsViewModel(
                 onboardingRepository = onboardingRepository,
@@ -492,6 +506,8 @@ class SettingsViewModelTest {
                 observeRetroAchievementsCredentialsUseCase = observeRetroAchievementsCredentialsUseCase,
                 validateRetroAchievementsCredentialsUseCase = validateRetroAchievementsCredentialsUseCase,
                 clearRetroAchievementsCredentialsUseCase = clearRetroAchievementsCredentialsUseCase,
+                observeUpdateOnScreensaverUseCase = observeUpdateOnScreensaverUseCase,
+                setUpdateOnScreensaverUseCase = setUpdateOnScreensaverUseCase,
             )
         return viewModel to appDrawerSettingsRepository
     }
@@ -559,6 +575,22 @@ class SettingsViewModelTest {
 
             advanceUntilIdle()
             assertEquals(true, onboardingRepository.launchEsdeOnStartEnabled)
+        }
+
+    @Test
+    fun `onUpdateAchievementsOnScreensaverEnabledChanged updates ui state immediately and persists`() =
+        runTest(testDispatcher) {
+            val onboardingRepository = FakeOnboardingRepository()
+            val (viewModel, _) = buildViewModel(onboardingRepository = onboardingRepository)
+            advanceUntilIdle()
+
+            viewModel.onUpdateAchievementsOnScreensaverEnabledChanged(false)
+
+            // ui state updates synchronously, before the persistence coroutine runs.
+            assertEquals(false, viewModel.uiState.value.updateAchievementsOnScreensaverEnabled)
+
+            advanceUntilIdle()
+            assertEquals(false, onboardingRepository.updateAchievementsOnScreensaverEnabled)
         }
 
     @Test

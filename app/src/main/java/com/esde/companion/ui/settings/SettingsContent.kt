@@ -1866,10 +1866,17 @@ internal data class RetroAchievementsCredentialsInput(
     val onWebApiKeyChanged: (String) -> Unit,
 )
 
-/** Bundles the Connect action's transient state - same reasoning as [RetroAchievementsCredentialsInput]. */
+/** Bundles the Connect action's transient state and handler - same reasoning as [RetroAchievementsCredentialsInput]. */
 internal data class RetroAchievementsConnectStatus(
     val isConnecting: Boolean,
     val connectError: String?,
+    val onConnectClicked: () -> Unit,
+)
+
+/** Bundles the "Update on Screensaver" toggle - same reasoning as [RetroAchievementsCredentialsInput]. */
+internal data class RetroAchievementsScreensaverToggle(
+    val enabled: Boolean,
+    val onEnabledChanged: (Boolean) -> Unit,
 )
 
 @Composable
@@ -1877,8 +1884,8 @@ internal fun RetroAchievementsSettingsContent(
     credentials: RetroAchievementsCredentials?,
     input: RetroAchievementsCredentialsInput,
     connectStatus: RetroAchievementsConnectStatus,
-    onConnectClicked: () -> Unit,
     onSignOutClicked: () -> Unit,
+    screensaverToggle: RetroAchievementsScreensaverToggle,
 ) {
     Column(
         modifier =
@@ -1892,7 +1899,13 @@ internal fun RetroAchievementsSettingsContent(
         RetroAchievementsCredentialsForm(
             input = input,
             connectStatus = connectStatus,
-            onConnectClicked = onConnectClicked,
+        )
+        ToggleSettingRow(
+            icon = Icons.Filled.Nightlight,
+            title = "Update on Screensaver",
+            description = "Switch the achievement page to the screensaver's game while it's active.",
+            enabled = screensaverToggle.enabled,
+            onEnabledChanged = screensaverToggle.onEnabledChanged,
         )
     }
 }
@@ -1930,7 +1943,6 @@ private fun RetroAchievementsConnectionStatus(
 private fun RetroAchievementsCredentialsForm(
     input: RetroAchievementsCredentialsInput,
     connectStatus: RetroAchievementsConnectStatus,
-    onConnectClicked: () -> Unit,
 ) {
     var webApiKeyVisible by remember { mutableStateOf(false) }
     Surface(
@@ -1974,7 +1986,7 @@ private fun RetroAchievementsCredentialsForm(
                 )
             }
             Button(
-                onClick = onConnectClicked,
+                onClick = connectStatus.onConnectClicked,
                 enabled = !connectStatus.isConnecting && input.username.isNotBlank() && input.webApiKey.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
             ) {

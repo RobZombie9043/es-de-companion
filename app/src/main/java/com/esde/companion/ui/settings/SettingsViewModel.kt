@@ -38,6 +38,7 @@ import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -63,6 +64,7 @@ import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
@@ -133,6 +135,8 @@ class SettingsViewModel(
     private val observeRetroAchievementsCredentialsUseCase: ObserveRetroAchievementsCredentialsUseCase,
     private val validateRetroAchievementsCredentialsUseCase: ValidateRetroAchievementsCredentialsUseCase,
     private val clearRetroAchievementsCredentialsUseCase: ClearRetroAchievementsCredentialsUseCase,
+    private val observeUpdateOnScreensaverUseCase: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
+    private val setUpdateOnScreensaverUseCase: SetUpdateAchievementsOnScreensaverEnabledUseCase,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
     // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient.
@@ -219,6 +223,7 @@ class SettingsViewModel(
             launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first(),
             debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first(),
             retroAchievementsCredentials = observeRetroAchievementsCredentialsUseCase().first(),
+            updateAchievementsOnScreensaverEnabled = observeUpdateOnScreensaverUseCase().first(),
         )
     }
 
@@ -352,6 +357,11 @@ class SettingsViewModel(
     fun onDebugLoggingEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(debugLoggingEnabled = enabled)
         viewModelScope.launch { setDebugLoggingEnabledUseCase(enabled) }
+    }
+
+    fun onUpdateAchievementsOnScreensaverEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(updateAchievementsOnScreensaverEnabled = enabled)
+        viewModelScope.launch { setUpdateOnScreensaverUseCase(enabled) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

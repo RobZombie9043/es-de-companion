@@ -292,6 +292,13 @@ class FileOnboardingRepository(
     override fun observeDebugLoggingEnabled(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[DEBUG_LOGGING_ENABLED_KEY] ?: false }
 
+    override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY] ?: true }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -330,5 +337,7 @@ class FileOnboardingRepository(
         val FAB_BOTTOM_END_CUSTOM_APP_KEY = stringPreferencesKey("fab_bottom_end_custom_app")
         val LAUNCH_ESDE_ON_START_ENABLED_KEY = booleanPreferencesKey("launch_esde_on_start_enabled")
         val DEBUG_LOGGING_ENABLED_KEY = booleanPreferencesKey("debug_logging_enabled")
+        val UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY =
+            booleanPreferencesKey("update_achievements_on_screensaver_enabled")
     }
 }

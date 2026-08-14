@@ -64,6 +64,7 @@ internal data class ConfigBackupDto(
     val dockApps: List<String>,
     val widgetCanvases: Map<String, CanvasDto>,
     val gameMatchOverrides: List<GameMatchOverrideDto> = emptyList(),
+    val updateAchievementsOnScreensaverEnabled: Boolean = true,
 )
 
 @Serializable

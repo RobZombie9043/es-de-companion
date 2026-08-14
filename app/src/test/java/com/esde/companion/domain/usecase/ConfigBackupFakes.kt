@@ -55,6 +55,7 @@ internal class FakeOnboardingRepository(
     closeCompanionOnQuitEnabled: Boolean = false,
     launchEsdeOnStartEnabled: Boolean = false,
     debugLoggingEnabled: Boolean = false,
+    updateAchievementsOnScreensaverEnabled: Boolean = true,
 ) : OnboardingRepository {
     private val logFolderPathFlow = MutableStateFlow(logFolderPath)
     private val mediaFolderPathFlow = MutableStateFlow(mediaFolderPath)
@@ -79,6 +80,7 @@ internal class FakeOnboardingRepository(
     private val closeCompanionOnQuitEnabledFlow = MutableStateFlow(closeCompanionOnQuitEnabled)
     private val launchEsdeOnStartEnabledFlow = MutableStateFlow(launchEsdeOnStartEnabled)
     private val debugLoggingEnabledFlow = MutableStateFlow(debugLoggingEnabled)
+    private val updateAchievementsOnScreensaverEnabledFlow = MutableStateFlow(updateAchievementsOnScreensaverEnabled)
 
     override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
 
@@ -241,6 +243,14 @@ internal class FakeOnboardingRepository(
     }
 
     override fun observeDebugLoggingEnabled(): Flow<Boolean> = debugLoggingEnabledFlow
+
+    override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {
+        updateAchievementsOnScreensaverEnabledFlow.value = enabled
+    }
+
+    override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
+        return updateAchievementsOnScreensaverEnabledFlow
+    }
 }
 
 internal class FakeAppDrawerSettingsRepository(

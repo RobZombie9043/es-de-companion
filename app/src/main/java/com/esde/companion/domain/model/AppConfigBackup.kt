@@ -55,6 +55,7 @@ data class AppConfigBackup(
     val dockApps: List<String>,
     val widgetCanvases: Map<StateGroup, SavedWidgetCanvas>,
     val gameMatchOverrides: List<GameMatchOverride> = emptyList(),
+    val updateAchievementsOnScreensaverEnabled: Boolean = true,
 ) {
     companion object {
         const val CURRENT_VERSION = 1

@@ -17,9 +17,11 @@ class RetroAchievementsViewModelFactory(
                 getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
                 getHashSupport = appContainer.getGameHashSupportUseCase,
             )
+        val observeUpdateOnScreensaver = appContainer.observeUpdateAchievementsOnScreensaverEnabledUseCase
         return RetroAchievementsViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeCredentials = appContainer.observeRetroAchievementsCredentialsUseCase,
+            observeUpdateAchievementsOnScreensaverEnabled = observeUpdateOnScreensaver,
             resolveGame = appContainer.resolveRetroAchievementsGameUseCase,
             detailUseCases = detailUseCases,
             searchGames = appContainer.searchRetroAchievementsGamesUseCase,

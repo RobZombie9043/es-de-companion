@@ -28,6 +28,8 @@ class ExportConfigBackupUseCase(
     private val configBackupRepository: ConfigBackupRepository,
 ) {
     suspend operator fun invoke(): String {
+        val updateAchievementsOnScreensaverEnabled =
+            onboardingRepository.observeUpdateAchievementsOnScreensaverEnabled().first()
         val snapshot =
             AppConfigBackup(
                 logFolderPath = onboardingRepository.observeLogFolderPath().first(),
@@ -65,6 +67,7 @@ class ExportConfigBackupUseCase(
                 dockApps = dockSettingsRepository.observeDockApps().first(),
                 widgetCanvases = StateGroup.entries.associateWith { widgetLayoutRepository.observeCanvas(it).first() },
                 gameMatchOverrides = gameMatchOverrideRepository.observeAllOverrides().first(),
+                updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
             )
         return configBackupRepository.serialize(snapshot)
     }

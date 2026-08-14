@@ -61,6 +61,7 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDtoMap(),
         gameMatchOverrides = gameMatchOverrides.map { it.toDto() },
+        updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
     )
 
 internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
@@ -108,6 +109,7 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDomainMap(),
         gameMatchOverrides = gameMatchOverrides.map { it.toDomain() },
+        updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
     )
 }
 

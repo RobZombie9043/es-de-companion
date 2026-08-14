@@ -150,6 +150,10 @@ class DebugFileLoggerTest {
         }
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = debugLoggingEnabled
+
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
     }
 
     // Mirrors DebugFileLogger's private eventColumnWidth - kept in sync manually since

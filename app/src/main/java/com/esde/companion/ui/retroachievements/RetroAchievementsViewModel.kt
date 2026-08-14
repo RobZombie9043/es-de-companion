@@ -10,10 +10,10 @@ import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
-import com.esde.companion.domain.model.currentGameName
-import com.esde.companion.domain.model.currentGameReference
+import com.esde.companion.domain.model.resolveAchievementsGame
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
 import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.launch
 
 private data class CurrentGame(val reference: GameReference, val name: String)
@@ -40,25 +41,33 @@ private data class CurrentGame(val reference: GameReference, val name: String)
  * both need "which game/system is currently showing", which only this ViewModel already
  * tracks (see [lastKnownGame]).
  *
+ * [currentGame] is folded through [com.esde.companion.domain.model.resolveAchievementsGame]
+ * rather than a plain `map`, so that when Settings > RetroAchievements > "Update on
+ * Screensaver" is off, a screensaver starting on a different game holds the previously
+ * displayed game instead of redirecting to it - see that function's kdoc.
+ *
  * [collectLatest] cancels an in-flight resolve/fetch as soon as the game or sign-in state
  * moves on, rather than letting a stale network call finish and overwrite newer state.
  */
+@Suppress("LongParameterList")
 class RetroAchievementsViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
+    observeUpdateAchievementsOnScreensaverEnabled: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
     private val resolveGame: ResolveRetroAchievementsGameUseCase,
     private val detailUseCases: RetroAchievementsDetailUseCases,
     private val searchGames: SearchRetroAchievementsGamesUseCase,
     private val setGameMatchOverride: SetGameMatchOverrideUseCase,
 ) : ViewModel() {
     private val currentGame =
-        observeConnectionState()
-            .map { connection -> (connection as? EsdeConnectionState.Connected)?.appState }
-            .map { appState ->
-                val reference = appState?.currentGameReference() ?: return@map null
-                val name = appState.currentGameName() ?: return@map null
-                CurrentGame(reference, name)
+        combine(
+            observeConnectionState().map { connection -> (connection as? EsdeConnectionState.Connected)?.appState },
+            observeUpdateAchievementsOnScreensaverEnabled(),
+        ) { appState, updateOnScreensaver -> appState to updateOnScreensaver }
+            .scan(null as Pair<GameReference, String>?) { previous, (appState, updateOnScreensaver) ->
+                resolveAchievementsGame(appState, previous, updateOnScreensaver)
             }
+            .map { resolved -> resolved?.let { (reference, name) -> CurrentGame(reference, name) } }
             .distinctUntilChanged()
 
     private val _resolution =
