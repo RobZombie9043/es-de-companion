@@ -7,7 +7,9 @@ import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.state.AppStateReducer
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -368,7 +370,13 @@ class EsdeLogFileRepositoryTest {
             )
 
             var fallbackCatchCount = 0
-            lateinit var capturedWatcher: CapturingDirectoryWatcher
+            // A CompletableDeferred, not a lateinit var: watchDirectory() runs from the
+            // producer coroutine on a real Dispatchers.IO thread, asynchronously with
+            // respect to this test coroutine, so there's no guarantee it has run yet the
+            // instant the first awaitItem() below returns - awaiting the deferred is what
+            // makes fireChange() below deterministic rather than an
+            // UninitializedPropertyAccessException race.
+            val watcherReady = CompletableDeferred<CapturingDirectoryWatcher>()
             val repository =
                 EsdeLogFileRepository(
                     logFilePath = logFile.absolutePath,
@@ -378,7 +386,7 @@ class EsdeLogFileRepositoryTest {
                     fallbackPollIntervalMs = 3_600_000L,
                     bootTimeMillis = { 0L },
                     watchDirectory = { _, _, onChange ->
-                        CapturingDirectoryWatcher(onChange).also { capturedWatcher = it }
+                        CapturingDirectoryWatcher(onChange).also { watcherReady.complete(it) }
                     },
                     selfHeal = SelfHealConfig(onFallbackPollCaughtUpdate = { fallbackCatchCount++ }),
                 )
@@ -393,7 +401,7 @@ class EsdeLogFileRepositoryTest {
                     "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
                         "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
                 )
-                capturedWatcher.fireChange()
+                watcherReady.await().fireChange()
 
                 assertEquals(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"), awaitItem())
                 cancelAndIgnoreRemainingEvents()
@@ -468,6 +476,13 @@ class EsdeLogFileRepositoryTest {
             repository.observeEvents().test {
                 awaitItem()
 
+                // The storage-events collector subscribes from the producer coroutine on
+                // a real Dispatchers.IO thread, asynchronously with respect to this test
+                // coroutine - emitting before it has actually subscribed silently drops
+                // the value (MutableSharedFlow has no buffer for a replay-0 flow with no
+                // collectors), so wait for the subscription to land first.
+                storageEvents.subscriptionCount.first { it > 0 }
+
                 logFile.appendText(
                     "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
                         "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
@@ -530,6 +545,11 @@ class EsdeLogFileRepositoryTest {
 
             repository.observeLogFileExists().test {
                 assertEquals(false, awaitItem())
+
+                // See the matching comment in the observeEvents() storage-changed test
+                // above - without this wait, emit() can race the producer coroutine's
+                // subscription and silently drop the signal.
+                storageEvents.subscriptionCount.first { it > 0 }
 
                 logFile.writeText("Jul 28 15:16:07 Debug:  Scripting::fireEvent(): startup \"\" \"\" \"\" \"\"\n")
                 storageEvents.emit(Unit)
