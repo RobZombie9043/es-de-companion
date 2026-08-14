@@ -18,6 +18,7 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.charset.StandardCharsets
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * A minimal single-request HTTP/1.1 server for exercising GitHubUpdateRepository's real
@@ -57,6 +58,18 @@ private class SingleRequestHttpServer(
         thread.join(1_000)
     }
 }
+
+/**
+ * Turbine's default 3s timeout is a wall-clock timeout under [runTest] (see its own kdoc on
+ * why virtual time would otherwise hang), not a virtual one - so it's tight for the two
+ * downloadApk tests below, which move real bytes through a real [SingleRequestHttpServer]
+ * thread and Dispatchers.IO. Under a full, parallel test-suite run those can occasionally lose
+ * the race against 3s of real wall-clock CPU contention, the same class of flakiness fixed in
+ * EsdeLogFileRepositoryTest/FileEsdeInstallationRepositoryTest - here the fix is a generous
+ * explicit timeout rather than synchronization, since the slowness is genuine variable-latency
+ * I/O, not a missed subscription.
+ */
+private val DOWNLOAD_TEST_TIMEOUT = 15.seconds
 
 private fun OutputStream.writeHeadAndBody(
     statusCode: Int,
@@ -203,7 +216,7 @@ class GitHubUpdateRepositoryTest {
                 ApkAsset(downloadUrl = "$apiBase/app.apk", fileName = "app.apk", sizeBytes = payload.size.toLong())
 
             val states = mutableListOf<DownloadState>()
-            repository.downloadApk(asset).test {
+            repository.downloadApk(asset).test(timeout = DOWNLOAD_TEST_TIMEOUT) {
                 while (true) {
                     val item = awaitItem()
                     states += item
@@ -239,7 +252,7 @@ class GitHubUpdateRepositoryTest {
             val asset = ApkAsset(downloadUrl = "$apiBase/app.apk", fileName = "app.apk", sizeBytes = 1_000_000L)
 
             val states = mutableListOf<DownloadState>()
-            repository.downloadApk(asset).test {
+            repository.downloadApk(asset).test(timeout = DOWNLOAD_TEST_TIMEOUT) {
                 while (true) {
                     val item = awaitItem()
                     states += item
