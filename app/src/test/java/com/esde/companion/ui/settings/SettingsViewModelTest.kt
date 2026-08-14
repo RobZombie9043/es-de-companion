@@ -361,6 +361,8 @@ class SettingsViewModelTest {
         }
 
         override suspend fun getAchievementSummary(gameId: Long) = error("not used in this test")
+
+        override suspend fun getUserGameProgress() = error("not used in this test")
     }
 
     private val testDispatcher = StandardTestDispatcher()

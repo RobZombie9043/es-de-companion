@@ -8,9 +8,21 @@ package com.esde.companion.domain.model
  * yet - both cases are [RetroAchievementsGameMatch.UnsupportedSystem] to callers, since this
  * table can't distinguish "genuinely unsupported" from "not yet mapped" on its own.
  *
- * Several ES-DE regional variants of the same physical console (e.g. `megadrive` and
- * `megadrivejp`) map to the same [RetroAchievementsConsole] - RetroAchievements does not
- * distinguish regions at the console level, only at the game level.
+ * Several ES-DE regional/hardware variants of the same physical console (e.g. `megadrive`
+ * and `megadrivejp`, or `amiga`/`amiga1200`/`amigacd32`) map to the same
+ * [RetroAchievementsConsole] - RetroAchievements does not distinguish regions or
+ * sub-hardware revisions at the console level, only at the game level.
+ *
+ * Deliberately excludes ES-DE's various MAME/arcade-board systems (`arcade`, `mame`,
+ * `fba`/`fbneo`, `cps`/`cps1`/`cps2`/`cps3`, `neogeo`, `model2`/`model3`, `naomi`/`naomi2`,
+ * `atomiswave`, `stv`, `mugen`, `openbor`, `type-x`) even though RetroAchievements does
+ * track an Arcade console - ES-DE's display names for these come from MAME ROM-set
+ * metadata (already inconsistent set to set), and RA's Arcade achievements are matched by
+ * exact ROM hash, not title, so title-matching against that console would mostly produce
+ * noise rather than useful automatic matches. Also excludes systems RA doesn't
+ * realistically support (PS3/PS4/PSVita/Xbox family/Switch/Wii U) and app/launcher
+ * pseudo-systems (`android`, `windows`, `steam`, `ports`, etc.) - neither is "not yet
+ * mapped" in the sense the class doc above means, just genuinely out of scope.
  */
 object EsdeSystemToRaConsoleMapping {
     private val mapping: Map<String, RetroAchievementsConsole> =
@@ -23,12 +35,18 @@ object EsdeSystemToRaConsoleMapping {
             "sfc" to RetroAchievementsConsole.Snes,
             "snesna" to RetroAchievementsConsole.Snes,
             "gb" to RetroAchievementsConsole.GameBoy,
+            "sgb" to RetroAchievementsConsole.GameBoy,
             "gba" to RetroAchievementsConsole.GameBoyAdvance,
             "gbc" to RetroAchievementsConsole.GameBoyColor,
             "nes" to RetroAchievementsConsole.Nes,
             "famicom" to RetroAchievementsConsole.Nes,
+            "fds" to RetroAchievementsConsole.FamicomDiskSystem,
             "pcengine" to RetroAchievementsConsole.PcEngine,
             "tg16" to RetroAchievementsConsole.PcEngine,
+            "supergrafx" to RetroAchievementsConsole.PcEngine,
+            "pcenginecd" to RetroAchievementsConsole.PcEngineCd,
+            "tg-cd" to RetroAchievementsConsole.PcEngineCd,
+            "pcfx" to RetroAchievementsConsole.PcFx,
             "segacd" to RetroAchievementsConsole.SegaCd,
             "megacd" to RetroAchievementsConsole.SegaCd,
             "megacdjp" to RetroAchievementsConsole.SegaCd,
@@ -38,10 +56,72 @@ object EsdeSystemToRaConsoleMapping {
             "mastersystem" to RetroAchievementsConsole.MasterSystem,
             "mark3" to RetroAchievementsConsole.MasterSystem,
             "gamegear" to RetroAchievementsConsole.GameGear,
+            "sg-1000" to RetroAchievementsConsole.Sg1000,
             "psx" to RetroAchievementsConsole.PlayStation,
+            "ps2" to RetroAchievementsConsole.PlayStation2,
+            "psp" to RetroAchievementsConsole.Psp,
+            "gc" to RetroAchievementsConsole.GameCube,
+            "wii" to RetroAchievementsConsole.Wii,
+            "nds" to RetroAchievementsConsole.NintendoDs,
+            "n3ds" to RetroAchievementsConsole.Nintendo3ds,
             "atarilynx" to RetroAchievementsConsole.AtariLynx,
+            "atari2600" to RetroAchievementsConsole.Atari2600,
+            "atari5200" to RetroAchievementsConsole.Atari5200,
+            "atari7800" to RetroAchievementsConsole.Atari7800,
+            "atarijaguar" to RetroAchievementsConsole.AtariJaguar,
+            "atarijaguarcd" to RetroAchievementsConsole.AtariJaguarCd,
+            "atarist" to RetroAchievementsConsole.AtariSt,
             "ngp" to RetroAchievementsConsole.NeoGeoPocket,
             "ngpc" to RetroAchievementsConsole.NeoGeoPocket,
+            "neogeocd" to RetroAchievementsConsole.NeoGeoCd,
+            "neogeocdjp" to RetroAchievementsConsole.NeoGeoCd,
+            "3do" to RetroAchievementsConsole.ThreeDo,
+            "cdimono1" to RetroAchievementsConsole.Cdi,
+            "dreamcast" to RetroAchievementsConsole.Dreamcast,
+            "saturn" to RetroAchievementsConsole.Saturn,
+            "saturnjp" to RetroAchievementsConsole.Saturn,
+            "dos" to RetroAchievementsConsole.MsDos,
+            "msx" to RetroAchievementsConsole.Msx,
+            "msx1" to RetroAchievementsConsole.Msx,
+            "msx2" to RetroAchievementsConsole.Msx,
+            "msxturbor" to RetroAchievementsConsole.Msx,
+            "c64" to RetroAchievementsConsole.Commodore64,
+            "vic20" to RetroAchievementsConsole.Vic20,
+            "zx81" to RetroAchievementsConsole.Zx81,
+            "zxspectrum" to RetroAchievementsConsole.ZxSpectrum,
+            "oric" to RetroAchievementsConsole.Oric,
+            "amiga" to RetroAchievementsConsole.Amiga,
+            "amiga1200" to RetroAchievementsConsole.Amiga,
+            "amiga600" to RetroAchievementsConsole.Amiga,
+            "amigacd32" to RetroAchievementsConsole.Amiga,
+            "cdtv" to RetroAchievementsConsole.Amiga,
+            "amstradcpc" to RetroAchievementsConsole.AmstradCpc,
+            "apple2" to RetroAchievementsConsole.AppleII,
+            "colecovision" to RetroAchievementsConsole.ColecoVision,
+            "intellivision" to RetroAchievementsConsole.Intellivision,
+            "vectrex" to RetroAchievementsConsole.Vectrex,
+            "odyssey2" to RetroAchievementsConsole.MagnavoxOdyssey2,
+            "videopac" to RetroAchievementsConsole.MagnavoxOdyssey2,
+            "pokemini" to RetroAchievementsConsole.PokemonMini,
+            "virtualboy" to RetroAchievementsConsole.VirtualBoy,
+            "wonderswan" to RetroAchievementsConsole.WonderSwan,
+            "wonderswancolor" to RetroAchievementsConsole.WonderSwan,
+            "channelf" to RetroAchievementsConsole.FairchildChannelF,
+            "gameandwatch" to RetroAchievementsConsole.GameAndWatch,
+            "ngage" to RetroAchievementsConsole.NokiaNGage,
+            "supervision" to RetroAchievementsConsole.Supervision,
+            "x1" to RetroAchievementsConsole.SharpX1,
+            "x68000" to RetroAchievementsConsole.X68000,
+            "pc88" to RetroAchievementsConsole.Pc8800,
+            "pc98" to RetroAchievementsConsole.Pc9800,
+            "fmtowns" to RetroAchievementsConsole.FmTowns,
+            "to8" to RetroAchievementsConsole.ThomsonTo8,
+            "tic80" to RetroAchievementsConsole.Tic80,
+            "megaduck" to RetroAchievementsConsole.Megaduck,
+            "arduboy" to RetroAchievementsConsole.Arduboy,
+            "wasm4" to RetroAchievementsConsole.Wasm4,
+            "arcadia" to RetroAchievementsConsole.Arcadia2001,
+            "scv" to RetroAchievementsConsole.SuperCassetteVision,
         )
 
     fun consoleFor(systemShortName: String): RetroAchievementsConsole? = mapping[systemShortName]

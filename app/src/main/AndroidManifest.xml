@@ -41,6 +41,7 @@
             android:name=".ui.MainActivity"
             android:exported="true"
             android:excludeFromRecents="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.EsdeCompanion">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

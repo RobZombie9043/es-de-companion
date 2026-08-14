@@ -2,14 +2,13 @@ package com.esde.companion.domain.model
 
 /**
  * A RetroAchievements-recognized console, carrying the numeric `consoleId` the Web API's
- * `c`/`i` parameters expect (e.g. `API_GetGameList.php`). This is a deliberate starter set
- * of well-established consoles sourced from RetroAchievements' public console ID table, not
- * an exhaustive one - see [EsdeSystemToRaConsoleMapping]. Growing this table over time is
- * expected, ongoing, low-effort maintenance (it's just a lookup table, no algorithmic
- * complexity attached to it). Before relying on any entry added later, spot-check its
- * `consoleId` against a live `API_GetConsoleIDs.php` response rather than trusting memory
- * or an unofficial source - these particular starter values were not verified against a
- * live API call.
+ * `c`/`i` parameters expect (e.g. `API_GetGameList.php`). Sourced from RetroAchievements'
+ * own reference implementation (`rcheevos`' `rc_consoles.h` `RC_CONSOLE_*` constants), which
+ * is as authoritative as anything short of a live `API_GetConsoleIDs.php` call - not
+ * exhaustive (RA adds new consoles over time), see [EsdeSystemToRaConsoleMapping] for which
+ * ES-DE systems currently map to which of these. Growing this table over time is expected,
+ * ongoing, low-effort maintenance (it's just a lookup table, no algorithmic complexity
+ * attached to it).
  */
 @Suppress("MagicNumber")
 enum class RetroAchievementsConsole(val consoleId: Long) {
@@ -28,4 +27,58 @@ enum class RetroAchievementsConsole(val consoleId: Long) {
     AtariLynx(13L),
     NeoGeoPocket(14L),
     GameGear(15L),
+    GameCube(16L),
+    AtariJaguar(17L),
+    NintendoDs(18L),
+    Wii(19L),
+    PlayStation2(21L),
+    MagnavoxOdyssey2(23L),
+    PokemonMini(24L),
+    Atari2600(25L),
+    MsDos(26L),
+    VirtualBoy(28L),
+    Msx(29L),
+    Commodore64(30L),
+    Zx81(31L),
+    Oric(32L),
+    Sg1000(33L),
+    Vic20(34L),
+    Amiga(35L),
+    AtariSt(36L),
+    AmstradCpc(37L),
+    AppleII(38L),
+    Saturn(39L),
+    Dreamcast(40L),
+    Psp(41L),
+    Cdi(42L),
+    ThreeDo(43L),
+    ColecoVision(44L),
+    Intellivision(45L),
+    Vectrex(46L),
+    Pc8800(47L),
+    Pc9800(48L),
+    PcFx(49L),
+    Atari5200(50L),
+    Atari7800(51L),
+    X68000(52L),
+    WonderSwan(53L),
+    SuperCassetteVision(55L),
+    NeoGeoCd(56L),
+    FairchildChannelF(57L),
+    FmTowns(58L),
+    ZxSpectrum(59L),
+    GameAndWatch(60L),
+    NokiaNGage(61L),
+    Nintendo3ds(62L),
+    Supervision(63L),
+    SharpX1(64L),
+    Tic80(65L),
+    ThomsonTo8(66L),
+    Megaduck(69L),
+    Arduboy(71L),
+    Wasm4(72L),
+    Arcadia2001(73L),
+    PcEngineCd(76L),
+    AtariJaguarCd(77L),
+    FamicomDiskSystem(81L),
 }

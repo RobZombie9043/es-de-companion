@@ -1,5 +1,6 @@
 package com.esde.companion.ui.retroachievements
 
+import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.MatchMethod
 
@@ -38,3 +39,13 @@ sealed class RetroAchievementsFetchState {
 
     data class NetworkError(val message: String) : RetroAchievementsFetchState()
 }
+
+/** Shared by [RetroAchievementsViewModel] and [RetroAchievementsSystemGamesViewModel] - both
+ * fetch a [GameAchievementSummary] for an already-identified gameId and map the outcome into
+ * [RetroAchievementsFetchState] identically. */
+internal fun AchievementSummaryFetchResult.toFetchState(): RetroAchievementsFetchState =
+    when (this) {
+        is AchievementSummaryFetchResult.Success -> RetroAchievementsFetchState.Loaded(summary)
+        AchievementSummaryFetchResult.NotFound -> RetroAchievementsFetchState.NotFound
+        is AchievementSummaryFetchResult.NetworkError -> RetroAchievementsFetchState.NetworkError(message)
+    }

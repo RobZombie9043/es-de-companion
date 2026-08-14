@@ -2,7 +2,9 @@ package com.esde.companion.ui.retroachievements
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.esde.companion.domain.model.AchievementSummaryFetchResult
+import com.esde.companion.domain.model.AchievementDisplayField
+import com.esde.companion.domain.model.AchievementFilterOption
+import com.esde.companion.domain.model.AchievementSortOrder
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameReference
@@ -73,6 +75,15 @@ class RetroAchievementsViewModel(
     private val _searchResults = MutableStateFlow<List<RetroAchievementsCandidateGame>>(emptyList())
     val searchResults: StateFlow<List<RetroAchievementsCandidateGame>> = _searchResults
 
+    private val _sortOrder = MutableStateFlow(AchievementSortOrder.DisplayOrderFirst)
+    val sortOrder: StateFlow<AchievementSortOrder> = _sortOrder
+
+    private val _filter = MutableStateFlow<Set<AchievementFilterOption>>(emptySet())
+    val filter: StateFlow<Set<AchievementFilterOption>> = _filter
+
+    private val _displayField = MutableStateFlow(AchievementDisplayField.UnlockRate)
+    val displayField: StateFlow<AchievementDisplayField> = _displayField
+
     // Set at the start of every resolveAndFetch call (a single collectLatest coroutine, so
     // no concurrent-write race) - the correction picker's search scope and onGameCorrected's
     // target both need "which game is this screen currently about", which resolution/fetch
@@ -93,10 +104,22 @@ class RetroAchievementsViewModel(
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
-        val systemShortName = lastKnownGame?.reference?.systemShortName ?: return
+        val game = lastKnownGame ?: return
         viewModelScope.launch {
-            _searchResults.value = searchGames(systemShortName, query)
+            _searchResults.value = searchGames(game.reference.systemShortName, query, game.name)
         }
+    }
+
+    fun onSortOrderChanged(order: AchievementSortOrder) {
+        _sortOrder.value = order
+    }
+
+    fun onFilterChanged(filter: Set<AchievementFilterOption>) {
+        _filter.value = filter
+    }
+
+    fun onDisplayFieldChanged(displayField: AchievementDisplayField) {
+        _displayField.value = displayField
     }
 
     fun onGameCorrected(candidate: RetroAchievementsCandidateGame) {
@@ -137,15 +160,8 @@ class RetroAchievementsViewModel(
             is RetroAchievementsGameMatch.Found -> {
                 _resolution.value = RetroAchievementsResolutionState.Found(match.method)
                 _fetch.value = RetroAchievementsFetchState.Loading
-                _fetch.value = fetchStateFor(getAchievementSummary(match.gameId))
+                _fetch.value = getAchievementSummary(match.gameId).toFetchState()
             }
         }
     }
-
-    private fun fetchStateFor(result: AchievementSummaryFetchResult): RetroAchievementsFetchState =
-        when (result) {
-            is AchievementSummaryFetchResult.Success -> RetroAchievementsFetchState.Loaded(result.summary)
-            AchievementSummaryFetchResult.NotFound -> RetroAchievementsFetchState.NotFound
-            is AchievementSummaryFetchResult.NetworkError -> RetroAchievementsFetchState.NetworkError(result.message)
-        }
 }

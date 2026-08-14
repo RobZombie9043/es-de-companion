@@ -2,10 +2,12 @@ package com.esde.companion.data.retroachievements
 
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.GameAchievementSummary
+import com.esde.companion.domain.model.ProgressStatus
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsConsole
 import com.esde.companion.domain.model.RetroAchievementsCredentials
+import com.esde.companion.domain.model.UserGameProgress
 import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -18,6 +20,7 @@ class RetroAchievementsRepositoryImplTest {
         private val userSummaryResult: RetroAchievementsApiResult<RetroAchievementsUserSummary>? = null,
         private val gameListResult: RetroAchievementsApiResult<List<RetroAchievementsCandidateGame>>? = null,
         private val summaryResult: RetroAchievementsApiResult<GameAchievementSummary>? = null,
+        private val progressResult: RetroAchievementsApiResult<UserCompletionProgressPage>? = null,
     ) : RetroAchievementsApi {
         var requestedUsername: String? = null
 
@@ -35,6 +38,15 @@ class RetroAchievementsRepositoryImplTest {
             requestedUsername = username
             return summaryResult ?: error("not used in this test")
         }
+
+        override suspend fun getUserCompletionProgress(
+            username: String,
+            offset: Int,
+            count: Int,
+        ): RetroAchievementsApiResult<UserCompletionProgressPage> {
+            requestedUsername = username
+            return progressResult ?: error("not used in this test")
+        }
     }
 
     private class FakeGameListCacheStore : GameListCacheStore {
@@ -43,6 +55,15 @@ class RetroAchievementsRepositoryImplTest {
         override suspend fun write(
             consoleId: Long,
             cached: CachedGameList,
+        ) = Unit
+    }
+
+    private class FakeUserProgressCacheStore : UserProgressCacheStore {
+        override suspend fun read(username: String): CachedUserProgress? = null
+
+        override suspend fun write(
+            username: String,
+            cached: CachedUserProgress,
         ) = Unit
     }
 
@@ -64,6 +85,7 @@ class RetroAchievementsRepositoryImplTest {
     ) = RetroAchievementsRepositoryImpl(
         credentialsRepository = FakeCredentialsRepository(signedInAs),
         gameListCache = GameListCache(FakeGameListCacheStore()),
+        userProgressCache = UserProgressCache(FakeUserProgressCacheStore()),
         apiFactory = { api },
     )
 
@@ -170,5 +192,29 @@ class RetroAchievementsRepositoryImplTest {
             val result = repository.getAchievementSummary(gameId = 1L)
 
             assertEquals(AchievementSummaryFetchResult.NetworkError("offline"), result)
+        }
+
+    @Test
+    fun `getUserGameProgress returns an empty map when nobody is signed in`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi(), signedInAs = null)
+
+            val result = repository.getUserGameProgress()
+
+            assertEquals(emptyMap<Long, UserGameProgress>(), result)
+        }
+
+    @Test
+    fun `getUserGameProgress delegates to the user progress cache using the signed-in credentials`() =
+        runTest {
+            val progress = UserGameProgress(gameId = 1L, numAwarded = 5, maxPossible = 10, status = ProgressStatus.Some)
+            val page = UserCompletionProgressPage(total = 1, entries = listOf(progress))
+            val fakeApi = FakeRetroAchievementsApi(progressResult = RetroAchievementsApiResult.Success(page))
+            val repository = repositoryWith(fakeApi)
+
+            val result = repository.getUserGameProgress()
+
+            assertEquals(mapOf(1L to progress), result)
+            assertEquals("player1", fakeApi.requestedUsername)
         }
 }

@@ -62,6 +62,48 @@ class GameTitleMatcherTest {
     }
 
     @Test
+    fun `a missing space is matched as SpaceInsensitiveTitle`() {
+        val matchingCandidate = candidate(1, "Motoracer Advance")
+        val candidates = listOf(matchingCandidate)
+
+        val result = GameTitleMatcher.match("Moto Racer Advance", candidates)
+
+        assertEquals(TitleMatchResult.Matched(matchingCandidate, TitleMatchMethod.SpaceInsensitiveTitle), result)
+    }
+
+    @Test
+    fun `an extra space is matched as SpaceInsensitiveTitle`() {
+        val matchingCandidate = candidate(1, "Moto Racer Advance")
+        val candidates = listOf(matchingCandidate)
+
+        val result = GameTitleMatcher.match("Motoracer Advance", candidates)
+
+        assertEquals(TitleMatchResult.Matched(matchingCandidate, TitleMatchMethod.SpaceInsensitiveTitle), result)
+    }
+
+    @Test
+    fun `SpaceInsensitiveTitle does not fire when NormalizedTitle already matches`() {
+        val matchingCandidate = candidate(1, "Chrono Trigger (USA)")
+        val candidates = listOf(matchingCandidate)
+
+        val result = GameTitleMatcher.match("Chrono Trigger", candidates)
+
+        assertEquals(TitleMatchResult.Matched(matchingCandidate, TitleMatchMethod.NormalizedTitle), result)
+    }
+
+    @Test
+    fun `a genuine spelling difference beyond just spacing is still NoMatch`() {
+        // "Motorace" vs "Moto Racer" differ by more than whitespace alone (a missing "r"),
+        // so this must stay NoMatch even with the SpaceInsensitiveTitle tier in place -
+        // this is the case rankBySimilarity (not match()) is meant to catch instead.
+        val candidates = listOf(candidate(1, "Moto Racer Advance"), candidate(2, "Chrono Trigger"))
+
+        val result = GameTitleMatcher.match("Motorace Advance", candidates)
+
+        assertEquals(TitleMatchResult.NoMatch, result)
+    }
+
+    @Test
     fun `a title with one inserted word in the middle is matched as PartialTitle`() {
         val matchingCandidate = candidate(1, "The Bugs Bunny Birthday Blowout")
         val candidates = listOf(matchingCandidate)
@@ -123,6 +165,34 @@ class GameTitleMatcherTest {
         val result = GameTitleMatcher.match("Chrono Trigger", emptyList())
 
         assertEquals(TitleMatchResult.NoMatch, result)
+    }
+
+    @Test
+    fun `a genuinely different title is not auto-matched even when it is the closest candidate by spelling`() {
+        val candidates = listOf(candidate(1, "Moto Racer Advance"), candidate(2, "Chrono Trigger"))
+
+        val result = GameTitleMatcher.match("Motorace Advance", candidates)
+
+        assertEquals(TitleMatchResult.NoMatch, result)
+    }
+
+    @Test
+    fun `rankBySimilarity puts a title with only a missing space and a single extra letter first`() {
+        val closeMatch = candidate(1, "Moto Racer Advance")
+        val candidates = listOf(candidate(2, "Chrono Trigger"), closeMatch, candidate(3, "Xenogears"))
+
+        val result = GameTitleMatcher.rankBySimilarity("Motorace Advance", candidates)
+
+        assertEquals(closeMatch, result.first())
+    }
+
+    @Test
+    fun `rankBySimilarity returns every candidate, just reordered`() {
+        val candidates = listOf(candidate(1, "Chrono Cross"), candidate(2, "Chrono Trigger"))
+
+        val result = GameTitleMatcher.rankBySimilarity("Xenogears", candidates)
+
+        assertEquals(candidates.toSet(), result.toSet())
     }
 
     @Test

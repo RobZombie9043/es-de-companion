@@ -42,6 +42,12 @@ class GameListCacheTest {
             username: String,
             gameId: Long,
         ) = error("not used in this test")
+
+        override suspend fun getUserCompletionProgress(
+            username: String,
+            offset: Int,
+            count: Int,
+        ) = error("not used in this test")
     }
 
     private val console = RetroAchievementsConsole.Snes

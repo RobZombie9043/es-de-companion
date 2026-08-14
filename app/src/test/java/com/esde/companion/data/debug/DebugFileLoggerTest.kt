@@ -154,7 +154,7 @@ class DebugFileLoggerTest {
 
     // Mirrors DebugFileLogger's private eventColumnWidth - kept in sync manually since
     // it's an internal formatting detail, not part of the class's public contract.
-    private val eventColumnWidth = 7
+    private val eventColumnWidth = 8
 
     private val fixedClock: Clock = Clock.fixed(Instant.parse("2026-08-09T14:23:01Z"), ZoneOffset.UTC)
 

@@ -2,6 +2,7 @@ package com.esde.companion.data.retroachievements
 
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
+import com.esde.companion.domain.model.UserGameProgress
 
 typealias GameListResult = RetroAchievementsApiResult<List<RetroAchievementsCandidateGame>>
 
@@ -24,4 +25,21 @@ interface RetroAchievementsApi {
         username: String,
         gameId: Long,
     ): RetroAchievementsApiResult<GameAchievementSummary>
+
+    /** One page of [username]'s cross-console completion progress - see [UserCompletionProgressPage]. */
+    suspend fun getUserCompletionProgress(
+        username: String,
+        offset: Int,
+        count: Int,
+    ): RetroAchievementsApiResult<UserCompletionProgressPage>
 }
+
+/**
+ * One page of `getUserCompletionProgress` - [total] is RA's reported total entry count across
+ * every page (not just this page's size), used by [UserProgressCache] to know when to stop
+ * paginating.
+ */
+data class UserCompletionProgressPage(
+    val total: Int,
+    val entries: List<UserGameProgress>,
+)

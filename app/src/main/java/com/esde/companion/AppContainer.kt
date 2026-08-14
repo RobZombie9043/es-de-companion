@@ -7,8 +7,11 @@ import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
+import com.esde.companion.data.gamelist.FileGameDescriptionRepository
+import com.esde.companion.data.gamelist.FileGameRomHashRepository
+import com.esde.companion.data.gamelist.GamelistFileReader
 import com.esde.companion.data.gamelist.LoggingGameDescriptionRepository
-import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
+import com.esde.companion.data.gamelist.LoggingGameRomHashRepository
 import com.esde.companion.data.log.EsdeLogFileRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.log.SharedEsdeLogRepository
@@ -22,10 +25,12 @@ import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
 import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
 import com.esde.companion.data.retroachievements.DataStoreGameMatchOverrideRepository
+import com.esde.companion.data.retroachievements.DataStoreUserProgressCacheStore
 import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
 import com.esde.companion.data.retroachievements.GameListCache
 import com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImpl
 import com.esde.companion.data.retroachievements.RetroClientRetroAchievementsApi
+import com.esde.companion.data.retroachievements.UserProgressCache
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileAppFolderRepository
 import com.esde.companion.data.settings.FileDockSettingsRepository
@@ -52,6 +57,7 @@ import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRomHashRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.MusicLibraryRepository
@@ -74,6 +80,8 @@ import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FetchReleaseNotesForVersionUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
+import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
+import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
@@ -240,10 +248,22 @@ class AppContainer(context: Context) {
         )
 
     // gamelists/ lives alongside logs/ under the ES-DE root, so this reacts to the log
-    // folder path, not the media folder path - see ReactiveGameDescriptionRepository.
+    // folder path, not the media folder path - see GamelistFileReader. Shared by both the
+    // description and ROM-hash repositories below so there's one cached copy of each
+    // gamelist.xml's text, not one per consumer.
+    private val gamelistFileReader = GamelistFileReader(esdeRootPath = onboardingRepository.observeLogFolderPath())
+
     private val gameDescriptionRepository: GameDescriptionRepository =
         LoggingGameDescriptionRepository(
-            inner = ReactiveGameDescriptionRepository(esdeRootPath = onboardingRepository.observeLogFolderPath()),
+            inner = FileGameDescriptionRepository(gamelistFileReader),
+            debugFileLogger = debugFileLogger,
+        )
+
+    // Ready ahead of ES-DE's own upcoming ROM-hash support - see CLAUDE.md's
+    // RetroAchievements section and GameListParser's ROM_HASH_TAG TODO.
+    private val gameRomHashRepository: GameRomHashRepository =
+        LoggingGameRomHashRepository(
+            inner = FileGameRomHashRepository(gamelistFileReader),
             debugFileLogger = debugFileLogger,
         )
 
@@ -435,14 +455,20 @@ class AppContainer(context: Context) {
     // passed into exportConfigBackupUseCase/restoreConfigBackupUseCase above, a structural
     // guarantee against a plaintext credential leak (the same mechanism lastKnownContextRepository
     // relies on). The game list is cached (disk + memory, 24h TTL) since api-kotlin flags
-    // GetGameList as rate-limited/response-heavy - see GameListCache's kdoc.
+    // GetGameList as rate-limited/response-heavy - see GameListCache's kdoc. The signed-in
+    // user's cross-console completion progress (system browser's Progress sort/filter) is a
+    // separate cache with its own 1h TTL and its own DataStore file - see UserProgressCache's
+    // and DataStoreUserProgressCacheStore's kdocs for why it can't share GameListCache's TTL
+    // or file. Neither cache is covered by Backup & Restore, same as the credentials.
     private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
         EncryptedRetroAchievementsCredentialsRepository(appContext)
     private val gameListCache = GameListCache(store = DataStoreGameListCacheStore(appContext))
+    private val userProgressCache = UserProgressCache(store = DataStoreUserProgressCacheStore(appContext))
     private val retroAchievementsRepository: RetroAchievementsRepository =
         RetroAchievementsRepositoryImpl(
             credentialsRepository = retroAchievementsCredentialsRepository,
             gameListCache = gameListCache,
+            userProgressCache = userProgressCache,
             apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) },
         )
 
@@ -453,10 +479,17 @@ class AppContainer(context: Context) {
     val validateRetroAchievementsCredentialsUseCase =
         ValidateRetroAchievementsCredentialsUseCase(retroAchievementsRepository, retroAchievementsCredentialsRepository)
     val resolveRetroAchievementsGameUseCase =
-        ResolveRetroAchievementsGameUseCase(gameMatchOverrideRepository, retroAchievementsRepository)
+        ResolveRetroAchievementsGameUseCase(
+            gameMatchOverrideRepository = gameMatchOverrideRepository,
+            retroAchievementsRepository = retroAchievementsRepository,
+            gameRomHashRepository = gameRomHashRepository,
+            onResolved = { message -> debugFileLogger.logInfo("Cheevo", message) },
+        )
     val getGameAchievementSummaryUseCase = GetGameAchievementSummaryUseCase(retroAchievementsRepository)
     val setGameMatchOverrideUseCase = SetGameMatchOverrideUseCase(gameMatchOverrideRepository)
     val searchRetroAchievementsGamesUseCase = SearchRetroAchievementsGamesUseCase(retroAchievementsRepository)
+    val getRetroAchievementsSystemGamesUseCase = GetRetroAchievementsSystemGamesUseCase(retroAchievementsRepository)
+    val getUserGameProgressUseCase = GetUserGameProgressUseCase(retroAchievementsRepository)
 
     // Update checker (GitHub Releases). The one sanctioned network use case in this app -
     // see CLAUDE.md's "What NOT to Do" entry on network layers.

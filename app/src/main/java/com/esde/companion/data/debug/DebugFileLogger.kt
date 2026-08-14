@@ -117,11 +117,14 @@ class DebugFileLogger(
      * both music and video. Used for the Description widget's resolution outcome (tag
      * "Media", by LoggingGameDescriptionRepository - "Game Description" stands in for a
      * media type name so it reads as one more line in the same FOUND/NOT FOUND log as
-     * [logMediaResolution]) and for
+     * [logMediaResolution]); for
      * [EsdeLogFileRepository][com.esde.companion.data.log.EsdeLogFileRepository]'s
      * fallback-poll diagnostic (tag "Poll") - a fallback poll ever being the one to notice
      * new es_log.txt data, rather than FileObserver, means FileObserver silently missed a
-     * notification, which is otherwise invisible.
+     * notification, which is otherwise invisible; and for RetroAchievements game
+     * identification (tag "Cheevo", by LoggingGameRomHashRepository's ROM-hash extraction
+     * outcome and `ResolveRetroAchievementsGameUseCase`'s own match-resolution outcome), so
+     * hash extraction and matching show up together.
      */
     fun logInfo(
         tag: String,
@@ -218,10 +221,11 @@ class DebugFileLogger(
     private companion object {
         const val NOT_SET = "(not set)"
 
-        // Sized to the longest tag ("Event:"/"State:"/"Media:", 6 chars) plus one
-        // separating space, so every logged line's details start in the same column
-        // regardless of which tag (Info/Event/State/Media) it uses.
-        const val EVENT_COLUMN_WIDTH = 7
+        // Sized to the longest tag ("Cheevo:", 7 chars - one longer than "Event:"/
+        // "State:"/"Media:") plus one separating space, so every logged line's details
+        // start in the same column regardless of which tag (Info/Event/State/Media/Cheevo)
+        // it uses.
+        const val EVENT_COLUMN_WIDTH = 8
 
         // Caps how large the debug log can grow across a single long-running kiosk
         // session. Checked before every write; once exceeded, the file is truncated and

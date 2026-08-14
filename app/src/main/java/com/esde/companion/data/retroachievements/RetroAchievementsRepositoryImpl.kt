@@ -5,6 +5,7 @@ import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsConsole
 import com.esde.companion.domain.model.RetroAchievementsCredentials
+import com.esde.companion.domain.model.UserGameProgress
 import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
 import com.esde.companion.domain.repository.RetroAchievementsRepository
 import kotlinx.coroutines.flow.first
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.first
 class RetroAchievementsRepositoryImpl(
     private val credentialsRepository: RetroAchievementsCredentialsRepository,
     private val gameListCache: GameListCache,
+    private val userProgressCache: UserProgressCache,
     private val apiFactory: (RetroAchievementsCredentials) -> RetroAchievementsApi,
 ) : RetroAchievementsRepository {
     override suspend fun validateCredentials(credentials: RetroAchievementsCredentials): RetroAchievementsAuthState {
@@ -50,6 +52,11 @@ class RetroAchievementsRepositoryImpl(
             is RetroAchievementsApiResult.Success -> AchievementSummaryFetchResult.Success(result.data)
             is RetroAchievementsApiResult.Error -> AchievementSummaryFetchResult.NetworkError(result.message)
         }
+    }
+
+    override suspend fun getUserGameProgress(): Map<Long, UserGameProgress> {
+        val credentials = currentCredentials() ?: return emptyMap()
+        return userProgressCache.getProgress(credentials.username, apiFactory(credentials))
     }
 
     private suspend fun currentCredentials(): RetroAchievementsCredentials? {

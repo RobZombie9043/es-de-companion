@@ -249,7 +249,7 @@
     <ID>LongParameterList:WidgetContentResolver.kt$WidgetContentResolver$( widgetType: WidgetType, systemLogoAssetPath: () -&gt; String?, customSystemLogoLookup: () -&gt; String?, customSystemImageLookup: () -&gt; String?, systemMediaLookup: (MediaType) -&gt; String?, gameMediaLookup: (MediaType) -&gt; String?, gameDescriptionLookup: () -&gt; String?, fallbackBackgroundAssetPath: String?, systemNameLookup: () -&gt; String? = { null }, gameNameLookup: () -&gt; String? = { null }, )</ID>
     <ID>LongParameterList:WidgetContentResolverTest.kt$WidgetContentResolverTest$( widgetType: WidgetType, systemLogoAssetPath: () -&gt; String? = { null }, customSystemLogoLookup: () -&gt; String? = { null }, customSystemImageLookup: () -&gt; String? = { null }, systemMediaLookup: (MediaType) -&gt; String? = { null }, gameMediaLookup: (MediaType) -&gt; String? = { null }, gameDescriptionLookup: () -&gt; String? = { null }, fallbackBackgroundAssetPath: String? = "fallback.webp", systemNameLookup: () -&gt; String? = { null }, gameNameLookup: () -&gt; String? = { null }, )</ID>
     <ID>LongParameterList:WidgetsViewModel.kt$WidgetsViewModel$( observeConnectionState: ObserveConnectionStateUseCase, private val observeWidgetCanvas: ObserveWidgetCanvasUseCase, private val resolveGameMedia: ResolveGameMediaUseCase, private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase, private val resolveGameDescription: ResolveGameDescriptionUseCase, private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase, private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase, private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase, )</ID>
-    <ID>LoopWithTooManyJumpStatements:GameListDescriptionParser.kt$GameListDescriptionParser$for</ID>
+    <ID>LoopWithTooManyJumpStatements:GameListParser.kt$GameListParser$for</ID>
     <ID>MagicNumber:AnimatedLogoImage.kt$0.35f</ID>
     <ID>MagicNumber:AnimatedLogoImage.kt$0.5f</ID>
     <ID>MagicNumber:AnimatedLogoImage.kt$0.65f</ID>
@@ -497,14 +497,16 @@
     <ID>PropertyWrapping:OnboardingViewModelTest.kt$OnboardingViewModelTest$val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)</ID>
     <ID>ReturnCount:EsdeEventParser.kt$EsdeEventParser$fun parseLine(rawLine: String): EsdeEvent?</ID>
     <ID>ReturnCount:EsdeLogFileRepository.kt$EsdeLogFileRepository$private fun findEventsSinceLastAnchor( file: File, directionTracker: NavigationDirectionTracker, ): List&lt;EsdeEvent&gt;</ID>
-    <ID>ReturnCount:FileGameDescriptionRepository.kt$FileGameDescriptionRepository$private fun resolveGamelistFile( systemShortName: String, romPath: String, ): File?</ID>
-    <ID>ReturnCount:GameListDescriptionParser.kt$GameListDescriptionParser$fun findDescription( content: String, romPath: String, ): String?</ID>
-    <ID>ReturnCount:GameListDescriptionParser.kt$GameListDescriptionParser$private fun String.extractGameListElement(): String?</ID>
+    <ID>ReturnCount:GamelistFileReader.kt$GamelistFileReader$private fun resolveGamelistFile( root: String, systemShortName: String, romPath: String, ): File?</ID>
+    <ID>ReturnCount:GameListParser.kt$GameListParser$private fun findGameField( content: String, romPath: String, tagName: String, ): String?</ID>
+    <ID>ReturnCount:GameListParser.kt$GameListParser$private fun String.extractGameListElement(): String?</ID>
     <ID>ReturnCount:GameMediaPathResolver.kt$GameMediaPathResolver$fun resolveBaseRelativePath( systemShortName: String, romPath: String, romIsDirectory: Boolean, ): String?</ID>
     <ID>ReturnCount:MusicPlayerAction.kt$MusicPlayerActionResolver$fun resolve( hasCurrentTrack: Boolean, eligible: Boolean, userPaused: Boolean, isDuckedByVideo: Boolean, duckingMode: MusicDuckingMode, ): MusicPlayerAction</ID>
     <ID>ReturnCount:NavigationDirectionParser.kt$NavigationDirectionParser$fun parseDirectionalPress(rawLine: String): NavigationDirection?</ID>
     <ID>ReturnCount:NormalizingSvgDecoder.kt$internal fun normalizeSmallViewBoxSvg(xml: String): String?</ID>
     <ID>ReturnCount:NormalizingSvgDecoder.kt$private fun dimensionsOf(openTag: String): Pair&lt;Double, Double&gt;?</ID>
+    <ID>ReturnCount:ResolveRetroAchievementsGameUseCase.kt$ResolveRetroAchievementsGameUseCase$suspend operator fun invoke( gameReference: GameReference, gameName: String, ): RetroAchievementsGameMatch</ID>
+    <ID>ReturnCount:RetroAchievementsSystemGamesViewModel.kt$RetroAchievementsSystemGamesViewModel$private suspend fun load( signedIn: Boolean, system: CurrentSystem?, )</ID>
     <ID>ReturnCount:WidgetContent.kt$fun resolveMediaWidgetContent( mediaType: MediaType, scaleMode: ScaleMode, lookup: (MediaType) -&gt; String?, fallbackBackgroundAssetPath: String?, effects: ImageEffects = ImageEffects(), ): WidgetContent</ID>
     <ID>TooManyFunctions:AppDock.kt$com.esde.companion.ui.dock.AppDock.kt</ID>
     <ID>TooManyFunctions:AppDrawer.kt$com.esde.companion.ui.drawer.AppDrawer.kt</ID>

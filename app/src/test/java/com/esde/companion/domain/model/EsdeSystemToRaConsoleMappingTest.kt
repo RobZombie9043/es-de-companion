@@ -26,4 +26,30 @@ class EsdeSystemToRaConsoleMappingTest {
         assertNull(EsdeSystemToRaConsoleMapping.consoleFor("does-not-exist"))
         assertNull(EsdeSystemToRaConsoleMapping.consoleFor("windows"))
     }
+
+    @Test
+    fun `Nintendo DS maps to its RetroAchievements console`() {
+        assertEquals(RetroAchievementsConsole.NintendoDs, EsdeSystemToRaConsoleMapping.consoleFor("nds"))
+    }
+
+    @Test
+    fun `a representative sample of the expanded system table maps correctly`() {
+        assertEquals(RetroAchievementsConsole.GameCube, EsdeSystemToRaConsoleMapping.consoleFor("gc"))
+        assertEquals(RetroAchievementsConsole.Wii, EsdeSystemToRaConsoleMapping.consoleFor("wii"))
+        assertEquals(RetroAchievementsConsole.PlayStation2, EsdeSystemToRaConsoleMapping.consoleFor("ps2"))
+        assertEquals(RetroAchievementsConsole.Psp, EsdeSystemToRaConsoleMapping.consoleFor("psp"))
+        assertEquals(RetroAchievementsConsole.Dreamcast, EsdeSystemToRaConsoleMapping.consoleFor("dreamcast"))
+        assertEquals(RetroAchievementsConsole.Saturn, EsdeSystemToRaConsoleMapping.consoleFor("saturn"))
+        assertEquals(RetroAchievementsConsole.Amiga, EsdeSystemToRaConsoleMapping.consoleFor("amiga1200"))
+        assertEquals(RetroAchievementsConsole.Msx, EsdeSystemToRaConsoleMapping.consoleFor("msx2"))
+        assertEquals(RetroAchievementsConsole.Commodore64, EsdeSystemToRaConsoleMapping.consoleFor("c64"))
+    }
+
+    @Test
+    fun `MAME-arcade systems are deliberately left unmapped`() {
+        assertNull(EsdeSystemToRaConsoleMapping.consoleFor("arcade"))
+        assertNull(EsdeSystemToRaConsoleMapping.consoleFor("mame"))
+        assertNull(EsdeSystemToRaConsoleMapping.consoleFor("neogeo"))
+        assertNull(EsdeSystemToRaConsoleMapping.consoleFor("fbneo"))
+    }
 }

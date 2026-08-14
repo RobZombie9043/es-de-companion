@@ -6,7 +6,11 @@ import java.io.StringReader
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Parses ES-DE's gamelist.xml content to find the <desc> text for one specific game.
+ * Parses ES-DE's gamelist.xml content to find per-game fields for one specific game -
+ * currently the <desc> text ([findDescription]) and, in preparation for ES-DE's upcoming
+ * ROM-hash support, a ROM-hash field ([findRomHash]). Both share the same
+ * document-locate-and-match core ([findGameField]), so the XML-quirk handling below only
+ * has to be gotten right once.
  *
  * ES-DE stores each game's <path> as "./<relative path>" relative to that system's ROM
  * folder - e.g. "./Cosmic Smash (Japan).chd", or "./subfolder/Name.zip" for games in
@@ -18,17 +22,27 @@ import javax.xml.parsers.DocumentBuilderFactory
  *
  * Deliberately takes raw XML [content] rather than a File, so this stays a pure,
  * Android-free function unit-testable against fixture XML with no filesystem required -
- * reading (and caching) the file is a data-layer concern, see
- * FileGameDescriptionRepository.
+ * reading (and caching) the file is a data-layer concern, see GamelistFileReader.
  *
  * Returns null for content that fails to parse (unexpected/corrupt gamelist.xml), a game
- * with no matching <path>, or a matching game with no (or blank) <desc> - all routine,
- * expected outcomes here, not errors.
+ * with no matching <path>, or a matching game with no (or blank) requested field - all
+ * routine, expected outcomes here, not errors.
  */
-object GameListDescriptionParser {
+object GameListParser {
     fun findDescription(
         content: String,
         romPath: String,
+    ): String? = findGameField(content, romPath, DESCRIPTION_TAG)
+
+    fun findRomHash(
+        content: String,
+        romPath: String,
+    ): String? = findGameField(content, romPath, ROM_HASH_TAG)
+
+    private fun findGameField(
+        content: String,
+        romPath: String,
+        tagName: String,
     ): String? {
         val gameListXml = content.extractGameListElement() ?: return null
 
@@ -43,7 +57,7 @@ object GameListDescriptionParser {
                 // control. Malformed content (e.g. an unescaped "&" in a <desc>) can surface
                 // as checked exceptions (SAXException) or unchecked ones (DOMException, seen
                 // in practice on-device) depending on the platform XML implementation - any
-                // parse failure here should degrade to "no description," never crash the app.
+                // parse failure here should degrade to "not found," never crash the app.
                 return null
             }
 
@@ -52,7 +66,7 @@ object GameListDescriptionParser {
             val gameElement = gameNodes.item(index) as? Element ?: continue
             val path = gameElement.firstTextOf("path") ?: continue
             if (!romPath.matchesGamelistPath(path)) continue
-            return gameElement.firstTextOf("desc")?.takeIf { it.isNotBlank() }
+            return gameElement.firstTextOf(tagName)?.takeIf { it.isNotBlank() }
         }
         return null
     }
@@ -85,4 +99,12 @@ object GameListDescriptionParser {
         if (nodes.length == 0) return null
         return nodes.item(0).textContent?.trim()
     }
+
+    private const val DESCRIPTION_TAG = "desc"
+
+    @Suppress("ForbiddenComment")
+    // TODO: ES-DE has not shipped ROM-hash output in gamelist.xml yet, so this tag name is a
+    //  placeholder. Update it (and GameListParserTest's fixtures) to the real element name once
+    //  ES-DE ships the field. Nothing else in the hash pipeline hard-codes a tag name.
+    private const val ROM_HASH_TAG = "hash"
 }

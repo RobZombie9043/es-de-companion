@@ -48,17 +48,33 @@ private data class CachedGameListDto(
     val games: List<CandidateGameDto>,
 )
 
+/**
+ * [numAchievements]/[totalPoints]/[hashes] all default so an older, already-persisted
+ * cache entry from before these fields existed decodes fine (as 0/0/empty) rather than
+ * failing to deserialize - the 24h TTL then refreshes it with the real values on its next
+ * cache miss, no schema version bump needed.
+ */
 @Serializable
 private data class CandidateGameDto(
     val gameId: Long,
     val title: String,
     val iconUrl: String?,
+    val numAchievements: Int = 0,
+    val totalPoints: Int = 0,
+    val hashes: List<String> = emptyList(),
 )
 
 private fun CachedGameList.toDto(): CachedGameListDto {
-    val gameDtos = games.map { CandidateGameDto(it.gameId, it.title, it.iconUrl) }
+    val gameDtos = games.map { it.toDto() }
     return CachedGameListDto(fetchedAtMillis, gameDtos)
 }
 
-private fun CachedGameListDto.toDomain() =
-    CachedGameList(fetchedAtMillis, games.map { RetroAchievementsCandidateGame(it.gameId, it.title, it.iconUrl) })
+private fun RetroAchievementsCandidateGame.toDto(): CandidateGameDto {
+    return CandidateGameDto(gameId, title, iconUrl, numAchievements, totalPoints, hashes)
+}
+
+private fun CachedGameListDto.toDomain() = CachedGameList(fetchedAtMillis, games.map { it.toDomain() })
+
+private fun CandidateGameDto.toDomain(): RetroAchievementsCandidateGame {
+    return RetroAchievementsCandidateGame(gameId, title, iconUrl, numAchievements, totalPoints, hashes)
+}

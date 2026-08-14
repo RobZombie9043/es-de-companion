@@ -1,5 +1,6 @@
 package com.esde.companion.data.gamelist
 
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -11,6 +12,8 @@ import java.nio.file.Files
 
 class FileGameDescriptionRepositoryTest {
     private lateinit var esdeRoot: File
+
+    private fun repository() = FileGameDescriptionRepository(GamelistFileReader(flowOf(esdeRoot.absolutePath)))
 
     @Before
     fun setUp() {
@@ -47,7 +50,7 @@ class FileGameDescriptionRepositoryTest {
                     </gameList>
                     """.trimIndent(),
                 )
-            val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
+            val repository = repository()
 
             val description = repository.resolveDescription("a", "/roms/a/Cosmic Smash (Japan).chd")
 
@@ -58,7 +61,7 @@ class FileGameDescriptionRepositoryTest {
     @Test
     fun `returns null text and null gamelistPath when no gamelist file exists at either location`() =
         runTest {
-            val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
+            val repository = repository()
 
             val description = repository.resolveDescription("a", "/roms/a/Missing.chd")
 
@@ -81,7 +84,7 @@ class FileGameDescriptionRepositoryTest {
                     </gameList>
                     """.trimIndent(),
                 )
-            val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
+            val repository = repository()
 
             val description = repository.resolveDescription("a", "/roms/a/Missing.chd")
 
@@ -104,7 +107,7 @@ class FileGameDescriptionRepositoryTest {
                     </gameList>
                     """.trimIndent(),
                 )
-            val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
+            val repository = repository()
 
             val first = repository.resolveDescription("a", "/roms/a/Game.chd")
             // Mutating the file on disk without changing lastModified() must not affect the
@@ -133,7 +136,7 @@ class FileGameDescriptionRepositoryTest {
                     </gameList>
                     """.trimIndent(),
                 )
-            val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
+            val repository = repository()
             val first = repository.resolveDescription("a", "/roms/a/Game.chd")
 
             Thread.sleep(10)
@@ -175,7 +178,7 @@ class FileGameDescriptionRepositoryTest {
                     </gameList>
                     """.trimIndent(),
                 )
-                val repository = FileGameDescriptionRepository(esdeRoot.absolutePath)
+                val repository = repository()
                 val romsRootUnixPath = romsRoot.absolutePath.replace('\\', '/')
 
                 val description = repository.resolveDescription("a", "$romsRootUnixPath/a/Game.chd")

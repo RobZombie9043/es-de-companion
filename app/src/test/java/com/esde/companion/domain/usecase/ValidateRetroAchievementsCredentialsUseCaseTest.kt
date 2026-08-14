@@ -29,6 +29,8 @@ class ValidateRetroAchievementsCredentialsUseCaseTest {
         override suspend fun getAchievementSummary(gameId: Long): AchievementSummaryFetchResult {
             error("not used in this test")
         }
+
+        override suspend fun getUserGameProgress() = error("not used in this test")
     }
 
     private class FakeRetroAchievementsCredentialsRepository : RetroAchievementsCredentialsRepository {
