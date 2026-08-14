@@ -120,7 +120,7 @@ fun RetroAchievementsSystemGamesScreen(
     // keeps the change strictly additive.
     BackHandler(enabled = page is SystemGamesPage.Detail, onBack = onBack)
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().blockAppDrawerSwipeFallthrough()) {
         AsyncImage(
             model = fallbackBackgroundAssetPath(LocalIsDarkTheme.current),
             contentDescription = null,

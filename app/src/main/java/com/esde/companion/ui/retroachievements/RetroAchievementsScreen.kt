@@ -96,7 +96,7 @@ fun RetroAchievementsScreen(
     // Material color, which wouldn't reliably contrast with an arbitrary backdrop image.
     val contentColor = themedContentColor()
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().blockAppDrawerSwipeFallthrough()) {
         AsyncImage(
             model = fallbackBackgroundAssetPath(LocalIsDarkTheme.current),
             contentDescription = null,
