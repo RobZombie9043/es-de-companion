@@ -2,6 +2,7 @@ package com.esde.companion.ui.retroachievements
 
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.GameAchievementSummary
+import com.esde.companion.domain.model.GameHashSupport
 import com.esde.companion.domain.model.MatchMethod
 
 /**
@@ -38,6 +39,20 @@ sealed class RetroAchievementsFetchState {
     data object NotFound : RetroAchievementsFetchState()
 
     data class NetworkError(val message: String) : RetroAchievementsFetchState()
+}
+
+/**
+ * Backs the achievements screen's "Supported Hashes" kebab-menu dialog ([GetGameHashSupportUseCase]).
+ * A tiny sealed state rather than a plain nullable, so the dialog can show a loading state
+ * while [com.esde.companion.domain.usecase.GetGameHashSupportUseCase] fetches the console's
+ * candidate list (which may not be warm in cache yet) instead of appearing to hang.
+ */
+sealed class HashSupportState {
+    data object Hidden : HashSupportState()
+
+    data object Loading : HashSupportState()
+
+    data class Loaded(val support: GameHashSupport) : HashSupportState()
 }
 
 /** Shared by [RetroAchievementsViewModel] and [RetroAchievementsSystemGamesViewModel] - both

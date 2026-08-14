@@ -12,7 +12,6 @@ import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.currentGameName
 import com.esde.companion.domain.model.currentGameReference
-import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
@@ -48,7 +47,7 @@ class RetroAchievementsViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
     private val resolveGame: ResolveRetroAchievementsGameUseCase,
-    private val getAchievementSummary: GetGameAchievementSummaryUseCase,
+    private val detailUseCases: RetroAchievementsDetailUseCases,
     private val searchGames: SearchRetroAchievementsGamesUseCase,
     private val setGameMatchOverride: SetGameMatchOverrideUseCase,
 ) : ViewModel() {
@@ -84,11 +83,19 @@ class RetroAchievementsViewModel(
     private val _displayField = MutableStateFlow(AchievementDisplayField.UnlockRate)
     val displayField: StateFlow<AchievementDisplayField> = _displayField
 
+    private val _hashSupport = MutableStateFlow<HashSupportState>(HashSupportState.Hidden)
+    val hashSupport: StateFlow<HashSupportState> = _hashSupport
+
     // Set at the start of every resolveAndFetch call (a single collectLatest coroutine, so
     // no concurrent-write race) - the correction picker's search scope and onGameCorrected's
     // target both need "which game is this screen currently about", which resolution/fetch
     // alone don't expose to the UI layer.
     private var lastKnownGame: CurrentGame? = null
+
+    // Set alongside resolution whenever it lands on Found - the "Supported Hashes" dialog
+    // needs the resolved RA gameId, which RetroAchievementsResolutionState.Found itself
+    // doesn't carry (it only exposes the match method).
+    private var lastGameId: Long? = null
 
     // Bumped after onGameCorrected persists an override, to force a re-resolve even though
     // neither currentGame nor the credentials flow actually changed.
@@ -130,13 +137,28 @@ class RetroAchievementsViewModel(
         }
     }
 
+    fun onRequestHashSupport() {
+        val reference = lastKnownGame?.reference ?: return
+        val gameId = lastGameId ?: return
+        _hashSupport.value = HashSupportState.Loading
+        viewModelScope.launch {
+            _hashSupport.value = HashSupportState.Loaded(detailUseCases.getHashSupport(reference, gameId))
+        }
+    }
+
+    fun onHashSupportDismissed() {
+        _hashSupport.value = HashSupportState.Hidden
+    }
+
     private suspend fun resolveAndFetch(
         signedIn: Boolean,
         game: CurrentGame?,
     ) {
         lastKnownGame = game
+        lastGameId = null
         _searchQuery.value = ""
         _searchResults.value = emptyList()
+        _hashSupport.value = HashSupportState.Hidden
 
         if (!signedIn) {
             _resolution.value = RetroAchievementsResolutionState.NotSignedIn
@@ -158,9 +180,10 @@ class RetroAchievementsViewModel(
                 _fetch.value = RetroAchievementsFetchState.Idle
             }
             is RetroAchievementsGameMatch.Found -> {
+                lastGameId = match.gameId
                 _resolution.value = RetroAchievementsResolutionState.Found(match.method)
                 _fetch.value = RetroAchievementsFetchState.Loading
-                _fetch.value = getAchievementSummary(match.gameId).toFetchState()
+                _fetch.value = detailUseCases.getAchievementSummary(match.gameId).toFetchState()
             }
         }
     }

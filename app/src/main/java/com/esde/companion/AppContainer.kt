@@ -82,6 +82,7 @@ import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FetchReleaseNotesForVersionUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
+import com.esde.companion.domain.usecase.GetGameHashSupportUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
@@ -505,6 +506,7 @@ class AppContainer(context: Context) {
             onResolved = { message -> debugFileLogger.logInfo("Cheevo", message) },
         )
     val getGameAchievementSummaryUseCase = GetGameAchievementSummaryUseCase(retroAchievementsRepository)
+    val getGameHashSupportUseCase = GetGameHashSupportUseCase(gameRomHashRepository, retroAchievementsRepository)
     val setGameMatchOverrideUseCase = SetGameMatchOverrideUseCase(gameMatchOverrideRepository)
     val searchRetroAchievementsGamesUseCase = SearchRetroAchievementsGamesUseCase(retroAchievementsRepository)
     val getRetroAchievementsSystemGamesUseCase = GetRetroAchievementsSystemGamesUseCase(retroAchievementsRepository)

@@ -12,11 +12,16 @@ class RetroAchievementsViewModelFactory(
         require(modelClass.isAssignableFrom(RetroAchievementsViewModel::class.java)) {
             "Unknown ViewModel class: $modelClass"
         }
+        val detailUseCases =
+            RetroAchievementsDetailUseCases(
+                getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
+                getHashSupport = appContainer.getGameHashSupportUseCase,
+            )
         return RetroAchievementsViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeCredentials = appContainer.observeRetroAchievementsCredentialsUseCase,
             resolveGame = appContainer.resolveRetroAchievementsGameUseCase,
-            getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
+            detailUseCases = detailUseCases,
             searchGames = appContainer.searchRetroAchievementsGamesUseCase,
             setGameMatchOverride = appContainer.setGameMatchOverrideUseCase,
         ) as T
