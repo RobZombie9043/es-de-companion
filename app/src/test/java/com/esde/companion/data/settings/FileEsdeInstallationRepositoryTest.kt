@@ -5,6 +5,7 @@ import com.esde.companion.data.storage.DirectoryWatcher
 import com.esde.companion.domain.model.EsdeEventScriptSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -130,6 +131,13 @@ class FileEsdeInstallationRepositoryTest {
 
             repository.observeEventScriptSettings(esdeRoot.absolutePath).test {
                 awaitItem()
+
+                // storageEventsJob subscribes from the producer coroutine on a real
+                // Dispatchers.IO thread, asynchronously with respect to this test
+                // coroutine - emitting before it has actually subscribed silently drops
+                // the value (MutableSharedFlow has no buffer for a replay-0 flow with no
+                // collectors), so wait for the subscription to land first.
+                storageEvents.subscriptionCount.first { it > 0 }
 
                 writeSettingsXml(esdeRoot, customEventScripts = true)
                 storageEvents.emit(Unit)
