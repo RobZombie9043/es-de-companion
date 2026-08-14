@@ -53,6 +53,26 @@
             </intent-filter>
         </activity>
 
+        <!-- Lets the log/settings directory watchers rearm promptly once removable storage
+             (e.g. an SD card holding the ES-DE folder) mounts after having been unavailable
+             at app startup, or tear down cleanly on removal - see StorageMountReceiver /
+             CLAUDE.md. android:exported is required (the system, a different UID, is the
+             sender) but these MEDIA_* actions are platform protected-broadcast actions, not
+             spoofable by third-party apps. <data android:scheme="file"/> is required for
+             these actions to be delivered to a manifest-registered receiver at all. -->
+        <receiver
+            android:name=".data.storage.StorageMountReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_MOUNTED" />
+                <action android:name="android.intent.action.MEDIA_UNMOUNTED" />
+                <action android:name="android.intent.action.MEDIA_EJECT" />
+                <action android:name="android.intent.action.MEDIA_REMOVED" />
+                <action android:name="android.intent.action.MEDIA_BAD_REMOVAL" />
+                <data android:scheme="file" />
+            </intent-filter>
+        </receiver>
+
         <!-- Exposes the downloaded update APK (private cache dir) to the system package
              installer - see ApkInstaller / res/xml/file_paths.xml. -->
         <provider

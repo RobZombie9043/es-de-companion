@@ -1,6 +1,8 @@
 package com.esde.companion.data.settings
 
 import android.os.FileObserver
+import com.esde.companion.data.storage.DirectoryWatcher
+import com.esde.companion.data.storage.SelfHealingDirectoryWatcher
 import com.esde.companion.domain.model.EsdeEventScriptSettings
 import com.esde.companion.domain.parser.EsdeSettingsParser
 import com.esde.companion.domain.repository.EsdeInstallationRepository
@@ -9,6 +11,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -22,6 +25,11 @@ import java.io.File
  */
 class FileEsdeInstallationRepository(
     private val fallbackPollIntervalMs: Long = DEFAULT_FALLBACK_POLL_INTERVAL_MS,
+    private val watchDirectory: (targetPath: String, mask: Int, onChange: () -> Unit) -> DirectoryWatcher =
+        { path, mask, onChange -> SelfHealingDirectoryWatcher(path, mask, onChange) },
+    // Emissions mean "storage mount state may have changed, re-evaluate" - see
+    // StorageMountEvents/EsdeLogFileRepository's matching parameter.
+    private val storageEvents: Flow<Unit> = emptyFlow(),
 ) : EsdeInstallationRepository {
     override suspend fun readMediaDirectory(esdeRootPath: String): String? =
         withContext(Dispatchers.IO) {
@@ -43,21 +51,15 @@ class FileEsdeInstallationRepository(
      */
     override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> =
         channelFlow {
-            send(parseEventScriptSettings(esdeRootPath))
+            var lastKnown = parseEventScriptSettings(esdeRootPath)
+            send(lastKnown)
 
-            val checkSignal = Channel<Unit>(capacity = Channel.CONFLATED)
+            val checkSignal = Channel<CheckTrigger>(capacity = Channel.CONFLATED)
 
             val settingsFile = File(esdeRootPath, SETTINGS_XML_RELATIVE_PATH)
-            val parentDir = settingsFile.parentFile ?: File(esdeRootPath)
-            val targetName = settingsFile.name
             val fileObserver =
-                object : FileObserver(parentDir, WRITE_EVENTS_MASK) {
-                    override fun onEvent(
-                        event: Int,
-                        path: String?,
-                    ) {
-                        if (path == null || path == targetName) checkSignal.trySend(Unit)
-                    }
+                watchDirectory(settingsFile.absolutePath, WRITE_EVENTS_MASK) {
+                    checkSignal.trySend(CheckTrigger.Observer)
                 }
             fileObserver.startWatching()
 
@@ -65,18 +67,31 @@ class FileEsdeInstallationRepository(
                 launch {
                     while (isActive) {
                         delay(fallbackPollIntervalMs)
-                        checkSignal.trySend(Unit)
+                        checkSignal.trySend(CheckTrigger.Fallback)
+                    }
+                }
+
+            val storageEventsJob =
+                launch {
+                    storageEvents.collect {
+                        fileObserver.recheck(forceRearm = true)
+                        checkSignal.trySend(CheckTrigger.StorageChanged)
                     }
                 }
 
             try {
-                // Loop variable is intentionally unused - checkSignal is CONFLATED, so
-                // every iteration just means "re-check", regardless of what coalesced into it.
-                @Suppress("UnusedPrivateProperty")
-                for (signal in checkSignal) {
-                    send(parseEventScriptSettings(esdeRootPath))
+                for (trigger in checkSignal) {
+                    val current = parseEventScriptSettings(esdeRootPath)
+                    if (trigger == CheckTrigger.Fallback && current != lastKnown) {
+                        // The fallback poll caught a real change the directory watcher
+                        // should have caught but didn't - direct proof it's gone stale.
+                        fileObserver.recheck(forceRearm = true)
+                    }
+                    lastKnown = current
+                    send(current)
                 }
             } finally {
+                storageEventsJob.cancel()
                 fallbackJob.cancel()
                 fileObserver.stopWatching()
             }
@@ -136,3 +151,10 @@ class FileEsdeInstallationRepository(
             )
     }
 }
+
+/**
+ * Which signal source woke up [FileEsdeInstallationRepository.observeEventScriptSettings]'s
+ * check loop - see [com.esde.companion.data.log.EsdeLogFileRepository]'s matching type for
+ * why [StorageChanged] is kept distinct from [Fallback].
+ */
+private enum class CheckTrigger { Observer, Fallback, StorageChanged }

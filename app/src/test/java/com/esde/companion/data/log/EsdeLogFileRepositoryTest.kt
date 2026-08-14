@@ -1,10 +1,13 @@
 package com.esde.companion.data.log
 
 import app.cash.turbine.test
+import com.esde.companion.data.storage.DirectoryWatcher
+import com.esde.companion.data.storage.SelfHealConfig
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.state.AppStateReducer
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -43,7 +46,7 @@ class EsdeLogFileRepositoryTest {
             fallbackPollIntervalMs = fallbackPollIntervalMs,
             bootTimeMillis = bootTimeMillis,
             watchDirectory = { _, _, _ -> NoOpDirectoryWatcher },
-            onFallbackPollCaughtUpdate = onFallbackPollCaughtUpdate,
+            selfHeal = SelfHealConfig(onFallbackPollCaughtUpdate = onFallbackPollCaughtUpdate),
         )
 
     private object NoOpDirectoryWatcher : DirectoryWatcher {
@@ -59,6 +62,27 @@ class EsdeLogFileRepositoryTest {
         override fun stopWatching() = Unit
 
         fun fireChange() = onChange()
+    }
+
+    /**
+     * Records [recheck] calls so a test can assert self-heal rearm behavior. Never fires a
+     * simulated FileObserver notification of its own - see [CapturingDirectoryWatcher] for
+     * that - so its constructor's `onChange` is intentionally unused, only present to match
+     * the `watchDirectory` factory shape.
+     */
+    private class RecordingDirectoryWatcher(
+        @Suppress("UNUSED_PARAMETER") onChange: () -> Unit,
+    ) : DirectoryWatcher {
+        var rechecksForced = 0
+        var rechecksNotForced = 0
+
+        override fun startWatching() = Unit
+
+        override fun stopWatching() = Unit
+
+        override fun recheck(forceRearm: Boolean) {
+            if (forceRearm) rechecksForced++ else rechecksNotForced++
+        }
     }
 
     @Test
@@ -356,7 +380,7 @@ class EsdeLogFileRepositoryTest {
                     watchDirectory = { _, _, onChange ->
                         CapturingDirectoryWatcher(onChange).also { capturedWatcher = it }
                     },
-                    onFallbackPollCaughtUpdate = { fallbackCatchCount++ },
+                    selfHeal = SelfHealConfig(onFallbackPollCaughtUpdate = { fallbackCatchCount++ }),
                 )
 
             repository.observeEvents().test {
@@ -376,5 +400,142 @@ class EsdeLogFileRepositoryTest {
             }
 
             assertEquals(0, fallbackCatchCount)
+        }
+
+    @Test
+    fun `a fallback-caught update forces the directory watcher to rearm`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): " +
+                    "system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+            )
+
+            lateinit var capturedWatcher: RecordingDirectoryWatcher
+            val repository =
+                EsdeLogFileRepository(
+                    logFilePath = logFile.absolutePath,
+                    fallbackPollIntervalMs = 20L,
+                    bootTimeMillis = { 0L },
+                    watchDirectory = { _, _, onChange ->
+                        RecordingDirectoryWatcher(onChange).also { capturedWatcher = it }
+                    },
+                )
+
+            repository.observeEvents().test {
+                // Not asserted here: capturedWatcher is assigned by the producer coroutine
+                // (running on Dispatchers.IO, a real thread) after this first emission, so
+                // there's no guarantee it has run yet the instant awaitItem() returns -
+                // asserting on it only after the second item is what's actually deterministic.
+                awaitItem()
+
+                logFile.appendText(
+                    "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
+                        "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
+                )
+
+                awaitItem()
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, capturedWatcher.rechecksForced)
+        }
+
+    @Test
+    fun `a storage-changed signal triggers an immediate reread without waiting for the fallback interval`() =
+        runTest {
+            val logFile = tempFolder.newFile("es_log.txt")
+            logFile.writeText(
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): " +
+                    "system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+            )
+
+            lateinit var capturedWatcher: RecordingDirectoryWatcher
+            val storageEvents = MutableSharedFlow<Unit>()
+            val repository =
+                EsdeLogFileRepository(
+                    logFilePath = logFile.absolutePath,
+                    // Long enough that the fallback ticker can't plausibly fire during the
+                    // test - proves the storage-events signal, not the ticker, drove the reread.
+                    fallbackPollIntervalMs = 3_600_000L,
+                    bootTimeMillis = { 0L },
+                    watchDirectory = { _, _, onChange ->
+                        RecordingDirectoryWatcher(onChange).also { capturedWatcher = it }
+                    },
+                    selfHeal = SelfHealConfig(storageEvents = storageEvents),
+                )
+
+            repository.observeEvents().test {
+                awaitItem()
+
+                logFile.appendText(
+                    "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
+                        "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
+                )
+                storageEvents.emit(Unit)
+
+                assertEquals(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, capturedWatcher.rechecksForced)
+        }
+
+    @Test
+    fun `observeLogFileExists rearms the directory watcher when the fallback poll catches an existence flip`() =
+        runTest {
+            val logFile = File(tempFolder.root, "es_log.txt")
+
+            lateinit var capturedWatcher: RecordingDirectoryWatcher
+            val repository =
+                EsdeLogFileRepository(
+                    logFilePath = logFile.absolutePath,
+                    fallbackPollIntervalMs = 20L,
+                    bootTimeMillis = { 0L },
+                    watchDirectory = { _, _, onChange ->
+                        RecordingDirectoryWatcher(onChange).also { capturedWatcher = it }
+                    },
+                )
+
+            repository.observeLogFileExists().test {
+                // Not asserted here: capturedWatcher is assigned by the producer coroutine
+                // (running on Dispatchers.IO, a real thread) after this first emission, so
+                // there's no guarantee it has run yet the instant awaitItem() returns -
+                // asserting on it only after the second item is what's actually deterministic.
+                assertEquals(false, awaitItem())
+
+                logFile.writeText("Jul 28 15:16:07 Debug:  Scripting::fireEvent(): startup \"\" \"\" \"\" \"\"\n")
+
+                assertEquals(true, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            assertEquals(1, capturedWatcher.rechecksForced)
+        }
+
+    @Test
+    fun `observeLogFileExists reacts to a storage-changed signal without waiting for the fallback interval`() =
+        runTest {
+            val logFile = File(tempFolder.root, "es_log.txt")
+
+            val storageEvents = MutableSharedFlow<Unit>()
+            val repository =
+                EsdeLogFileRepository(
+                    logFilePath = logFile.absolutePath,
+                    fallbackPollIntervalMs = 3_600_000L,
+                    bootTimeMillis = { 0L },
+                    watchDirectory = { _, _, _ -> NoOpDirectoryWatcher },
+                    selfHeal = SelfHealConfig(storageEvents = storageEvents),
+                )
+
+            repository.observeLogFileExists().test {
+                assertEquals(false, awaitItem())
+
+                logFile.writeText("Jul 28 15:16:07 Debug:  Scripting::fireEvent(): startup \"\" \"\" \"\" \"\"\n")
+                storageEvents.emit(Unit)
+
+                assertEquals(true, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }
