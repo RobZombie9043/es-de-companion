@@ -1,7 +1,7 @@
 package com.esde.companion.domain.model
 
 private val IMAGE_EXTENSIONS = listOf("jpg", "png", "webp")
-private val VIDEO_EXTENSIONS = listOf("mp4", "mkv", "avi", "wmv", "mov", "webm")
+private val VIDEO_EXTENSIONS = listOf("mp4", "mkv", "avi", "wmv", "mov", "webm", "m4v")
 private val MANUAL_EXTENSIONS = listOf("pdf")
 
 /**
