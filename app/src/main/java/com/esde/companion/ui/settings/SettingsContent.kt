@@ -2014,7 +2014,7 @@ private fun GetWebApiKeyRow() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Get your Web API Key from RetroAchievements → Settings → Applications > Web API Key",
+            text = "Get your Web API Key from RetroAchievements → Settings → Applications → Web API Key",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
