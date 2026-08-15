@@ -7,8 +7,26 @@ package com.esde.companion.ui.retroachievements
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cottage
+import androidx.compose.material.icons.filled.DonutLarge
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.HighlightOff
+import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.HasAchievementsFilter
 import com.esde.companion.domain.model.ProgressFilter
@@ -60,22 +78,22 @@ internal fun SystemGamesSortFilterRow(
     ) {
         SingleSelectDropdownChip(
             title = "Sort Order",
-            options = SystemGameSortOrder.entries.map { DropdownOption(it, it.displayLabel()) },
+            options = SystemGameSortOrder.entries.map { DropdownOption(it, it.displayLabel(), it.icon()) },
             selection = controls.sort,
         )
         MultiSelectDropdownChip(
             title = "Game Type",
-            options = RetroGameType.entries.map { DropdownOption(it, it.displayLabel()) },
+            options = RetroGameType.entries.map { DropdownOption(it, it.displayLabel(), it.icon()) },
             selection = controls.gameTypes,
         )
         SingleSelectDropdownChip(
             title = "Has Achievements",
-            options = HasAchievementsFilter.entries.map { DropdownOption(it, it.displayLabel()) },
+            options = HasAchievementsFilter.entries.map { DropdownOption(it, it.displayLabel(), it.icon()) },
             selection = controls.hasAchievements,
         )
         SingleSelectDropdownChip(
             title = "Progress",
-            options = ProgressFilter.entries.map { DropdownOption(it, it.displayLabel()) },
+            options = ProgressFilter.entries.map { DropdownOption(it, it.displayLabel(), it.icon()) },
             selection = controls.progress,
         )
     }
@@ -93,6 +111,18 @@ private fun SystemGameSortOrder.displayLabel(): String =
         SystemGameSortOrder.TitleZToA -> "Title (Z - A)"
     }
 
+private fun SystemGameSortOrder.icon(): ImageVector =
+    when (this) {
+        SystemGameSortOrder.AchievementsMost -> Icons.Filled.EmojiEvents
+        SystemGameSortOrder.AchievementsLeast -> Icons.Filled.EmojiEvents
+        SystemGameSortOrder.PointsMost -> Icons.Filled.Star
+        SystemGameSortOrder.PointsLeast -> Icons.Filled.Star
+        SystemGameSortOrder.ProgressMost -> Icons.Filled.DonutLarge
+        SystemGameSortOrder.ProgressLeast -> Icons.Filled.DonutLarge
+        SystemGameSortOrder.TitleAToZ -> Icons.Filled.SortByAlpha
+        SystemGameSortOrder.TitleZToA -> Icons.Filled.SortByAlpha
+    }
+
 private fun RetroGameType.displayLabel(): String =
     when (this) {
         RetroGameType.Retail -> "Retail"
@@ -103,11 +133,28 @@ private fun RetroGameType.displayLabel(): String =
         RetroGameType.Demo -> "Demo"
     }
 
+private fun RetroGameType.icon(): ImageVector =
+    when (this) {
+        RetroGameType.Retail -> Icons.Filled.Storefront
+        RetroGameType.Hack -> Icons.Filled.Extension
+        RetroGameType.Homebrew -> Icons.Filled.Cottage
+        RetroGameType.Prototype -> Icons.Filled.Science
+        RetroGameType.Unlicensed -> Icons.Filled.Block
+        RetroGameType.Demo -> Icons.Filled.PlayCircleOutline
+    }
+
 private fun HasAchievementsFilter.displayLabel(): String =
     when (this) {
         HasAchievementsFilter.Yes -> "Yes"
         HasAchievementsFilter.No -> "No"
         HasAchievementsFilter.Both -> "Both"
+    }
+
+private fun HasAchievementsFilter.icon(): ImageVector =
+    when (this) {
+        HasAchievementsFilter.Yes -> Icons.Filled.CheckCircle
+        HasAchievementsFilter.No -> Icons.Filled.HighlightOff
+        HasAchievementsFilter.Both -> Icons.Filled.AllInclusive
     }
 
 private fun ProgressFilter.displayLabel(): String =
@@ -117,4 +164,13 @@ private fun ProgressFilter.displayLabel(): String =
         ProgressFilter.Some -> "Some"
         ProgressFilter.Beaten -> "Completed"
         ProgressFilter.Mastered -> "Mastered"
+    }
+
+private fun ProgressFilter.icon(): ImageVector =
+    when (this) {
+        ProgressFilter.AllGames -> Icons.Filled.Apps
+        ProgressFilter.None -> Icons.Filled.RadioButtonUnchecked
+        ProgressFilter.Some -> Icons.Filled.Timelapse
+        ProgressFilter.Beaten -> Icons.Filled.CheckCircle
+        ProgressFilter.Mastered -> Icons.Filled.EmojiEvents
     }

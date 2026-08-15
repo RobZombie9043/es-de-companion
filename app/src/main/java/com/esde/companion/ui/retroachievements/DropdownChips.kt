@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /**
@@ -47,6 +48,7 @@ internal fun <T> SingleSelectDropdownChip(
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
+                    leadingIcon = { Icon(imageVector = option.icon, contentDescription = null) },
                     onClick = {
                         expanded = false
                         selection.onValueChanged(option.value)
@@ -88,7 +90,7 @@ internal fun <T> MultiSelectDropdownChip(
                 val checked = option.value in selection.value
                 DropdownMenuItem(
                     text = { Text(option.label) },
-                    leadingIcon = { Checkbox(checked = checked, onCheckedChange = null) },
+                    leadingIcon = { MultiSelectLeadingIcon(checked = checked, icon = option.icon) },
                     onClick = {
                         val updated =
                             if (checked) selection.value - option.value else selection.value + option.value
@@ -97,6 +99,17 @@ internal fun <T> MultiSelectDropdownChip(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun MultiSelectLeadingIcon(
+    checked: Boolean,
+    icon: ImageVector,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(start = 4.dp))
     }
 }
 
