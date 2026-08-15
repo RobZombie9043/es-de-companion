@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.esde.companion.domain.model.MatchMethod
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
@@ -285,7 +286,12 @@ private fun RetroAchievementsBody(
         RetroAchievementsResolutionState.NoMatch ->
             RetroAchievementsMessage("No RetroAchievements entry found for this game.", modifier)
         is RetroAchievementsResolutionState.Found ->
-            RetroAchievementsFetchBody(fetch = fetch, listControls = listControls, modifier = modifier)
+            RetroAchievementsFetchBody(
+                fetch = fetch,
+                listControls = listControls,
+                isHashMatched = resolution.method == MatchMethod.RomHash,
+                modifier = modifier,
+            )
     }
 }
 

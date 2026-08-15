@@ -17,7 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,12 +70,18 @@ internal fun RetroAchievementsFetchBody(
     fetch: RetroAchievementsFetchState,
     listControls: AchievementListControls,
     modifier: Modifier,
+    isHashMatched: Boolean = true,
 ) {
     when (fetch) {
         RetroAchievementsFetchState.Idle, RetroAchievementsFetchState.Loading ->
             Box(modifier = modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         is RetroAchievementsFetchState.Loaded ->
-            AchievementSummaryList(summary = fetch.summary, listControls = listControls, modifier = modifier)
+            AchievementSummaryList(
+                summary = fetch.summary,
+                listControls = listControls,
+                isHashMatched = isHashMatched,
+                modifier = modifier,
+            )
         RetroAchievementsFetchState.NotFound ->
             RetroAchievementsMessage("This game's RetroAchievements entry couldn't be found.", modifier)
         is RetroAchievementsFetchState.NetworkError ->
@@ -100,6 +109,7 @@ internal fun AchievementSummaryList(
     summary: GameAchievementSummary,
     listControls: AchievementListControls,
     modifier: Modifier,
+    isHashMatched: Boolean = true,
 ) {
     if (summary.achievements.isEmpty()) {
         RetroAchievementsMessage("This game has no achievements.", modifier)
@@ -124,7 +134,7 @@ internal fun AchievementSummaryList(
     }
 
     Column(modifier = modifier) {
-        AchievementSummaryHeader(summary)
+        AchievementSummaryHeader(summary, isHashMatched)
         AchievementSortFilterRow(
             sort = listControls.sort,
             filter = listControls.filter,
@@ -153,10 +163,30 @@ internal fun AchievementSummaryList(
     }
 }
 
+/**
+ * [isHashMatched] defaults to true (no indicator) since this header is shared with
+ * [RetroAchievementsSystemGamesScreen]'s [GameDetailPage] drill-down, where the game was
+ * explicitly tapped rather than resolved via [MatchMethod] - there's no match-confidence
+ * concept to show there. [RetroAchievementsScreen] passes the real value, so a title-only
+ * match (as opposed to [MatchMethod.RomHash]) gets a small info icon next to the title -
+ * see that screen's kdoc on why title matches aren't flagged as *wrong*, just unverified.
+ */
 @Composable
-internal fun AchievementSummaryHeader(summary: GameAchievementSummary) {
+internal fun AchievementSummaryHeader(
+    summary: GameAchievementSummary,
+    isHashMatched: Boolean = true,
+) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = summary.gameTitle, style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = summary.gameTitle, style = MaterialTheme.typography.titleMedium)
+            if (!isHashMatched) {
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = "Matched by title, not verified by ROM hash",
+                    modifier = Modifier.size(HASH_MISMATCH_ICON_SIZE),
+                )
+            }
+        }
         val unlockedCount = summary.achievements.count { it.unlocked }
         val completionPercent = summary.completionPercent.roundToInt()
         val statsText =
@@ -219,6 +249,7 @@ private fun formatUnlockDate(unlockedAtMillis: Long): String {
     return date.format(UNLOCK_DATE_FORMAT)
 }
 
+private val HASH_MISMATCH_ICON_SIZE = 18.dp
 private val ACHIEVEMENT_BADGE_SIZE = 48.dp
 private val UNLOCK_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")
 private const val UNLOCK_DATE_ALPHA = 0.6f
