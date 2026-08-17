@@ -89,6 +89,101 @@ class WidgetContentResolverTest {
         assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)
     }
 
+    @Test
+    fun `SystemImage falls back to a Screenshot when no FanArt is found (fixed, non-configurable)`() {
+        val screenshotOnly: (MediaType) -> String? = {
+            if (it == MediaType.Screenshots) "/media/screenshot.png" else null
+        }
+        val content =
+            resolve(
+                widgetType = WidgetType.SystemImage(ScaleMode.Fill),
+                systemMediaLookup = screenshotOnly,
+                fallbackBackgroundAssetPath = "fallback.webp",
+            )
+
+        assertEquals(
+            WidgetContent.Image("/media/screenshot.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
+    }
+
+    // --- SystemMedia/GameMedia: configurable Fallback Artwork ------------------------------
+
+    @Test
+    fun `SystemMedia FanArt falls back to its configured fallback when FanArt is missing`() {
+        val screenshotOnly: (MediaType) -> String? = {
+            if (it == MediaType.Screenshots) "/media/screenshot.png" else null
+        }
+        val content =
+            resolve(
+                widgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
+                systemMediaLookup = screenshotOnly,
+            )
+
+        assertEquals(
+            WidgetContent.Image("/media/screenshot.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
+    }
+
+    @Test
+    fun `GameMedia Screenshots falls back to its configured fallback when Screenshots is missing`() {
+        val fanArtOnly: (MediaType) -> String? = { if (it == MediaType.FanArt) "/media/fanart.png" else null }
+        val content =
+            resolve(
+                widgetType = WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill),
+                gameMediaLookup = fanArtOnly,
+            )
+
+        assertEquals(
+            WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
+    }
+
+    @Test
+    fun `GameMedia ThreeDBoxes falls back to Box Cover by default when ThreeDBoxes is missing`() {
+        val coverOnly: (MediaType) -> String? = { if (it == MediaType.Covers) "/media/cover.png" else null }
+        val content =
+            resolve(
+                widgetType = WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit),
+                gameMediaLookup = coverOnly,
+            )
+
+        assertEquals(
+            WidgetContent.Image("/media/cover.png", ScaleMode.Fit, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
+    }
+
+    @Test
+    fun `explicitly configuring None disables the fallback even when the fallback media is available`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit, fallbackMediaType = null),
+                gameMediaLookup = { mediaType -> if (mediaType == MediaType.Covers) "/media/cover.png" else null },
+            )
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    @Test
+    fun `prefers the primary media type over its configured fallback when both are available`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
+                systemMediaLookup = { mediaType ->
+                    when (mediaType) {
+                        MediaType.FanArt -> "/media/fanart.png"
+                        MediaType.Screenshots -> "/media/screenshot.png"
+                        else -> null
+                    }
+                },
+            )
+
+        assertEquals(WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false), content)
+    }
+
     // --- SystemLogo: name-text fallback ---------------------------------------------------
 
     @Test

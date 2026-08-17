@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.model.defaultFallbackMediaType
 
 private fun ScaleMode.toDto() = name
 
@@ -21,6 +22,20 @@ private fun String.toImageTransitionMode() = ImageTransitionMode.valueOf(this)
 private fun LogoTransitionMode.toDto() = name
 
 private fun String.toLogoTransitionMode() = LogoTransitionMode.valueOf(this)
+
+// See WidgetTypeDto's kdoc for the tri-state reasoning: null means "not present in the
+// JSON at all" (old data, or a widget never explicitly reconfigured), the literal string
+// "None" means the fallback was explicitly turned off, anything else is a MediaType name.
+private const val EXPLICIT_NO_FALLBACK = "None"
+
+private fun MediaType?.toFallbackDto(): String = this?.name ?: EXPLICIT_NO_FALLBACK
+
+private fun String?.toFallbackMediaType(primaryMediaType: MediaType): MediaType? =
+    when (this) {
+        null -> primaryMediaType.defaultFallbackMediaType()
+        EXPLICIT_NO_FALLBACK -> null
+        else -> MediaType.valueOf(this)
+    }
 
 private fun WidgetType.toDto(): WidgetTypeDto =
     when (this) {
@@ -44,6 +59,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 imageTransitionMode.toDto(),
                 logoTransitionMode.toDto(),
                 glintEnabled,
+                fallbackMediaType.toFallbackDto(),
             )
         is WidgetType.GameMedia ->
             WidgetTypeDto.GameMedia(
@@ -55,6 +71,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 imageTransitionMode.toDto(),
                 logoTransitionMode.toDto(),
                 glintEnabled,
+                fallbackMediaType.toFallbackDto(),
             )
         is WidgetType.CustomImage ->
             WidgetTypeDto.CustomImage(
@@ -85,26 +102,32 @@ private fun WidgetTypeDto.toDomain(): WidgetType =
                 panZoomEnabled,
                 imageTransitionMode.toImageTransitionMode(),
             )
-        is WidgetTypeDto.SystemMedia ->
+        is WidgetTypeDto.SystemMedia -> {
+            val resolvedMediaType = MediaType.valueOf(mediaType)
             WidgetType.SystemMedia(
-                MediaType.valueOf(mediaType),
+                resolvedMediaType,
                 scaleMode.toScaleMode(),
                 ImageEffects(blurAmount, darkenAmount),
                 panZoomEnabled,
                 imageTransitionMode.toImageTransitionMode(),
                 logoTransitionMode.toLogoTransitionMode(),
                 glintEnabled,
+                fallbackMediaType.toFallbackMediaType(resolvedMediaType),
             )
-        is WidgetTypeDto.GameMedia ->
+        }
+        is WidgetTypeDto.GameMedia -> {
+            val resolvedMediaType = MediaType.valueOf(mediaType)
             WidgetType.GameMedia(
-                MediaType.valueOf(mediaType),
+                resolvedMediaType,
                 scaleMode.toScaleMode(),
                 ImageEffects(blurAmount, darkenAmount),
                 panZoomEnabled,
                 imageTransitionMode.toImageTransitionMode(),
                 logoTransitionMode.toLogoTransitionMode(),
                 glintEnabled,
+                fallbackMediaType.toFallbackMediaType(resolvedMediaType),
             )
+        }
         is WidgetTypeDto.CustomImage ->
             WidgetType.CustomImage(
                 path,

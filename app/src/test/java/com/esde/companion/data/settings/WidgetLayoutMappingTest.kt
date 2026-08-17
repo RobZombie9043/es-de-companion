@@ -11,18 +11,19 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class WidgetLayoutMappingTest {
+    private fun placedWidget(widgetType: WidgetType) =
+        PlacedWidget(
+            id = "widget-1",
+            widgetType = widgetType,
+            gridColumn = 0,
+            gridRow = 0,
+            columnSpan = 1,
+            rowSpan = 1,
+            zIndex = 0,
+        )
+
     private fun roundTrip(widgetType: WidgetType): WidgetType {
-        val placed =
-            PlacedWidget(
-                id = "widget-1",
-                widgetType = widgetType,
-                gridColumn = 0,
-                gridRow = 0,
-                columnSpan = 1,
-                rowSpan = 1,
-                zIndex = 0,
-            )
-        val dto = listOf(placed).toDtoList()
+        val dto = listOf(placedWidget(widgetType)).toDtoList()
         val roundTripped = dto.toDomainList()
         return roundTripped.single().widgetType
     }
@@ -170,6 +171,7 @@ class WidgetLayoutMappingTest {
                 imageTransitionMode = "None",
                 logoTransitionMode = "None",
                 glintEnabled = false,
+                fallbackMediaType = null,
             ),
             decoded,
         )
@@ -189,9 +191,76 @@ class WidgetLayoutMappingTest {
                 imageTransitionMode = "None",
                 logoTransitionMode = "None",
                 glintEnabled = false,
+                fallbackMediaType = null,
             ),
             decoded,
         )
+    }
+
+    // --- fallbackMediaType: round-trip, explicit None, and old-data migration -------------
+
+    @Test
+    fun `SystemMedia round-trips an explicit fallbackMediaType`() {
+        val widget = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill, fallbackMediaType = MediaType.Screenshots)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `GameMedia round-trips an explicit fallbackMediaType of Covers for ThreeDBoxes`() {
+        val widget = WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit, fallbackMediaType = MediaType.Covers)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `an explicitly configured None fallback round-trips as None, not the MediaType default`() {
+        val widget = WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill, fallbackMediaType = null)
+
+        val dto = listOf(placedWidget(widget)).toDtoList().single().widgetType as WidgetTypeDto.GameMedia
+        assertEquals("None", dto.fallbackMediaType)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON persisted before fallbackMediaType existed decodes to the MediaType's own default, not None`() {
+        // The field is entirely absent, not present-and-null - simulates real pre-feature
+        // persisted data, which never had this key at all (see WidgetTypeDto's kdoc for
+        // why "absent" and "explicitly None" must decode differently).
+        val json = """{"mediaType":"FanArt","scaleMode":"Fill"}"""
+        val dto = Json.decodeFromString(WidgetTypeDto.GameMedia.serializer(), json)
+        val placed =
+            PlacedWidgetDto(
+                id = "widget-1",
+                widgetType = dto,
+                gridColumn = 0,
+                gridRow = 0,
+                columnSpan = 1,
+                rowSpan = 1,
+                zIndex = 0,
+            )
+
+        val domain = listOf(placed).toDomainList().single().widgetType as WidgetType.GameMedia
+
+        assertEquals(MediaType.Screenshots, domain.fallbackMediaType)
+    }
+
+    @Test
+    fun `raw JSON persisted before fallbackMediaType existed defaults ThreeDBoxes to Covers`() {
+        val json = """{"mediaType":"ThreeDBoxes","scaleMode":"Fit"}"""
+        val dto = Json.decodeFromString(WidgetTypeDto.GameMedia.serializer(), json)
+        val placed =
+            PlacedWidgetDto(
+                id = "widget-1",
+                widgetType = dto,
+                gridColumn = 0,
+                gridRow = 0,
+                columnSpan = 1,
+                rowSpan = 1,
+                zIndex = 0,
+            )
+
+        val domain = listOf(placed).toDomainList().single().widgetType as WidgetType.GameMedia
+
+        assertEquals(MediaType.Covers, domain.fallbackMediaType)
     }
 
     @Test

@@ -141,7 +141,14 @@ class WidgetsViewModel(
         widgets: List<PlacedWidget>,
         identity: ContentIdentity,
     ): Map<String, WidgetContent> {
-        val neededGameMediaTypes = widgets.mapNotNull { (it.widgetType as? WidgetType.GameMedia)?.mediaType }.toSet()
+        // Includes each widget's own fallbackMediaType, not just its primary mediaType -
+        // otherwise a lone FanArt widget's Screenshots fallback would only ever resolve
+        // by coincidence, when some other widget on the same canvas also happens to need
+        // Screenshots. See WidgetContentResolver/resolveMediaWidgetContent's kdoc.
+        val neededGameMediaTypes =
+            widgets.mapNotNull { it.widgetType as? WidgetType.GameMedia }
+                .flatMap { listOfNotNull(it.mediaType, it.fallbackMediaType) }
+                .toSet()
         val gameMedia =
             identity.gameRef?.let {
                 resolveGameMedia(
@@ -157,7 +164,8 @@ class WidgetsViewModel(
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
         val neededSystemMediaTypes =
             (
-                widgets.mapNotNull { (it.widgetType as? WidgetType.SystemMedia)?.mediaType } +
+                widgets.mapNotNull { it.widgetType as? WidgetType.SystemMedia }
+                    .flatMap { listOfNotNull(it.mediaType, it.fallbackMediaType) } +
                     if (hasSystemImageWidget) listOf(MediaType.FanArt, MediaType.Screenshots) else emptyList()
             ).distinct()
         val systemMediaByType: Map<MediaType, String?> =

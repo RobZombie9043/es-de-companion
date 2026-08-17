@@ -307,7 +307,11 @@ class WidgetsViewModelTest {
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()
             val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            val widget = placedWidget("fanart", WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill))
+            // fallbackMediaType = null: this test is about the caching mechanism, not
+            // Fallback Artwork - keeping it to one requested media type per resolution
+            // keeps the call-count assertions below simple and focused.
+            val widgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill, fallbackMediaType = null)
+            val widget = placedWidget("fanart", widgetType)
             widgetLayoutRepository.seed(StateGroup.System, listOf(widget))
             val systemMediaRepository = CountingSystemMediaRepository()
             val viewModel =
@@ -336,7 +340,9 @@ class WidgetsViewModelTest {
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()
             val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            val widget = placedWidget("fanart", WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill))
+            // fallbackMediaType = null - see the caching test above for why.
+            val widgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill, fallbackMediaType = null)
+            val widget = placedWidget("fanart", widgetType)
             widgetLayoutRepository.seed(StateGroup.System, listOf(widget))
             val systemMediaRepository = CountingSystemMediaRepository()
             val viewModel =
@@ -416,6 +422,56 @@ class WidgetsViewModelTest {
 
             val expectedTypes = setOf(MediaType.FanArt, MediaType.Screenshots)
             assertEquals(expectedTypes, systemMediaRepository.lastRequestedTypes.toSet())
+        }
+
+    @Test
+    fun `a lone SystemMedia FanArt widget also requests its configured fallback (Screenshots)`() =
+        runTest(testDispatcher) {
+            // Regression: the fallback must resolve on its own, not only when some other
+            // widget on the canvas happens to also need Screenshots.
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            val widget = placedWidget("fanart", WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill))
+            widgetLayoutRepository.seed(StateGroup.System, listOf(widget))
+            val systemMediaRepository = CountingSystemMediaRepository()
+            val viewModel =
+                buildViewModel(
+                    esdeLogRepository,
+                    widgetLayoutRepository,
+                    systemMediaRepository = systemMediaRepository,
+                )
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(systemSelect("snes"))
+            advanceUntilIdle()
+
+            assertEquals(
+                setOf(MediaType.FanArt, MediaType.Screenshots),
+                systemMediaRepository.lastRequestedTypes.toSet(),
+            )
+        }
+
+    @Test
+    fun `a lone GameMedia ThreeDBoxes widget also requests its configured fallback (Box Cover)`() =
+        runTest(testDispatcher) {
+            // Same regression as the SystemMedia FanArt case above, for the Game canvas.
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            val widget = placedWidget("box", WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit))
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(widget))
+            val gameMediaRepository = RecordingGameMediaRepository()
+            val viewModel =
+                buildViewModel(
+                    esdeLogRepository,
+                    widgetLayoutRepository,
+                    gameMediaRepository = gameMediaRepository,
+                )
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            assertEquals(setOf(MediaType.ThreeDBoxes, MediaType.Covers), gameMediaRepository.lastRequestedTypes)
         }
 
     // --- game media/description gated on gameRef presence ---------------------------------

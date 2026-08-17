@@ -102,10 +102,12 @@ import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.model.allowsFadeTransition
+import com.esde.companion.domain.model.fallbackMediaTypeOptions
 import com.esde.companion.domain.model.glintEnabled
 import com.esde.companion.domain.model.imageTransitionMode
 import com.esde.companion.domain.model.isLogoStyle
 import com.esde.companion.domain.model.logoTransitionMode
+import com.esde.companion.domain.model.supportsFallbackArtwork
 import com.esde.companion.domain.model.supportsImageTransition
 import com.esde.companion.domain.model.supportsPanZoom
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
@@ -1189,6 +1191,12 @@ private fun ConfigureWidgetDialog(
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
+                        if (widgetType.supportsFallbackArtwork) {
+                            FallbackArtworkConfig(
+                                mediaType = widgetType.mediaType,
+                                current = widgetType.fallbackMediaType,
+                            ) { onChange(widgetType.copy(fallbackMediaType = it)) }
+                        }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
 
@@ -1206,6 +1214,12 @@ private fun ConfigureWidgetDialog(
                         }
                         if (widgetType.supportsPanZoom) {
                             PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                        }
+                        if (widgetType.supportsFallbackArtwork) {
+                            FallbackArtworkConfig(
+                                mediaType = widgetType.mediaType,
+                                current = widgetType.fallbackMediaType,
+                            ) { onChange(widgetType.copy(fallbackMediaType = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
@@ -1367,6 +1381,48 @@ private fun PanZoomConfig(
         Switch(checked = enabled, onCheckedChange = onChange)
     }
 }
+
+/**
+ * Only shown when [WidgetType.supportsFallbackArtwork] is true - lets a Fan Art,
+ * Screenshot, or 3D Box widget substitute a different MediaType (or nothing) when its
+ * own primary artwork isn't available for the currently browsed system/game - see
+ * [MediaType.fallbackMediaTypeOptions] for which choices apply to which [mediaType], and
+ * resolveMediaWidgetContent for where this is actually applied at render time.
+ */
+@Composable
+private fun FallbackArtworkConfig(
+    mediaType: MediaType,
+    current: MediaType?,
+    onSelected: (MediaType?) -> Unit,
+) {
+    val options = mediaType.fallbackMediaTypeOptions()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = "Fallback Artwork", style = MaterialTheme.typography.titleSmall)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = option == current,
+                    onClick = { onSelected(option) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    label = { Text(option.fallbackArtworkDisplayLabel()) },
+                )
+            }
+        }
+    }
+}
+
+/** Plain-English label for a Fallback Artwork choice - deliberately distinct from
+ * MediaType.gameWidgetLabel()/systemWidgetLabel() (those describe what a whole widget
+ * shows, e.g. "Random Game Fanart"; this describes a fallback target on its own, e.g.
+ * just "Fan Art"). `null` is the explicit "None" choice. */
+private fun MediaType?.fallbackArtworkDisplayLabel(): String =
+    when (this) {
+        null -> "None"
+        MediaType.FanArt -> "Fan Art"
+        MediaType.Screenshots -> "Screenshot"
+        MediaType.Covers -> "Box Cover"
+        else -> name
+    }
 
 /**
  * Only shown when [WidgetType.supportsImageTransition] AND [WidgetType.allowsFadeTransition]

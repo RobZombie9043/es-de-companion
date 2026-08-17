@@ -236,40 +236,101 @@ val WidgetType.panZoomActive: Boolean
             }
 
 /**
- * FanArt and Screenshots fall back to each other when the primary type is missing - the
- * only two MediaTypes that do. Every other type is exact-or-empty; see widget system
- * design notes for why a general fallback chain per type was deliberately not built.
+ * The Fallback Artwork options a Configure Widget dialog should offer for a widget of
+ * this [MediaType], in display order - the primary type is never included (it wouldn't
+ * be a "fallback"), and a trailing `null` always represents the explicit "None" choice.
+ * Empty for every MediaType without a sensible fallback (the dialog hides the picker
+ * entirely in that case - see [WidgetType.supportsFallbackArtwork]).
+ *
+ * FanArt and Screenshots fall back to each other, and ThreeDBoxes falls back to Covers
+ * (Box Cover) - the only three MediaTypes with a configurable fallback; every other type
+ * is exact-or-empty, see widget system design notes for why a general fallback chain per
+ * type was deliberately not built.
  */
-private val MEDIA_FALLBACKS: Map<MediaType, MediaType> =
-    mapOf(
-        MediaType.FanArt to MediaType.Screenshots,
-        MediaType.Screenshots to MediaType.FanArt,
-    )
+fun MediaType.fallbackMediaTypeOptions(): List<MediaType?> =
+    when (this) {
+        MediaType.FanArt -> listOf(MediaType.Screenshots, null)
+        MediaType.Screenshots -> listOf(MediaType.FanArt, null)
+        MediaType.ThreeDBoxes -> listOf(MediaType.Covers, null)
+        else -> emptyList()
+    }
+
+/**
+ * The Fallback Artwork default for a freshly-created widget of this [MediaType] - the
+ * first (non-"None") entry of [fallbackMediaTypeOptions]. Also what a widget persisted
+ * before this feature existed resolves to on load (its DTO's fallbackMediaType field is
+ * simply absent from old JSON) - see WidgetLayoutMapping, this is deliberately the same
+ * default both times so pre-existing FanArt/Screenshots widgets keep behaving exactly as
+ * they always did (previously a fixed, non-configurable fallback) rather than silently
+ * losing it.
+ */
+fun MediaType.defaultFallbackMediaType(): MediaType? = fallbackMediaTypeOptions().firstOrNull()
+
+/**
+ * Whether this widget type's Configure dialog should offer the Fallback Artwork picker
+ * at all - only SystemMedia/GameMedia instances whose [MediaType] has any
+ * [fallbackMediaTypeOptions]. Purely structural, mirroring [supportsPanZoom]'s pattern.
+ */
+val WidgetType.supportsFallbackArtwork: Boolean
+    get() =
+        when (this) {
+            is WidgetType.SystemMedia -> mediaType.fallbackMediaTypeOptions().isNotEmpty()
+            is WidgetType.GameMedia -> mediaType.fallbackMediaTypeOptions().isNotEmpty()
+            else -> false
+        }
+
+/**
+ * This widget instance's own per-widget Fallback Artwork choice (Configure Widget
+ * dialog) - see [supportsFallbackArtwork] for which variants/mediaTypes actually offer
+ * this. `null` means no fallback: either "None" was explicitly chosen, or this instance
+ * doesn't support Fallback Artwork at all.
+ */
+val WidgetType.fallbackMediaType: MediaType?
+    get() =
+        when (this) {
+            is WidgetType.SystemMedia -> fallbackMediaType
+            is WidgetType.GameMedia -> fallbackMediaType
+            else -> null
+        }
 
 /** Only these two types fall back further to a generic background image when neither
- * they nor their MEDIA_FALLBACKS partner has a real file - they're the ones used as
+ * they nor their [fallbackMediaType] has a real file - they're the ones used as
  * full-bleed backdrops, where "show nothing" would leave the screen visibly broken
- * rather than just a missing small widget. */
+ * rather than just a missing small widget. Independent of the per-widget Fallback
+ * Artwork config - applies purely based on the primary [MediaType], even if that
+ * widget's own fallback is set to "None". */
 private val BACKGROUND_FALLBACK_ELIGIBLE = setOf(MediaType.FanArt, MediaType.Screenshots)
+
+/**
+ * The two fallback sources [resolveMediaWidgetContent] can use when [MediaType][mediaType]
+ * itself doesn't resolve, bundled together purely to keep that function's parameter count
+ * down. [mediaType] is the widget's own per-instance Fallback Artwork choice (see
+ * [WidgetType.fallbackMediaType]); [backgroundAssetPath] is the generic background asset
+ * (an Android asset path, supplied by the caller rather than hardcoded here to keep this
+ * file platform-path-free) - only ever tried for [BACKGROUND_FALLBACK_ELIGIBLE] media types.
+ */
+data class MediaWidgetFallback(
+    val mediaType: MediaType? = null,
+    val backgroundAssetPath: String? = null,
+)
 
 /**
  * Resolves a MediaType-backed widget's content given a lookup of what's actually
  * available. [lookup] is supplied by the caller (game or system media resolution) so
- * this stays pure and source-agnostic. [fallbackBackgroundAssetPath] is likewise supplied
- * by the caller (an Android asset path) rather than hardcoded here, keeping this function
- * free of platform-specific paths. [effects] is threaded straight through to whichever
- * WidgetContent.Image gets returned - the fallback background image gets the same
- * configured blur/tint as the real media would have, so switching between "real photo
- * found" and "fallback asset" doesn't visibly change the effect the person configured.
+ * this stays pure and source-agnostic. [effects] is threaded straight through to
+ * whichever WidgetContent.Image gets returned - the fallback background image gets the
+ * same configured blur/tint as the real media would have, so switching between "real
+ * photo found" and "fallback asset" doesn't visibly change the effect the person
+ * configured. See [MediaWidgetFallback] for [fallback]'s two-tier meaning.
  */
 fun resolveMediaWidgetContent(
     mediaType: MediaType,
     scaleMode: ScaleMode,
     lookup: (MediaType) -> String?,
-    fallbackBackgroundAssetPath: String?,
     effects: ImageEffects = ImageEffects(),
+    fallback: MediaWidgetFallback = MediaWidgetFallback(),
 ): WidgetContent {
-    val path = lookup(mediaType) ?: MEDIA_FALLBACKS[mediaType]?.let(lookup)
+    val path = lookup(mediaType) ?: fallback.mediaType?.let(lookup)
     if (path != null) {
         return WidgetContent.Image(
             path,
@@ -280,9 +341,10 @@ fun resolveMediaWidgetContent(
         )
     }
 
-    if (mediaType in BACKGROUND_FALLBACK_ELIGIBLE && fallbackBackgroundAssetPath != null) {
-        return WidgetContent.Image(fallbackBackgroundAssetPath, scaleMode, isTransparentOverlay = false, isAsset = true, effects = effects)
+    val backgroundPath = fallback.backgroundAssetPath.takeIf { mediaType in BACKGROUND_FALLBACK_ELIGIBLE }
+    return if (backgroundPath != null) {
+        WidgetContent.Image(backgroundPath, scaleMode, isTransparentOverlay = false, isAsset = true, effects = effects)
+    } else {
+        WidgetContent.Empty
     }
-
-    return WidgetContent.Empty
 }

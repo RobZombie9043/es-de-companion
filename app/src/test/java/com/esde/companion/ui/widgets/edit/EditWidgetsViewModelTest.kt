@@ -113,6 +113,21 @@ class EditWidgetsViewModelTest {
         ): GameMedia = media
     }
 
+    /** Unlike [FakeGameMediaRepository] (which returns [media] unconditionally regardless
+     * of what's asked for), this only returns entries actually present in the requested
+     * mediaTypes - lets a test expose the regression where a lone widget's own
+     * fallbackMediaType wasn't included in what got requested at all. */
+    private class RequestedTypesFilteringGameMediaRepository(
+        private val media: GameMedia,
+    ) : GameMediaRepository {
+        override suspend fun resolveMedia(
+            systemShortName: String,
+            systemPath: String?,
+            romPath: String,
+            mediaTypes: Set<MediaType>,
+        ): GameMedia = media.copy(filesByType = media.filesByType.filterKeys { it in mediaTypes })
+    }
+
     private class FakeGameDescriptionRepository(
         private val description: GameDescription = GameDescription(text = null),
     ) : GameDescriptionRepository {
@@ -379,7 +394,7 @@ class EditWidgetsViewModelTest {
 
     private fun buildViewModel(
         widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
-        gameMediaRepository: FakeGameMediaRepository = FakeGameMediaRepository(),
+        gameMediaRepository: GameMediaRepository = FakeGameMediaRepository(),
         systemMediaRepository: SystemMediaRepository = FakeSystemMediaRepository(),
         customSystemImageRepository: FakeCustomSystemImageRepository = FakeCustomSystemImageRepository(),
         customSystemLogoRepository: FakeCustomSystemLogoRepository = FakeCustomSystemLogoRepository(),
@@ -775,19 +790,56 @@ class EditWidgetsViewModelTest {
         }
 
     @Test
-    fun `previewContent reuses the same random system media pick across repeated resolutions in one edit session`() =
+    fun `previewContent resolves a lone GameMedia widget's configured fallback artwork on its own`() =
         runTest(testDispatcher) {
+            // Regression: a canvas with only a FanArt widget (no separate Screenshots
+            // widget) must still resolve FanArt's configured fallback to Screenshots.
+            val gameReference = GameReference(systemShortName = "snes", romPath = "/roms/snes/game.sfc")
+            val gameMedia =
+                GameMedia(
+                    baseRelativePath = "game",
+                    filesByType = mapOf(MediaType.Screenshots to "/media/snes/screenshots/game.png"),
+                )
             val repository =
                 FakeWidgetLayoutRepository().apply {
                     seed(
-                        StateGroup.System,
+                        StateGroup.Playing,
                         listOf(
                             placedWidget(
                                 id = "widget-a",
                                 zIndex = 0,
-                                widgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill),
+                                widgetType = WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill),
                             ),
                         ),
+                    )
+                }
+            val viewModel =
+                buildViewModel(
+                    widgetLayoutRepository = repository,
+                    gameMediaRepository = RequestedTypesFilteringGameMediaRepository(gameMedia),
+                    lastKnownContextRepository = FakeLastKnownContextRepository(initialGameReference = gameReference),
+                )
+            viewModel.selectCanvas(StateGroup.Playing)
+            viewModel.setGridDimensions(grid)
+            advanceUntilIdle()
+
+            val content = viewModel.previewContent.value["widget-a"]
+            assertTrue(content is WidgetContent.Image)
+            assertEquals("/media/snes/screenshots/game.png", (content as WidgetContent.Image).path)
+        }
+
+    @Test
+    fun `previewContent reuses the same random system media pick across repeated resolutions in one edit session`() =
+        runTest(testDispatcher) {
+            // fallbackMediaType = null throughout: this test is about the caching
+            // mechanism, not Fallback Artwork - keeping it to one requested media type
+            // keeps the call-count assertion below simple and focused.
+            val initialWidgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill, fallbackMediaType = null)
+            val repository =
+                FakeWidgetLayoutRepository().apply {
+                    seed(
+                        StateGroup.System,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = initialWidgetType)),
                     )
                 }
             val systemMediaRepository = CountingSystemMediaRepository()
@@ -803,7 +855,8 @@ class EditWidgetsViewModelTest {
 
             // A Configure Widget tweak recomputes previewContent (see updateWidgetConfig's
             // kdoc) but must not reroll which random image was already chosen this session.
-            viewModel.updateWidgetConfig("widget-a", WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fit))
+            val retunedWidgetType = WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fit, fallbackMediaType = null)
+            viewModel.updateWidgetConfig("widget-a", retunedWidgetType)
             advanceUntilIdle()
             val secondPick = (viewModel.previewContent.value["widget-a"] as WidgetContent.Image).path
 

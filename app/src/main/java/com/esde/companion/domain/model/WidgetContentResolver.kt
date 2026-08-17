@@ -34,26 +34,29 @@ object WidgetContentResolver {
                         mediaType = MediaType.FanArt,
                         scaleMode = widgetType.scaleMode,
                         lookup = systemMediaLookup,
-                        fallbackBackgroundAssetPath = fallbackBackgroundAssetPath,
                         effects = widgetType.effects,
+                        // No per-widget config here (SystemImage has no mediaType/
+                        // Fallback Artwork field of its own) - matches this variant's
+                        // documented fixed behavior, see its kdoc.
+                        fallback = MediaWidgetFallback(MediaType.Screenshots, fallbackBackgroundAssetPath),
                     )
 
             is WidgetType.SystemMedia ->
                 resolveMediaWidgetContent(
-                    widgetType.mediaType,
-                    widgetType.scaleMode,
-                    systemMediaLookup,
-                    fallbackBackgroundAssetPath,
-                    widgetType.effects,
+                    mediaType = widgetType.mediaType,
+                    scaleMode = widgetType.scaleMode,
+                    lookup = systemMediaLookup,
+                    effects = widgetType.effects,
+                    fallback = MediaWidgetFallback(widgetType.fallbackMediaType, fallbackBackgroundAssetPath),
                 ).withNameFallback(widgetType.mediaType, systemNameLookup)
 
             is WidgetType.GameMedia ->
                 resolveMediaWidgetContent(
-                    widgetType.mediaType,
-                    widgetType.scaleMode,
-                    gameMediaLookup,
-                    fallbackBackgroundAssetPath,
-                    widgetType.effects,
+                    mediaType = widgetType.mediaType,
+                    scaleMode = widgetType.scaleMode,
+                    lookup = gameMediaLookup,
+                    effects = widgetType.effects,
+                    fallback = MediaWidgetFallback(widgetType.fallbackMediaType, fallbackBackgroundAssetPath),
                 ).withNameFallback(widgetType.mediaType, gameNameLookup)
 
             is WidgetType.CustomImage ->
