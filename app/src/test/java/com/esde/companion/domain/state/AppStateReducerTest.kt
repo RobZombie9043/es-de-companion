@@ -249,4 +249,75 @@ class AppStateReducerTest {
 
         assertEquals(AppState.Idle, result)
     }
+
+    // GameMediaPathResolver needs the system's real ROM directory (only ever reported via
+    // system-select) to resolve media correctly when a system's ROM folder isn't named after
+    // its shortname - see GameMediaPathResolver's kdoc. These verify the reducer actually
+    // carries that systemPath forward onto BrowsingGame/PlayingGame/ScreensaverGame, since
+    // game-select/game-start/game-end/screensaver-game-select never report it themselves.
+
+    @Test
+    fun `game-select carries systemPath forward from a matching BrowsingSystem`() {
+        val browsingSystem = AppState.BrowsingSystem("nds", "Nintendo DS", "/storage/E2AB-E84A/ROMs/DS")
+        val event = EsdeEvent.GameSelect("/storage/E2AB-E84A/ROMs/DS/dummy.zip", "Dummy", "nds", "Nintendo DS")
+
+        val result = AppStateReducer.reduce(browsingSystem, event) as AppState.BrowsingGame
+
+        assertEquals("/storage/E2AB-E84A/ROMs/DS", result.systemPath)
+    }
+
+    @Test
+    fun `game-select does not carry systemPath forward from a different system`() {
+        val browsingSystem = AppState.BrowsingSystem("nds", "Nintendo DS", "/storage/E2AB-E84A/ROMs/DS")
+        val event = EsdeEvent.GameSelect("/roms/psx/game.chd", "Game", "psx", "Sony PlayStation")
+
+        val result = AppStateReducer.reduce(browsingSystem, event) as AppState.BrowsingGame
+
+        assertNull(result.systemPath)
+    }
+
+    @Test
+    fun `game-start carries systemPath forward from BrowsingGame`() {
+        val browsing =
+            AppState.BrowsingGame(
+                "/storage/E2AB-E84A/ROMs/DS/dummy.zip",
+                "Dummy",
+                "nds",
+                "Nintendo DS",
+                systemPath = "/storage/E2AB-E84A/ROMs/DS",
+            )
+        val event = EsdeEvent.GameStart("/storage/E2AB-E84A/ROMs/DS/dummy.zip", "Dummy", "nds", "Nintendo DS")
+
+        val result = AppStateReducer.reduce(browsing, event) as AppState.PlayingGame
+
+        assertEquals("/storage/E2AB-E84A/ROMs/DS", result.systemPath)
+    }
+
+    @Test
+    fun `game-end carries systemPath forward from PlayingGame`() {
+        val playing =
+            AppState.PlayingGame(
+                "/storage/E2AB-E84A/ROMs/DS/dummy.zip",
+                "Dummy",
+                "nds",
+                "Nintendo DS",
+                systemPath = "/storage/E2AB-E84A/ROMs/DS",
+            )
+        val event = EsdeEvent.GameEnd("/storage/E2AB-E84A/ROMs/DS/dummy.zip", "Dummy", "nds", "Nintendo DS")
+
+        val result = AppStateReducer.reduce(playing, event) as AppState.BrowsingGame
+
+        assertEquals("/storage/E2AB-E84A/ROMs/DS", result.systemPath)
+    }
+
+    @Test
+    fun `screensaver-game-select carries systemPath forward from the state active before the screensaver started`() {
+        val previous = AppState.BrowsingSystem("arcade", "Arcade", "/roms/arcade")
+        val screensaver = AppState.Screensaver(mode = "manual", currentGame = null, previousState = previous)
+        val event = EsdeEvent.ScreensaverGameSelect("/roms/arcade/tapper.zip", "Tapper", "arcade", "Arcade")
+
+        val result = AppStateReducer.reduce(screensaver, event) as AppState.Screensaver
+
+        assertEquals("/roms/arcade", result.currentGame?.systemPath)
+    }
 }

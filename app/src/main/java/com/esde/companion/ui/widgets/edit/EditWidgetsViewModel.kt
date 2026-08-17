@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.APP_DRAWER_SHORTCUT_PACKAGE_NAME
 import com.esde.companion.domain.model.AppDrawerShortcut
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.MediaType
@@ -357,8 +358,7 @@ class EditWidgetsViewModel(
         val lastSystemShortName = observeLastSystemShortName().first()
         val lastGameReference = observeLastGameReference().first()
         val neededGameMediaTypes = widgets.mapNotNull { (it.widgetType as? WidgetType.GameMedia)?.mediaType }.toSet()
-        val gameMedia =
-            lastGameReference?.let { resolveGameMedia(it.systemShortName, it.romPath, neededGameMediaTypes) }
+        val gameMedia = lastGameReference?.let { resolveGameMediaFor(it, neededGameMediaTypes) }
         val gameDescription = lastGameReference?.let { resolveGameDescription(it.systemShortName, it.romPath) }
 
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
@@ -413,4 +413,14 @@ class EditWidgetsViewModel(
                 )
         }
     }
+
+    private suspend fun resolveGameMediaFor(
+        gameReference: GameReference,
+        mediaTypes: Set<MediaType>,
+    ) = resolveGameMedia(
+        systemShortName = gameReference.systemShortName,
+        systemPath = gameReference.systemPath,
+        romPath = gameReference.romPath,
+        mediaTypes = mediaTypes,
+    )
 }

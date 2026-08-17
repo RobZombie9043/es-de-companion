@@ -35,6 +35,7 @@ class FileGameMediaRepositoryTest {
             val result =
                 repository.resolveMedia(
                     systemShortName = "dreamcast",
+                    systemPath = null,
                     romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Cosmic Smash (Japan).chd",
                     mediaTypes = setOf(MediaType.Covers),
                 )
@@ -54,6 +55,7 @@ class FileGameMediaRepositoryTest {
             val result =
                 repository.resolveMedia(
                     systemShortName = "psx",
+                    systemPath = null,
                     romPath = "/storage/E2AB-E84A/ROMs/psx/RPGs/Final Fantasy IX (USA).chd",
                     mediaTypes = setOf(MediaType.Screenshots),
                 )
@@ -77,6 +79,7 @@ class FileGameMediaRepositoryTest {
             val result =
                 repository.resolveMedia(
                     systemShortName = "psx",
+                    systemPath = null,
                     romPath = gameDir.absolutePath.replace(File.separatorChar, '/'),
                     mediaTypes = setOf(MediaType.Covers),
                 )
@@ -95,11 +98,32 @@ class FileGameMediaRepositoryTest {
             val result =
                 repository.resolveMedia(
                     systemShortName = "dreamcast",
+                    systemPath = null,
                     romPath = "/storage/E2AB-E84A/ROMs/dreamcast/Missing Game.chd",
                     mediaTypes = setOf(MediaType.Covers),
                 )
 
             assertNull(result.path(MediaType.Covers))
+        }
+
+    @Test
+    fun `finds media via systemPath when the ROM folder isn't named after the system's shortname`() =
+        runTest {
+            writeMediaFile("nds/covers/dummy.png")
+            val repository = FileGameMediaRepository(mediaRoot.absolutePath)
+
+            val result =
+                repository.resolveMedia(
+                    systemShortName = "nds",
+                    systemPath = "/storage/E2AB-E84A/ROMs/DS",
+                    romPath = "/storage/E2AB-E84A/ROMs/DS/dummy.zip",
+                    mediaTypes = setOf(MediaType.Covers),
+                )
+
+            assertEquals(
+                File(mediaRoot, "nds/covers/dummy.png").absolutePath,
+                result.path(MediaType.Covers),
+            )
         }
 
     private fun writeMediaFile(relativePath: String) {

@@ -17,10 +17,11 @@ class LoggingGameMediaRepository(
 ) : GameMediaRepository {
     override suspend fun resolveMedia(
         systemShortName: String,
+        systemPath: String?,
         romPath: String,
         mediaTypes: Set<MediaType>,
     ): GameMedia {
-        val result = inner.resolveMedia(systemShortName, romPath, mediaTypes)
+        val result = inner.resolveMedia(systemShortName, systemPath, romPath, mediaTypes)
         debugFileLogger.logMediaResolution(systemShortName, mediaTypes, result)
         return result
     }

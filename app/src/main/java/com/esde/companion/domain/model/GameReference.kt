@@ -1,7 +1,11 @@
 package com.esde.companion.domain.model
 
-/** Identifies a game by the same two fields GameMediaPathResolver needs. */
-data class GameReference(val systemShortName: String, val romPath: String)
+/**
+ * Identifies a game by the same fields GameMediaPathResolver needs. [systemPath] is ES-DE's
+ * own reported ROM directory for the system (carried forward from a prior system-select - see
+ * AppStateReducer.systemPathFor), null when it hasn't been observed yet this session.
+ */
+data class GameReference(val systemShortName: String, val romPath: String, val systemPath: String? = null)
 
 /**
  * The game currently relevant to display, if any - BrowsingGame/PlayingGame directly, or
@@ -10,8 +14,8 @@ data class GameReference(val systemShortName: String, val romPath: String)
  */
 fun AppState.currentGameReference(): GameReference? =
     when (this) {
-        is AppState.BrowsingGame -> GameReference(systemShortName, romPath)
-        is AppState.PlayingGame -> GameReference(systemShortName, romPath)
-        is AppState.Screensaver -> currentGame?.let { GameReference(it.systemShortName, it.romPath) }
+        is AppState.BrowsingGame -> GameReference(systemShortName, romPath, systemPath)
+        is AppState.PlayingGame -> GameReference(systemShortName, romPath, systemPath)
+        is AppState.Screensaver -> currentGame?.let { GameReference(it.systemShortName, it.romPath, it.systemPath) }
         is AppState.Idle, is AppState.BrowsingSystem -> null
     }

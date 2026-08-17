@@ -143,7 +143,14 @@ class WidgetsViewModel(
     ): Map<String, WidgetContent> {
         val neededGameMediaTypes = widgets.mapNotNull { (it.widgetType as? WidgetType.GameMedia)?.mediaType }.toSet()
         val gameMedia =
-            identity.gameRef?.let { resolveGameMedia(it.systemShortName, it.romPath, neededGameMediaTypes) }
+            identity.gameRef?.let {
+                resolveGameMedia(
+                    systemShortName = it.systemShortName,
+                    systemPath = it.systemPath,
+                    romPath = it.romPath,
+                    mediaTypes = neededGameMediaTypes,
+                )
+            }
         val gameDescription = identity.gameRef?.let { resolveGameDescription(it.systemShortName, it.romPath) }
         val systemShortName = identity.systemShortName
 

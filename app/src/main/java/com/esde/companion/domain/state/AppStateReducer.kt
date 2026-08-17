@@ -42,6 +42,7 @@ object AppStateReducer {
                         systemShortName = event.systemShortName,
                         systemFullName = event.systemFullName,
                         navigationDirection = event.direction,
+                        systemPath = current.systemPathFor(event.systemShortName),
                     )
                 }
             }
@@ -52,6 +53,7 @@ object AppStateReducer {
                     gameName = event.gameName,
                     systemShortName = event.systemShortName,
                     systemFullName = event.systemFullName,
+                    systemPath = current.systemPathFor(event.systemShortName),
                 )
 
             is EsdeEvent.GameEnd ->
@@ -60,6 +62,7 @@ object AppStateReducer {
                     gameName = event.gameName,
                     systemShortName = event.systemShortName,
                     systemFullName = event.systemFullName,
+                    systemPath = current.systemPathFor(event.systemShortName),
                 )
 
             is EsdeEvent.ScreensaverStart ->
@@ -79,6 +82,7 @@ object AppStateReducer {
                         gameName = event.gameName,
                         systemShortName = event.systemShortName,
                         systemFullName = event.systemFullName,
+                        systemPath = current.systemPathFor(event.systemShortName),
                     )
                 // A screensaver-game-select can arrive without a preceding screensaver-start
                 // being observed (e.g. the app was launched mid-screensaver) - fall back to
@@ -113,5 +117,26 @@ object AppStateReducer {
             // screen is stale until it re-fires system-select/game-select once reload
             // finishes, so drop to Idle in the meantime, same as Quit.
             is EsdeEvent.Reload -> AppState.Idle
+        }
+
+    /**
+     * ES-DE's `game-select`/`game-start`/`game-end` fireEvent() lines don't carry the
+     * system's ROM directory the way `system-select` does (see [EsdeEvent.SystemSelect]) -
+     * only `systemShortName`. Since browsing into a system (firing system-select) always
+     * precedes selecting a game within it, [current] - or, for a repeated screensaver, its
+     * carried-over previousState - already holds the right systemPath for a matching system
+     * whenever one has been observed this session; this is how GameMediaPathResolver gets an
+     * authoritative ROM root without depending on the ROM folder's name on disk (see its
+     * kdoc). Returns null only when no matching system-select has been seen yet (e.g. a
+     * cold-start replay anchored directly on a game event) - GameMediaPathResolver falls
+     * back to a marker search in that case.
+     */
+    private fun AppState.systemPathFor(systemShortName: String): String? =
+        when (this) {
+            is AppState.BrowsingSystem -> systemPath.takeIf { this.systemShortName == systemShortName }
+            is AppState.BrowsingGame -> systemPath?.takeIf { this.systemShortName == systemShortName }
+            is AppState.PlayingGame -> systemPath?.takeIf { this.systemShortName == systemShortName }
+            is AppState.Screensaver -> previousState.systemPathFor(systemShortName)
+            is AppState.Idle -> null
         }
 }

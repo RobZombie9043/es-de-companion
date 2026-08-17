@@ -107,6 +107,7 @@ class EditWidgetsViewModelTest {
     ) : GameMediaRepository {
         override suspend fun resolveMedia(
             systemShortName: String,
+            systemPath: String?,
             romPath: String,
             mediaTypes: Set<MediaType>,
         ): GameMedia = media

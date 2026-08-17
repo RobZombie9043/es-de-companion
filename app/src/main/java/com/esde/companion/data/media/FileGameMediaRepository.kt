@@ -13,6 +13,7 @@ class FileGameMediaRepository(
 ) : GameMediaRepository {
     override suspend fun resolveMedia(
         systemShortName: String,
+        systemPath: String?,
         romPath: String,
         mediaTypes: Set<MediaType>,
     ): GameMedia =
@@ -24,6 +25,7 @@ class FileGameMediaRepository(
             val baseRelativePath =
                 GameMediaPathResolver.resolveBaseRelativePath(
                     systemShortName = systemShortName,
+                    systemPath = systemPath,
                     romPath = romPath,
                     romIsDirectory = romIsDirectory,
                 ) ?: return@withContext GameMedia(baseRelativePath = null, filesByType = emptyMap())

@@ -43,6 +43,7 @@ class GameManualViewModelTest {
     private class FakeGameMediaRepository : GameMediaRepository {
         override suspend fun resolveMedia(
             systemShortName: String,
+            systemPath: String?,
             romPath: String,
             mediaTypes: Set<MediaType>,
         ): GameMedia = GameMedia(baseRelativePath = null, filesByType = mapOf(MediaType.Manuals to "$romPath.pdf"))
