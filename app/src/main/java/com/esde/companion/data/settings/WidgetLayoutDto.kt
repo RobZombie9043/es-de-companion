@@ -40,6 +40,12 @@ internal data class PlacedWidgetDto(
  * for panZoomEnabled defaulting to false (see WidgetType.panZoomEnabled). imageTransitionMode/
  * logoTransitionMode/glintEnabled follow the same pattern for the per-widget transition/glint
  * config that used to live in global Settings.
+ *
+ * fallbackMediaType on SystemMedia/GameMedia is a tri-state string, not a plain optional
+ * MediaType name - see WidgetLayoutMapping's toFallbackMediaTypeDto/toFallbackMediaType
+ * for why: `null` (the key absent entirely, e.g. JSON from before this feature existed)
+ * means "apply MediaType.defaultFallbackMediaType()", the literal string "None" means the
+ * fallback was explicitly turned off, and anything else is a MediaType enum name.
  */
 @Serializable
 internal sealed class WidgetTypeDto {
@@ -71,6 +77,7 @@ internal sealed class WidgetTypeDto {
         val imageTransitionMode: String = "None",
         val logoTransitionMode: String = "None",
         val glintEnabled: Boolean = false,
+        val fallbackMediaType: String? = null,
     ) : WidgetTypeDto()
 
     @Serializable
@@ -83,6 +90,7 @@ internal sealed class WidgetTypeDto {
         val imageTransitionMode: String = "None",
         val logoTransitionMode: String = "None",
         val glintEnabled: Boolean = false,
+        val fallbackMediaType: String? = null,
     ) : WidgetTypeDto()
 
     @Serializable

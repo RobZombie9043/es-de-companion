@@ -69,6 +69,13 @@ sealed class WidgetType {
      * render/Configure-dialog time (see WidgetContent.kt's extension properties); the
      * others are simply unused for that instance, same reasoning as [SystemLogo] carrying
      * fields [ColorBackground] doesn't need.
+     *
+     * [fallbackMediaType] is this widget's own per-instance Fallback Artwork choice
+     * (Configure Widget dialog) - see [MediaType.fallbackMediaTypeOptions] for which
+     * MediaTypes offer this at all and what their choices are, and
+     * resolveMediaWidgetContent for where it's actually applied. Defaults to
+     * [MediaType.defaultFallbackMediaType] so a freshly-added widget starts with a
+     * sensible fallback already selected, not "None".
      */
     data class SystemMedia(
         val mediaType: MediaType,
@@ -78,10 +85,12 @@ sealed class WidgetType {
         val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
         val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
         val glintEnabled: Boolean = false,
+        val fallbackMediaType: MediaType? = mediaType.defaultFallbackMediaType(),
     ) : WidgetType()
 
-    /** See [SystemMedia]'s kdoc - same logo-style-vs-opaque field split, just for the
-     * Playing/game canvas's media catalog instead of System's. */
+    /** See [SystemMedia]'s kdoc - same logo-style-vs-opaque field split (and the same
+     * [fallbackMediaType] Fallback Artwork config), just for the Playing/game canvas's
+     * media catalog instead of System's. */
     data class GameMedia(
         val mediaType: MediaType,
         val scaleMode: ScaleMode,
@@ -90,6 +99,7 @@ sealed class WidgetType {
         val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
         val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
         val glintEnabled: Boolean = false,
+        val fallbackMediaType: MediaType? = mediaType.defaultFallbackMediaType(),
     ) : WidgetType()
 
     /**
