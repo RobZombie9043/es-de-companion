@@ -30,7 +30,7 @@ class FileLastKnownContextRepository(
             val systemShortName = prefs[GAME_SYSTEM_SHORT_NAME_KEY]
             val romPath = prefs[GAME_ROM_PATH_KEY]
             if (systemShortName != null && romPath != null) {
-                GameReference(systemShortName, romPath)
+                GameReference(systemShortName, romPath, prefs[GAME_SYSTEM_PATH_KEY])
             } else {
                 null
             }
@@ -40,6 +40,11 @@ class FileLastKnownContextRepository(
         context.lastKnownContextDataStore.edit {
             it[GAME_SYSTEM_SHORT_NAME_KEY] = gameReference.systemShortName
             it[GAME_ROM_PATH_KEY] = gameReference.romPath
+            if (gameReference.systemPath != null) {
+                it[GAME_SYSTEM_PATH_KEY] = gameReference.systemPath
+            } else {
+                it.remove(GAME_SYSTEM_PATH_KEY)
+            }
         }
     }
 
@@ -47,5 +52,6 @@ class FileLastKnownContextRepository(
         val SYSTEM_SHORT_NAME_KEY = stringPreferencesKey("last_system_short_name")
         val GAME_SYSTEM_SHORT_NAME_KEY = stringPreferencesKey("last_game_system_short_name")
         val GAME_ROM_PATH_KEY = stringPreferencesKey("last_game_rom_path")
+        val GAME_SYSTEM_PATH_KEY = stringPreferencesKey("last_game_system_path")
     }
 }

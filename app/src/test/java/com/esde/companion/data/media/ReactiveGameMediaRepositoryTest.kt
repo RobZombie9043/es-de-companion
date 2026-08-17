@@ -3,6 +3,7 @@ package com.esde.companion.data.media
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.SystemPathRepository
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -13,6 +14,7 @@ class ReactiveGameMediaRepositoryTest {
     private class FakeGameMediaRepository(private val folder: String) : GameMediaRepository {
         override suspend fun resolveMedia(
             systemShortName: String,
+            systemPath: String?,
             romPath: String,
             mediaTypes: Set<MediaType>,
         ): GameMedia =
@@ -22,16 +24,21 @@ class ReactiveGameMediaRepositoryTest {
             )
     }
 
+    private class FakeSystemPathRepository : SystemPathRepository {
+        override suspend fun resolveSystemPath(systemShortName: String): String? = null
+    }
+
     @Test
     fun `resolves to empty GameMedia when no media folder is configured yet`() =
         runTest {
             val repository =
                 ReactiveGameMediaRepository(
                     mediaFolderPath = flowOf(null),
-                    repositoryFactory = { folder -> FakeGameMediaRepository(folder) },
+                    systemPathRepository = FakeSystemPathRepository(),
+                    repositoryFactory = { folder, _ -> FakeGameMediaRepository(folder) },
                 )
 
-            val result = repository.resolveMedia("dreamcast", "/roms/dreamcast/game.chd", setOf(MediaType.Covers))
+            val result = repository.resolveMedia("dreamcast", null, "/roms/dreamcast/game.chd", setOf(MediaType.Covers))
 
             assertNull(result.path(MediaType.Covers))
         }
@@ -42,10 +49,11 @@ class ReactiveGameMediaRepositoryTest {
             val repository =
                 ReactiveGameMediaRepository(
                     mediaFolderPath = flowOf("/sdcard/ES-DE/downloaded_media"),
-                    repositoryFactory = { folder -> FakeGameMediaRepository(folder) },
+                    systemPathRepository = FakeSystemPathRepository(),
+                    repositoryFactory = { folder, _ -> FakeGameMediaRepository(folder) },
                 )
 
-            val result = repository.resolveMedia("dreamcast", "/roms/dreamcast/game.chd", setOf(MediaType.Covers))
+            val result = repository.resolveMedia("dreamcast", null, "/roms/dreamcast/game.chd", setOf(MediaType.Covers))
 
             assertEquals(
                 "/sdcard/ES-DE/downloaded_media/dreamcast/covers/resolved.png",

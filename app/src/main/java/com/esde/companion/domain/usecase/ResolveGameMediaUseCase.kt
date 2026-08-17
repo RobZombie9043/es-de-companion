@@ -19,7 +19,8 @@ class ResolveGameMediaUseCase(
 ) {
     suspend operator fun invoke(
         systemShortName: String,
+        systemPath: String?,
         romPath: String,
         mediaTypes: Set<MediaType>,
-    ): GameMedia = gameMediaRepository.resolveMedia(systemShortName, romPath, mediaTypes)
+    ): GameMedia = gameMediaRepository.resolveMedia(systemShortName, systemPath, romPath, mediaTypes)
 }

@@ -40,6 +40,8 @@ import com.esde.companion.data.settings.FileOnboardingRepository
 import com.esde.companion.data.settings.FileWidgetLayoutRepository
 import com.esde.companion.data.storage.SelfHealConfig
 import com.esde.companion.data.storage.StorageMountEvents
+import com.esde.companion.data.systems.LoggingSystemPathRepository
+import com.esde.companion.data.systems.ReactiveSystemPathRepository
 import com.esde.companion.data.update.FileUpdateStateRepository
 import com.esde.companion.data.update.GitHubUpdateRepository
 import com.esde.companion.data.video.ProcessVideoPlaybackStateRepository
@@ -69,6 +71,7 @@ import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
 import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
+import com.esde.companion.domain.repository.SystemPathRepository
 import com.esde.companion.domain.repository.UpdateRepository
 import com.esde.companion.domain.repository.UpdateStateRepository
 import com.esde.companion.domain.repository.VideoPlaybackStateRepository
@@ -263,10 +266,26 @@ class AppContainer(context: Context) {
             scope = applicationScope,
         )
 
+    // custom_systems/ lives alongside logs/ under the ES-DE root, so this reacts to the
+    // log folder path, not the media folder path - see ReactiveSystemPathRepository.
+    // Last-resort tier of media resolution (see GameMediaPathResolver's kdoc), shared
+    // by gameMediaRepository below.
+    private val systemPathRepository: SystemPathRepository =
+        LoggingSystemPathRepository(
+            inner = ReactiveSystemPathRepository(esdeRootPath = onboardingRepository.observeLogFolderPath()),
+            debugFileLogger = debugFileLogger,
+        )
+
     // Same reactive-to-Settings pattern as logRepository, for the media folder.
+    private val reactiveGameMediaRepository =
+        ReactiveGameMediaRepository(
+            mediaFolderPath = onboardingRepository.observeMediaFolderPath(),
+            systemPathRepository = systemPathRepository,
+        )
+
     private val gameMediaRepository: GameMediaRepository =
         LoggingGameMediaRepository(
-            inner = ReactiveGameMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath()),
+            inner = reactiveGameMediaRepository,
             debugFileLogger = debugFileLogger,
         )
 

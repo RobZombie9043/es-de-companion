@@ -44,14 +44,19 @@ class VideoOverlayViewModel(
         combine(observeConnectionState(), observeVideoPlaybackEnabled()) { connection, enabled ->
             ((connection as? EsdeConnectionState.Connected)?.appState as? AppState.BrowsingGame)
                 .takeIf { enabled }
-                ?.let { GameReference(it.systemShortName, it.romPath) }
+                ?.let { GameReference(it.systemShortName, it.romPath, it.systemPath) }
         }.distinctUntilChanged()
 
     val videoPath: StateFlow<String?> =
         browsingGameReference
             .map { ref ->
                 ref?.let {
-                    resolveGameMedia(it.systemShortName, it.romPath, setOf(MediaType.Videos)).path(MediaType.Videos)
+                    resolveGameMedia(
+                        systemShortName = it.systemShortName,
+                        systemPath = it.systemPath,
+                        romPath = it.romPath,
+                        mediaTypes = setOf(MediaType.Videos),
+                    ).path(MediaType.Videos)
                 }
             }
             .distinctUntilChanged()

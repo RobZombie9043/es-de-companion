@@ -26,6 +26,7 @@ sealed class AppState {
         val systemShortName: String,
         val systemFullName: String,
         val navigationDirection: NavigationDirection? = null,
+        val systemPath: String? = null,
     ) : AppState()
 
     data class PlayingGame(
@@ -33,6 +34,7 @@ sealed class AppState {
         val gameName: String,
         val systemShortName: String,
         val systemFullName: String,
+        val systemPath: String? = null,
     ) : AppState()
 
     /**
@@ -54,4 +56,5 @@ data class ScreensaverGame(
     val gameName: String,
     val systemShortName: String,
     val systemFullName: String,
+    val systemPath: String? = null,
 )

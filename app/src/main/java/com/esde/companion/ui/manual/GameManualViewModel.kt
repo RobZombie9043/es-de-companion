@@ -50,7 +50,12 @@ class GameManualViewModel(
         currentGameReference
             .map { gameRef ->
                 gameRef?.let {
-                    resolveGameMedia(it.systemShortName, it.romPath, setOf(MediaType.Manuals)).path(MediaType.Manuals)
+                    resolveGameMedia(
+                        systemShortName = it.systemShortName,
+                        systemPath = it.systemPath,
+                        romPath = it.romPath,
+                        mediaTypes = setOf(MediaType.Manuals),
+                    ).path(MediaType.Manuals)
                 }
             }
             .distinctUntilChanged()
