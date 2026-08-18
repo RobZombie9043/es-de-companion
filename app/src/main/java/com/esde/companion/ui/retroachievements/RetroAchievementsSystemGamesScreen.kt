@@ -114,11 +114,15 @@ fun RetroAchievementsSystemGamesScreen(
         viewModel.onGameDetailClosed()
         page = SystemGamesPage.Browse
     }
-    // Gated to the detail page only - unlike LongPressSettingsMenu's unconditional BackHandler,
-    // making this unconditional would start closing the whole System overlay on back at the
-    // browse level, which nothing does today and RetroAchievementsScreen doesn't either; this
-    // keeps the change strictly additive.
-    BackHandler(enabled = page is SystemGamesPage.Detail, onBack = onBack)
+    // Step-back priority: close the detail page first if it's open (same onBack the top
+    // bar's own back arrow uses), exit the whole System overlay once neither applies - same
+    // one-step-at-a-time chain EditWidgetsOverlay uses, and the same fix GameManualScreen/
+    // RetroAchievementsScreen apply for their own onExit - without an unconditional handler
+    // here, back at the browse level fell through to MainScreen's handler underneath and did
+    // nothing.
+    BackHandler(enabled = true) {
+        if (page is SystemGamesPage.Detail) onBack() else onExit()
+    }
 
     Box(modifier = modifier.fillMaxSize().blockAppDrawerSwipeFallthrough()) {
         AsyncImage(

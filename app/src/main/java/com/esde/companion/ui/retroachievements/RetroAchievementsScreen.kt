@@ -1,5 +1,6 @@
 package com.esde.companion.ui.retroachievements
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -76,6 +77,12 @@ fun RetroAchievementsScreen(
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val displayField by viewModel.displayField.collectAsStateWithLifecycle()
     var showCorrectionDialog by remember { mutableStateOf(false) }
+
+    // Only composed while this screen is showing (AnimatedVisibility in MainActivity), so
+    // it's registered later than MainScreen's own BackHandler and wins Compose's LIFO back
+    // dispatch - without it, back would fall through to MainScreen's handler underneath and
+    // do nothing, same fix as GameManualScreen's.
+    BackHandler(onBack = onExit)
 
     // A correction is only meaningful once a system/game is actually in play - not while
     // signed out, no game selected, or the system has no RetroAchievements console mapping.
