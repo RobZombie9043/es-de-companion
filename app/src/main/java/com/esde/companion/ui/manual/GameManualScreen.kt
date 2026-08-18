@@ -1,5 +1,6 @@
 package com.esde.companion.ui.manual
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
@@ -88,6 +89,12 @@ fun GameManualScreen(
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     val hapticFeedback = LocalHapticFeedback.current
+
+    // Only composed while this screen is showing (AnimatedVisibility in MainActivity), so
+    // it's registered later than MainScreen's own BackHandler and wins Compose's LIFO back
+    // dispatch - without it, back would fall through to MainScreen's handler underneath
+    // and do nothing, same pattern as FolderContentsPopup/LongPressSettingsMenu.
+    BackHandler(onBack = onExit)
 
     var controlsVisible by remember { mutableStateOf(true) }
 
