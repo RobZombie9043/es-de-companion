@@ -474,8 +474,9 @@ private fun SettingsMenuHome(
         // AppDock's no-op clickable - so this reads as plain text, not an obvious
         // button, keeping the Easter egg's presence undiscoverable short of trying it.
         var versionTapCount by remember { mutableIntStateOf(0) }
+        val debugSuffix = if (BuildConfig.DEBUG) " (Debug)" else ""
         Text(
-            text = "ES-DE Companion v${BuildConfig.VERSION_NAME}",
+            text = "ES-DE Companion v${BuildConfig.VERSION_NAME}$debugSuffix",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
