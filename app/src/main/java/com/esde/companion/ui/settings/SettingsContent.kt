@@ -2019,7 +2019,7 @@ private fun GetWebApiKeyRow() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = { uriHandler.openUri("https://retroachievements.org/settings") }) {
+        TextButton(onClick = { uriHandler.openUri("https://retroachievements.org/settings?tab=applications") }) {
             Icon(
                 imageVector = Icons.Filled.Launch,
                 contentDescription = null,
