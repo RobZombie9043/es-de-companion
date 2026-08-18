@@ -35,15 +35,18 @@ import java.io.File
  * that decides when this is composed at all.
  *
  * [videoPath] is the *target* video; what's actually attached to the on-screen
- * [PlayerView] is tracked separately as `displayedPlayer`/`displayedPath`, so a
- * game-to-game transition never drops back to "nothing playing" while the next video
- * buffers/waits out [delaySeconds] - which would let the widget canvas flash through
- * underneath for that whole window. Instead, the previous video keeps playing until the
- * next one has real decoded frames ready (`Player.isPlaying` true), at which point the
- * swap happens in a single step and the outgoing player is released. Same pre-decode-
- * before-swap principle as CrossfadeAsyncImage, applied to video. The very first video
- * (no prior `displayedPlayer` to hold onto) still renders nothing until it's ready,
- * same as before this change.
+ * [PlayerView] is tracked separately as `displayedPlayer`/`displayedPath`. A nonzero
+ * [delaySeconds] is a deliberate "don't show a video yet" pause - intended to keep videos
+ * from flickering past while the user is just scrolling the game list - so the previous
+ * game's video is dropped immediately (back to the widget canvas) rather than held onto
+ * through that wait; see `dropDisplayedVideoForDelay`. What *is* bridged is the purely
+ * technical buffering gap right before playback: once the wait (if any) is over, the
+ * previous video (only present when [delaySeconds] is 0, since a nonzero delay already
+ * dropped it above) keeps playing until the next one has real decoded frames ready
+ * (`Player.isPlaying` true), at which point the swap happens in a single step and the
+ * outgoing player is released - the same pre-decode-before-swap principle as
+ * CrossfadeAsyncImage, applied to video. The very first video (no prior `displayedPlayer`
+ * to hold onto) still renders nothing until it's ready, same as before this change.
  *
  * The incoming player is built muted (`volume = 0f`) and only unmuted at the moment
  * it's promoted to `displayedPlayer` - both players are genuinely decoding audio during
@@ -80,6 +83,10 @@ fun VideoOverlayScreen(
                 promote = { player ->
                     displayedPlayer = player
                     displayedPath = videoPath
+                },
+                clear = {
+                    displayedPlayer = null
+                    displayedPath = null
                 },
             )
         transitionToVideo(
@@ -138,6 +145,7 @@ fun VideoOverlayScreen(
 private class DisplayedVideoSlot(
     val current: () -> ExoPlayer?,
     val promote: (ExoPlayer) -> Unit,
+    val clear: () -> Unit,
 )
 
 /** Bundled for the same [LongParameterList] reason as [DisplayedVideoSlot]. */
@@ -160,6 +168,15 @@ private suspend fun transitionToVideo(
     displayedSlot: DisplayedVideoSlot,
     onPlaybackEvent: (VideoPlaybackEvent) -> Unit,
 ) {
+    // A configured delay is a deliberate "don't show a video yet" pause (so that quickly
+    // scrolling through the game list doesn't play a video per game) - the widget canvas
+    // should be visible for that whole wait, not whatever the previously-browsed game's
+    // video happened to be. Drop it immediately rather than bridging into the wait, and
+    // only bridge (below) across the technical buffering gap that follows. A zero delay
+    // has no such wait to occupy, so the previous video keeps playing straight into that
+    // buffering gap, same as before this distinction existed.
+    if (settings.delaySeconds > 0) dropDisplayedVideoForDelay(displayedSlot, onPlaybackEvent)
+
     val ready = CompletableDeferred<Unit>()
     val incoming = createIncomingPlayer(context, videoPath, displayedSlot.current, ready, onPlaybackEvent)
 
@@ -184,6 +201,21 @@ private suspend fun transitionToVideo(
     } finally {
         if (displayedSlot.current() !== incoming) incoming.release()
     }
+}
+
+/**
+ * Releases whatever's currently displayed (if anything) and clears the slot, dropping back
+ * to the widget canvas - see the call site in [transitionToVideo] for why this only runs
+ * when there's a nonzero delay to wait out.
+ */
+private fun dropDisplayedVideoForDelay(
+    displayedSlot: DisplayedVideoSlot,
+    onPlaybackEvent: (VideoPlaybackEvent) -> Unit,
+) {
+    val outgoing = displayedSlot.current() ?: return
+    displayedSlot.clear()
+    onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(false))
+    outgoing.release()
 }
 
 /**
