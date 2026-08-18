@@ -44,6 +44,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "ES-DE Companion (Debug)")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
