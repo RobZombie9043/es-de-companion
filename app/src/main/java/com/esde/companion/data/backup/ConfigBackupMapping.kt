@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
@@ -59,6 +60,13 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         dockSize = dockSize.name,
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDtoMap(),
+        lidWakeGuardEnabled = lidWakeGuardEnabled,
+        hallSensorType = hallSensorCalibration.sensorType,
+        hallSensorName = hallSensorCalibration.sensorName,
+        hallSensorClosedValue = hallSensorCalibration.closedValue,
+        hallSensorOpenValue = hallSensorCalibration.openValue,
+        autoFpsEnabled = autoFpsEnabled,
+        autoFpsTriggerPackages = autoFpsTriggerPackages,
     )
 
 internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
@@ -68,6 +76,13 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
             topEnd = FabSlot(fabTopEndType.toEnumOrDefault(FabType.None), fabTopEndCustomApp),
             bottomStart = FabSlot(fabBottomStartType.toEnumOrDefault(FabType.None), fabBottomStartCustomApp),
             bottomEnd = FabSlot(fabBottomEndType.toEnumOrDefault(FabType.None), fabBottomEndCustomApp),
+        )
+    val hallSensorCalibration =
+        HallSensorCalibration(
+            sensorType = hallSensorType,
+            sensorName = hallSensorName,
+            closedValue = hallSensorClosedValue,
+            openValue = hallSensorOpenValue,
         )
     return AppConfigBackup(
         version = version,
@@ -105,6 +120,10 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         dockSize = dockSize.toEnumOrDefault(DockSize.Medium),
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDomainMap(),
+        lidWakeGuardEnabled = lidWakeGuardEnabled,
+        hallSensorCalibration = hallSensorCalibration,
+        autoFpsEnabled = autoFpsEnabled,
+        autoFpsTriggerPackages = autoFpsTriggerPackages,
     )
 }
 

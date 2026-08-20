@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -51,4 +52,9 @@ data class SettingsUiState(
     val installedApps: List<InstalledApp> = emptyList(),
     val launchEsdeOnStartEnabled: Boolean = false,
     val debugLoggingEnabled: Boolean = false,
+    val lidWakeGuardEnabled: Boolean = false,
+    val hallSensorCalibration: HallSensorCalibration = HallSensorCalibration.Uncalibrated,
+    val autoFpsEnabled: Boolean = false,
+    val thorAccessibilityGranted: Boolean = false,
+    val autoFpsPrivilegedServiceAvailable: Boolean = false,
 )

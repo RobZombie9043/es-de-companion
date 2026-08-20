@@ -63,6 +63,13 @@ internal data class ConfigBackupDto(
     val dockSize: String,
     val dockApps: List<String>,
     val widgetCanvases: Map<String, CanvasDto>,
+    val lidWakeGuardEnabled: Boolean = false,
+    val hallSensorType: Int? = null,
+    val hallSensorName: String = "",
+    val hallSensorClosedValue: Float? = null,
+    val hallSensorOpenValue: Float? = null,
+    val autoFpsEnabled: Boolean = false,
+    val autoFpsTriggerPackages: Set<String> = emptySet(),
 )
 
 @Serializable

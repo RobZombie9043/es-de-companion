@@ -3,6 +3,7 @@ package com.esde.companion.data.backup
 import com.esde.companion.domain.model.AppConfigBackup
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
@@ -52,6 +53,10 @@ class JsonConfigBackupRepositoryTest {
             // StateGroup, always, defaulting to an empty canvas rather than an absent key
             // (see ConfigBackupMapping's toDomainMap, which always reconstructs every entry).
             widgetCanvases = StateGroup.entries.associateWith { SavedWidgetCanvas(grid = null, widgets = emptyList()) },
+            lidWakeGuardEnabled = false,
+            hallSensorCalibration = HallSensorCalibration.Uncalibrated,
+            autoFpsEnabled = false,
+            autoFpsTriggerPackages = emptySet(),
         )
 
     @Test

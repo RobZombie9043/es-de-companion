@@ -1,7 +1,10 @@
 package com.esde.companion.ui.settings
 
 import android.content.Context
+import android.hardware.SensorManager
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -43,6 +46,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Movie
@@ -56,6 +60,7 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
@@ -82,6 +87,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -101,11 +107,15 @@ import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.storage.ConfigBackupFileIo
 import com.esde.companion.data.storage.SafPathResolver
+import com.esde.companion.data.thor.ThorAccessibilityPermission
+import com.esde.companion.data.thor.sensor.HallSensorReader
+import com.esde.companion.data.thor.sensor.autoPickHallSensor
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -1828,3 +1838,235 @@ private fun MediaFolderValidation?.toStatusText(): String =
         is MediaFolderValidation.FolderNotFound -> "Folder not found"
         is MediaFolderValidation.FolderFound -> "Folder found"
     }
+
+/** Bundles Lid Wake Guard's settings-panel state into one [ThorSettingsContent] parameter,
+ * keeping that function's parameter count under detekt's LongParameterList threshold - same
+ * reasoning as [DimAmountControl]. */
+internal data class LidWakeGuardSettingsState(
+    val enabled: Boolean,
+    val accessibilityGranted: Boolean,
+    val calibration: HallSensorCalibration,
+    val onEnabledChanged: (Boolean) -> Unit,
+    val onCalibrationChanged: (HallSensorCalibration) -> Unit,
+)
+
+/** Same bundling reasoning as [LidWakeGuardSettingsState], for Auto FPS Mode. */
+internal data class AutoFpsSettingsState(
+    val enabled: Boolean,
+    val privilegedServiceAvailable: Boolean,
+    val onEnabledChanged: (Boolean) -> Unit,
+    val onManageTriggerAppsClick: () -> Unit,
+)
+
+/**
+ * Thor Settings (Ayn Thor-only, see CLAUDE.md) - Lid Wake Guard and Auto FPS Mode. Only
+ * reachable when [com.esde.companion.data.thor.isAynThorDevice] is true (see
+ * `SettingsMenuHome`'s filtering in `LongPressSettingsMenu`); the `when` branch routing here
+ * still exists unconditionally, same forcing-function reasoning as every other
+ * [SettingsCategory].
+ */
+@Composable
+internal fun ThorSettingsContent(
+    lidWakeGuard: LidWakeGuardSettingsState,
+    autoFps: AutoFpsSettingsState,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        LidWakeGuardSetting(lidWakeGuard)
+        AutoFpsSetting(autoFps)
+    }
+}
+
+/**
+ * The Hall sensor is a plain on/off switch, so there's nothing to physically calibrate:
+ * whichever value is live *right now* is necessarily "open" (the screen has to be on, and the
+ * user has to be looking at this panel, for this composable to be running at all - the lid
+ * can't be closed), and the other of the two binary values is "closed". Ported from Asgard's
+ * `LidWakeGuardDetails` - see CLAUDE.md for why this app doesn't also port Asgard's manual
+ * `SensorPickerActivity` fallback screen.
+ */
+@Composable
+private fun LidWakeGuardSetting(state: LidWakeGuardSettingsState) {
+    val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
+    var autoCalibrating by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        autoCalibrateHallSensor(
+            context = context,
+            alreadyCalibrated = state.calibration.isCalibrated,
+            onCalibratingChanged = { autoCalibrating = it },
+            onCalibrationChanged = state.onCalibrationChanged,
+        )
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SettingsLabel(icon = Icons.Filled.Lock, text = "Lid Wake Guard")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Re-lock the screen if a stray button press wakes it while the lid is closed",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = state.enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        state.onEnabledChanged(it)
+                    },
+                )
+            }
+            val statusText = calibrationStatusText(state.calibration, autoCalibrating)
+            Text(text = statusText, style = MaterialTheme.typography.bodySmall)
+            if (!state.accessibilityGranted) {
+                AccessibilityGrantRow(
+                    text = "Accessibility service not granted - required to lock the screen",
+                    onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
+                )
+            }
+        }
+    }
+}
+
+private fun calibrationStatusText(
+    calibration: HallSensorCalibration,
+    autoCalibrating: Boolean,
+): String =
+    when {
+        calibration.isCalibrated -> "Sensor calibrated (${calibration.sensorName})"
+        autoCalibrating -> "Checking sensor…"
+        else -> "No Hall sensor found on this device"
+    }
+
+/**
+ * See [LidWakeGuardSetting]'s kdoc for why a live read is always treated as "open". Split out
+ * of that composable purely to stay under detekt's LongMethod threshold once the panel's own
+ * UI joined the calibration logic in one function.
+ */
+private suspend fun autoCalibrateHallSensor(
+    context: Context,
+    alreadyCalibrated: Boolean,
+    onCalibratingChanged: (Boolean) -> Unit,
+    onCalibrationChanged: (HallSensorCalibration) -> Unit,
+) {
+    if (alreadyCalibrated) return
+    val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    val sensor = autoPickHallSensor(sensorManager) ?: return
+    onCalibratingChanged(true)
+    HallSensorReader(sensorManager).readOnce(
+        sensorType = sensor.type,
+        timeoutMs = HALL_SENSOR_CALIBRATION_TIMEOUT_MS,
+        handler = Handler(Looper.getMainLooper()),
+    ) { value ->
+        if (value != null) {
+            onCalibrationChanged(
+                HallSensorCalibration(
+                    sensorType = sensor.type,
+                    sensorName = sensor.name,
+                    openValue = value,
+                    closedValue = 1f - value,
+                ),
+            )
+        }
+        onCalibratingChanged(false)
+    }
+}
+
+@Composable
+private fun AutoFpsSetting(state: AutoFpsSettingsState) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SettingsLabel(icon = Icons.Filled.Speed, text = "Auto FPS Mode")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Boost the top screen to 120Hz automatically for selected apps",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = state.enabled,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        state.onEnabledChanged(it)
+                    },
+                )
+            }
+            if (!state.privilegedServiceAvailable) {
+                Text(
+                    text = "Privileged settings service not found on this firmware - Auto FPS Mode is unavailable",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Surface(
+                onClick = state.onManageTriggerAppsClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = SettingsItemShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            ) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(text = "Choose Trigger Apps", style = MaterialTheme.typography.bodyMedium)
+                    Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccessibilityGrantRow(
+    text: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onClick) { Text("Grant") }
+    }
+}
+
+/** Matches [com.esde.companion.data.thor.LidWakeGuardCoordinator]'s own sensor-read timeout. */
+private const val HALL_SENSOR_CALIBRATION_TIMEOUT_MS = 2000L

@@ -50,6 +50,10 @@ data class AppConfigBackup(
     val dockSize: DockSize,
     val dockApps: List<String>,
     val widgetCanvases: Map<StateGroup, SavedWidgetCanvas>,
+    val lidWakeGuardEnabled: Boolean,
+    val hallSensorCalibration: HallSensorCalibration,
+    val autoFpsEnabled: Boolean,
+    val autoFpsTriggerPackages: Set<String>,
 ) {
     companion object {
         const val CURRENT_VERSION = 1

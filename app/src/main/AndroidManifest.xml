@@ -73,6 +73,23 @@
             </intent-filter>
         </receiver>
 
+        <!-- Thor Settings (Ayn Thor-only: Lid Wake Guard + Auto FPS Mode - see CLAUDE.md).
+             The first AccessibilityService in this codebase; only ever bound if the user
+             explicitly enables it from Thor Settings, and only shown/reachable there on an
+             actual Ayn Thor device (see DeviceCheck.isAynThorDevice). Narrow config - see
+             res/xml/thor_accessibility_service_config.xml - never requests window content. -->
+        <service
+            android:name=".data.thor.accessibility.CompanionAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/thor_accessibility_service_config" />
+        </service>
+
         <!-- Exposes the downloaded update APK (private cache dir) to the system package
              installer - see ApkInstaller / res/xml/file_paths.xml. -->
         <provider

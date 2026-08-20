@@ -4,6 +4,7 @@ import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -16,12 +17,13 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.repository.ThorSettingsRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * In-memory fakes for the five settings repositories [ExportConfigBackupUseCase]/
+ * In-memory fakes for the six settings repositories [ExportConfigBackupUseCase]/
  * [RestoreConfigBackupUseCase] read and write, shared by both use cases' tests plus the
  * export-then-restore round trip. Every field is independently settable/observable via a
  * backing [MutableStateFlow], same shape as [SetFabAssignmentUseCaseTest]'s
@@ -330,6 +332,42 @@ internal class FakeDockSettingsRepository(
     }
 
     override fun observeDockApps(): Flow<List<String>> = dockAppsFlow
+}
+
+internal class FakeThorSettingsRepository(
+    lidWakeGuardEnabled: Boolean = false,
+    hallSensorCalibration: HallSensorCalibration = HallSensorCalibration.Uncalibrated,
+    autoFpsEnabled: Boolean = false,
+    autoFpsTriggerPackages: Set<String> = emptySet(),
+) : ThorSettingsRepository {
+    private val lidWakeGuardEnabledFlow = MutableStateFlow(lidWakeGuardEnabled)
+    private val hallSensorCalibrationFlow = MutableStateFlow(hallSensorCalibration)
+    private val autoFpsEnabledFlow = MutableStateFlow(autoFpsEnabled)
+    private val autoFpsTriggerPackagesFlow = MutableStateFlow(autoFpsTriggerPackages)
+
+    override suspend fun setLidWakeGuardEnabled(enabled: Boolean) {
+        lidWakeGuardEnabledFlow.value = enabled
+    }
+
+    override fun observeLidWakeGuardEnabled(): Flow<Boolean> = lidWakeGuardEnabledFlow
+
+    override suspend fun setHallSensorCalibration(calibration: HallSensorCalibration) {
+        hallSensorCalibrationFlow.value = calibration
+    }
+
+    override fun observeHallSensorCalibration(): Flow<HallSensorCalibration> = hallSensorCalibrationFlow
+
+    override suspend fun setAutoFpsEnabled(enabled: Boolean) {
+        autoFpsEnabledFlow.value = enabled
+    }
+
+    override fun observeAutoFpsEnabled(): Flow<Boolean> = autoFpsEnabledFlow
+
+    override suspend fun setAutoFpsTriggerPackages(packages: Set<String>) {
+        autoFpsTriggerPackagesFlow.value = packages
+    }
+
+    override fun observeAutoFpsTriggerPackages(): Flow<Set<String>> = autoFpsTriggerPackagesFlow
 }
 
 internal class FakeWidgetLayoutRepository(

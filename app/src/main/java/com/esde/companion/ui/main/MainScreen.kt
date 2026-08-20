@@ -57,6 +57,7 @@ import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.SettingsViewModel
+import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModel
 import com.esde.companion.ui.toAlignment
 import com.esde.companion.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
@@ -105,6 +106,7 @@ fun MainScreen(
     dockViewModel: AppDockViewModel,
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
+    autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -124,6 +126,7 @@ fun MainScreen(
         dockViewModel = dockViewModel,
         settingsViewModel = settingsViewModel,
         manageAppsViewModel = manageAppsViewModel,
+        autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
         updateViewModel = updateViewModel,
         fabAssignments = fabAssignments,
         overlayOpacityPercent = overlayOpacityPercent,
@@ -155,6 +158,7 @@ private fun MainScreenContent(
     dockViewModel: AppDockViewModel,
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
+    autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -442,6 +446,7 @@ private fun MainScreenContent(
                         LongPressSettingsMenu(
                             settingsViewModel = settingsViewModel,
                             manageAppsViewModel = manageAppsViewModel,
+                            autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
                             updateViewModel = updateViewModel,
                             onEditWidgetsClick = {
                                 setLongPressMenuOpen(false)
