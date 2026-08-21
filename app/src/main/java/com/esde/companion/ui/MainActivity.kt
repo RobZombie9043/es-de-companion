@@ -89,6 +89,10 @@ import com.esde.companion.ui.settings.ManageAppsViewModelFactory
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SettingsViewModelFactory
 import com.esde.companion.ui.theme.EsdeCompanionTheme
+import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModel
+import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModelFactory
+import com.esde.companion.ui.thor.TaskKillerExcludedAppsViewModel
+import com.esde.companion.ui.thor.TaskKillerExcludedAppsViewModelFactory
 import com.esde.companion.ui.update.UpdateAvailableDialog
 import com.esde.companion.ui.update.UpdateViewModel
 import com.esde.companion.ui.update.UpdateViewModelFactory
@@ -217,6 +221,10 @@ class MainActivity : ComponentActivity() {
                             // destination it replaced).
                             val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
                             val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
+                            val autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel =
+                                viewModel(factory = AutoFpsTriggerAppsViewModelFactory(appContainer))
+                            val taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel =
+                                viewModel(factory = TaskKillerExcludedAppsViewModelFactory(appContainer))
                             val updateViewModel: UpdateViewModel =
                                 viewModel(factory = UpdateViewModelFactory(appContainer))
                             val updateUiState by updateViewModel.uiState.collectAsStateWithLifecycle()
@@ -565,6 +573,8 @@ class MainActivity : ComponentActivity() {
                                             dockViewModel = dockViewModel,
                                             settingsViewModel = settingsViewModel,
                                             manageAppsViewModel = manageAppsViewModel,
+                                            autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
+                                            taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
                                             updateViewModel = updateViewModel,
                                             fabAssignments = fabAssignments,
                                             overlayOpacityPercent = overlayOpacityPercent,

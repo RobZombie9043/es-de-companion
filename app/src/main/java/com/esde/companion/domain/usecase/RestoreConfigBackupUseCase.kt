@@ -1,12 +1,8 @@
 package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.AppConfigBackup
-import com.esde.companion.domain.repository.AppDrawerSettingsRepository
-import com.esde.companion.domain.repository.AppFolderRepository
+import com.esde.companion.domain.repository.BackupRepositories
 import com.esde.companion.domain.repository.ConfigBackupRepository
-import com.esde.companion.domain.repository.DockSettingsRepository
-import com.esde.companion.domain.repository.OnboardingRepository
-import com.esde.companion.domain.repository.WidgetLayoutRepository
 
 /**
  * Applies a previously-exported [AppConfigBackup] snapshot (see [ExportConfigBackupUseCase])
@@ -16,11 +12,7 @@ import com.esde.companion.domain.repository.WidgetLayoutRepository
  * touching any repository - callers can treat a failed restore as a no-op on current state.
  */
 class RestoreConfigBackupUseCase(
-    private val onboardingRepository: OnboardingRepository,
-    private val appDrawerSettingsRepository: AppDrawerSettingsRepository,
-    private val appFolderRepository: AppFolderRepository,
-    private val dockSettingsRepository: DockSettingsRepository,
-    private val widgetLayoutRepository: WidgetLayoutRepository,
+    private val repositories: BackupRepositories,
     private val configBackupRepository: ConfigBackupRepository,
 ) {
     suspend operator fun invoke(contents: String): Result<Unit> =
@@ -28,15 +20,15 @@ class RestoreConfigBackupUseCase(
 
     private suspend fun apply(snapshot: AppConfigBackup) {
         applyOnboardingSettings(snapshot)
-        with(appDrawerSettingsRepository) {
+        with(repositories.appDrawerSettingsRepository) {
             setHiddenApps(snapshot.hiddenApps)
             setGridColumns(snapshot.gridColumns)
             setOtherScreenLaunchApps(snapshot.otherScreenLaunchApps)
             setSortFoldersOnTop(snapshot.sortFoldersOnTop)
             setShowSearchBar(snapshot.showSearchBar)
         }
-        appFolderRepository.setFolders(snapshot.folders)
-        with(dockSettingsRepository) {
+        repositories.appFolderRepository.setFolders(snapshot.folders)
+        with(repositories.dockSettingsRepository) {
             setDockEnabled(snapshot.dockEnabled)
             setDockMaxApps(snapshot.dockMaxApps)
             setDockSize(snapshot.dockSize)
@@ -47,12 +39,22 @@ class RestoreConfigBackupUseCase(
         // guessed at.
         snapshot.widgetCanvases.forEach { (stateGroup, canvas) ->
             val grid = canvas.grid ?: return@forEach
-            widgetLayoutRepository.saveCanvas(stateGroup, canvas.widgets, grid)
+            repositories.widgetLayoutRepository.saveCanvas(stateGroup, canvas.widgets, grid)
+        }
+        with(repositories.thorSettingsRepository) {
+            setLidWakeGuardEnabled(snapshot.lidWakeGuardEnabled)
+            setHallSensorCalibration(snapshot.hallSensorCalibration)
+            setAutoFpsEnabled(snapshot.autoFpsEnabled)
+            setAutoFpsTriggerPackages(snapshot.autoFpsTriggerPackages)
+            setTaskKillerEnabled(snapshot.taskKillerEnabled)
+            setTaskKillerExcludedPackages(snapshot.taskKillerExcludedPackages)
+            setVolumeSyncEnabled(snapshot.volumeSyncEnabled)
+            setVolumeSyncMode(snapshot.volumeSyncMode)
         }
     }
 
     private suspend fun applyOnboardingSettings(snapshot: AppConfigBackup) {
-        with(onboardingRepository) {
+        with(repositories.onboardingRepository) {
             snapshot.logFolderPath?.let { saveLogFolderPath(it) }
             snapshot.mediaFolderPath?.let { saveMediaFolderPath(it) }
             if (snapshot.customSystemImagesFolderPath != null) {

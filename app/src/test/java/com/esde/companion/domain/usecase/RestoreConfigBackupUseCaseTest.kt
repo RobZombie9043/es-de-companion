@@ -7,6 +7,7 @@ import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
@@ -14,6 +15,7 @@ import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.repository.BackupRepositories
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -49,6 +51,16 @@ private class SourceFixture {
         FakeDockSettingsRepository(dockEnabled = true, dockSize = DockSize.Large, dockApps = listOf("com.dock.app"))
     val canvas = SavedWidgetCanvas(grid = GridDimensions(columns = 8, rows = 5), widgets = listOf(samplePlacedWidget()))
     val widgets = FakeWidgetLayoutRepository(initial = mapOf(StateGroup.System to canvas))
+    val calibration =
+        HallSensorCalibration(sensorType = 5, sensorName = "Hall Sensor", closedValue = 1f, openValue = 0f)
+    val thorSettings =
+        FakeThorSettingsRepository(
+            lidWakeGuardEnabled = true,
+            hallSensorCalibration = calibration,
+            autoFpsEnabled = true,
+            autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
+        )
+    val repositories = BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings)
 
     private fun samplePlacedWidget() =
         PlacedWidget(
@@ -68,30 +80,24 @@ class RestoreConfigBackupUseCaseTest {
         runTest {
             val source = SourceFixture()
             val configBackupRepository = JsonConfigBackupRepository()
-            val json =
-                ExportConfigBackupUseCase(
-                    source.onboarding,
-                    source.appDrawer,
-                    source.appFolders,
-                    source.dock,
-                    source.widgets,
-                    configBackupRepository,
-                )()
+            val json = ExportConfigBackupUseCase(source.repositories, configBackupRepository)()
 
             val targetOnboarding = FakeOnboardingRepository()
             val targetAppDrawer = FakeAppDrawerSettingsRepository()
             val targetAppFolders = FakeAppFolderRepository()
             val targetDock = FakeDockSettingsRepository()
             val targetWidgets = FakeWidgetLayoutRepository()
-            val restoreUseCase =
-                RestoreConfigBackupUseCase(
+            val targetThorSettings = FakeThorSettingsRepository()
+            val targetRepositories =
+                BackupRepositories(
                     targetOnboarding,
                     targetAppDrawer,
                     targetAppFolders,
                     targetDock,
                     targetWidgets,
-                    configBackupRepository,
+                    targetThorSettings,
                 )
+            val restoreUseCase = RestoreConfigBackupUseCase(targetRepositories, configBackupRepository)
 
             val result = restoreUseCase(json)
 
@@ -113,6 +119,10 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(DockSize.Large, targetDock.observeDockSize().first())
             assertEquals(listOf("com.dock.app"), targetDock.observeDockApps().first())
             assertEquals(source.canvas, targetWidgets.observeCanvas(StateGroup.System).first())
+            assertTrue(targetThorSettings.observeLidWakeGuardEnabled().first())
+            assertEquals(source.calibration, targetThorSettings.observeHallSensorCalibration().first())
+            assertTrue(targetThorSettings.observeAutoFpsEnabled().first())
+            assertEquals(setOf("org.libretro.retroarch"), targetThorSettings.observeAutoFpsTriggerPackages().first())
         }
 
     @Test
@@ -120,18 +130,16 @@ class RestoreConfigBackupUseCaseTest {
         runTest {
             val onboarding = FakeOnboardingRepository(themePreference = ThemePreference.Light)
             val appDrawer = FakeAppDrawerSettingsRepository(gridColumns = 4)
-            val appFolders = FakeAppFolderRepository()
-            val dock = FakeDockSettingsRepository()
-            val widgets = FakeWidgetLayoutRepository()
-            val useCase =
-                RestoreConfigBackupUseCase(
+            val repositories =
+                BackupRepositories(
                     onboarding,
                     appDrawer,
-                    appFolders,
-                    dock,
-                    widgets,
-                    JsonConfigBackupRepository(),
+                    FakeAppFolderRepository(),
+                    FakeDockSettingsRepository(),
+                    FakeWidgetLayoutRepository(),
+                    FakeThorSettingsRepository(),
                 )
+            val useCase = RestoreConfigBackupUseCase(repositories, JsonConfigBackupRepository())
 
             val result = useCase("not valid json")
 
@@ -143,16 +151,19 @@ class RestoreConfigBackupUseCaseTest {
     @Test
     fun `a backup from a newer app version fails`() =
         runTest {
-            val onboarding = FakeOnboardingRepository()
-            val appDrawer = FakeAppDrawerSettingsRepository()
-            val appFolders = FakeAppFolderRepository()
-            val dock = FakeDockSettingsRepository()
-            val widgets = FakeWidgetLayoutRepository()
+            val repositories =
+                BackupRepositories(
+                    FakeOnboardingRepository(),
+                    FakeAppDrawerSettingsRepository(),
+                    FakeAppFolderRepository(),
+                    FakeDockSettingsRepository(),
+                    FakeWidgetLayoutRepository(),
+                    FakeThorSettingsRepository(),
+                )
             val configBackupRepository = JsonConfigBackupRepository()
-            val useCase =
-                RestoreConfigBackupUseCase(onboarding, appDrawer, appFolders, dock, widgets, configBackupRepository)
+            val useCase = RestoreConfigBackupUseCase(repositories, configBackupRepository)
             val futureJson =
-                ExportConfigBackupUseCase(onboarding, appDrawer, appFolders, dock, widgets, configBackupRepository)()
+                ExportConfigBackupUseCase(repositories, configBackupRepository)()
                     .replace("\"version\":1", "\"version\":999")
 
             val result = useCase(futureJson)

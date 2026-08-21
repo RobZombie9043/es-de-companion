@@ -3,11 +3,13 @@ package com.esde.companion.data.backup
 import com.esde.companion.domain.model.AppConfigBackup
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -52,6 +54,14 @@ class JsonConfigBackupRepositoryTest {
             // StateGroup, always, defaulting to an empty canvas rather than an absent key
             // (see ConfigBackupMapping's toDomainMap, which always reconstructs every entry).
             widgetCanvases = StateGroup.entries.associateWith { SavedWidgetCanvas(grid = null, widgets = emptyList()) },
+            lidWakeGuardEnabled = false,
+            hallSensorCalibration = HallSensorCalibration.Uncalibrated,
+            autoFpsEnabled = false,
+            autoFpsTriggerPackages = emptySet(),
+            taskKillerEnabled = false,
+            taskKillerExcludedPackages = setOf("org.es_de.frontend", "com.esde.companion"),
+            volumeSyncEnabled = false,
+            volumeSyncMode = VolumeSyncMode.Linked,
         )
 
     @Test

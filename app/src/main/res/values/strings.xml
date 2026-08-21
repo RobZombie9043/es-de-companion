@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ES-DE Companion</string>
+    <string name="thor_accessibility_service_description">Allows ES-DE Companion to lock the screen when Lid Wake Guard detects the Thor\'s lid is closed, detect the foreground app for Auto FPS Mode\'s automatic refresh-rate switching, detect a held BACK button for Task Killer, and intercept the volume buttons for Volume Sync. Does not inspect, record, or interact with screen content.</string>
 </resources>

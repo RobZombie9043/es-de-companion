@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.state.AppStateReducer
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -40,15 +41,11 @@ class EsdeLogFileRepositoryTest {
     private fun repositoryFor(
         logFile: File,
         bootTimeMillis: () -> Long = { 0L },
-        fallbackPollIntervalMs: Long = 3_000L,
-        onFallbackPollCaughtUpdate: () -> Unit = {},
     ): EsdeLogFileRepository =
         EsdeLogFileRepository(
             logFilePath = logFile.absolutePath,
-            fallbackPollIntervalMs = fallbackPollIntervalMs,
             bootTimeMillis = bootTimeMillis,
             watchDirectory = { _, _, _ -> NoOpDirectoryWatcher },
-            selfHeal = SelfHealConfig(onFallbackPollCaughtUpdate = onFallbackPollCaughtUpdate),
         )
 
     private object NoOpDirectoryWatcher : DirectoryWatcher {
@@ -329,16 +326,20 @@ class EsdeLogFileRepositoryTest {
                     "system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
             )
 
-            // NoOpDirectoryWatcher (see repositoryFor) never invokes its onChange callback,
-            // so the only signal that can ever pick up the appended line below is the
-            // fallback ticker - a small real interval keeps the test fast without needing
-            // to fake time inside the flowOn(Dispatchers.IO) producer.
+            // NoOpDirectoryWatcher never invokes its onChange callback, so the only signal
+            // that can ever pick up the appended line below is a manual fallbackTicker tick -
+            // deterministic, unlike depending on a real delay() racing Turbine's await
+            // timeout (this used to pass fallbackPollIntervalMs = 20L and rely on real time,
+            // which was flaky under load - see EsdeLogFileRepository's fallbackTicker kdoc).
             var fallbackCatchCount = 0
+            val fallbackTicker = MutableSharedFlow<Unit>()
             val repository =
-                repositoryFor(
-                    logFile,
-                    fallbackPollIntervalMs = 20L,
-                    onFallbackPollCaughtUpdate = { fallbackCatchCount++ },
+                EsdeLogFileRepository(
+                    logFilePath = logFile.absolutePath,
+                    bootTimeMillis = { 0L },
+                    watchDirectory = { _, _, _ -> NoOpDirectoryWatcher },
+                    selfHeal = SelfHealConfig(onFallbackPollCaughtUpdate = { fallbackCatchCount++ }),
+                    fallbackTicker = fallbackTicker,
                 )
 
             repository.observeEvents().test {
@@ -348,10 +349,17 @@ class EsdeLogFileRepositoryTest {
                 )
                 assertEquals(0, fallbackCatchCount)
 
+                // See the storage-changed test's matching comment - wait for the producer's
+                // ticker collector to subscribe before emitting, or the tick can be silently
+                // dropped (MutableSharedFlow has no buffer for a replay-0 flow with no
+                // collectors).
+                fallbackTicker.subscriptionCount.first { it > 0 }
+
                 logFile.appendText(
                     "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
                         "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
                 )
+                fallbackTicker.emit(Unit)
 
                 assertEquals(EsdeEvent.SystemSelect("gc", "Nintendo GameCube", "/roms/gc"), awaitItem())
                 cancelAndIgnoreRemainingEvents()
@@ -380,10 +388,9 @@ class EsdeLogFileRepositoryTest {
             val repository =
                 EsdeLogFileRepository(
                     logFilePath = logFile.absolutePath,
-                    // Long enough that the fallback ticker can't plausibly fire during the
-                    // test - the only signal reaching checkSignal is the manual fireChange()
-                    // below, standing in for a real FileObserver notification.
-                    fallbackPollIntervalMs = 3_600_000L,
+                    // Never fires - the only signal reaching checkSignal is the manual
+                    // fireChange() below, standing in for a real FileObserver notification.
+                    fallbackTicker = emptyFlow(),
                     bootTimeMillis = { 0L },
                     watchDirectory = { _, _, onChange ->
                         CapturingDirectoryWatcher(onChange).also { watcherReady.complete(it) }
@@ -420,14 +427,15 @@ class EsdeLogFileRepositoryTest {
             )
 
             lateinit var capturedWatcher: RecordingDirectoryWatcher
+            val fallbackTicker = MutableSharedFlow<Unit>()
             val repository =
                 EsdeLogFileRepository(
                     logFilePath = logFile.absolutePath,
-                    fallbackPollIntervalMs = 20L,
                     bootTimeMillis = { 0L },
                     watchDirectory = { _, _, onChange ->
                         RecordingDirectoryWatcher(onChange).also { capturedWatcher = it }
                     },
+                    fallbackTicker = fallbackTicker,
                 )
 
             repository.observeEvents().test {
@@ -437,10 +445,13 @@ class EsdeLogFileRepositoryTest {
                 // asserting on it only after the second item is what's actually deterministic.
                 awaitItem()
 
+                fallbackTicker.subscriptionCount.first { it > 0 }
+
                 logFile.appendText(
                     "Jul 28 15:16:10 Debug:  Scripting::fireEvent(): " +
                         "system-select \"gc\" \"Nintendo GameCube\" \"/roms/gc\" \"\"\n",
                 )
+                fallbackTicker.emit(Unit)
 
                 awaitItem()
                 cancelAndIgnoreRemainingEvents()
@@ -463,9 +474,9 @@ class EsdeLogFileRepositoryTest {
             val repository =
                 EsdeLogFileRepository(
                     logFilePath = logFile.absolutePath,
-                    // Long enough that the fallback ticker can't plausibly fire during the
-                    // test - proves the storage-events signal, not the ticker, drove the reread.
-                    fallbackPollIntervalMs = 3_600_000L,
+                    // Never fires - proves the storage-events signal, not the ticker, drove
+                    // the reread.
+                    fallbackTicker = emptyFlow(),
                     bootTimeMillis = { 0L },
                     watchDirectory = { _, _, onChange ->
                         RecordingDirectoryWatcher(onChange).also { capturedWatcher = it }
@@ -502,14 +513,15 @@ class EsdeLogFileRepositoryTest {
             val logFile = File(tempFolder.root, "es_log.txt")
 
             lateinit var capturedWatcher: RecordingDirectoryWatcher
+            val fallbackTicker = MutableSharedFlow<Unit>()
             val repository =
                 EsdeLogFileRepository(
                     logFilePath = logFile.absolutePath,
-                    fallbackPollIntervalMs = 20L,
                     bootTimeMillis = { 0L },
                     watchDirectory = { _, _, onChange ->
                         RecordingDirectoryWatcher(onChange).also { capturedWatcher = it }
                     },
+                    fallbackTicker = fallbackTicker,
                 )
 
             repository.observeLogFileExists().test {
@@ -519,7 +531,10 @@ class EsdeLogFileRepositoryTest {
                 // asserting on it only after the second item is what's actually deterministic.
                 assertEquals(false, awaitItem())
 
+                fallbackTicker.subscriptionCount.first { it > 0 }
+
                 logFile.writeText("Jul 28 15:16:07 Debug:  Scripting::fireEvent(): startup \"\" \"\" \"\" \"\"\n")
+                fallbackTicker.emit(Unit)
 
                 assertEquals(true, awaitItem())
                 cancelAndIgnoreRemainingEvents()
@@ -537,7 +552,7 @@ class EsdeLogFileRepositoryTest {
             val repository =
                 EsdeLogFileRepository(
                     logFilePath = logFile.absolutePath,
-                    fallbackPollIntervalMs = 3_600_000L,
+                    fallbackTicker = emptyFlow(),
                     bootTimeMillis = { 0L },
                     watchDirectory = { _, _, _ -> NoOpDirectoryWatcher },
                     selfHeal = SelfHealConfig(storageEvents = storageEvents),

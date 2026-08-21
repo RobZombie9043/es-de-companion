@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,7 +55,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.esde.companion.BuildConfig
 import com.esde.companion.data.storage.AllFilesAccessPermission
+import com.esde.companion.data.thor.ThorAccessibilityPermission
+import com.esde.companion.data.thor.isAynThorDevice
 import com.esde.companion.ui.settings.AppDrawerSettingsContent
+import com.esde.companion.ui.settings.AutoFpsSettingsState
+import com.esde.companion.ui.settings.LidWakeGuardSettingsState
 import com.esde.companion.ui.settings.ManageAppsScreen
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.OtherSettingsContent
@@ -64,10 +69,17 @@ import com.esde.companion.ui.settings.SettingsQuitRow
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SetupSettingsContent
 import com.esde.companion.ui.settings.SoundSettingsContent
+import com.esde.companion.ui.settings.TaskKillerSettingsState
+import com.esde.companion.ui.settings.ThorSettingsContent
 import com.esde.companion.ui.settings.UISettingsContent
 import com.esde.companion.ui.settings.VideoPlaybackSettingsContent
+import com.esde.companion.ui.settings.VolumeSyncSettingsState
 import com.esde.companion.ui.settings.WidgetsSettingsContent
 import com.esde.companion.ui.theme.LocalIsDarkTheme
+import com.esde.companion.ui.thor.AutoFpsTriggerAppsScreen
+import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModel
+import com.esde.companion.ui.thor.TaskKillerExcludedAppsScreen
+import com.esde.companion.ui.thor.TaskKillerExcludedAppsViewModel
 import com.esde.companion.ui.update.UpdateViewModel
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 import kotlinx.coroutines.launch
@@ -115,18 +127,28 @@ private sealed interface MenuPage {
     data class Category(val category: SettingsCategory) : MenuPage
 
     data class ManageApps(val fromCategory: SettingsCategory) : MenuPage
+
+    /** Reachable only from [SettingsCategory.Thor]'s Auto FPS Mode panel - same
+     * fromCategory-carrying shape as [ManageApps], for the same back-navigation reason. */
+    data class AutoFpsTriggerApps(val fromCategory: SettingsCategory) : MenuPage
+
+    /** Reachable only from [SettingsCategory.Thor]'s Task Killer panel - same shape as
+     * [AutoFpsTriggerApps]. */
+    data class TaskKillerExcludedApps(val fromCategory: SettingsCategory) : MenuPage
 }
 
-/** Home = 0, a Category subpage = 1, ManageApps = 2 - used purely to pick the
- * [AnimatedContent] slide direction below (drilling deeper slides in from the right,
- * stepping back slides in from the left), the same "how many levels deep" comparison the
- * old two-state version made with a plain boolean. */
+/** Home = 0, a Category subpage = 1, ManageApps/AutoFpsTriggerApps/TaskKillerExcludedApps = 2 -
+ * used purely to pick the [AnimatedContent] slide direction below (drilling deeper slides in
+ * from the right, stepping back slides in from the left), the same "how many levels deep"
+ * comparison the old two-state version made with a plain boolean. */
 private val MenuPage.depth: Int
     get() =
         when (this) {
             MenuPage.Home -> 0
             is MenuPage.Category -> 1
             is MenuPage.ManageApps -> 2
+            is MenuPage.AutoFpsTriggerApps -> 2
+            is MenuPage.TaskKillerExcludedApps -> 2
         }
 
 /**
@@ -143,6 +165,8 @@ private val MenuPage.depth: Int
 fun LongPressSettingsMenu(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
+    autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
+    taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
     updateViewModel: UpdateViewModel,
     onEditWidgetsClick: () -> Unit,
     onQuitClick: () -> Unit,
@@ -152,17 +176,25 @@ fun LongPressSettingsMenu(
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val updateUiState by updateViewModel.uiState.collectAsStateWithLifecycle()
 
-    // Named locally so passing it into OtherSettingsContent below doesn't push that call's
-    // line over the max line length - the callback name is already the longest in the file.
+    // Named locally so passing it into OtherSettingsContent/ThorSettingsContent below doesn't
+    // push those calls' lines over the max line length.
     val onLaunchEsdeOnStartEnabledChanged = settingsViewModel::onLaunchEsdeOnStartEnabledChanged
+    val onLidWakeGuardEnabledChanged = settingsViewModel::onLidWakeGuardEnabledChanged
+    val onHallSensorCalibrationChanged = settingsViewModel::onHallSensorCalibrationChanged
+    val onTaskKillerEnabledChanged = settingsViewModel::onTaskKillerEnabledChanged
+    val onVolumeSyncEnabledChanged = settingsViewModel::onVolumeSyncEnabledChanged
+    val onVolumeSyncModeChanged = settingsViewModel::onVolumeSyncModeChanged
 
     val currentOnRefresh = rememberUpdatedState(settingsViewModel::refreshPermissionState)
+    val currentOnRefreshThorAccessibility = rememberUpdatedState(settingsViewModel::refreshThorAccessibilityGranted)
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
     DisposableEffect(lifecycleOwner) {
         val observer =
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     currentOnRefresh.value(AllFilesAccessPermission.isGranted())
+                    currentOnRefreshThorAccessibility.value(ThorAccessibilityPermission.isEnabledInSettings(context))
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -189,6 +221,8 @@ fun LongPressSettingsMenu(
     val onBack: () -> Unit = {
         when (val current = page) {
             is MenuPage.ManageApps -> page = MenuPage.Category(current.fromCategory)
+            is MenuPage.AutoFpsTriggerApps -> page = MenuPage.Category(current.fromCategory)
+            is MenuPage.TaskKillerExcludedApps -> page = MenuPage.Category(current.fromCategory)
             is MenuPage.Category -> page = MenuPage.Home
             MenuPage.Home -> onDismiss()
         }
@@ -208,6 +242,8 @@ fun LongPressSettingsMenu(
             MenuPage.Home -> "Main Menu"
             is MenuPage.Category -> current.category.title
             is MenuPage.ManageApps -> "Manage Apps"
+            is MenuPage.AutoFpsTriggerApps -> "Trigger Apps"
+            is MenuPage.TaskKillerExcludedApps -> "Excluded Apps"
         }
 
     Box(modifier = modifier) {
@@ -255,6 +291,12 @@ fun LongPressSettingsMenu(
                             )
 
                         is MenuPage.ManageApps -> ManageAppsScreen(viewModel = manageAppsViewModel)
+
+                        is MenuPage.AutoFpsTriggerApps ->
+                            AutoFpsTriggerAppsScreen(viewModel = autoFpsTriggerAppsViewModel)
+
+                        is MenuPage.TaskKillerExcludedApps ->
+                            TaskKillerExcludedAppsScreen(viewModel = taskKillerExcludedAppsViewModel)
 
                         is MenuPage.Category ->
                             when (targetPage.category) {
@@ -343,6 +385,49 @@ fun LongPressSettingsMenu(
                                         onDebugLoggingEnabledChanged = settingsViewModel::onDebugLoggingEnabledChanged,
                                     )
                                 SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
+                                SettingsCategory.Thor ->
+                                    ThorSettingsContent(
+                                        lidWakeGuard =
+                                            LidWakeGuardSettingsState(
+                                                enabled = uiState.lidWakeGuardEnabled,
+                                                accessibilityGranted = uiState.thorAccessibilityGranted,
+                                                calibration = uiState.hallSensorCalibration,
+                                                onEnabledChanged = onLidWakeGuardEnabledChanged,
+                                                onCalibrationChanged = onHallSensorCalibrationChanged,
+                                            ),
+                                        autoFps =
+                                            AutoFpsSettingsState(
+                                                enabled = uiState.autoFpsEnabled,
+                                                accessibilityGranted = uiState.thorAccessibilityGranted,
+                                                privilegedServiceAvailable = uiState.thorPrivilegedServiceAvailable,
+                                                onEnabledChanged = settingsViewModel::onAutoFpsEnabledChanged,
+                                                onManageTriggerAppsClick = {
+                                                    val category = targetPage.category
+                                                    page = MenuPage.AutoFpsTriggerApps(fromCategory = category)
+                                                },
+                                            ),
+                                        taskKiller =
+                                            TaskKillerSettingsState(
+                                                enabled = uiState.taskKillerEnabled,
+                                                accessibilityGranted = uiState.thorAccessibilityGranted,
+                                                privilegedServiceAvailable = uiState.thorPrivilegedServiceAvailable,
+                                                onEnabledChanged = onTaskKillerEnabledChanged,
+                                                onManageExcludedAppsClick = {
+                                                    val category = targetPage.category
+                                                    page = MenuPage.TaskKillerExcludedApps(fromCategory = category)
+                                                },
+                                            ),
+                                        volumeSync =
+                                            VolumeSyncSettingsState(
+                                                enabled = uiState.volumeSyncEnabled,
+                                                accessibilityGranted = uiState.thorAccessibilityGranted,
+                                                privilegedServiceAvailable = uiState.thorPrivilegedServiceAvailable,
+                                                secondarySettingPresent = uiState.volumeSyncSecondarySettingPresent,
+                                                mode = uiState.volumeSyncMode,
+                                                onEnabledChanged = onVolumeSyncEnabledChanged,
+                                                onModeChanged = onVolumeSyncModeChanged,
+                                            ),
+                                    )
                             }
                     }
                 }
@@ -410,7 +495,11 @@ private fun SettingsMenuHome(
                 .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        SettingsCategory.entries.forEach { category ->
+        // Thor Settings is only meaningful on an actual Ayn Thor device - the `when` branch
+        // that routes to it above still exists unconditionally regardless (see
+        // ThorSettingsContent's kdoc), this is purely a list-visibility filter.
+        val visibleCategories = SettingsCategory.entries.filter { it != SettingsCategory.Thor || isAynThorDevice() }
+        visibleCategories.forEach { category ->
             SettingsCategoryRow(
                 category = category,
                 // Widgets skips the subpage entirely - there's nothing else to show

@@ -67,6 +67,19 @@ class SettingsViewModelFactory(
             setDebugLoggingEnabledUseCase = appContainer.setDebugLoggingEnabledUseCase,
             exportConfigBackupUseCase = appContainer.exportConfigBackupUseCase,
             restoreConfigBackupUseCase = appContainer.restoreConfigBackupUseCase,
+            observeLidWakeGuardEnabledUseCase = appContainer.observeLidWakeGuardEnabledUseCase,
+            setLidWakeGuardEnabledUseCase = appContainer.setLidWakeGuardEnabledUseCase,
+            observeHallSensorCalibrationUseCase = appContainer.observeHallSensorCalibrationUseCase,
+            setHallSensorCalibrationUseCase = appContainer.setHallSensorCalibrationUseCase,
+            observeAutoFpsEnabledUseCase = appContainer.observeAutoFpsEnabledUseCase,
+            setAutoFpsEnabledUseCase = appContainer.setAutoFpsEnabledUseCase,
+            observeTaskKillerEnabledUseCase = appContainer.observeTaskKillerEnabledUseCase,
+            setTaskKillerEnabledUseCase = appContainer.setTaskKillerEnabledUseCase,
+            observeVolumeSyncEnabledUseCase = appContainer.observeVolumeSyncEnabledUseCase,
+            setVolumeSyncEnabledUseCase = appContainer.setVolumeSyncEnabledUseCase,
+            observeVolumeSyncModeUseCase = appContainer.observeVolumeSyncModeUseCase,
+            setVolumeSyncModeUseCase = appContainer.setVolumeSyncModeUseCase,
+            volumeSyncSecondarySettingPresent = appContainer.volumeSyncSecondarySettingPresent,
         ) as T
     }
 }

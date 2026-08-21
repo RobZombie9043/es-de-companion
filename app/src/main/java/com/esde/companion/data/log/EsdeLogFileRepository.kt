@@ -16,8 +16,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.RandomAccessFile
@@ -58,11 +58,16 @@ import java.io.RandomAccessFile
 class EsdeLogFileRepository(
     private val logFilePath: String,
     private val parser: EsdeEventParser = EsdeEventParser(),
-    private val fallbackPollIntervalMs: Long = DEFAULT_FALLBACK_POLL_INTERVAL_MS,
     private val bootTimeMillis: () -> Long = { System.currentTimeMillis() - SystemClock.elapsedRealtime() },
     private val watchDirectory: (targetPath: String, mask: Int, onChange: () -> Unit) -> DirectoryWatcher =
         { path, mask, onChange -> SelfHealingDirectoryWatcher(path, mask, onChange) },
     private val selfHeal: SelfHealConfig = SelfHealConfig(),
+    // A cold Flow, not a bare `delay` loop, purely so tests can substitute a hand-controlled
+    // MutableSharedFlow (same seam shape as selfHeal.storageEvents) or emptyFlow() (same seam
+    // shape used to mean "never fires") instead of depending on a real wall-clock delay racing
+    // Turbine's await timeout - see EsdeLogFileRepositoryTest's fallback-poll tests for why
+    // that real-time dependency was flaky under load.
+    private val fallbackTicker: Flow<Unit> = fixedRateTicker(DEFAULT_FALLBACK_POLL_INTERVAL_MS),
 ) : EsdeLogRepository {
     override fun observeEvents(): Flow<EsdeEvent> =
         channelFlow {
@@ -96,10 +101,7 @@ class EsdeLogFileRepository(
 
             val fallbackJob =
                 launch {
-                    while (isActive) {
-                        delay(fallbackPollIntervalMs)
-                        checkSignal.trySend(CheckTrigger.Fallback)
-                    }
+                    fallbackTicker.collect { checkSignal.trySend(CheckTrigger.Fallback) }
                 }
 
             val storageEventsJob =
@@ -161,10 +163,7 @@ class EsdeLogFileRepository(
 
             val fallbackJob =
                 launch {
-                    while (isActive) {
-                        delay(fallbackPollIntervalMs)
-                        checkSignal.trySend(CheckTrigger.Fallback)
-                    }
+                    fallbackTicker.collect { checkSignal.trySend(CheckTrigger.Fallback) }
                 }
 
             val storageEventsJob =
@@ -301,6 +300,16 @@ class EsdeLogFileRepository(
                 FileObserver.MOVED_FROM
     }
 }
+
+/** A cold [Flow] that emits [Unit] every [intervalMs], forever - the production default for
+ * [EsdeLogFileRepository.fallbackTicker]. */
+private fun fixedRateTicker(intervalMs: Long): Flow<Unit> =
+    flow {
+        while (true) {
+            delay(intervalMs)
+            emit(Unit)
+        }
+    }
 
 /**
  * Which signal source woke up [EsdeLogFileRepository.observeEvents]'s (or

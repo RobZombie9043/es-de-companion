@@ -8,18 +8,23 @@ import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.model.WidgetType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ConfigBackupMappingTest {
+    private val sampleHallSensorCalibration =
+        HallSensorCalibration(sensorType = 5, sensorName = "Hall Sensor", closedValue = 1f, openValue = 0f)
+
     private fun sampleSnapshot(widgetCanvases: Map<StateGroup, SavedWidgetCanvas> = emptyMap()) =
         AppConfigBackup(
             logFolderPath = "/storage/emulated/0/ES-DE",
@@ -56,6 +61,14 @@ class ConfigBackupMappingTest {
             dockSize = DockSize.Small,
             dockApps = listOf("com.dock.app"),
             widgetCanvases = widgetCanvases,
+            lidWakeGuardEnabled = true,
+            hallSensorCalibration = sampleHallSensorCalibration,
+            autoFpsEnabled = true,
+            autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
+            taskKillerEnabled = true,
+            taskKillerExcludedPackages = setOf("org.es_de.frontend", "com.esde.companion"),
+            volumeSyncEnabled = true,
+            volumeSyncMode = VolumeSyncMode.FollowFocus,
         )
 
     private fun sampleCanvas() =
