@@ -303,7 +303,7 @@ private fun TaskKillerSetting(state: TaskKillerSettingsState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Hold BACK for about a second to force-quit the foreground app",
+                    text = "Hold BACK to force-quit the app in focus",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
