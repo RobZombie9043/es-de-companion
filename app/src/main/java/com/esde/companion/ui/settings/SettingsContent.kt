@@ -123,6 +123,7 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.UpdateCheckResult
+import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -1853,22 +1854,45 @@ internal data class LidWakeGuardSettingsState(
 /** Same bundling reasoning as [LidWakeGuardSettingsState], for Auto FPS Mode. */
 internal data class AutoFpsSettingsState(
     val enabled: Boolean,
+    val accessibilityGranted: Boolean,
     val privilegedServiceAvailable: Boolean,
     val onEnabledChanged: (Boolean) -> Unit,
     val onManageTriggerAppsClick: () -> Unit,
 )
 
+/** Same bundling reasoning as [LidWakeGuardSettingsState], for Task Killer. */
+internal data class TaskKillerSettingsState(
+    val enabled: Boolean,
+    val accessibilityGranted: Boolean,
+    val privilegedServiceAvailable: Boolean,
+    val onEnabledChanged: (Boolean) -> Unit,
+    val onManageExcludedAppsClick: () -> Unit,
+)
+
+/** Same bundling reasoning as [LidWakeGuardSettingsState], for Volume Sync. */
+internal data class VolumeSyncSettingsState(
+    val enabled: Boolean,
+    val accessibilityGranted: Boolean,
+    val privilegedServiceAvailable: Boolean,
+    val secondarySettingPresent: Boolean,
+    val mode: VolumeSyncMode,
+    val onEnabledChanged: (Boolean) -> Unit,
+    val onModeChanged: (VolumeSyncMode) -> Unit,
+)
+
 /**
- * Thor Settings (Ayn Thor-only, see CLAUDE.md) - Lid Wake Guard and Auto FPS Mode. Only
- * reachable when [com.esde.companion.data.thor.isAynThorDevice] is true (see
- * `SettingsMenuHome`'s filtering in `LongPressSettingsMenu`); the `when` branch routing here
- * still exists unconditionally, same forcing-function reasoning as every other
+ * Thor Settings (Ayn Thor-only, see CLAUDE.md) - Lid Wake Guard, Auto FPS Mode, Task Killer,
+ * and Volume Sync. Only reachable when [com.esde.companion.data.thor.isAynThorDevice] is true
+ * (see `SettingsMenuHome`'s filtering in `LongPressSettingsMenu`); the `when` branch routing
+ * here still exists unconditionally, same forcing-function reasoning as every other
  * [SettingsCategory].
  */
 @Composable
 internal fun ThorSettingsContent(
     lidWakeGuard: LidWakeGuardSettingsState,
     autoFps: AutoFpsSettingsState,
+    taskKiller: TaskKillerSettingsState,
+    volumeSync: VolumeSyncSettingsState,
 ) {
     Column(
         modifier =
@@ -1880,6 +1904,8 @@ internal fun ThorSettingsContent(
     ) {
         LidWakeGuardSetting(lidWakeGuard)
         AutoFpsSetting(autoFps)
+        TaskKillerSetting(taskKiller)
+        VolumeSyncSetting(volumeSync)
     }
 }
 
@@ -1928,6 +1954,11 @@ private fun LidWakeGuardSetting(state: LidWakeGuardSettingsState) {
                 )
                 Switch(
                     checked = state.enabled,
+                    // Turning ON requires the accessibility grant (the lock action needs it) -
+                    // turning OFF always stays available, including right after a revoke this
+                    // switch hasn't yet reflected. See LidWakeGuardCoordinator's kdoc for the
+                    // auto-disable path when the grant is revoked while this is already on.
+                    enabled = state.enabled || state.accessibilityGranted,
                     onCheckedChange = {
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         state.onEnabledChanged(it)
@@ -1992,6 +2023,7 @@ private suspend fun autoCalibrateHallSensor(
 
 @Composable
 private fun AutoFpsSetting(state: AutoFpsSettingsState) {
+    val context = LocalContext.current
     val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -2015,10 +2047,19 @@ private fun AutoFpsSetting(state: AutoFpsSettingsState) {
                 )
                 Switch(
                     checked = state.enabled,
+                    // Same accessibility-grant gating as Lid Wake Guard's switch - see that
+                    // one's comment.
+                    enabled = state.enabled || state.accessibilityGranted,
                     onCheckedChange = {
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                         state.onEnabledChanged(it)
                     },
+                )
+            }
+            if (!state.accessibilityGranted) {
+                AccessibilityGrantRow(
+                    text = "Accessibility service not granted - required to detect the foreground app",
+                    onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
                 )
             }
             if (!state.privilegedServiceAvailable) {
@@ -2027,24 +2068,177 @@ private fun AutoFpsSetting(state: AutoFpsSettingsState) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Surface(
-                onClick = state.onManageTriggerAppsClick,
+            ThorAppPickerNavigationRow(label = "Choose Trigger Apps", onClick = state.onManageTriggerAppsClick)
+        }
+    }
+}
+
+@Composable
+private fun TaskKillerSetting(state: TaskKillerSettingsState) {
+    val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SettingsLabel(icon = Icons.Filled.PowerSettingsNew, text = "Task Killer")
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = SettingsItemShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(text = "Choose Trigger Apps", style = MaterialTheme.typography.bodyMedium)
-                    Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
-                }
+                Text(
+                    text = "Hold BACK for about a second to force-quit the foreground app",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = state.enabled,
+                    enabled = state.enabled || state.accessibilityGranted,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        state.onEnabledChanged(it)
+                    },
+                )
             }
+            if (!state.accessibilityGranted) {
+                AccessibilityGrantRow(
+                    text = "Accessibility service not granted - required to detect the BACK button",
+                    onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
+                )
+            }
+            if (!state.privilegedServiceAvailable) {
+                Text(
+                    text = "Privileged settings service not found on this firmware - Task Killer is unavailable",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            ThorAppPickerNavigationRow(label = "Choose Excluded Apps", onClick = state.onManageExcludedAppsClick)
+        }
+    }
+}
+
+@Composable
+private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
+    val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SettingsLabel(icon = Icons.Filled.VolumeUp, text = "Volume Sync")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Keep both screens' volume in step with each other",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = state.enabled,
+                    enabled = state.enabled || state.accessibilityGranted,
+                    onCheckedChange = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        state.onEnabledChanged(it)
+                    },
+                )
+            }
+            if (!state.accessibilityGranted) {
+                AccessibilityGrantRow(
+                    text = "Accessibility service not granted - required to intercept the volume buttons",
+                    onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
+                )
+            }
+            if (!state.privilegedServiceAvailable) {
+                Text(
+                    text = "Privileged settings service not found on this firmware - Volume Sync is unavailable",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            } else if (!state.secondarySettingPresent) {
+                Text(
+                    text = "This firmware doesn't expose a bottom-screen volume setting",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if (state.enabled) {
+                VolumeSyncModePicker(mode = state.mode, onModeChanged = state.onModeChanged)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VolumeSyncModePicker(
+    mode: VolumeSyncMode,
+    onModeChanged: (VolumeSyncMode) -> Unit,
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(text = "Mode", style = MaterialTheme.typography.labelLarge)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = mode == VolumeSyncMode.Linked,
+                onClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onModeChanged(VolumeSyncMode.Linked)
+                },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            ) { Text("Synced") }
+            SegmentedButton(
+                selected = mode == VolumeSyncMode.FollowFocus,
+                onClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onModeChanged(VolumeSyncMode.FollowFocus)
+                },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            ) { Text("Follow Focus") }
+        }
+        Text(
+            text =
+                when (mode) {
+                    VolumeSyncMode.Linked -> "Volume buttons control both screens together."
+                    VolumeSyncMode.FollowFocus -> "Volume buttons control the screen currently in focus."
+                },
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+/** Shared "navigate to the app picker" row for Auto FPS's trigger-apps picker and Task
+ * Killer's excluded-apps picker - identical shape, different destination/label. */
+@Composable
+private fun ThorAppPickerNavigationRow(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val rowModifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    ) {
+        Row(
+            modifier = rowModifier,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
         }
     }
 }

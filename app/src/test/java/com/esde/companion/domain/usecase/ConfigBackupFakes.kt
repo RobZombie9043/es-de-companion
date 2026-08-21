@@ -13,6 +13,7 @@ import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
@@ -334,16 +335,25 @@ internal class FakeDockSettingsRepository(
     override fun observeDockApps(): Flow<List<String>> = dockAppsFlow
 }
 
+@Suppress("LongParameterList")
 internal class FakeThorSettingsRepository(
     lidWakeGuardEnabled: Boolean = false,
     hallSensorCalibration: HallSensorCalibration = HallSensorCalibration.Uncalibrated,
     autoFpsEnabled: Boolean = false,
     autoFpsTriggerPackages: Set<String> = emptySet(),
+    taskKillerEnabled: Boolean = false,
+    taskKillerExcludedPackages: Set<String> = emptySet(),
+    volumeSyncEnabled: Boolean = false,
+    volumeSyncMode: VolumeSyncMode = VolumeSyncMode.Linked,
 ) : ThorSettingsRepository {
     private val lidWakeGuardEnabledFlow = MutableStateFlow(lidWakeGuardEnabled)
     private val hallSensorCalibrationFlow = MutableStateFlow(hallSensorCalibration)
     private val autoFpsEnabledFlow = MutableStateFlow(autoFpsEnabled)
     private val autoFpsTriggerPackagesFlow = MutableStateFlow(autoFpsTriggerPackages)
+    private val taskKillerEnabledFlow = MutableStateFlow(taskKillerEnabled)
+    private val taskKillerExcludedPackagesFlow = MutableStateFlow(taskKillerExcludedPackages)
+    private val volumeSyncEnabledFlow = MutableStateFlow(volumeSyncEnabled)
+    private val volumeSyncModeFlow = MutableStateFlow(volumeSyncMode)
 
     override suspend fun setLidWakeGuardEnabled(enabled: Boolean) {
         lidWakeGuardEnabledFlow.value = enabled
@@ -368,6 +378,30 @@ internal class FakeThorSettingsRepository(
     }
 
     override fun observeAutoFpsTriggerPackages(): Flow<Set<String>> = autoFpsTriggerPackagesFlow
+
+    override suspend fun setTaskKillerEnabled(enabled: Boolean) {
+        taskKillerEnabledFlow.value = enabled
+    }
+
+    override fun observeTaskKillerEnabled(): Flow<Boolean> = taskKillerEnabledFlow
+
+    override suspend fun setTaskKillerExcludedPackages(packages: Set<String>) {
+        taskKillerExcludedPackagesFlow.value = packages
+    }
+
+    override fun observeTaskKillerExcludedPackages(): Flow<Set<String>> = taskKillerExcludedPackagesFlow
+
+    override suspend fun setVolumeSyncEnabled(enabled: Boolean) {
+        volumeSyncEnabledFlow.value = enabled
+    }
+
+    override fun observeVolumeSyncEnabled(): Flow<Boolean> = volumeSyncEnabledFlow
+
+    override suspend fun setVolumeSyncMode(mode: VolumeSyncMode) {
+        volumeSyncModeFlow.value = mode
+    }
+
+    override fun observeVolumeSyncMode(): Flow<VolumeSyncMode> = volumeSyncModeFlow
 }
 
 internal class FakeWidgetLayoutRepository(

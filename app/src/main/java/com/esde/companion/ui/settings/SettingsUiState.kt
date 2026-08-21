@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 
 data class SettingsUiState(
     val permissionGranted: Boolean = false,
@@ -56,5 +57,9 @@ data class SettingsUiState(
     val hallSensorCalibration: HallSensorCalibration = HallSensorCalibration.Uncalibrated,
     val autoFpsEnabled: Boolean = false,
     val thorAccessibilityGranted: Boolean = false,
-    val autoFpsPrivilegedServiceAvailable: Boolean = false,
+    val thorPrivilegedServiceAvailable: Boolean = false,
+    val taskKillerEnabled: Boolean = false,
+    val volumeSyncEnabled: Boolean = false,
+    val volumeSyncMode: VolumeSyncMode = VolumeSyncMode.Linked,
+    val volumeSyncSecondarySettingPresent: Boolean = false,
 )

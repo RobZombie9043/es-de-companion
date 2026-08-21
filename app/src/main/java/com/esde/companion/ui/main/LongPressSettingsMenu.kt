@@ -69,13 +69,17 @@ import com.esde.companion.ui.settings.SettingsQuitRow
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SetupSettingsContent
 import com.esde.companion.ui.settings.SoundSettingsContent
+import com.esde.companion.ui.settings.TaskKillerSettingsState
 import com.esde.companion.ui.settings.ThorSettingsContent
 import com.esde.companion.ui.settings.UISettingsContent
 import com.esde.companion.ui.settings.VideoPlaybackSettingsContent
+import com.esde.companion.ui.settings.VolumeSyncSettingsState
 import com.esde.companion.ui.settings.WidgetsSettingsContent
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.thor.AutoFpsTriggerAppsScreen
 import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModel
+import com.esde.companion.ui.thor.TaskKillerExcludedAppsScreen
+import com.esde.companion.ui.thor.TaskKillerExcludedAppsViewModel
 import com.esde.companion.ui.update.UpdateViewModel
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 import kotlinx.coroutines.launch
@@ -127,12 +131,16 @@ private sealed interface MenuPage {
     /** Reachable only from [SettingsCategory.Thor]'s Auto FPS Mode panel - same
      * fromCategory-carrying shape as [ManageApps], for the same back-navigation reason. */
     data class AutoFpsTriggerApps(val fromCategory: SettingsCategory) : MenuPage
+
+    /** Reachable only from [SettingsCategory.Thor]'s Task Killer panel - same shape as
+     * [AutoFpsTriggerApps]. */
+    data class TaskKillerExcludedApps(val fromCategory: SettingsCategory) : MenuPage
 }
 
-/** Home = 0, a Category subpage = 1, ManageApps/AutoFpsTriggerApps = 2 - used purely to pick
- * the [AnimatedContent] slide direction below (drilling deeper slides in from the right,
- * stepping back slides in from the left), the same "how many levels deep" comparison the
- * old two-state version made with a plain boolean. */
+/** Home = 0, a Category subpage = 1, ManageApps/AutoFpsTriggerApps/TaskKillerExcludedApps = 2 -
+ * used purely to pick the [AnimatedContent] slide direction below (drilling deeper slides in
+ * from the right, stepping back slides in from the left), the same "how many levels deep"
+ * comparison the old two-state version made with a plain boolean. */
 private val MenuPage.depth: Int
     get() =
         when (this) {
@@ -140,6 +148,7 @@ private val MenuPage.depth: Int
             is MenuPage.Category -> 1
             is MenuPage.ManageApps -> 2
             is MenuPage.AutoFpsTriggerApps -> 2
+            is MenuPage.TaskKillerExcludedApps -> 2
         }
 
 /**
@@ -157,6 +166,7 @@ fun LongPressSettingsMenu(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
+    taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
     updateViewModel: UpdateViewModel,
     onEditWidgetsClick: () -> Unit,
     onQuitClick: () -> Unit,
@@ -171,6 +181,9 @@ fun LongPressSettingsMenu(
     val onLaunchEsdeOnStartEnabledChanged = settingsViewModel::onLaunchEsdeOnStartEnabledChanged
     val onLidWakeGuardEnabledChanged = settingsViewModel::onLidWakeGuardEnabledChanged
     val onHallSensorCalibrationChanged = settingsViewModel::onHallSensorCalibrationChanged
+    val onTaskKillerEnabledChanged = settingsViewModel::onTaskKillerEnabledChanged
+    val onVolumeSyncEnabledChanged = settingsViewModel::onVolumeSyncEnabledChanged
+    val onVolumeSyncModeChanged = settingsViewModel::onVolumeSyncModeChanged
 
     val currentOnRefresh = rememberUpdatedState(settingsViewModel::refreshPermissionState)
     val currentOnRefreshThorAccessibility = rememberUpdatedState(settingsViewModel::refreshThorAccessibilityGranted)
@@ -209,6 +222,7 @@ fun LongPressSettingsMenu(
         when (val current = page) {
             is MenuPage.ManageApps -> page = MenuPage.Category(current.fromCategory)
             is MenuPage.AutoFpsTriggerApps -> page = MenuPage.Category(current.fromCategory)
+            is MenuPage.TaskKillerExcludedApps -> page = MenuPage.Category(current.fromCategory)
             is MenuPage.Category -> page = MenuPage.Home
             MenuPage.Home -> onDismiss()
         }
@@ -229,6 +243,7 @@ fun LongPressSettingsMenu(
             is MenuPage.Category -> current.category.title
             is MenuPage.ManageApps -> "Manage Apps"
             is MenuPage.AutoFpsTriggerApps -> "Trigger Apps"
+            is MenuPage.TaskKillerExcludedApps -> "Excluded Apps"
         }
 
     Box(modifier = modifier) {
@@ -279,6 +294,9 @@ fun LongPressSettingsMenu(
 
                         is MenuPage.AutoFpsTriggerApps ->
                             AutoFpsTriggerAppsScreen(viewModel = autoFpsTriggerAppsViewModel)
+
+                        is MenuPage.TaskKillerExcludedApps ->
+                            TaskKillerExcludedAppsScreen(viewModel = taskKillerExcludedAppsViewModel)
 
                         is MenuPage.Category ->
                             when (targetPage.category) {
@@ -380,12 +398,34 @@ fun LongPressSettingsMenu(
                                         autoFps =
                                             AutoFpsSettingsState(
                                                 enabled = uiState.autoFpsEnabled,
-                                                privilegedServiceAvailable = uiState.autoFpsPrivilegedServiceAvailable,
+                                                accessibilityGranted = uiState.thorAccessibilityGranted,
+                                                privilegedServiceAvailable = uiState.thorPrivilegedServiceAvailable,
                                                 onEnabledChanged = settingsViewModel::onAutoFpsEnabledChanged,
                                                 onManageTriggerAppsClick = {
                                                     val category = targetPage.category
                                                     page = MenuPage.AutoFpsTriggerApps(fromCategory = category)
                                                 },
+                                            ),
+                                        taskKiller =
+                                            TaskKillerSettingsState(
+                                                enabled = uiState.taskKillerEnabled,
+                                                accessibilityGranted = uiState.thorAccessibilityGranted,
+                                                privilegedServiceAvailable = uiState.thorPrivilegedServiceAvailable,
+                                                onEnabledChanged = onTaskKillerEnabledChanged,
+                                                onManageExcludedAppsClick = {
+                                                    val category = targetPage.category
+                                                    page = MenuPage.TaskKillerExcludedApps(fromCategory = category)
+                                                },
+                                            ),
+                                        volumeSync =
+                                            VolumeSyncSettingsState(
+                                                enabled = uiState.volumeSyncEnabled,
+                                                accessibilityGranted = uiState.thorAccessibilityGranted,
+                                                privilegedServiceAvailable = uiState.thorPrivilegedServiceAvailable,
+                                                secondarySettingPresent = uiState.volumeSyncSecondarySettingPresent,
+                                                mode = uiState.volumeSyncMode,
+                                                onEnabledChanged = onVolumeSyncEnabledChanged,
+                                                onModeChanged = onVolumeSyncModeChanged,
                                             ),
                                     )
                             }

@@ -14,6 +14,7 @@ import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.thor.LidWakeGuardDecision
 import com.esde.companion.domain.usecase.ObserveHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.ObserveLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.SetLidWakeGuardEnabledUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -27,16 +28,21 @@ import kotlinx.coroutines.launch
  * same as [com.esde.companion.data.storage.SelfHealingDirectoryWatcher] instances), started via
  * [start].
  *
- * Whether a screen-on actually results in a lock additionally requires the user to have
- * separately granted the accessibility service (see [ThorAccessibilityPermission]/Thor Settings'
- * own status UI) - [CompanionAccessibilityService.requestLock] simply returns `false` and does
- * nothing if the service isn't bound, so this coordinator doesn't need to track that grant state
- * itself to stay opt-in: an unwanted `BroadcastReceiver` registration is the only thing gated
- * purely by the DataStore toggle, and it does nothing observable without the accessibility grant.
+ * The Settings UI (`ThorSettingsContent`) prevents *turning on* this setting while the
+ * accessibility service isn't granted, but a user can still revoke that grant afterward from
+ * system Settings while the feature is on - [CompanionAccessibilityService.addDisconnectListener]
+ * fires when that happens (the OS unbinds the service), and this coordinator reacts by persisting
+ * the setting back to disabled via [setLidWakeGuardEnabled], which the existing
+ * [observeLidWakeGuardEnabled] collector below then disarms in response - so the same single
+ * enabled-flow drives both directions, and the Settings UI reflects the auto-disable the next
+ * time it reloads that flow. Registered once in [start], not tied to arm/disarm, since
+ * [CompanionAccessibilityService]'s listener lists have no matching remove API - registering it
+ * repeatedly would accumulate duplicate listeners.
  */
 class LidWakeGuardCoordinator(
     private val context: Context,
     private val observeLidWakeGuardEnabled: ObserveLidWakeGuardEnabledUseCase,
+    private val setLidWakeGuardEnabled: SetLidWakeGuardEnabledUseCase,
     private val observeHallSensorCalibration: ObserveHallSensorCalibrationUseCase,
 ) {
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -62,14 +68,21 @@ class LidWakeGuardCoordinator(
             }
         }
 
+    @Volatile
+    private var guardEnabled = false
+
     fun start(applicationScope: CoroutineScope) {
         applicationScope.launch {
             observeHallSensorCalibration().collect { calibration = it }
         }
         applicationScope.launch {
             observeLidWakeGuardEnabled().distinctUntilChanged().collect { enabled ->
+                guardEnabled = enabled
                 if (enabled) arm() else disarm()
             }
+        }
+        CompanionAccessibilityService.addDisconnectListener {
+            if (guardEnabled) applicationScope.launch { setLidWakeGuardEnabled(false) }
         }
     }
 

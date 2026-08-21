@@ -15,6 +15,7 @@ import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.model.WidgetType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -64,6 +65,10 @@ class ConfigBackupMappingTest {
             hallSensorCalibration = sampleHallSensorCalibration,
             autoFpsEnabled = true,
             autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
+            taskKillerEnabled = true,
+            taskKillerExcludedPackages = setOf("org.es_de.frontend", "com.esde.companion"),
+            volumeSyncEnabled = true,
+            volumeSyncMode = VolumeSyncMode.FollowFocus,
         )
 
     private fun sampleCanvas() =

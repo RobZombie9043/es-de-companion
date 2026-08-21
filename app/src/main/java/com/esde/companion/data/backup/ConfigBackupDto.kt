@@ -70,6 +70,10 @@ internal data class ConfigBackupDto(
     val hallSensorOpenValue: Float? = null,
     val autoFpsEnabled: Boolean = false,
     val autoFpsTriggerPackages: Set<String> = emptySet(),
+    val taskKillerEnabled: Boolean = false,
+    val taskKillerExcludedPackages: Set<String>? = null,
+    val volumeSyncEnabled: Boolean = false,
+    val volumeSyncMode: String = "Linked",
 )
 
 @Serializable

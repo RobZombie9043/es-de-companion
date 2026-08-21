@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -57,6 +58,10 @@ class JsonConfigBackupRepositoryTest {
             hallSensorCalibration = HallSensorCalibration.Uncalibrated,
             autoFpsEnabled = false,
             autoFpsTriggerPackages = emptySet(),
+            taskKillerEnabled = false,
+            taskKillerExcludedPackages = setOf("org.es_de.frontend", "com.esde.companion"),
+            volumeSyncEnabled = false,
+            volumeSyncMode = VolumeSyncMode.Linked,
         )
 
     @Test

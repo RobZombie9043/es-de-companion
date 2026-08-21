@@ -54,6 +54,10 @@ data class AppConfigBackup(
     val hallSensorCalibration: HallSensorCalibration,
     val autoFpsEnabled: Boolean,
     val autoFpsTriggerPackages: Set<String>,
+    val taskKillerEnabled: Boolean,
+    val taskKillerExcludedPackages: Set<String>,
+    val volumeSyncEnabled: Boolean,
+    val volumeSyncMode: VolumeSyncMode,
 ) {
     companion object {
         const val CURRENT_VERSION = 1

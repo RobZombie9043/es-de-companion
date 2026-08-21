@@ -73,6 +73,13 @@ class SettingsViewModelFactory(
             setHallSensorCalibrationUseCase = appContainer.setHallSensorCalibrationUseCase,
             observeAutoFpsEnabledUseCase = appContainer.observeAutoFpsEnabledUseCase,
             setAutoFpsEnabledUseCase = appContainer.setAutoFpsEnabledUseCase,
+            observeTaskKillerEnabledUseCase = appContainer.observeTaskKillerEnabledUseCase,
+            setTaskKillerEnabledUseCase = appContainer.setTaskKillerEnabledUseCase,
+            observeVolumeSyncEnabledUseCase = appContainer.observeVolumeSyncEnabledUseCase,
+            setVolumeSyncEnabledUseCase = appContainer.setVolumeSyncEnabledUseCase,
+            observeVolumeSyncModeUseCase = appContainer.observeVolumeSyncModeUseCase,
+            setVolumeSyncModeUseCase = appContainer.setVolumeSyncModeUseCase,
+            volumeSyncSecondarySettingPresent = appContainer.volumeSyncSecondarySettingPresent,
         ) as T
     }
 }

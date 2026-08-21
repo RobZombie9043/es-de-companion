@@ -4,5 +4,6 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:canRetrieveWindowContent="false"
     android:canPerformGestures="false"
+    android:canRequestFilterKeyEvents="true"
     android:notificationTimeout="100"
     android:description="@string/thor_accessibility_service_description" />

@@ -46,6 +46,10 @@ class RestoreConfigBackupUseCase(
             setHallSensorCalibration(snapshot.hallSensorCalibration)
             setAutoFpsEnabled(snapshot.autoFpsEnabled)
             setAutoFpsTriggerPackages(snapshot.autoFpsTriggerPackages)
+            setTaskKillerEnabled(snapshot.taskKillerEnabled)
+            setTaskKillerExcludedPackages(snapshot.taskKillerExcludedPackages)
+            setVolumeSyncEnabled(snapshot.volumeSyncEnabled)
+            setVolumeSyncMode(snapshot.volumeSyncMode)
         }
     }
 

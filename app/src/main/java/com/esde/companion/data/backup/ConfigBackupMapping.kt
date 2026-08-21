@@ -15,6 +15,7 @@ import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 
 internal fun AppConfigBackup.toDto(): ConfigBackupDto =
     ConfigBackupDto(
@@ -67,23 +68,31 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         hallSensorOpenValue = hallSensorCalibration.openValue,
         autoFpsEnabled = autoFpsEnabled,
         autoFpsTriggerPackages = autoFpsTriggerPackages,
+        taskKillerEnabled = taskKillerEnabled,
+        taskKillerExcludedPackages = taskKillerExcludedPackages,
+        volumeSyncEnabled = volumeSyncEnabled,
+        volumeSyncMode = volumeSyncMode.name,
+    )
+
+private fun ConfigBackupDto.toFabAssignments() =
+    FabAssignments(
+        topStart = FabSlot(fabTopStartType.toEnumOrDefault(FabType.None), fabTopStartCustomApp),
+        topEnd = FabSlot(fabTopEndType.toEnumOrDefault(FabType.None), fabTopEndCustomApp),
+        bottomStart = FabSlot(fabBottomStartType.toEnumOrDefault(FabType.None), fabBottomStartCustomApp),
+        bottomEnd = FabSlot(fabBottomEndType.toEnumOrDefault(FabType.None), fabBottomEndCustomApp),
+    )
+
+private fun ConfigBackupDto.toHallSensorCalibration() =
+    HallSensorCalibration(
+        sensorType = hallSensorType,
+        sensorName = hallSensorName,
+        closedValue = hallSensorClosedValue,
+        openValue = hallSensorOpenValue,
     )
 
 internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
-    val fabAssignments =
-        FabAssignments(
-            topStart = FabSlot(fabTopStartType.toEnumOrDefault(FabType.None), fabTopStartCustomApp),
-            topEnd = FabSlot(fabTopEndType.toEnumOrDefault(FabType.None), fabTopEndCustomApp),
-            bottomStart = FabSlot(fabBottomStartType.toEnumOrDefault(FabType.None), fabBottomStartCustomApp),
-            bottomEnd = FabSlot(fabBottomEndType.toEnumOrDefault(FabType.None), fabBottomEndCustomApp),
-        )
-    val hallSensorCalibration =
-        HallSensorCalibration(
-            sensorType = hallSensorType,
-            sensorName = hallSensorName,
-            closedValue = hallSensorClosedValue,
-            openValue = hallSensorOpenValue,
-        )
+    val fabAssignments = toFabAssignments()
+    val hallSensorCalibration = toHallSensorCalibration()
     return AppConfigBackup(
         version = version,
         logFolderPath = logFolderPath,
@@ -124,8 +133,18 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         hallSensorCalibration = hallSensorCalibration,
         autoFpsEnabled = autoFpsEnabled,
         autoFpsTriggerPackages = autoFpsTriggerPackages,
+        taskKillerEnabled = taskKillerEnabled,
+        // Matches FileThorSettingsRepository's own default, used when decoding a
+        // pre-Task-Killer backup that has no excluded-packages field at all (distinct from
+        // the user having explicitly saved an empty set, which decodes as an empty set, not
+        // this default - see ConfigBackupDto's nullable field).
+        taskKillerExcludedPackages = taskKillerExcludedPackages ?: DEFAULT_TASK_KILLER_EXCLUDED_PACKAGES,
+        volumeSyncEnabled = volumeSyncEnabled,
+        volumeSyncMode = volumeSyncMode.toEnumOrDefault(VolumeSyncMode.Linked),
     )
 }
+
+private val DEFAULT_TASK_KILLER_EXCLUDED_PACKAGES = setOf("org.es_de.frontend", "com.esde.companion")
 
 /**
  * Canvases with no grid saved yet (see [SavedWidgetCanvas]'s kdoc) are omitted entirely

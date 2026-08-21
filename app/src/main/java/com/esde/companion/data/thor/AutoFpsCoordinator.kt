@@ -10,8 +10,10 @@ import com.esde.companion.data.thor.accessibility.CompanionAccessibilityService
 import com.esde.companion.domain.thor.RefreshRateDecision
 import com.esde.companion.domain.thor.RefreshRateDecisionResult
 import com.esde.companion.domain.thor.RefreshRateReactorState
+import com.esde.companion.domain.thor.THOR_IGNORED_SYSTEM_PACKAGES
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsTriggerPackagesUseCase
+import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -20,15 +22,28 @@ import kotlinx.coroutines.launch
  * App-scoped reactive piece for Thor Settings > Auto FPS Mode - full port of Asgard's
  * `AutoFpsForegroundReactor` mechanism (accessibility-based foreground-app detection, not a
  * shortcut off `AppState` - see CLAUDE.md for why), with the same opt-in-gated divergence as
- * [LidWakeGuardCoordinator]: the foreground-package listener and the `ACTION_SCREEN_OFF`
- * receiver are only installed while [ObserveAutoFpsEnabledUseCase] reports the setting is on.
- * Whether a refresh-rate write actually lands additionally depends on the user having granted
- * the accessibility service (for the foreground-package feed to fire at all) and
- * [RefreshRateController.canWrite] (the privileged Settings service being present on this
- * firmware) - both fail soft, so neither needs to gate installation itself.
+ * [LidWakeGuardCoordinator]: the `ACTION_SCREEN_OFF` receiver is only registered while
+ * [ObserveAutoFpsEnabledUseCase] reports the setting is on. Whether a refresh-rate write
+ * actually lands additionally depends on the user having granted the accessibility service (for
+ * the foreground-package feed to fire at all) and [RefreshRateController.canWrite] (the
+ * privileged Settings service being present on this firmware) - both fail soft.
+ *
+ * The accessibility listeners themselves ([CompanionAccessibilityService.addForegroundPackageListener]/
+ * [CompanionAccessibilityService.addDisconnectListener]) are registered exactly once in [start],
+ * not inside the enabled/disabled toggle handling - that service's listener lists have no remove
+ * API, so re-registering them on every enable would accumulate duplicate listeners across
+ * repeated toggles. [featureEnabled] is what actually gates whether [onForegroundPackage] does
+ * anything, matching how [RefreshRateDecision.decide] already treats a disabled feature as
+ * [RefreshRateDecisionResult.IGNORE].
+ *
+ * The Settings UI prevents *turning on* this setting while the accessibility service isn't
+ * granted, but a user can revoke that grant afterward from system Settings while the feature is
+ * on - the disconnect listener reacts by persisting the setting back to disabled via
+ * [setAutoFpsEnabled], same auto-disable shape as [LidWakeGuardCoordinator].
  */
 class AutoFpsCoordinator(
     private val observeAutoFpsEnabled: ObserveAutoFpsEnabledUseCase,
+    private val setAutoFpsEnabled: SetAutoFpsEnabledUseCase,
     private val observeAutoFpsTriggerPackages: ObserveAutoFpsTriggerPackagesUseCase,
 ) {
     private val workerThread = HandlerThread("AutoFpsCoordinator").apply { start() }
@@ -42,7 +57,7 @@ class AutoFpsCoordinator(
 
     private var highRefreshActive = false
     private var pendingRevert: Runnable? = null
-    private var installed = false
+    private var screenOffReceiverRegistered = false
 
     private val screenOffReceiver =
         object : BroadcastReceiver() {
@@ -59,32 +74,35 @@ class AutoFpsCoordinator(
         applicationScope: CoroutineScope,
     ) {
         val appContext = context.applicationContext
+        CompanionAccessibilityService.addForegroundPackageListener { packageName ->
+            handler.post { onForegroundPackage(packageName) }
+        }
+        CompanionAccessibilityService.addDisconnectListener {
+            handler.post {
+                onDisconnect()
+                if (featureEnabled) applicationScope.launch { setAutoFpsEnabled(false) }
+            }
+        }
         applicationScope.launch {
             observeAutoFpsTriggerPackages().collect { triggerPackages = it }
         }
         applicationScope.launch {
             observeAutoFpsEnabled().distinctUntilChanged().collect { enabled ->
                 featureEnabled = enabled
-                if (enabled) install(appContext) else uninstall(appContext)
+                if (enabled) armScreenOffReceiver(appContext) else disarmScreenOffReceiver(appContext)
             }
         }
     }
 
-    private fun install(context: Context) {
-        if (installed) return
-        installed = true
-        CompanionAccessibilityService.addForegroundPackageListener { packageName ->
-            handler.post { onForegroundPackage(packageName) }
-        }
-        CompanionAccessibilityService.addDisconnectListener {
-            handler.post(::onDisconnect)
-        }
+    private fun armScreenOffReceiver(context: Context) {
+        if (screenOffReceiverRegistered) return
+        screenOffReceiverRegistered = true
         context.registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
     }
 
-    private fun uninstall(context: Context) {
-        if (!installed) return
-        installed = false
+    private fun disarmScreenOffReceiver(context: Context) {
+        if (!screenOffReceiverRegistered) return
+        screenOffReceiverRegistered = false
         runCatching { context.unregisterReceiver(screenOffReceiver) }
         onDisconnect()
     }
@@ -96,7 +114,7 @@ class AutoFpsCoordinator(
         when (
             RefreshRateDecision.decide(
                 packageName = packageName,
-                ignoredPackages = IGNORED_PACKAGES,
+                ignoredPackages = THOR_IGNORED_SYSTEM_PACKAGES,
                 featureEnabled = featureEnabled,
                 triggerPackages = triggerPackages,
                 state = reactorState,
@@ -143,26 +161,15 @@ class AutoFpsCoordinator(
         }
     }
 
+    // Deliberately does NOT add this app's own package to THOR_IGNORED_SYSTEM_PACKAGES here:
+    // since this service doesn't filter by display id (see [CompanionAccessibilityService]'s
+    // kdoc), a window-state-changed event for Companion's own package is the genuine "the user
+    // backed out of an App-Drawer-launched trigger app" signal for that use case - ignoring it
+    // would break that revert path entirely. The known tradeoff (an internal Companion
+    // dialog/overlay briefly stealing "foreground" while a trigger app is still genuinely
+    // displayed on the other display) is exactly the on-device validation item called out in
+    // CLAUDE.md, not something this ignore-list can resolve for both cases at once.
     private companion object {
         const val REVERT_DEBOUNCE_MS = 700L
-
-        /**
-         * Matches Asgard's `AutoFpsForegroundReactor.IGNORED_PACKAGES`. Deliberately does NOT
-         * include this app's own package: since this service doesn't filter by display id (see
-         * [CompanionAccessibilityService]'s kdoc), a window-state-changed event for Companion's
-         * own package is the genuine "the user backed out of an App-Drawer-launched trigger app"
-         * signal for that use case - ignoring it would break that revert path entirely. The
-         * known tradeoff (an internal Companion dialog/overlay briefly stealing "foreground"
-         * while a trigger app is still genuinely displayed on the other display) is exactly the
-         * on-device validation item called out in CLAUDE.md, not something this ignore-list can
-         * resolve for both cases at once.
-         */
-        val IGNORED_PACKAGES =
-            setOf(
-                "com.odin.gameassistant",
-                "com.android.systemui",
-                "com.android.launcher3",
-                "android",
-            )
     }
 }

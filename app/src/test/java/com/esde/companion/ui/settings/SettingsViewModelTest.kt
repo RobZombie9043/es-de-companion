@@ -45,10 +45,13 @@ import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
@@ -73,10 +76,13 @@ import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.Dispatchers
@@ -447,6 +453,13 @@ class SettingsViewModelTest {
                 setHallSensorCalibrationUseCase = SetHallSensorCalibrationUseCase(thorSettingsRepository),
                 observeAutoFpsEnabledUseCase = ObserveAutoFpsEnabledUseCase(thorSettingsRepository),
                 setAutoFpsEnabledUseCase = SetAutoFpsEnabledUseCase(thorSettingsRepository),
+                observeTaskKillerEnabledUseCase = ObserveTaskKillerEnabledUseCase(thorSettingsRepository),
+                setTaskKillerEnabledUseCase = SetTaskKillerEnabledUseCase(thorSettingsRepository),
+                observeVolumeSyncEnabledUseCase = ObserveVolumeSyncEnabledUseCase(thorSettingsRepository),
+                setVolumeSyncEnabledUseCase = SetVolumeSyncEnabledUseCase(thorSettingsRepository),
+                observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository),
+                setVolumeSyncModeUseCase = SetVolumeSyncModeUseCase(thorSettingsRepository),
+                volumeSyncSecondarySettingPresent = false,
             )
         return viewModel to appDrawerSettingsRepository
     }

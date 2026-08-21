@@ -33,6 +33,9 @@ import com.esde.companion.data.systems.ReactiveSystemPathRepository
 import com.esde.companion.data.thor.AutoFpsCoordinator
 import com.esde.companion.data.thor.FileThorSettingsRepository
 import com.esde.companion.data.thor.LidWakeGuardCoordinator
+import com.esde.companion.data.thor.TaskKillerCoordinator
+import com.esde.companion.data.thor.VolumeSyncCoordinator
+import com.esde.companion.data.thor.VolumeSyncShell
 import com.esde.companion.data.update.FileUpdateStateRepository
 import com.esde.companion.data.update.GitHubUpdateRepository
 import com.esde.companion.data.video.ProcessVideoPlaybackStateRepository
@@ -111,10 +114,14 @@ import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
@@ -157,10 +164,14 @@ import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -370,6 +381,13 @@ class AppContainer(context: Context) {
     // construction time. See CLAUDE.md.
     private val thorSettingsRepository: ThorSettingsRepository = FileThorSettingsRepository(appContext)
 
+    // Whether this firmware exposes the vendor Settings.System key Volume Sync writes to -
+    // effectively fixed for the process lifetime, same reasoning as RefreshRateController's own
+    // canWrite() check, so this is a plain one-time snapshot rather than a Flow. Needs
+    // appContext (ContentResolver access), unlike the other Thor capability checks, so it's
+    // computed here rather than directly in SettingsViewModel's init.
+    val volumeSyncSecondarySettingPresent = VolumeSyncShell.hasSecondarySetting(appContext)
+
     val observeLidWakeGuardEnabledUseCase = ObserveLidWakeGuardEnabledUseCase(thorSettingsRepository)
     val setLidWakeGuardEnabledUseCase = SetLidWakeGuardEnabledUseCase(thorSettingsRepository)
     val observeHallSensorCalibrationUseCase = ObserveHallSensorCalibrationUseCase(thorSettingsRepository)
@@ -378,6 +396,14 @@ class AppContainer(context: Context) {
     val setAutoFpsEnabledUseCase = SetAutoFpsEnabledUseCase(thorSettingsRepository)
     val observeAutoFpsTriggerPackagesUseCase = ObserveAutoFpsTriggerPackagesUseCase(thorSettingsRepository)
     val setAutoFpsTriggerPackagesUseCase = SetAutoFpsTriggerPackagesUseCase(thorSettingsRepository)
+    val observeTaskKillerEnabledUseCase = ObserveTaskKillerEnabledUseCase(thorSettingsRepository)
+    val setTaskKillerEnabledUseCase = SetTaskKillerEnabledUseCase(thorSettingsRepository)
+    val observeTaskKillerExcludedPackagesUseCase = ObserveTaskKillerExcludedPackagesUseCase(thorSettingsRepository)
+    val setTaskKillerExcludedPackagesUseCase = SetTaskKillerExcludedPackagesUseCase(thorSettingsRepository)
+    val observeVolumeSyncEnabledUseCase = ObserveVolumeSyncEnabledUseCase(thorSettingsRepository)
+    val setVolumeSyncEnabledUseCase = SetVolumeSyncEnabledUseCase(thorSettingsRepository)
+    val observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository)
+    val setVolumeSyncModeUseCase = SetVolumeSyncModeUseCase(thorSettingsRepository)
 
     // Settings > Setup > Backup & Restore. Reaches directly into the settings repositories
     // above (rather than through their narrower per-field use cases) since export/restore
@@ -475,13 +501,29 @@ class AppContainer(context: Context) {
         LidWakeGuardCoordinator(
             context = appContext,
             observeLidWakeGuardEnabled = observeLidWakeGuardEnabledUseCase,
+            setLidWakeGuardEnabled = setLidWakeGuardEnabledUseCase,
             observeHallSensorCalibration = observeHallSensorCalibrationUseCase,
         )
 
     private val autoFpsCoordinator =
         AutoFpsCoordinator(
             observeAutoFpsEnabled = observeAutoFpsEnabledUseCase,
+            setAutoFpsEnabled = setAutoFpsEnabledUseCase,
             observeAutoFpsTriggerPackages = observeAutoFpsTriggerPackagesUseCase,
+        )
+
+    private val taskKillerCoordinator =
+        TaskKillerCoordinator(
+            observeTaskKillerEnabled = observeTaskKillerEnabledUseCase,
+            setTaskKillerEnabled = setTaskKillerEnabledUseCase,
+            observeTaskKillerExcludedPackages = observeTaskKillerExcludedPackagesUseCase,
+        )
+
+    private val volumeSyncCoordinator =
+        VolumeSyncCoordinator(
+            observeVolumeSyncEnabled = observeVolumeSyncEnabledUseCase,
+            setVolumeSyncEnabled = setVolumeSyncEnabledUseCase,
+            observeVolumeSyncMode = observeVolumeSyncModeUseCase,
         )
 
     // Update checker (GitHub Releases). The one sanctioned network use case in this app -
@@ -515,6 +557,8 @@ class AppContainer(context: Context) {
     init {
         lidWakeGuardCoordinator.start(applicationScope)
         autoFpsCoordinator.start(appContext, applicationScope)
+        taskKillerCoordinator.start(appContext, applicationScope)
+        volumeSyncCoordinator.start(appContext, applicationScope)
 
         // Always-running, independent of whether edit mode is even open - records
         // whatever's actually been browsed so edit-mode preview has something real to

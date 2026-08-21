@@ -62,6 +62,10 @@ class ExportConfigBackupUseCase(
                     hallSensorCalibration = thorSettingsRepository.observeHallSensorCalibration().first(),
                     autoFpsEnabled = thorSettingsRepository.observeAutoFpsEnabled().first(),
                     autoFpsTriggerPackages = thorSettingsRepository.observeAutoFpsTriggerPackages().first(),
+                    taskKillerEnabled = thorSettingsRepository.observeTaskKillerEnabled().first(),
+                    taskKillerExcludedPackages = thorSettingsRepository.observeTaskKillerExcludedPackages().first(),
+                    volumeSyncEnabled = thorSettingsRepository.observeVolumeSyncEnabled().first(),
+                    volumeSyncMode = thorSettingsRepository.observeVolumeSyncMode().first(),
                 )
             }
         return configBackupRepository.serialize(snapshot)

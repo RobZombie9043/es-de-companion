@@ -58,6 +58,7 @@ import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModel
+import com.esde.companion.ui.thor.TaskKillerExcludedAppsViewModel
 import com.esde.companion.ui.toAlignment
 import com.esde.companion.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
@@ -107,6 +108,7 @@ fun MainScreen(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
+    taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -127,6 +129,7 @@ fun MainScreen(
         settingsViewModel = settingsViewModel,
         manageAppsViewModel = manageAppsViewModel,
         autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
+        taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
         updateViewModel = updateViewModel,
         fabAssignments = fabAssignments,
         overlayOpacityPercent = overlayOpacityPercent,
@@ -159,6 +162,7 @@ private fun MainScreenContent(
     settingsViewModel: SettingsViewModel,
     manageAppsViewModel: ManageAppsViewModel,
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
+    taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -447,6 +451,7 @@ private fun MainScreenContent(
                             settingsViewModel = settingsViewModel,
                             manageAppsViewModel = manageAppsViewModel,
                             autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
+                            taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
                             updateViewModel = updateViewModel,
                             onEditWidgetsClick = {
                                 setLongPressMenuOpen(false)
