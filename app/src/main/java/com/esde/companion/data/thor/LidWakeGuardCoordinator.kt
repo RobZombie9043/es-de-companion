@@ -122,7 +122,10 @@ class LidWakeGuardCoordinator(
     /**
      * Logs the same four outcomes as Asgard's `LidWakeGuardReactor.onScreenOn`/`GuardAction`
      * (timeout/open/locked/lock-failed), via [DebugFileLogger.logInfo] rather than a separate
-     * per-feature event store - see CLAUDE.md's Debug Logging note.
+     * per-feature event store - see CLAUDE.md's Debug Logging note. Each line spells out
+     * *which* of the two cases this screen-on was - a normal wake (lid open, left alone) or an
+     * accidental one (lid closed, locked back) - rather than just the raw sensor value, since
+     * that's the actual question this log exists to answer when diagnosing a report.
      */
     @Suppress("ReturnCount")
     private fun onSensorRead(
@@ -131,7 +134,7 @@ class LidWakeGuardCoordinator(
         openValue: Float,
     ) {
         if (reading == null) {
-            debugFileLogger.logInfo(LOG_TAG, "sensor read timed out, ignoring screen-on")
+            debugFileLogger.logInfo(LOG_TAG, "sensor read timed out - treating as normal wake, leaving screen on")
             return
         }
         val shouldLock =
@@ -141,13 +144,16 @@ class LidWakeGuardCoordinator(
                 sensorReadsClosed = LidWakeGuardDecision.isReadingClosed(reading, closedValue, openValue),
             )
         if (!shouldLock) {
-            debugFileLogger.logInfo(LOG_TAG, "lid reads open (reading=$reading), ignoring screen-on")
+            debugFileLogger.logInfo(LOG_TAG, "normal wake - lid open (reading=$reading), leaving screen on")
             return
         }
         if (CompanionAccessibilityService.requestLock()) {
-            debugFileLogger.logInfo(LOG_TAG, "locked screen (reading=$reading)")
+            debugFileLogger.logInfo(LOG_TAG, "accidental wake - lid closed (reading=$reading), locked screen")
         } else {
-            debugFileLogger.logInfo(LOG_TAG, "lock failed - accessibility service not bound (reading=$reading)")
+            debugFileLogger.logInfo(
+                LOG_TAG,
+                "accidental wake - lid closed (reading=$reading), lock FAILED - accessibility service not bound",
+            )
         }
     }
 
