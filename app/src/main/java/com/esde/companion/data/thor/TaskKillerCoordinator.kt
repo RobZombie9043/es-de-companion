@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.HandlerThread
+import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.thor.accessibility.CompanionAccessibilityService
 import com.esde.companion.domain.thor.THOR_IGNORED_SYSTEM_PACKAGES
 import com.esde.companion.domain.thor.TaskKillerCapabilities
@@ -52,6 +53,7 @@ class TaskKillerCoordinator(
     private val observeTaskKillerEnabled: ObserveTaskKillerEnabledUseCase,
     private val setTaskKillerEnabled: SetTaskKillerEnabledUseCase,
     private val observeTaskKillerExcludedPackages: ObserveTaskKillerExcludedPackagesUseCase,
+    private val debugFileLogger: DebugFileLogger,
 ) {
     private val workerThread = HandlerThread("TaskKillerCoordinator").apply { start() }
     private val handler = Handler(workerThread.looper)
@@ -139,12 +141,34 @@ class TaskKillerCoordinator(
                 ownPackage = context.packageName,
                 excludedPackages = excludedPackages,
             )
+        logDecision(decision, foreground)
         if (decision != TaskKillerDecisionResult.FORCE_STOP) return
         // decide() only returns FORCE_STOP once foregroundPackage is confirmed non-null.
         val pkg = checkNotNull(foreground)
+        val stopped = TaskKillerShell.forceStop(pkg)
+        debugFileLogger.logInfo(LOG_TAG, "${if (stopped) "force-stopped" else "FAILED to force-stop"} $pkg")
         // force-stop alone kills the process but leaves a stale card in Recents - only worth
         // attempting cleanup once the kill itself is confirmed.
-        if (TaskKillerShell.forceStop(pkg)) cleanUpRecents(pkg)
+        if (stopped) cleanUpRecents(pkg)
+    }
+
+    /** Same skip/force-stop outcomes as Asgard's `TaskKillerAction`, logged via
+     * [DebugFileLogger.logInfo] instead of a separate per-feature event store - see CLAUDE.md's
+     * Debug Logging note. `DISABLED`/`SHORT_PRESS` aren't logged, matching Asgard. */
+    private fun logDecision(
+        decision: TaskKillerDecisionResult,
+        foreground: String?,
+    ) {
+        val message =
+            when (decision) {
+                TaskKillerDecisionResult.DISABLED, TaskKillerDecisionResult.SHORT_PRESS -> return
+                TaskKillerDecisionResult.NO_FOREGROUND -> "skipped - no foreground package resolved"
+                TaskKillerDecisionResult.PROTECTED -> "skipped - $foreground is protected"
+                TaskKillerDecisionResult.PRIVILEGED_UNAVAILABLE ->
+                    "skipped - privileged settings service unavailable ($foreground)"
+                TaskKillerDecisionResult.FORCE_STOP -> return
+            }
+        debugFileLogger.logInfo(LOG_TAG, message)
     }
 
     /**
@@ -158,7 +182,15 @@ class TaskKillerCoordinator(
             Thread.sleep(RECENTS_LOOKUP_RETRY_DELAY_MS)
             taskIds = TaskKillerShell.findRecentTaskIds(packageName)
         }
-        taskIds.forEach { taskId -> TaskKillerShell.removeRecentsTask(taskId) }
+        if (taskIds.isEmpty()) {
+            debugFileLogger.logInfo(LOG_TAG, "no Recents task found for $packageName after force-stop")
+            return
+        }
+        taskIds.forEach { taskId ->
+            val removed = TaskKillerShell.removeRecentsTask(taskId)
+            val outcome = if (removed) "removed" else "FAILED to remove"
+            debugFileLogger.logInfo(LOG_TAG, "$outcome Recents task $taskId ($packageName)")
+        }
     }
 
     /** The device's current default home/launcher package - always protected, whichever app it is. */
@@ -195,5 +227,7 @@ class TaskKillerCoordinator(
 
         const val VIBRATION_DURATION_MS = 50L
         const val VIBRATION_AMPLITUDE = 130
+
+        const val LOG_TAG = "Killer"
     }
 }

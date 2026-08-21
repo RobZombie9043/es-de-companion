@@ -503,6 +503,7 @@ class AppContainer(context: Context) {
             observeLidWakeGuardEnabled = observeLidWakeGuardEnabledUseCase,
             setLidWakeGuardEnabled = setLidWakeGuardEnabledUseCase,
             observeHallSensorCalibration = observeHallSensorCalibrationUseCase,
+            debugFileLogger = debugFileLogger,
         )
 
     private val autoFpsCoordinator =
@@ -510,6 +511,7 @@ class AppContainer(context: Context) {
             observeAutoFpsEnabled = observeAutoFpsEnabledUseCase,
             setAutoFpsEnabled = setAutoFpsEnabledUseCase,
             observeAutoFpsTriggerPackages = observeAutoFpsTriggerPackagesUseCase,
+            debugFileLogger = debugFileLogger,
         )
 
     private val taskKillerCoordinator =
@@ -517,6 +519,7 @@ class AppContainer(context: Context) {
             observeTaskKillerEnabled = observeTaskKillerEnabledUseCase,
             setTaskKillerEnabled = setTaskKillerEnabledUseCase,
             observeTaskKillerExcludedPackages = observeTaskKillerExcludedPackagesUseCase,
+            debugFileLogger = debugFileLogger,
         )
 
     private val volumeSyncCoordinator =

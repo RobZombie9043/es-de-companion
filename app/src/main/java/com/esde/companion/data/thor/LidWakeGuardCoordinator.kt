@@ -8,6 +8,7 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
+import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.thor.accessibility.CompanionAccessibilityService
 import com.esde.companion.data.thor.sensor.HallSensorReader
 import com.esde.companion.domain.model.HallSensorCalibration
@@ -44,6 +45,7 @@ class LidWakeGuardCoordinator(
     private val observeLidWakeGuardEnabled: ObserveLidWakeGuardEnabledUseCase,
     private val setLidWakeGuardEnabled: SetLidWakeGuardEnabledUseCase,
     private val observeHallSensorCalibration: ObserveHallSensorCalibrationUseCase,
+    private val debugFileLogger: DebugFileLogger,
 ) {
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val hallSensorReader = HallSensorReader(sensorManager)
@@ -113,16 +115,39 @@ class LidWakeGuardCoordinator(
         val openValue = current.openValue ?: return
 
         hallSensorReader.readOnce(sensorType, SENSOR_READ_TIMEOUT_MS, handler) { reading ->
-            val readsClosed = reading != null && LidWakeGuardDecision.isReadingClosed(reading, closedValue, openValue)
-            val shouldLock =
-                LidWakeGuardDecision.shouldLock(
-                    guardEnabled = true,
-                    isCalibrated = true,
-                    sensorReadsClosed = readsClosed,
-                )
-            if (shouldLock) {
-                CompanionAccessibilityService.requestLock()
-            }
+            onSensorRead(reading, closedValue, openValue)
+        }
+    }
+
+    /**
+     * Logs the same four outcomes as Asgard's `LidWakeGuardReactor.onScreenOn`/`GuardAction`
+     * (timeout/open/locked/lock-failed), via [DebugFileLogger.logInfo] rather than a separate
+     * per-feature event store - see CLAUDE.md's Debug Logging note.
+     */
+    @Suppress("ReturnCount")
+    private fun onSensorRead(
+        reading: Float?,
+        closedValue: Float,
+        openValue: Float,
+    ) {
+        if (reading == null) {
+            debugFileLogger.logInfo(LOG_TAG, "sensor read timed out, ignoring screen-on")
+            return
+        }
+        val shouldLock =
+            LidWakeGuardDecision.shouldLock(
+                guardEnabled = true,
+                isCalibrated = true,
+                sensorReadsClosed = LidWakeGuardDecision.isReadingClosed(reading, closedValue, openValue),
+            )
+        if (!shouldLock) {
+            debugFileLogger.logInfo(LOG_TAG, "lid reads open (reading=$reading), ignoring screen-on")
+            return
+        }
+        if (CompanionAccessibilityService.requestLock()) {
+            debugFileLogger.logInfo(LOG_TAG, "locked screen (reading=$reading)")
+        } else {
+            debugFileLogger.logInfo(LOG_TAG, "lock failed - accessibility service not bound (reading=$reading)")
         }
     }
 
@@ -131,5 +156,7 @@ class LidWakeGuardCoordinator(
 
         /** Matches Asgard's `GuardPrefs.DEFAULT_TIMEOUT_MS`. */
         const val SENSOR_READ_TIMEOUT_MS = 2000L
+
+        const val LOG_TAG = "Guard"
     }
 }

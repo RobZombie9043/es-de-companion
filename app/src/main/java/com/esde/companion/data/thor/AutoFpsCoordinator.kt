@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
 import android.os.HandlerThread
+import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.thor.accessibility.CompanionAccessibilityService
 import com.esde.companion.domain.thor.RefreshRateDecision
 import com.esde.companion.domain.thor.RefreshRateDecisionResult
@@ -45,6 +46,7 @@ class AutoFpsCoordinator(
     private val observeAutoFpsEnabled: ObserveAutoFpsEnabledUseCase,
     private val setAutoFpsEnabled: SetAutoFpsEnabledUseCase,
     private val observeAutoFpsTriggerPackages: ObserveAutoFpsTriggerPackagesUseCase,
+    private val debugFileLogger: DebugFileLogger,
 ) {
     private val workerThread = HandlerThread("AutoFpsCoordinator").apply { start() }
     private val handler = Handler(workerThread.looper)
@@ -125,13 +127,14 @@ class AutoFpsCoordinator(
             RefreshRateDecisionResult.ENTER_HIGH_REFRESH -> {
                 cancelPendingRevert()
                 if (!highRefreshActive) {
-                    RefreshRateController.setHighRefreshRate()
+                    val succeeded = RefreshRateController.setHighRefreshRate()
+                    logSwitch(succeeded, entering = true, packageName)
                     highRefreshActive = true
                 }
             }
 
             RefreshRateDecisionResult.SCHEDULE_REVERT_CHECK -> {
-                val runnable = Runnable { reconcile() }
+                val runnable = Runnable { reconcile(packageName) }
                 pendingRevert = runnable
                 handler.postDelayed(runnable, REVERT_DEBOUNCE_MS)
             }
@@ -140,12 +143,30 @@ class AutoFpsCoordinator(
         }
     }
 
-    private fun reconcile() {
+    private fun reconcile(lastSeenPackage: String) {
         pendingRevert = null
         val current = CompanionAccessibilityService.currentForegroundPackage()
         if (current != null && current in triggerPackages) return // false alarm - still in a trigger app
-        RefreshRateController.setNormalRefreshRate()
+        val succeeded = RefreshRateController.setNormalRefreshRate()
+        logSwitch(succeeded, entering = false, current ?: lastSeenPackage)
         highRefreshActive = false
+    }
+
+    /** Same three outcomes as Asgard's `RefreshRateAction` (`ENTERED_HIGH_REFRESH`/
+     * `RETURNED_NORMAL_REFRESH`/`WRITE_FAILED`), logged via [DebugFileLogger.logInfo] instead of
+     * a separate per-feature event store - see CLAUDE.md's Debug Logging note. */
+    private fun logSwitch(
+        succeeded: Boolean,
+        entering: Boolean,
+        packageName: String,
+    ) {
+        val outcome =
+            when {
+                !succeeded -> "FAILED to write refresh rate"
+                entering -> "entered high refresh"
+                else -> "returned to normal refresh"
+            }
+        debugFileLogger.logInfo(LOG_TAG, "$outcome ($packageName)")
     }
 
     private fun cancelPendingRevert() {
@@ -168,5 +189,6 @@ class AutoFpsCoordinator(
     // display) never reaches onForegroundPackage in the first place.
     private companion object {
         const val REVERT_DEBOUNCE_MS = 700L
+        const val LOG_TAG = "AutoFPS"
     }
 }
