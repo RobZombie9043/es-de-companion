@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -46,7 +48,6 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Movie
@@ -60,6 +61,7 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.filled.ShieldMoon
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -1941,7 +1943,7 @@ private fun LidWakeGuardSetting(state: LidWakeGuardSettingsState) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SettingsLabel(icon = Icons.Filled.Lock, text = "Lid Wake Guard")
+            SettingsLabel(icon = Icons.Filled.ShieldMoon, text = "Lid Wake Guard")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1952,6 +1954,7 @@ private fun LidWakeGuardSetting(state: LidWakeGuardSettingsState) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
+                Spacer(modifier = Modifier.width(16.dp))
                 Switch(
                     checked = state.enabled,
                     // Turning ON requires the accessibility grant (the lock action needs it) -
@@ -2045,6 +2048,7 @@ private fun AutoFpsSetting(state: AutoFpsSettingsState) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
+                Spacer(modifier = Modifier.width(16.dp))
                 Switch(
                     checked = state.enabled,
                     // Same accessibility-grant gating as Lid Wake Guard's switch - see that
@@ -2097,6 +2101,7 @@ private fun TaskKillerSetting(state: TaskKillerSettingsState) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
+                Spacer(modifier = Modifier.width(16.dp))
                 Switch(
                     checked = state.enabled,
                     enabled = state.enabled || state.accessibilityGranted,
@@ -2147,6 +2152,7 @@ private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
+                Spacer(modifier = Modifier.width(16.dp))
                 Switch(
                     checked = state.enabled,
                     enabled = state.enabled || state.accessibilityGranted,
