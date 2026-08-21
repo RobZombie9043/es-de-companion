@@ -391,6 +391,23 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
+                            // Fed into each ViewModel's onOverlayVisibilityChanged below so its
+                            // own screensaver-hold logic (resolveAchievementsGame/System) only
+                            // freezes the displayed game/system while that exact screen is
+                            // genuinely on screen, matching these AnimatedVisibility conditions.
+                            val retroAchievementsGameVisible =
+                                showRetroAchievementsOverlay && mainScreenActive &&
+                                    heldRetroAchievementsFabMode == RetroAchievementsFabMode.Game
+                            val retroAchievementsSystemVisible =
+                                showRetroAchievementsOverlay && mainScreenActive &&
+                                    heldRetroAchievementsFabMode == RetroAchievementsFabMode.System
+                            LaunchedEffect(retroAchievementsGameVisible) {
+                                retroAchievementsViewModel.onOverlayVisibilityChanged(retroAchievementsGameVisible)
+                            }
+                            LaunchedEffect(retroAchievementsSystemVisible) {
+                                systemGamesViewModel.onOverlayVisibilityChanged(retroAchievementsSystemVisible)
+                            }
+
                             val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
 
                             val isActivityVisible by produceState(initialValue = true) {
@@ -789,9 +806,7 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 AnimatedVisibility(
-                                    visible =
-                                        showRetroAchievementsOverlay && mainScreenActive &&
-                                            heldRetroAchievementsFabMode == RetroAchievementsFabMode.Game,
+                                    visible = retroAchievementsGameVisible,
                                     enter = fadeIn(),
                                     exit = fadeOut(),
                                 ) {
@@ -804,9 +819,7 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 AnimatedVisibility(
-                                    visible =
-                                        showRetroAchievementsOverlay && mainScreenActive &&
-                                            heldRetroAchievementsFabMode == RetroAchievementsFabMode.System,
+                                    visible = retroAchievementsSystemVisible,
                                     enter = fadeIn(),
                                     exit = fadeOut(),
                                 ) {

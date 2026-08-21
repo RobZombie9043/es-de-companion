@@ -49,7 +49,7 @@ private data class CurrentGame(val reference: GameReference, val name: String)
  * [collectLatest] cancels an in-flight resolve/fetch as soon as the game or sign-in state
  * moves on, rather than letting a stale network call finish and overwrite newer state.
  */
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "TooManyFunctions")
 class RetroAchievementsViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
@@ -60,10 +60,17 @@ class RetroAchievementsViewModel(
     private val setGameMatchOverride: SetGameMatchOverrideUseCase,
     private val getAchievementComments: GetAchievementCommentsUseCase,
 ) : ViewModel() {
+    // Set by MainActivity via onOverlayVisibilityChanged, reflecting whether this screen is
+    // actually on screen right now (its AnimatedVisibility condition) - see
+    // resolveAchievementsGame's kdoc for why the screensaver-hold logic needs this rather than
+    // just tracking [currentGame]'s previous value.
+    private val overlayVisible = MutableStateFlow(false)
+
     private val currentGameContext =
         ObserveScreensaverAwareContextUseCase(
             observeConnectionState,
             observeUpdateAchievementsOnScreensaverEnabled,
+            { overlayVisible },
             ::resolveAchievementsGame,
         )
 
@@ -161,6 +168,11 @@ class RetroAchievementsViewModel(
 
     /** Forces the next fetch to bypass [RetroAchievementsDetailUseCases.getAchievementSummary]'s cache. */
     fun onRefreshRequested() = forceRefresh.request()
+
+    /** Called by MainActivity whenever this screen's own on-screen visibility changes. */
+    fun onOverlayVisibilityChanged(visible: Boolean) {
+        overlayVisible.value = visible
+    }
 
     private suspend fun resolveAndFetch(
         signedIn: Boolean,

@@ -82,10 +82,15 @@ class RetroAchievementsSystemGamesViewModel(
     private val getUserGameProgress: GetUserGameProgressUseCase,
     private val getAchievementComments: GetAchievementCommentsUseCase,
 ) : ViewModel() {
+    // Set by MainActivity via onOverlayVisibilityChanged - see resolveAchievementsSystem's kdoc
+    // (via resolveAchievementsGame's) for why the screensaver-hold logic needs this.
+    private val overlayVisible = MutableStateFlow(false)
+
     private val currentSystemContext =
         ObserveScreensaverAwareContextUseCase(
             observeConnectionState,
             observeUpdateAchievementsOnScreensaverEnabled,
+            { overlayVisible },
             ::resolveAchievementsSystem,
         )
 
@@ -182,6 +187,11 @@ class RetroAchievementsSystemGamesViewModel(
 
     /** Forces the next fetch to bypass [GetGameAchievementSummaryUseCase]'s cache. */
     fun onRefreshRequested() = forceRefresh.request()
+
+    /** Called by MainActivity whenever this screen's own on-screen visibility changes. */
+    fun onOverlayVisibilityChanged(visible: Boolean) {
+        overlayVisible.value = visible
+    }
 
     private suspend fun loadSelectedGame(game: RetroAchievementsCandidateGame?) {
         achievementDisplay.onTargetChanged()

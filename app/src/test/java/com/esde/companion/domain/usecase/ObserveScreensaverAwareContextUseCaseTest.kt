@@ -155,22 +155,28 @@ class ObserveScreensaverAwareContextUseCaseTest {
         events: Flow<EsdeEvent>,
         onboardingRepository: FakeOnboardingRepository,
         scope: CoroutineScope,
-        resolve: (AppState?, String?, Boolean) -> String?,
+        resolve: (AppState?, String?, Boolean, Boolean) -> String?,
+        visible: Flow<Boolean> = flowOf(true),
     ): ObserveScreensaverAwareContextUseCase<String> {
         val logRepository = FakeEsdeLogRepository(events)
         val observeAppState = ObserveAppStateUseCase(logRepository, scope)
         val observeConnectionState = ObserveConnectionStateUseCase(logRepository, observeAppState)
         val observeUpdateOnScreensaver = ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
-        return ObserveScreensaverAwareContextUseCase(observeConnectionState, observeUpdateOnScreensaver, resolve)
+        return ObserveScreensaverAwareContextUseCase(
+            observeConnectionState,
+            observeUpdateOnScreensaver,
+            { visible },
+            resolve,
+        )
     }
 
     /** Trivial resolver independent of resolveAchievementsGame/resolveAchievementsSystem's own logic (see
      * RetroAchievementsScreensaverFreezeTest) - just enough to exercise this class's own combine/scan wiring. */
-    private val holdPreviousDuringScreensaverWhenDisabled: (AppState?, String?, Boolean) -> String? =
-        { appState, previous, updateOnScreensaver ->
+    private val holdPreviousDuringScreensaverWhenDisabled: (AppState?, String?, Boolean, Boolean) -> String? =
+        { appState, previous, updateOnScreensaver, visible ->
             when {
                 appState == null -> null
-                appState is AppState.Screensaver && !updateOnScreensaver -> previous
+                visible && appState is AppState.Screensaver && !updateOnScreensaver -> previous
                 else -> appState.toString()
             }
         }
