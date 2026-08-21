@@ -28,7 +28,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.BrandingWatermark
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Launch
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AspectRatio
@@ -46,10 +50,8 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Nightlight
@@ -67,8 +69,6 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VolumeDown
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -751,7 +751,7 @@ private fun VideoAudioSetting(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SettingsLabel(icon = Icons.Filled.VolumeUp, text = "Video Audio")
+            SettingsLabel(icon = Icons.AutoMirrored.Filled.VolumeUp, text = "Video Audio")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1011,7 +1011,7 @@ private val ScreenBehavior.icon: ImageVector
             ScreenBehavior.Nothing -> Icons.Filled.Brightness7
             ScreenBehavior.Dim -> Icons.Filled.Brightness4
             ScreenBehavior.Black -> Icons.Filled.Brightness1
-            ScreenBehavior.GameManual -> Icons.Filled.MenuBook
+            ScreenBehavior.GameManual -> Icons.AutoMirrored.Filled.MenuBook
         }
 
 private val ScreenBehavior.label: String
@@ -1231,9 +1231,9 @@ private val FabType.icon: ImageVector
         when (this) {
             FabType.Music -> Icons.Filled.MusicNote
             FabType.Settings -> Icons.Filled.Menu
-            FabType.GameManual -> Icons.Filled.MenuBook
+            FabType.GameManual -> Icons.AutoMirrored.Filled.MenuBook
             FabType.AppDrawer -> Icons.Filled.Apps
-            FabType.CustomApp -> Icons.Filled.Launch
+            FabType.CustomApp -> Icons.AutoMirrored.Filled.Launch
             FabType.None -> Icons.Filled.Clear
         }
 
@@ -1602,8 +1602,8 @@ private fun MusicDuckingModeSetting(
 private val MusicDuckingMode.icon: ImageVector
     get() =
         when (this) {
-            MusicDuckingMode.Unchanged -> Icons.Filled.VolumeUp
-            MusicDuckingMode.LowerVolume -> Icons.Filled.VolumeDown
+            MusicDuckingMode.Unchanged -> Icons.AutoMirrored.Filled.VolumeUp
+            MusicDuckingMode.LowerVolume -> Icons.AutoMirrored.Filled.VolumeDown
             MusicDuckingMode.Pause -> Icons.Filled.Pause
         }
 
@@ -2140,7 +2140,7 @@ private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SettingsLabel(icon = Icons.Filled.VolumeUp, text = "Volume Control")
+            SettingsLabel(icon = Icons.AutoMirrored.Filled.VolumeUp, text = "Volume Control")
             Text(
                 text = "Customize the volume button behavior",
                 style = MaterialTheme.typography.bodyMedium,
