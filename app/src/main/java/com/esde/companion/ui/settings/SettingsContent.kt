@@ -2218,7 +2218,7 @@ private fun VolumeControlModePicker(
                     onSelectionChanged(VolumeSyncMode.FollowFocus)
                 },
                 shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-            ) { Text("Follow Focus") }
+            ) { Text("Focus") }
         }
         Text(
             text =
