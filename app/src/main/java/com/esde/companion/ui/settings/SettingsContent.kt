@@ -1883,8 +1883,8 @@ internal data class VolumeSyncSettingsState(
 )
 
 /**
- * Thor Settings (Ayn Thor-only, see CLAUDE.md) - Lid Wake Guard, Auto FPS Mode, Task Killer,
- * and Volume Sync. Only reachable when [com.esde.companion.data.thor.isAynThorDevice] is true
+ * Thor Settings (Ayn Thor-only, see CLAUDE.md) - Auto FPS Mode, Lid Wake Guard, Task Killer,
+ * and Volume Control. Only reachable when [com.esde.companion.data.thor.isAynThorDevice] is true
  * (see `SettingsMenuHome`'s filtering in `LongPressSettingsMenu`); the `when` branch routing
  * here still exists unconditionally, same forcing-function reasoning as every other
  * [SettingsCategory].
@@ -1904,8 +1904,8 @@ internal fun ThorSettingsContent(
                 .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        LidWakeGuardSetting(lidWakeGuard)
         AutoFpsSetting(autoFps)
+        LidWakeGuardSetting(lidWakeGuard)
         TaskKillerSetting(taskKiller)
         VolumeSyncSetting(volumeSync)
     }
@@ -2131,7 +2131,6 @@ private fun TaskKillerSetting(state: TaskKillerSettingsState) {
 @Composable
 private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
     val context = LocalContext.current
-    val hapticFeedback = LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SettingsItemShape,
@@ -2141,27 +2140,25 @@ private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SettingsLabel(icon = Icons.Filled.VolumeUp, text = "Volume Sync")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Keep both screens' volume in step with each other",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Switch(
-                    checked = state.enabled,
-                    enabled = state.enabled || state.accessibilityGranted,
-                    onCheckedChange = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        state.onEnabledChanged(it)
-                    },
-                )
-            }
+            SettingsLabel(icon = Icons.Filled.VolumeUp, text = "Volume Control")
+            Text(
+                text = "Customize the volume button behavior",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            VolumeControlModePicker(
+                enabled = state.enabled,
+                mode = state.mode,
+                selectionEnabled = state.enabled || state.accessibilityGranted,
+                onSelectionChanged = { selection ->
+                    when (selection) {
+                        null -> state.onEnabledChanged(false)
+                        else -> {
+                            state.onModeChanged(selection)
+                            state.onEnabledChanged(true)
+                        }
+                    }
+                },
+            )
             if (!state.accessibilityGranted) {
                 AccessibilityGrantRow(
                     text = "Accessibility service not granted - required to intercept the volume buttons",
@@ -2170,7 +2167,7 @@ private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
             }
             if (!state.privilegedServiceAvailable) {
                 Text(
-                    text = "Privileged settings service not found on this firmware - Volume Sync is unavailable",
+                    text = "Privileged settings service not found on this firmware - Volume Control is unavailable",
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else if (!state.secondarySettingPresent) {
@@ -2179,43 +2176,54 @@ private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            if (state.enabled) {
-                VolumeSyncModePicker(mode = state.mode, onModeChanged = state.onModeChanged)
-            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VolumeSyncModePicker(
+private fun VolumeControlModePicker(
+    enabled: Boolean,
     mode: VolumeSyncMode,
-    onModeChanged: (VolumeSyncMode) -> Unit,
+    selectionEnabled: Boolean,
+    onSelectionChanged: (VolumeSyncMode?) -> Unit,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    val selection = if (enabled) mode else null
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = "Mode", style = MaterialTheme.typography.labelLarge)
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             SegmentedButton(
-                selected = mode == VolumeSyncMode.Linked,
+                selected = selection == null,
+                enabled = selectionEnabled,
                 onClick = {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onModeChanged(VolumeSyncMode.Linked)
+                    onSelectionChanged(null)
                 },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+            ) { Text("None") }
+            SegmentedButton(
+                selected = selection == VolumeSyncMode.Linked,
+                enabled = selectionEnabled,
+                onClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onSelectionChanged(VolumeSyncMode.Linked)
+                },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
             ) { Text("Synced") }
             SegmentedButton(
-                selected = mode == VolumeSyncMode.FollowFocus,
+                selected = selection == VolumeSyncMode.FollowFocus,
+                enabled = selectionEnabled,
                 onClick = {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onModeChanged(VolumeSyncMode.FollowFocus)
+                    onSelectionChanged(VolumeSyncMode.FollowFocus)
                 },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
             ) { Text("Follow Focus") }
         }
         Text(
             text =
-                when (mode) {
+                when (selection) {
+                    null -> "Volume buttons use standard system behavior."
                     VolumeSyncMode.Linked -> "Volume buttons control both screens together."
                     VolumeSyncMode.FollowFocus -> "Volume buttons control the screen currently in focus."
                 },
