@@ -1,5 +1,7 @@
 package com.esde.companion.data.retroachievements
 
+import com.esde.companion.domain.model.AchievementComment
+import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.ProgressStatus
@@ -14,6 +16,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+
+private typealias CommentsApiResult = RetroAchievementsApiResult<List<AchievementComment>>
 
 class RetroAchievementsRepositoryImplTest {
     private class FakeRetroAchievementsApi(
@@ -47,6 +51,8 @@ class RetroAchievementsRepositoryImplTest {
             requestedUsername = username
             return progressResult ?: error("not used in this test")
         }
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
     }
 
     private class CountingGameInfoApi(
@@ -72,6 +78,35 @@ class RetroAchievementsRepositoryImplTest {
             offset: Int,
             count: Int,
         ) = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+    }
+
+    private class FakeCommentsApi(
+        private val commentsResult: CommentsApiResult,
+    ) : RetroAchievementsApi {
+        var callCount = 0
+            private set
+
+        override suspend fun getUserSummary(username: String) = error("not used in this test")
+
+        override suspend fun getGameList(consoleId: Long) = error("not used in this test")
+
+        override suspend fun getGameInfoAndUserProgress(
+            username: String,
+            gameId: Long,
+        ) = error("not used in this test")
+
+        override suspend fun getUserCompletionProgress(
+            username: String,
+            offset: Int,
+            count: Int,
+        ) = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long): CommentsApiResult {
+            callCount++
+            return commentsResult
+        }
     }
 
     private class FakeGameListCacheStore : GameListCacheStore {
@@ -112,6 +147,7 @@ class RetroAchievementsRepositoryImplTest {
         gameListCache = GameListCache(FakeGameListCacheStore()),
         userProgressCache = UserProgressCache(FakeUserProgressCacheStore()),
         achievementSummaryCache = AchievementSummaryCache(),
+        achievementCommentsCache = AchievementCommentsCache(),
         apiFactory = { api },
     )
 
@@ -270,5 +306,51 @@ class RetroAchievementsRepositoryImplTest {
 
             assertEquals(mapOf(1L to progress), result)
             assertEquals("player1", fakeApi.requestedUsername)
+        }
+
+    @Test
+    fun `getAchievementComments reports an empty list when nobody is signed in`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi(), signedInAs = null)
+
+            val result = repository.getAchievementComments(achievementId = 1L)
+
+            assertEquals(AchievementCommentsFetchResult.Success(emptyList()), result)
+        }
+
+    @Test
+    fun `getAchievementComments maps a successful fetch to Success`() =
+        runTest {
+            val comment = AchievementComment("player1", 0L, "gg")
+            val fakeApi = FakeCommentsApi(RetroAchievementsApiResult.Success(listOf(comment)))
+            val repository = repositoryWith(fakeApi)
+
+            val result = repository.getAchievementComments(achievementId = 1L)
+
+            assertEquals(AchievementCommentsFetchResult.Success(listOf(comment)), result)
+        }
+
+    @Test
+    fun `getAchievementComments maps an api error to NetworkError with the same message`() =
+        runTest {
+            val fakeApi = FakeCommentsApi(RetroAchievementsApiResult.Error("offline"))
+            val repository = repositoryWith(fakeApi)
+
+            val result = repository.getAchievementComments(achievementId = 1L)
+
+            assertEquals(AchievementCommentsFetchResult.NetworkError("offline"), result)
+        }
+
+    @Test
+    fun `getAchievementComments caches a successful fetch and does not re-query the api on a second call`() =
+        runTest {
+            val comment = AchievementComment("player1", 0L, "gg")
+            val fakeApi = FakeCommentsApi(RetroAchievementsApiResult.Success(listOf(comment)))
+            val repository = repositoryWith(fakeApi)
+
+            repository.getAchievementComments(achievementId = 1L)
+            repository.getAchievementComments(achievementId = 1L)
+
+            assertEquals(1, fakeApi.callCount)
         }
 }

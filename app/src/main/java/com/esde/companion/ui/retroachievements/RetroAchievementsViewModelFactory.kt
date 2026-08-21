@@ -26,6 +26,7 @@ class RetroAchievementsViewModelFactory(
             detailUseCases = detailUseCases,
             searchGames = appContainer.searchRetroAchievementsGamesUseCase,
             setGameMatchOverride = appContainer.setGameMatchOverrideUseCase,
+            getAchievementComments = appContainer.getAchievementCommentsUseCase,
         ) as T
     }
 }

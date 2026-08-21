@@ -48,6 +48,8 @@ class GameListCacheTest {
             offset: Int,
             count: Int,
         ) = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
     }
 
     private val console = RetroAchievementsConsole.Snes

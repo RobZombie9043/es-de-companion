@@ -58,6 +58,8 @@ class UserProgressCacheTest {
             callCount++
             return result
         }
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
     }
 
     private val now = Instant.parse("2026-08-12T12:00:00Z")

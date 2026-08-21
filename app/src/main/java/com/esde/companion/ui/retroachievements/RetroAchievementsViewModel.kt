@@ -11,6 +11,7 @@ import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.resolveAchievementsGame
+import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
@@ -58,6 +59,7 @@ class RetroAchievementsViewModel(
     private val detailUseCases: RetroAchievementsDetailUseCases,
     private val searchGames: SearchRetroAchievementsGamesUseCase,
     private val setGameMatchOverride: SetGameMatchOverrideUseCase,
+    private val getAchievementComments: GetAchievementCommentsUseCase,
 ) : ViewModel() {
     private val currentGame =
         combine(
@@ -95,6 +97,14 @@ class RetroAchievementsViewModel(
     private val _hashSupport = MutableStateFlow<HashSupportState>(HashSupportState.Hidden)
     val hashSupport: StateFlow<HashSupportState> = _hashSupport
 
+    // Single-expand accordion for the achievement list's tap-to-show-comments row - see
+    // AchievementRow/AchievementSummaryContent.kt. The achievementId and its comments fetch
+    // state are bundled into one value, not two separate StateFlows - see
+    // ExpandedAchievementComments' kdoc for the torn-read bug that caused. Reset to null in
+    // resolveAndFetch whenever the underlying game changes, same as lastGameId/hashSupport below.
+    private val _expanded = MutableStateFlow<ExpandedAchievementComments?>(null)
+    val expanded: StateFlow<ExpandedAchievementComments?> = _expanded
+
     // Set at the start of every resolveAndFetch call (a single collectLatest coroutine, so
     // no concurrent-write race) - the correction picker's search scope and onGameCorrected's
     // target both need "which game is this screen currently about", which resolution/fetch
@@ -120,6 +130,13 @@ class RetroAchievementsViewModel(
             combine(observeCredentials(), currentGame, refreshTrigger) { credentials, game, _ ->
                 (credentials != null) to game
             }.collectLatest { (signedIn, game) -> resolveAndFetch(signedIn, game) }
+        }
+        viewModelScope.launch {
+            _expanded.map { it?.achievementId }.distinctUntilChanged().collectLatest { achievementId ->
+                if (achievementId == null) return@collectLatest
+                val comments = getAchievementComments(achievementId).toCommentsFetchState()
+                _expanded.value = ExpandedAchievementComments(achievementId, comments)
+            }
         }
     }
 
@@ -164,6 +181,21 @@ class RetroAchievementsViewModel(
         _hashSupport.value = HashSupportState.Hidden
     }
 
+    /**
+     * Toggles the tapped achievement's comments section open/closed - only one open at a time.
+     * Sets the new achievementId and a [CommentsFetchState.Loading] placeholder in the same
+     * atomic write (see [ExpandedAchievementComments]'s kdoc), so the row never briefly renders
+     * with a mismatched previous achievement's comments content.
+     */
+    fun onAchievementTapped(achievementId: Long) {
+        _expanded.value =
+            if (_expanded.value?.achievementId == achievementId) {
+                null
+            } else {
+                ExpandedAchievementComments(achievementId, CommentsFetchState.Loading)
+            }
+    }
+
     /** Forces the next fetch to bypass [RetroAchievementsDetailUseCases.getAchievementSummary]'s cache. */
     fun onRefreshRequested() {
         pendingForceRefresh = true
@@ -179,6 +211,7 @@ class RetroAchievementsViewModel(
         _searchQuery.value = ""
         _searchResults.value = emptyList()
         _hashSupport.value = HashSupportState.Hidden
+        _expanded.value = null
 
         if (!signedIn) {
             _resolution.value = RetroAchievementsResolutionState.NotSignedIn

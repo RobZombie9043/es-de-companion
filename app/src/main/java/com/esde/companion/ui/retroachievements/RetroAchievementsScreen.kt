@@ -73,9 +73,8 @@ fun RetroAchievementsScreen(
 ) {
     val resolution by viewModel.resolution.collectAsStateWithLifecycle()
     val fetch by viewModel.fetch.collectAsStateWithLifecycle()
-    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
-    val filter by viewModel.filter.collectAsStateWithLifecycle()
-    val displayField by viewModel.displayField.collectAsStateWithLifecycle()
+    val listControls = rememberAchievementListControls(viewModel, overlayOpacityPercent)
+    val expansion = rememberAchievementExpansionState(viewModel)
     var showCorrectionDialog by remember { mutableStateOf(false) }
 
     // Only composed while this screen is showing (AnimatedVisibility in MainActivity), so
@@ -126,17 +125,11 @@ fun RetroAchievementsScreen(
                         onRequestRefresh = viewModel::onRefreshRequested,
                     )
                 RetroAchievementsTopBar(onExit = onExit, menuActions = menuActions)
-                val listControls =
-                    AchievementListControls(
-                        sort = DropdownSelection(sortOrder, viewModel::onSortOrderChanged),
-                        filter = DropdownSelection(filter, viewModel::onFilterChanged),
-                        display = DropdownSelection(displayField, viewModel::onDisplayFieldChanged),
-                        overlayOpacityPercent = overlayOpacityPercent,
-                    )
                 RetroAchievementsBody(
                     resolution = resolution,
                     fetch = fetch,
                     listControls = listControls,
+                    expansion = expansion,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -148,6 +141,36 @@ fun RetroAchievementsScreen(
         showCorrectionDialog = showCorrectionDialog,
         onCorrectionDialogDismissed = { showCorrectionDialog = false },
     )
+}
+
+/**
+ * Collects [RetroAchievementsViewModel]'s sort/filter/display state into one
+ * [AchievementListControls] - pulled out so [RetroAchievementsScreen] itself stays short.
+ */
+@Composable
+private fun rememberAchievementListControls(
+    viewModel: RetroAchievementsViewModel,
+    overlayOpacityPercent: Int,
+): AchievementListControls {
+    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
+    val filter by viewModel.filter.collectAsStateWithLifecycle()
+    val displayField by viewModel.displayField.collectAsStateWithLifecycle()
+    return AchievementListControls(
+        sort = DropdownSelection(sortOrder, viewModel::onSortOrderChanged),
+        filter = DropdownSelection(filter, viewModel::onFilterChanged),
+        display = DropdownSelection(displayField, viewModel::onDisplayFieldChanged),
+        overlayOpacityPercent = overlayOpacityPercent,
+    )
+}
+
+/**
+ * Collects [RetroAchievementsViewModel]'s expand/comments state into one
+ * [AchievementExpansionState] - pulled out so [RetroAchievementsScreen] itself stays short.
+ */
+@Composable
+private fun rememberAchievementExpansionState(viewModel: RetroAchievementsViewModel): AchievementExpansionState {
+    val expanded by viewModel.expanded.collectAsStateWithLifecycle()
+    return AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped)
 }
 
 /** Both non-inline dialogs this screen can show, pulled out so [RetroAchievementsScreen] itself stays short. */
@@ -279,6 +302,7 @@ private fun RetroAchievementsBody(
     resolution: RetroAchievementsResolutionState,
     fetch: RetroAchievementsFetchState,
     listControls: AchievementListControls,
+    expansion: AchievementExpansionState,
     modifier: Modifier,
 ) {
     when (resolution) {
@@ -296,6 +320,7 @@ private fun RetroAchievementsBody(
             RetroAchievementsFetchBody(
                 fetch = fetch,
                 listControls = listControls,
+                expansion = expansion,
                 isHashMatched = resolution.method == MatchMethod.RomHash,
                 modifier = modifier,
             )

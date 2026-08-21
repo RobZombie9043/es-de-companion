@@ -1,5 +1,6 @@
 package com.esde.companion.data.retroachievements
 
+import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
@@ -26,6 +27,7 @@ class RetroAchievementsRepositoryImpl(
     private val gameListCache: GameListCache,
     private val userProgressCache: UserProgressCache,
     private val achievementSummaryCache: AchievementSummaryCache,
+    private val achievementCommentsCache: AchievementCommentsCache,
     private val apiFactory: (RetroAchievementsCredentials) -> RetroAchievementsApi,
 ) : RetroAchievementsRepository {
     override suspend fun validateCredentials(credentials: RetroAchievementsCredentials): RetroAchievementsAuthState {
@@ -63,6 +65,17 @@ class RetroAchievementsRepositoryImpl(
     override suspend fun getUserGameProgress(): Map<Long, UserGameProgress> {
         val credentials = currentCredentials() ?: return emptyMap()
         return userProgressCache.getProgress(credentials.username, apiFactory(credentials))
+    }
+
+    override suspend fun getAchievementComments(achievementId: Long): AchievementCommentsFetchResult {
+        val credentials = currentCredentials() ?: return AchievementCommentsFetchResult.Success(emptyList())
+        val api = apiFactory(credentials)
+        return achievementCommentsCache.getComments(achievementId) {
+            when (val result = api.getAchievementComments(achievementId)) {
+                is RetroAchievementsApiResult.Success -> AchievementCommentsFetchResult.Success(result.data)
+                is RetroAchievementsApiResult.Error -> AchievementCommentsFetchResult.NetworkError(result.message)
+            }
+        }
     }
 
     private suspend fun currentCredentials(): RetroAchievementsCredentials? {

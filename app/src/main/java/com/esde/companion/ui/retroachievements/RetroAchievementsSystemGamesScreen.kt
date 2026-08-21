@@ -383,6 +383,7 @@ private fun GameDetailPage(
     val sortOrder by viewModel.gameSortOrder.collectAsStateWithLifecycle()
     val filter by viewModel.gameFilter.collectAsStateWithLifecycle()
     val displayField by viewModel.gameDisplayField.collectAsStateWithLifecycle()
+    val expanded by viewModel.expanded.collectAsStateWithLifecycle()
     val listControls =
         AchievementListControls(
             sort = DropdownSelection(sortOrder, viewModel::onGameSortOrderChanged),
@@ -390,9 +391,15 @@ private fun GameDetailPage(
             display = DropdownSelection(displayField, viewModel::onGameDisplayFieldChanged),
             overlayOpacityPercent = overlayOpacityPercent,
         )
+    val expansion = AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped)
     Column(modifier = Modifier.fillMaxSize()) {
         GameDetailTopBar(onBack = onBack, onExit = onExit)
-        RetroAchievementsFetchBody(fetch = fetch, listControls = listControls, modifier = Modifier.fillMaxSize())
+        RetroAchievementsFetchBody(
+            fetch = fetch,
+            listControls = listControls,
+            expansion = expansion,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 

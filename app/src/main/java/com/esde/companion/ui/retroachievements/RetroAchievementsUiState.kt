@@ -1,5 +1,7 @@
 package com.esde.companion.ui.retroachievements
 
+import com.esde.companion.domain.model.AchievementComment
+import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.GameHashSupport
@@ -63,4 +65,40 @@ internal fun AchievementSummaryFetchResult.toFetchState(): RetroAchievementsFetc
         is AchievementSummaryFetchResult.Success -> RetroAchievementsFetchState.Loaded(summary)
         AchievementSummaryFetchResult.NotFound -> RetroAchievementsFetchState.NotFound
         is AchievementSummaryFetchResult.NetworkError -> RetroAchievementsFetchState.NetworkError(message)
+    }
+
+/**
+ * Backs the tap-to-expand comments section under an expanded [com.esde.companion.domain.model.AchievementItem]
+ * row - only meaningful while paired with an achievementId inside [ExpandedAchievementComments].
+ */
+sealed class CommentsFetchState {
+    data object Loading : CommentsFetchState()
+
+    data class Loaded(val comments: List<AchievementComment>) : CommentsFetchState()
+
+    data class NetworkError(val message: String) : CommentsFetchState()
+}
+
+/**
+ * Atomically pairs which achievement's comments section is expanded with that achievement's
+ * fetch state, in a single [kotlinx.coroutines.flow.StateFlow] value - both ViewModels
+ * originally exposed the achievementId and the fetch state as two separate `StateFlow`s, which
+ * update at different times (the id flips synchronously on tap, the fetch state resolves
+ * asynchronously one dispatch later). Compose could observe a torn combination of the two - the
+ * newly-expanding row's id, but the previously-expanded achievement's (possibly long) comments
+ * content - which visibly grew that row to fit the wrong content before shrinking back down
+ * once the real state arrived. Bundling both into one value written in a single atomic
+ * `StateFlow` update makes that torn read impossible: a row can never see an achievementId that
+ * doesn't match the comments it's paired with.
+ */
+data class ExpandedAchievementComments(
+    val achievementId: Long,
+    val comments: CommentsFetchState,
+)
+
+/** Shared by both ViewModels' comments-fetch logic - see [CommentsFetchState]'s kdoc. */
+internal fun AchievementCommentsFetchResult.toCommentsFetchState(): CommentsFetchState =
+    when (this) {
+        is AchievementCommentsFetchResult.Success -> CommentsFetchState.Loaded(comments)
+        is AchievementCommentsFetchResult.NetworkError -> CommentsFetchState.NetworkError(message)
     }

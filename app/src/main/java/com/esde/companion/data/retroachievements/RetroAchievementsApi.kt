@@ -1,5 +1,6 @@
 package com.esde.companion.data.retroachievements
 
+import com.esde.companion.domain.model.AchievementComment
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.UserGameProgress
@@ -32,6 +33,9 @@ interface RetroAchievementsApi {
         offset: Int,
         count: Int,
     ): RetroAchievementsApiResult<UserCompletionProgressPage>
+
+    /** [achievementId]'s wall comments, most recent page only (see `RetroClientRetroAchievementsApi`'s kdoc). */
+    suspend fun getAchievementComments(achievementId: Long): RetroAchievementsApiResult<List<AchievementComment>>
 }
 
 /**

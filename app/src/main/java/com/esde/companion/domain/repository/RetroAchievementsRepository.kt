@@ -1,5 +1,6 @@
 package com.esde.companion.domain.repository
 
+import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
@@ -43,4 +44,7 @@ interface RetroAchievementsRepository {
      * an error.
      */
     suspend fun getUserGameProgress(): Map<Long, UserGameProgress>
+
+    /** [achievementId]'s wall comments, already resolved through whatever caching the implementation applies. */
+    suspend fun getAchievementComments(achievementId: Long): AchievementCommentsFetchResult
 }

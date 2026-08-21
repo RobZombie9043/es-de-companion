@@ -16,6 +16,7 @@ import com.esde.companion.domain.model.filteredBySystemGameFilters
 import com.esde.companion.domain.model.resolveAchievementsSystem
 import com.esde.companion.domain.model.retroGameTypes
 import com.esde.companion.domain.model.sortedBySystemGameOrder
+import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
 import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
@@ -69,6 +70,7 @@ private data class CurrentSystem(val systemShortName: String, val systemFullName
  * the live-game flow. [load] additionally clears the selection whenever the browsed system
  * itself changes, so a stale drill-down can't survive past the system it belonged to.
  */
+@Suppress("LongParameterList")
 class RetroAchievementsSystemGamesViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
@@ -76,6 +78,7 @@ class RetroAchievementsSystemGamesViewModel(
     private val getSystemGames: GetRetroAchievementsSystemGamesUseCase,
     private val getAchievementSummary: GetGameAchievementSummaryUseCase,
     private val getUserGameProgress: GetUserGameProgressUseCase,
+    private val getAchievementComments: GetAchievementCommentsUseCase,
 ) : ViewModel() {
     private val currentSystem =
         combine(
@@ -132,6 +135,14 @@ class RetroAchievementsSystemGamesViewModel(
     private val _gameDisplayField = MutableStateFlow(AchievementDisplayField.UnlockRate)
     val gameDisplayField: StateFlow<AchievementDisplayField> = _gameDisplayField
 
+    // Single-expand accordion for the drill-down achievement list's tap-to-show-comments row -
+    // same shape as RetroAchievementsViewModel's equivalent, including bundling the achievementId
+    // and its comments fetch state into one atomic value - see ExpandedAchievementComments' kdoc
+    // for the torn-read bug that caused when they were two separate StateFlows. Reset to null in
+    // loadSelectedGame whenever the selected game changes (including closing the drill-down).
+    private val _expanded = MutableStateFlow<ExpandedAchievementComments?>(null)
+    val expanded: StateFlow<ExpandedAchievementComments?> = _expanded
+
     init {
         viewModelScope.launch {
             combine(observeCredentials(), currentSystem) { credentials, system -> (credentials != null) to system }
@@ -139,6 +150,13 @@ class RetroAchievementsSystemGamesViewModel(
         }
         viewModelScope.launch {
             selectedGame.collectLatest { game -> loadSelectedGame(game) }
+        }
+        viewModelScope.launch {
+            _expanded.map { it?.achievementId }.distinctUntilChanged().collectLatest { achievementId ->
+                if (achievementId == null) return@collectLatest
+                val comments = getAchievementComments(achievementId).toCommentsFetchState()
+                _expanded.value = ExpandedAchievementComments(achievementId, comments)
+            }
         }
     }
 
@@ -170,7 +188,22 @@ class RetroAchievementsSystemGamesViewModel(
         selectedGame.value = null
     }
 
+    /**
+     * Toggles the tapped achievement's comments section open/closed - only one open at a time.
+     * See [RetroAchievementsViewModel.onAchievementTapped]'s kdoc for why the achievementId and
+     * a [CommentsFetchState.Loading] placeholder are set in the same atomic write.
+     */
+    fun onAchievementTapped(achievementId: Long) {
+        _expanded.value =
+            if (_expanded.value?.achievementId == achievementId) {
+                null
+            } else {
+                ExpandedAchievementComments(achievementId, CommentsFetchState.Loading)
+            }
+    }
+
     private suspend fun loadSelectedGame(game: RetroAchievementsCandidateGame?) {
+        _expanded.value = null
         if (game == null) {
             _selectedGameFetch.value = RetroAchievementsFetchState.Idle
             return

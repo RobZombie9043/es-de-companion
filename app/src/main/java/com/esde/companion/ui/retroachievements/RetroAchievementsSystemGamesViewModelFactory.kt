@@ -20,6 +20,7 @@ class RetroAchievementsSystemGamesViewModelFactory(
             getSystemGames = appContainer.getRetroAchievementsSystemGamesUseCase,
             getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
             getUserGameProgress = appContainer.getUserGameProgressUseCase,
+            getAchievementComments = appContainer.getAchievementCommentsUseCase,
         ) as T
     }
 }

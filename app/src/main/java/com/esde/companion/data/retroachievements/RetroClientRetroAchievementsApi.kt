@@ -1,5 +1,6 @@
 package com.esde.companion.data.retroachievements
 
+import com.esde.companion.domain.model.AchievementComment
 import com.esde.companion.domain.model.AchievementItem
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
@@ -17,12 +18,14 @@ import org.json.JSONObject
 import org.retroachivements.api.RetroClient
 import org.retroachivements.api.data.RetroCredentials
 import org.retroachivements.api.data.pojo.ErrorResponse
+import org.retroachivements.api.data.pojo.comments.GetComments
 import org.retroachivements.api.data.pojo.game.GetGameInfoAndUserProgress
 import org.retroachivements.api.data.pojo.user.GetUserCompletionProgress
 import org.retroachivements.api.data.pojo.user.GetUserSummary
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -42,6 +45,15 @@ private val RA_TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:
 private const val GAME_EXTENDED_ENDPOINT = "https://retroachievements.org/API/API_GetGameExtended.php"
 private const val ACHIEVEMENT_TYPES_CONNECT_TIMEOUT_MS = 10_000
 private const val ACHIEVEMENT_TYPES_READ_TIMEOUT_MS = 15_000
+
+// Single page only - generous enough for a typical achievement's wall, no "load more" UI yet.
+// Revisit if a heavily-commented achievement ever needs pagination.
+private const val ACHIEVEMENT_COMMENTS_PAGE_SIZE = 50
+
+// RA's automated audit-log account - see getAchievementComments' kdoc for why its entries are filtered out.
+private const val RA_SERVER_USERNAME = "Server"
+
+private typealias AchievementCommentsResult = RetroAchievementsApiResult<List<AchievementComment>>
 
 /**
  * Real [RetroAchievementsApi], wrapping api-kotlin's `RetroClient(credentials).api`. A
@@ -148,6 +160,31 @@ class RetroClientRetroAchievementsApi(
         return api.getUserCompletionProgress(username, count, offset).toApiResult { it.toPage() }
     }
 
+    /**
+     * api-kotlin's `getCommentsOnAchievementWall` declares its parameters as `(achievementId,
+     * count, offset, type, sort)` - count before offset - the exact same trap that already bit
+     * [getUserCompletionProgress] above (see that method's kdoc). Named arguments only; do not
+     * "simplify" this to positional args.
+     *
+     * RA's achievement wall mixes real user comments with automated audit-log entries posted
+     * under a `Server` account (e.g. "X uploaded this achievement.", edit/promotion notices) -
+     * confirmed via this endpoint's own mock response data. Those aren't user comments, so they're
+     * filtered out here rather than left for the UI to reason about.
+     */
+    override suspend fun getAchievementComments(achievementId: Long): AchievementCommentsResult {
+        val response =
+            api.getCommentsOnAchievementWall(
+                achievementId = achievementId,
+                count = ACHIEVEMENT_COMMENTS_PAGE_SIZE,
+                offset = 0,
+            )
+        return response.toApiResult { comments ->
+            comments.results
+                .filterNot { it.user.equals(RA_SERVER_USERNAME, ignoreCase = true) }
+                .map { comment -> comment.toAchievementComment() }
+        }
+    }
+
     private fun GetUserSummary.Response.toUserSummary() =
         RetroAchievementsUserSummary(
             username = user,
@@ -234,6 +271,28 @@ private fun RaAchievement.toAchievementItem(typesById: Map<Long, String?>): Achi
         type = typesById[achievementId].toAchievementType(),
     )
 }
+
+private fun GetComments.Result.toAchievementComment() =
+    AchievementComment(
+        user = user,
+        submittedAtMillis = parseCommentTimestamp(submitted),
+        text = commentText,
+    )
+
+/**
+ * Unlike achievement-unlock timestamps ([parseRaTimestamp]'s ad-hoc `yyyy-MM-dd HH:mm:ss`
+ * format), `GetComments`' `Submitted` field is real ISO-8601 (e.g.
+ * `2020-02-18T06:04:01.000000Z`) - [Instant.parse] handles the arbitrary fractional-second
+ * digits directly, no custom formatter needed.
+ */
+private fun parseCommentTimestamp(value: String): Long? =
+    try {
+        Instant.parse(value).toEpochMilli()
+    } catch (
+        @Suppress("SwallowedException") e: DateTimeParseException,
+    ) {
+        null
+    }
 
 private fun GetUserCompletionProgress.Response.toPage(): UserCompletionProgressPage {
     val entries = results.map { it.toUserGameProgress() }
