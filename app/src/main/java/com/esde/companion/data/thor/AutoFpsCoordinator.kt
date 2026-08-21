@@ -161,14 +161,11 @@ class AutoFpsCoordinator(
         }
     }
 
-    // Deliberately does NOT add this app's own package to THOR_IGNORED_SYSTEM_PACKAGES here:
-    // since this service doesn't filter by display id (see [CompanionAccessibilityService]'s
-    // kdoc), a window-state-changed event for Companion's own package is the genuine "the user
-    // backed out of an App-Drawer-launched trigger app" signal for that use case - ignoring it
-    // would break that revert path entirely. The known tradeoff (an internal Companion
-    // dialog/overlay briefly stealing "foreground" while a trigger app is still genuinely
-    // displayed on the other display) is exactly the on-device validation item called out in
-    // CLAUDE.md, not something this ignore-list can resolve for both cases at once.
+    // Companion's own package is deliberately absent from THOR_IGNORED_SYSTEM_PACKAGES - see
+    // ThorIgnoredSystemPackages' kdoc. It's moot for this coordinator specifically:
+    // CompanionAccessibilityService now filters to Display.DEFAULT_DISPLAY only, so a
+    // window-state-changed event for Companion's own package (which runs on the secondary/bottom
+    // display) never reaches onForegroundPackage in the first place.
     private companion object {
         const val REVERT_DEBOUNCE_MS = 700L
     }

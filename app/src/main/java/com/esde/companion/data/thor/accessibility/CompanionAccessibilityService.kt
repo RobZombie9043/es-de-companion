@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.view.Display
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import java.lang.ref.WeakReference
@@ -20,13 +21,17 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Ported from Asgard's `AsgardAccessibilityService`, which is shared by the same four features
  * there too.
  *
- * Unlike Asgard - which scopes window-state events to `Display.DEFAULT_DISPLAY` because Asgard's
- * own app never runs on the Thor's secondary display - this service deliberately does NOT filter
- * by display id. ES-DE Companion itself runs on the secondary display, and apps launched from its
- * own App Drawer also land there, so Auto FPS Mode needs to react to foreground-package changes
- * on any display; the ignore-list (systemui, launcher, this app's own package, OEM overlays)
- * carries the noise-filtering weight instead. See CLAUDE.md for the open item to validate this
- * on-device.
+ * Window-state events are scoped to `Display.DEFAULT_DISPLAY` only, same as Asgard - confirmed
+ * on-device that *not* filtering by display let Companion's own bottom-screen UI (its own
+ * dialogs/Settings/App Drawer opening and closing) generate a stream of foreground-package
+ * "changes" that Auto FPS Mode had no principled way to tell apart from a genuine top-screen app
+ * switch, causing spurious refresh-rate flips and system/launcher packages slipping through the
+ * ignore-list's intent. This does NOT lose App-Drawer-launched apps: `SecondaryDisplayResolver`
+ * launches them onto whichever display Companion itself is *not* running on, which - since
+ * Companion runs on the Thor's secondary/bottom display - is always `DEFAULT_DISPLAY`, the same
+ * top screen ES-DE/games run on. So every event Auto FPS Mode actually needs still arrives; only
+ * the bottom-screen noise is now excluded at the source instead of relying on the ignore-list to
+ * catch it after the fact.
  *
  * VOLUME_UP/VOLUME_DOWN go through a single installable handler ([setVolumeKeyHandler]) rather
  * than a fire-and-forget listener list like the back-press feed below - whether the event gets
@@ -52,8 +57,12 @@ class CompanionAccessibilityService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
+    // Three independent early-return guard clauses (event type, display, package name) rather
+    // than one accumulating condition - same reasoning as onKeyEvent below.
+    @Suppress("ReturnCount")
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event.displayId != Display.DEFAULT_DISPLAY) return
         val packageName = event.packageName?.toString() ?: return
         notifyForegroundPackage(packageName)
     }
@@ -134,7 +143,7 @@ class CompanionAccessibilityService : AccessibilityService() {
             return true
         }
 
-        /** Called with the foreground app's package name on every window-state change. */
+        /** Called with the top screen's foreground app package name on every window-state change. */
         fun addForegroundPackageListener(listener: (String) -> Unit) {
             foregroundPackageListeners.add(listener)
         }
@@ -144,7 +153,7 @@ class CompanionAccessibilityService : AccessibilityService() {
             disconnectListeners.add(listener)
         }
 
-        /** The foreground app from the most recent window-state event. */
+        /** The top screen's foreground app, from the most recent display-0 window-state event. */
         fun currentForegroundPackage(): String? = lastForegroundPackage
 
         /** Called on every genuine BACK press (auto-repeat ticks excluded). */
