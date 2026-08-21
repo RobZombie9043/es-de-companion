@@ -68,8 +68,16 @@ private class SingleRequestHttpServer(
  * EsdeLogFileRepositoryTest/FileEsdeInstallationRepositoryTest - here the fix is a generous
  * explicit timeout rather than synchronization, since the slowness is genuine variable-latency
  * I/O, not a missed subscription.
+ *
+ * Must stay meaningfully larger than [GitHubUpdateRepository]'s own `READ_TIMEOUT_MS`
+ * (15s): the mid-stream-drop test below relies on an abortive RST (SO_LINGER=0) surfacing as
+ * an immediate IOException, but that's real OS socket behavior, not something the test
+ * controls - if the RST is ever delivered late, the download instead falls through to
+ * HttpURLConnection's own 15s read timeout before failing. This value used to be exactly
+ * 15s too, an exact tie with that production timeout that occasionally lost the race
+ * (TurbineTimeoutCancellationException) whenever the slow-RST path was taken.
  */
-private val DOWNLOAD_TEST_TIMEOUT = 15.seconds
+private val DOWNLOAD_TEST_TIMEOUT = 25.seconds
 
 private fun OutputStream.writeHeadAndBody(
     statusCode: Int,
