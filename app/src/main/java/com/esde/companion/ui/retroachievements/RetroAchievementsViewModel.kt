@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.AchievementDisplayField
 import com.esde.companion.domain.model.AchievementFilterOption
 import com.esde.companion.domain.model.AchievementSortOrder
-import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
@@ -14,6 +13,7 @@ import com.esde.companion.domain.model.resolveAchievementsGame
 import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.launch
 
 private data class CurrentGame(val reference: GameReference, val name: String)
@@ -61,14 +60,15 @@ class RetroAchievementsViewModel(
     private val setGameMatchOverride: SetGameMatchOverrideUseCase,
     private val getAchievementComments: GetAchievementCommentsUseCase,
 ) : ViewModel() {
+    private val currentGameContext =
+        ObserveScreensaverAwareContextUseCase(
+            observeConnectionState,
+            observeUpdateAchievementsOnScreensaverEnabled,
+            ::resolveAchievementsGame,
+        )
+
     private val currentGame =
-        combine(
-            observeConnectionState().map { connection -> (connection as? EsdeConnectionState.Connected)?.appState },
-            observeUpdateAchievementsOnScreensaverEnabled(),
-        ) { appState, updateOnScreensaver -> appState to updateOnScreensaver }
-            .scan(null as Pair<GameReference, String>?) { previous, (appState, updateOnScreensaver) ->
-                resolveAchievementsGame(appState, previous, updateOnScreensaver)
-            }
+        currentGameContext()
             .map { resolved -> resolved?.let { (reference, name) -> CurrentGame(reference, name) } }
             .distinctUntilChanged()
 
@@ -85,25 +85,17 @@ class RetroAchievementsViewModel(
     private val _searchResults = MutableStateFlow<List<RetroAchievementsCandidateGame>>(emptyList())
     val searchResults: StateFlow<List<RetroAchievementsCandidateGame>> = _searchResults
 
-    private val _sortOrder = MutableStateFlow(AchievementSortOrder.DisplayOrderFirst)
-    val sortOrder: StateFlow<AchievementSortOrder> = _sortOrder
-
-    private val _filter = MutableStateFlow<Set<AchievementFilterOption>>(emptySet())
-    val filter: StateFlow<Set<AchievementFilterOption>> = _filter
-
-    private val _displayField = MutableStateFlow(AchievementDisplayField.UnlockRate)
-    val displayField: StateFlow<AchievementDisplayField> = _displayField
+    // Sort/filter/display-field controls and the tap-to-expand comments accordion - see
+    // AchievementDisplayController's kdoc. Shared with RetroAchievementsSystemGamesViewModel,
+    // which owns its own instance for its own achievement list.
+    private val achievementDisplay = AchievementDisplayController(getAchievementComments, viewModelScope)
+    val sortOrder: StateFlow<AchievementSortOrder> = achievementDisplay.sortOrder
+    val filter: StateFlow<Set<AchievementFilterOption>> = achievementDisplay.filter
+    val displayField: StateFlow<AchievementDisplayField> = achievementDisplay.displayField
+    val expanded: StateFlow<ExpandedAchievementComments?> = achievementDisplay.expanded
 
     private val _hashSupport = MutableStateFlow<HashSupportState>(HashSupportState.Hidden)
     val hashSupport: StateFlow<HashSupportState> = _hashSupport
-
-    // Single-expand accordion for the achievement list's tap-to-show-comments row - see
-    // AchievementRow/AchievementSummaryContent.kt. The achievementId and its comments fetch
-    // state are bundled into one value, not two separate StateFlows - see
-    // ExpandedAchievementComments' kdoc for the torn-read bug that caused. Reset to null in
-    // resolveAndFetch whenever the underlying game changes, same as lastGameId/hashSupport below.
-    private val _expanded = MutableStateFlow<ExpandedAchievementComments?>(null)
-    val expanded: StateFlow<ExpandedAchievementComments?> = _expanded
 
     // Set at the start of every resolveAndFetch call (a single collectLatest coroutine, so
     // no concurrent-write race) - the correction picker's search scope and onGameCorrected's
@@ -118,25 +110,13 @@ class RetroAchievementsViewModel(
 
     // Bumped after onGameCorrected persists an override, or after onRefreshRequested, to force
     // a re-resolve even though neither currentGame nor the credentials flow actually changed.
-    private val refreshTrigger = MutableStateFlow(0)
-
-    // Set by onRefreshRequested and read-and-cleared inside resolveAndFetch - safe without a
-    // lock since resolveAndFetch only ever runs inside the single collectLatest coroutine below,
-    // same reasoning as lastKnownGame/lastGameId.
-    private var pendingForceRefresh = false
+    private val forceRefresh = ForceRefreshCoordinator()
 
     init {
         viewModelScope.launch {
-            combine(observeCredentials(), currentGame, refreshTrigger) { credentials, game, _ ->
+            combine(observeCredentials(), currentGame, forceRefresh.trigger) { credentials, game, _ ->
                 (credentials != null) to game
             }.collectLatest { (signedIn, game) -> resolveAndFetch(signedIn, game) }
-        }
-        viewModelScope.launch {
-            _expanded.map { it?.achievementId }.distinctUntilChanged().collectLatest { achievementId ->
-                if (achievementId == null) return@collectLatest
-                val comments = getAchievementComments(achievementId).toCommentsFetchState()
-                _expanded.value = ExpandedAchievementComments(achievementId, comments)
-            }
         }
     }
 
@@ -148,23 +128,19 @@ class RetroAchievementsViewModel(
         }
     }
 
-    fun onSortOrderChanged(order: AchievementSortOrder) {
-        _sortOrder.value = order
-    }
+    fun onSortOrderChanged(order: AchievementSortOrder) = achievementDisplay.onSortOrderChanged(order)
 
-    fun onFilterChanged(filter: Set<AchievementFilterOption>) {
-        _filter.value = filter
-    }
+    fun onFilterChanged(filter: Set<AchievementFilterOption>) = achievementDisplay.onFilterChanged(filter)
 
     fun onDisplayFieldChanged(displayField: AchievementDisplayField) {
-        _displayField.value = displayField
+        achievementDisplay.onDisplayFieldChanged(displayField)
     }
 
     fun onGameCorrected(candidate: RetroAchievementsCandidateGame) {
         val reference = lastKnownGame?.reference ?: return
         viewModelScope.launch {
             setGameMatchOverride(GameMatchOverride(reference.systemShortName, reference.romPath, candidate.gameId))
-            refreshTrigger.value += 1
+            forceRefresh.retrigger()
         }
     }
 
@@ -181,26 +157,10 @@ class RetroAchievementsViewModel(
         _hashSupport.value = HashSupportState.Hidden
     }
 
-    /**
-     * Toggles the tapped achievement's comments section open/closed - only one open at a time.
-     * Sets the new achievementId and a [CommentsFetchState.Loading] placeholder in the same
-     * atomic write (see [ExpandedAchievementComments]'s kdoc), so the row never briefly renders
-     * with a mismatched previous achievement's comments content.
-     */
-    fun onAchievementTapped(achievementId: Long) {
-        _expanded.value =
-            if (_expanded.value?.achievementId == achievementId) {
-                null
-            } else {
-                ExpandedAchievementComments(achievementId, CommentsFetchState.Loading)
-            }
-    }
+    fun onAchievementTapped(achievementId: Long) = achievementDisplay.onAchievementTapped(achievementId)
 
     /** Forces the next fetch to bypass [RetroAchievementsDetailUseCases.getAchievementSummary]'s cache. */
-    fun onRefreshRequested() {
-        pendingForceRefresh = true
-        refreshTrigger.value += 1
-    }
+    fun onRefreshRequested() = forceRefresh.request()
 
     private suspend fun resolveAndFetch(
         signedIn: Boolean,
@@ -211,7 +171,7 @@ class RetroAchievementsViewModel(
         _searchQuery.value = ""
         _searchResults.value = emptyList()
         _hashSupport.value = HashSupportState.Hidden
-        _expanded.value = null
+        achievementDisplay.onTargetChanged()
 
         if (!signedIn) {
             _resolution.value = RetroAchievementsResolutionState.NotSignedIn
@@ -236,8 +196,7 @@ class RetroAchievementsViewModel(
                 lastGameId = match.gameId
                 _resolution.value = RetroAchievementsResolutionState.Found(match.method)
                 _fetch.value = RetroAchievementsFetchState.Loading
-                val forceRefresh = pendingForceRefresh.also { pendingForceRefresh = false }
-                _fetch.value = detailUseCases.getAchievementSummary(match.gameId, forceRefresh).toFetchState()
+                _fetch.value = detailUseCases.getAchievementSummary(match.gameId, forceRefresh.consume()).toFetchState()
             }
         }
     }

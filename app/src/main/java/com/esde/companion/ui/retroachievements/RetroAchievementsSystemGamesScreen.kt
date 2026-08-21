@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -80,7 +81,8 @@ import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
  * following the same no-NavHost, plain-state idiom [com.esde.companion.ui.main.LongPressSettingsMenu]
  * uses. [GameDetailPage]'s top bar has no kebab/correction menu - unlike [RetroAchievementsScreen],
  * the game here was explicitly picked, not automatically resolved, so there's nothing to
- * correct - a back arrow (returning to the game list) sits in the kebab's slot instead.
+ * correct - a back arrow (returning to the game list) and a manual-refresh action sit in the
+ * kebab's slot instead.
  */
 @Composable
 fun RetroAchievementsSystemGamesScreen(
@@ -393,7 +395,7 @@ private fun GameDetailPage(
         )
     val expansion = AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped)
     Column(modifier = Modifier.fillMaxSize()) {
-        GameDetailTopBar(onBack = onBack, onExit = onExit)
+        GameDetailTopBar(onBack = onBack, onExit = onExit, onRefresh = viewModel::onRefreshRequested)
         RetroAchievementsFetchBody(
             fetch = fetch,
             listControls = listControls,
@@ -404,12 +406,14 @@ private fun GameDetailPage(
 }
 
 /** Same shape as [RetroAchievementsScreen]'s top bar, but the kebab/correction menu is
- * replaced with a back arrow (returning to the game list) - the game here was explicitly
- * tapped, not automatically resolved, so there's nothing to correct. */
+ * replaced with a back arrow (returning to the game list) and a plain refresh action - the
+ * game here was explicitly tapped, not automatically resolved, so there's nothing to correct,
+ * and a dropdown menu isn't warranted for a single action. */
 @Composable
 private fun GameDetailTopBar(
     onBack: () -> Unit,
     onExit: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = CORNER_BUTTON_EDGE_PADDING),
@@ -418,6 +422,9 @@ private fun GameDetailTopBar(
         Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = null, modifier = Modifier.size(28.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Text(text = "Achievements", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        IconButton(onClick = onRefresh) {
+            Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Refresh")
+        }
         IconButton(onClick = onBack) {
             Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
         }
