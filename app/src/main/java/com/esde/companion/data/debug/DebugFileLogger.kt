@@ -221,11 +221,12 @@ class DebugFileLogger(
     private companion object {
         const val NOT_SET = "(not set)"
 
-        // Sized to the longest tag ("Cheevo:", 7 chars - one longer than "Event:"/
-        // "State:"/"Media:") plus one separating space, so every logged line's details
-        // start in the same column regardless of which tag (Info/Event/State/Media/Cheevo)
-        // it uses.
-        const val EVENT_COLUMN_WIDTH = 8
+        // Sized to the longest tag in use ("Storage:"/"AutoFPS:", 8 chars) plus one
+        // separating space, so every logged line's details start in the same column
+        // regardless of which tag (Info/Event/State/Media/Poll/Storage/Music/Video/Guard/
+        // AutoFPS/Killer/Cheevo) it uses. Tags are plain call-site strings, not a closed
+        // enum - bump this if a future tag is ever longer than "AutoFPS"/"Storage".
+        const val EVENT_COLUMN_WIDTH = 9
 
         // Caps how large the debug log can grow across a single long-running kiosk
         // session. Checked before every write; once exceeded, the file is truncated and

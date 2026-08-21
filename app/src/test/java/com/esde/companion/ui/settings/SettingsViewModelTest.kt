@@ -17,6 +17,7 @@ import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
+import com.esde.companion.domain.repository.BackupRepositories
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
@@ -26,7 +27,9 @@ import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCas
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FakeAppFolderRepository
 import com.esde.companion.domain.usecase.FakeGameMatchOverrideRepository
+import com.esde.companion.domain.usecase.FakeThorSettingsRepository
 import com.esde.companion.domain.usecase.FakeWidgetLayoutRepository
+import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
@@ -36,8 +39,10 @@ import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveLidWakeGuardEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -49,12 +54,16 @@ import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
+import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -64,7 +73,9 @@ import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
+import com.esde.companion.domain.usecase.SetLidWakeGuardEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -75,11 +86,14 @@ import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
@@ -398,31 +412,21 @@ class SettingsViewModelTest {
         onboardingRepository: FakeOnboardingRepository,
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository,
         dockSettingsRepository: FakeDockSettingsRepository,
+        thorSettingsRepository: FakeThorSettingsRepository,
     ): Pair<ExportConfigBackupUseCase, RestoreConfigBackupUseCase> {
         val configBackupRepository = JsonConfigBackupRepository()
-        val appFolderRepository = FakeAppFolderRepository()
-        val widgetLayoutRepository = FakeWidgetLayoutRepository()
-        val gameMatchOverrideRepository = FakeGameMatchOverrideRepository()
-        val export =
-            ExportConfigBackupUseCase(
+        val repositories =
+            BackupRepositories(
                 onboardingRepository,
                 appDrawerSettingsRepository,
-                appFolderRepository,
+                FakeAppFolderRepository(),
                 dockSettingsRepository,
-                widgetLayoutRepository,
-                gameMatchOverrideRepository,
-                configBackupRepository,
+                FakeWidgetLayoutRepository(),
+                thorSettingsRepository,
+                FakeGameMatchOverrideRepository(),
             )
-        val restore =
-            RestoreConfigBackupUseCase(
-                onboardingRepository,
-                appDrawerSettingsRepository,
-                appFolderRepository,
-                dockSettingsRepository,
-                widgetLayoutRepository,
-                gameMatchOverrideRepository,
-                configBackupRepository,
-            )
+        val export = ExportConfigBackupUseCase(repositories, configBackupRepository)
+        val restore = RestoreConfigBackupUseCase(repositories, configBackupRepository)
         return export to restore
     }
 
@@ -431,9 +435,15 @@ class SettingsViewModelTest {
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
         installedAppsRepository: FakeInstalledAppsRepository = FakeInstalledAppsRepository(),
+        thorSettingsRepository: FakeThorSettingsRepository = FakeThorSettingsRepository(),
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
         val (exportConfigBackupUseCase, restoreConfigBackupUseCase) =
-            configBackupUseCases(onboardingRepository, appDrawerSettingsRepository, dockSettingsRepository)
+            configBackupUseCases(
+                onboardingRepository,
+                appDrawerSettingsRepository,
+                dockSettingsRepository,
+                thorSettingsRepository,
+            )
         val retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository()
         val observeRetroAchievementsCredentialsUseCase =
             ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
@@ -508,6 +518,19 @@ class SettingsViewModelTest {
                 clearRetroAchievementsCredentialsUseCase = clearRetroAchievementsCredentialsUseCase,
                 observeUpdateOnScreensaverUseCase = observeUpdateOnScreensaverUseCase,
                 setUpdateOnScreensaverUseCase = setUpdateOnScreensaverUseCase,
+                observeLidWakeGuardEnabledUseCase = ObserveLidWakeGuardEnabledUseCase(thorSettingsRepository),
+                setLidWakeGuardEnabledUseCase = SetLidWakeGuardEnabledUseCase(thorSettingsRepository),
+                observeHallSensorCalibrationUseCase = ObserveHallSensorCalibrationUseCase(thorSettingsRepository),
+                setHallSensorCalibrationUseCase = SetHallSensorCalibrationUseCase(thorSettingsRepository),
+                observeAutoFpsEnabledUseCase = ObserveAutoFpsEnabledUseCase(thorSettingsRepository),
+                setAutoFpsEnabledUseCase = SetAutoFpsEnabledUseCase(thorSettingsRepository),
+                observeTaskKillerEnabledUseCase = ObserveTaskKillerEnabledUseCase(thorSettingsRepository),
+                setTaskKillerEnabledUseCase = SetTaskKillerEnabledUseCase(thorSettingsRepository),
+                observeVolumeSyncEnabledUseCase = ObserveVolumeSyncEnabledUseCase(thorSettingsRepository),
+                setVolumeSyncEnabledUseCase = SetVolumeSyncEnabledUseCase(thorSettingsRepository),
+                observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository),
+                setVolumeSyncModeUseCase = SetVolumeSyncModeUseCase(thorSettingsRepository),
+                volumeSyncSecondarySettingPresent = false,
             )
         return viewModel to appDrawerSettingsRepository
     }

@@ -65,6 +65,17 @@ internal data class ConfigBackupDto(
     val widgetCanvases: Map<String, CanvasDto>,
     val gameMatchOverrides: List<GameMatchOverrideDto> = emptyList(),
     val updateAchievementsOnScreensaverEnabled: Boolean = true,
+    val lidWakeGuardEnabled: Boolean = false,
+    val hallSensorType: Int? = null,
+    val hallSensorName: String = "",
+    val hallSensorClosedValue: Float? = null,
+    val hallSensorOpenValue: Float? = null,
+    val autoFpsEnabled: Boolean = false,
+    val autoFpsTriggerPackages: Set<String> = emptySet(),
+    val taskKillerEnabled: Boolean = false,
+    val taskKillerExcludedPackages: Set<String>? = null,
+    val volumeSyncEnabled: Boolean = false,
+    val volumeSyncMode: String = "Linked",
 )
 
 @Serializable

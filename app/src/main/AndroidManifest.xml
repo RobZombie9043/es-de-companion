@@ -21,6 +21,9 @@
     <!-- Update checker: lets the user grant "install unknown apps" for this app
          specifically, to install the downloaded update APK (see InstallUnknownAppsPermission). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Thor Settings > Task Killer: the confirmation buzz once a held BACK button reaches
+         the force-quit threshold (see data/thor/Vibration.kt). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <queries>
         <intent>
@@ -73,6 +76,24 @@
                 <data android:scheme="file" />
             </intent-filter>
         </receiver>
+
+        <!-- Thor Settings (Ayn Thor-only: Lid Wake Guard, Auto FPS Mode, Task Killer, Volume
+             Sync - see CLAUDE.md). The first AccessibilityService in this codebase; only ever
+             bound if the user explicitly enables a Thor Settings toggle, and only shown/
+             reachable there on an actual Ayn Thor device (see DeviceCheck.isAynThorDevice).
+             Narrow config - see res/xml/thor_accessibility_service_config.xml - never
+             requests window content. -->
+        <service
+            android:name=".data.thor.accessibility.CompanionAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/thor_accessibility_service_config" />
+        </service>
 
         <!-- Exposes the downloaded update APK (private cache dir) to the system package
              installer - see ApkInstaller / res/xml/file_paths.xml. -->

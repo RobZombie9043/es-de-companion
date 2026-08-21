@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -9,6 +10,7 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 
 data class SettingsUiState(
     val permissionGranted: Boolean = false,
@@ -58,4 +60,13 @@ data class SettingsUiState(
     val isConnectingToRetroAchievements: Boolean = false,
     val retroAchievementsConnectError: String? = null,
     val updateAchievementsOnScreensaverEnabled: Boolean = true,
+    val lidWakeGuardEnabled: Boolean = false,
+    val hallSensorCalibration: HallSensorCalibration = HallSensorCalibration.Uncalibrated,
+    val autoFpsEnabled: Boolean = false,
+    val thorAccessibilityGranted: Boolean = false,
+    val thorPrivilegedServiceAvailable: Boolean = false,
+    val taskKillerEnabled: Boolean = false,
+    val volumeSyncEnabled: Boolean = false,
+    val volumeSyncMode: VolumeSyncMode = VolumeSyncMode.Linked,
+    val volumeSyncSecondarySettingPresent: Boolean = false,
 )

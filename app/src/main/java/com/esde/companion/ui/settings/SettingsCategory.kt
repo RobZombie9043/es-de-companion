@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MusicNote
@@ -59,5 +60,10 @@ enum class SettingsCategory(val title: String, val description: String, val icon
         title = "RetroAchievements",
         description = "Sign in and manage the RetroAchievements connection",
         icon = Icons.Filled.EmojiEvents,
+    ),
+    Thor(
+        title = "Thor Settings",
+        description = "Lid Wake Guard and Auto FPS Mode",
+        icon = Icons.Filled.Devices,
     ),
 }

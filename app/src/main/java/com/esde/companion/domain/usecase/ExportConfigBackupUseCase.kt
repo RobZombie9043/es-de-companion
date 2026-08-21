@@ -2,13 +2,8 @@ package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.AppConfigBackup
 import com.esde.companion.domain.model.StateGroup
-import com.esde.companion.domain.repository.AppDrawerSettingsRepository
-import com.esde.companion.domain.repository.AppFolderRepository
+import com.esde.companion.domain.repository.BackupRepositories
 import com.esde.companion.domain.repository.ConfigBackupRepository
-import com.esde.companion.domain.repository.DockSettingsRepository
-import com.esde.companion.domain.repository.GameMatchOverrideRepository
-import com.esde.companion.domain.repository.OnboardingRepository
-import com.esde.companion.domain.repository.WidgetLayoutRepository
 import kotlinx.coroutines.flow.first
 
 /**
@@ -19,56 +14,65 @@ import kotlinx.coroutines.flow.first
  */
 @Suppress("LongParameterList")
 class ExportConfigBackupUseCase(
-    private val onboardingRepository: OnboardingRepository,
-    private val appDrawerSettingsRepository: AppDrawerSettingsRepository,
-    private val appFolderRepository: AppFolderRepository,
-    private val dockSettingsRepository: DockSettingsRepository,
-    private val widgetLayoutRepository: WidgetLayoutRepository,
-    private val gameMatchOverrideRepository: GameMatchOverrideRepository,
+    private val repositories: BackupRepositories,
     private val configBackupRepository: ConfigBackupRepository,
 ) {
     suspend operator fun invoke(): String {
+        val widgetCanvases =
+            StateGroup.entries.associateWith { stateGroup ->
+                repositories.widgetLayoutRepository.observeCanvas(stateGroup).first()
+            }
         val updateAchievementsOnScreensaverEnabled =
-            onboardingRepository.observeUpdateAchievementsOnScreensaverEnabled().first()
+            repositories.onboardingRepository.observeUpdateAchievementsOnScreensaverEnabled().first()
         val snapshot =
-            AppConfigBackup(
-                logFolderPath = onboardingRepository.observeLogFolderPath().first(),
-                mediaFolderPath = onboardingRepository.observeMediaFolderPath().first(),
-                customSystemImagesFolderPath = onboardingRepository.observeCustomSystemImagesFolderPath().first(),
-                customLogosFolderPath = onboardingRepository.observeCustomLogosFolderPath().first(),
-                customMusicFolderPath = onboardingRepository.observeCustomMusicFolderPath().first(),
-                themePreference = onboardingRepository.observeThemePreference().first(),
-                gamePlayingBehavior = onboardingRepository.observeGamePlayingBehavior().first(),
-                gamePlayingDimPercent = onboardingRepository.observeGamePlayingDimPercent().first(),
-                screensaverBehavior = onboardingRepository.observeScreensaverBehavior().first(),
-                screensaverDimPercent = onboardingRepository.observeScreensaverDimPercent().first(),
-                overlayOpacityPercent = onboardingRepository.observeOverlayOpacityPercent().first(),
-                fabAssignments = onboardingRepository.observeFabAssignments().first(),
-                videoPlaybackEnabled = onboardingRepository.observeVideoPlaybackEnabled().first(),
-                videoDelaySeconds = onboardingRepository.observeVideoDelaySeconds().first(),
-                videoAudioEnabled = onboardingRepository.observeVideoAudioEnabled().first(),
-                musicEnabled = onboardingRepository.observeMusicEnabled().first(),
-                musicPlayWhileBrowsingSystems = onboardingRepository.observeMusicPlayWhileBrowsingSystems().first(),
-                musicPlayWhileBrowsingGames = onboardingRepository.observeMusicPlayWhileBrowsingGames().first(),
-                musicPlayDuringScreensaver = onboardingRepository.observeMusicPlayDuringScreensaver().first(),
-                musicDuckingMode = onboardingRepository.observeMusicDuckingMode().first(),
-                closeCompanionOnQuitEnabled = onboardingRepository.observeCloseCompanionOnQuitEnabled().first(),
-                launchEsdeOnStartEnabled = onboardingRepository.observeLaunchEsdeOnStartEnabled().first(),
-                debugLoggingEnabled = onboardingRepository.observeDebugLoggingEnabled().first(),
-                hiddenApps = appDrawerSettingsRepository.observeHiddenApps().first(),
-                gridColumns = appDrawerSettingsRepository.observeGridColumns().first(),
-                otherScreenLaunchApps = appDrawerSettingsRepository.observeOtherScreenLaunchApps().first(),
-                sortFoldersOnTop = appDrawerSettingsRepository.observeSortFoldersOnTop().first(),
-                showSearchBar = appDrawerSettingsRepository.observeShowSearchBar().first(),
-                folders = appFolderRepository.observeFolders().first(),
-                dockEnabled = dockSettingsRepository.observeDockEnabled().first(),
-                dockMaxApps = dockSettingsRepository.observeDockMaxApps().first(),
-                dockSize = dockSettingsRepository.observeDockSize().first(),
-                dockApps = dockSettingsRepository.observeDockApps().first(),
-                widgetCanvases = StateGroup.entries.associateWith { widgetLayoutRepository.observeCanvas(it).first() },
-                gameMatchOverrides = gameMatchOverrideRepository.observeAllOverrides().first(),
-                updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
-            )
+            with(repositories) {
+                AppConfigBackup(
+                    logFolderPath = onboardingRepository.observeLogFolderPath().first(),
+                    mediaFolderPath = onboardingRepository.observeMediaFolderPath().first(),
+                    customSystemImagesFolderPath = onboardingRepository.observeCustomSystemImagesFolderPath().first(),
+                    customLogosFolderPath = onboardingRepository.observeCustomLogosFolderPath().first(),
+                    customMusicFolderPath = onboardingRepository.observeCustomMusicFolderPath().first(),
+                    themePreference = onboardingRepository.observeThemePreference().first(),
+                    gamePlayingBehavior = onboardingRepository.observeGamePlayingBehavior().first(),
+                    gamePlayingDimPercent = onboardingRepository.observeGamePlayingDimPercent().first(),
+                    screensaverBehavior = onboardingRepository.observeScreensaverBehavior().first(),
+                    screensaverDimPercent = onboardingRepository.observeScreensaverDimPercent().first(),
+                    overlayOpacityPercent = onboardingRepository.observeOverlayOpacityPercent().first(),
+                    fabAssignments = onboardingRepository.observeFabAssignments().first(),
+                    videoPlaybackEnabled = onboardingRepository.observeVideoPlaybackEnabled().first(),
+                    videoDelaySeconds = onboardingRepository.observeVideoDelaySeconds().first(),
+                    videoAudioEnabled = onboardingRepository.observeVideoAudioEnabled().first(),
+                    musicEnabled = onboardingRepository.observeMusicEnabled().first(),
+                    musicPlayWhileBrowsingSystems = onboardingRepository.observeMusicPlayWhileBrowsingSystems().first(),
+                    musicPlayWhileBrowsingGames = onboardingRepository.observeMusicPlayWhileBrowsingGames().first(),
+                    musicPlayDuringScreensaver = onboardingRepository.observeMusicPlayDuringScreensaver().first(),
+                    musicDuckingMode = onboardingRepository.observeMusicDuckingMode().first(),
+                    closeCompanionOnQuitEnabled = onboardingRepository.observeCloseCompanionOnQuitEnabled().first(),
+                    launchEsdeOnStartEnabled = onboardingRepository.observeLaunchEsdeOnStartEnabled().first(),
+                    debugLoggingEnabled = onboardingRepository.observeDebugLoggingEnabled().first(),
+                    hiddenApps = appDrawerSettingsRepository.observeHiddenApps().first(),
+                    gridColumns = appDrawerSettingsRepository.observeGridColumns().first(),
+                    otherScreenLaunchApps = appDrawerSettingsRepository.observeOtherScreenLaunchApps().first(),
+                    sortFoldersOnTop = appDrawerSettingsRepository.observeSortFoldersOnTop().first(),
+                    showSearchBar = appDrawerSettingsRepository.observeShowSearchBar().first(),
+                    folders = appFolderRepository.observeFolders().first(),
+                    dockEnabled = dockSettingsRepository.observeDockEnabled().first(),
+                    dockMaxApps = dockSettingsRepository.observeDockMaxApps().first(),
+                    dockSize = dockSettingsRepository.observeDockSize().first(),
+                    dockApps = dockSettingsRepository.observeDockApps().first(),
+                    widgetCanvases = widgetCanvases,
+                    gameMatchOverrides = gameMatchOverrideRepository.observeAllOverrides().first(),
+                    updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
+                    lidWakeGuardEnabled = thorSettingsRepository.observeLidWakeGuardEnabled().first(),
+                    hallSensorCalibration = thorSettingsRepository.observeHallSensorCalibration().first(),
+                    autoFpsEnabled = thorSettingsRepository.observeAutoFpsEnabled().first(),
+                    autoFpsTriggerPackages = thorSettingsRepository.observeAutoFpsTriggerPackages().first(),
+                    taskKillerEnabled = thorSettingsRepository.observeTaskKillerEnabled().first(),
+                    taskKillerExcludedPackages = thorSettingsRepository.observeTaskKillerExcludedPackages().first(),
+                    volumeSyncEnabled = thorSettingsRepository.observeVolumeSyncEnabled().first(),
+                    volumeSyncMode = thorSettingsRepository.observeVolumeSyncMode().first(),
+                )
+            }
         return configBackupRepository.serialize(snapshot)
     }
 }

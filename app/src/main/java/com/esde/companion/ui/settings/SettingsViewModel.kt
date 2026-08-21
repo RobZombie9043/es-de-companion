@@ -3,18 +3,22 @@ package com.esde.companion.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.storage.AllFilesAccessPermission
+import com.esde.companion.data.thor.RefreshRateController
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
+import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
@@ -24,8 +28,10 @@ import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
+import com.esde.companion.domain.usecase.ObserveHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveLidWakeGuardEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -37,12 +43,16 @@ import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
+import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -52,7 +62,9 @@ import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
+import com.esde.companion.domain.usecase.SetHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
+import com.esde.companion.domain.usecase.SetLidWakeGuardEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -63,11 +75,14 @@ import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
+import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
 import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
@@ -137,12 +152,33 @@ class SettingsViewModel(
     private val clearRetroAchievementsCredentialsUseCase: ClearRetroAchievementsCredentialsUseCase,
     private val observeUpdateOnScreensaverUseCase: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
     private val setUpdateOnScreensaverUseCase: SetUpdateAchievementsOnScreensaverEnabledUseCase,
+    private val observeLidWakeGuardEnabledUseCase: ObserveLidWakeGuardEnabledUseCase,
+    private val setLidWakeGuardEnabledUseCase: SetLidWakeGuardEnabledUseCase,
+    private val observeHallSensorCalibrationUseCase: ObserveHallSensorCalibrationUseCase,
+    private val setHallSensorCalibrationUseCase: SetHallSensorCalibrationUseCase,
+    private val observeAutoFpsEnabledUseCase: ObserveAutoFpsEnabledUseCase,
+    private val setAutoFpsEnabledUseCase: SetAutoFpsEnabledUseCase,
+    private val observeTaskKillerEnabledUseCase: ObserveTaskKillerEnabledUseCase,
+    private val setTaskKillerEnabledUseCase: SetTaskKillerEnabledUseCase,
+    private val observeVolumeSyncEnabledUseCase: ObserveVolumeSyncEnabledUseCase,
+    private val setVolumeSyncEnabledUseCase: SetVolumeSyncEnabledUseCase,
+    private val observeVolumeSyncModeUseCase: ObserveVolumeSyncModeUseCase,
+    private val setVolumeSyncModeUseCase: SetVolumeSyncModeUseCase,
+    private val volumeSyncSecondarySettingPresent: Boolean,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
-    // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient.
+    // relying solely on the screen's ON_RESUME DisposableEffect isn't sufficient. Thor
+    // Settings' runtime capability checks (accessibility grant, privileged Settings service,
+    // whether this firmware exposes a bottom-screen volume setting) are seeded the same way -
+    // see refreshThorAccessibilityGranted for why only the first needs an explicit
+    // resume-driven refresh; the other two are effectively fixed for the process lifetime.
     private val _uiState =
         MutableStateFlow(
-            SettingsUiState(permissionGranted = AllFilesAccessPermission.isGranted()),
+            SettingsUiState(
+                permissionGranted = AllFilesAccessPermission.isGranted(),
+                thorPrivilegedServiceAvailable = RefreshRateController.canWrite(),
+                volumeSyncSecondarySettingPresent = volumeSyncSecondarySettingPresent,
+            ),
         )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -154,6 +190,30 @@ class SettingsViewModel(
         viewModelScope.launch {
             observeInstalledAppsUseCase().collect { apps ->
                 _uiState.value = _uiState.value.copy(installedApps = apps)
+            }
+        }
+        // Same "can change independently of this screen's own actions" reasoning as
+        // installed apps above: each Thor Settings coordinator can flip its own setting back
+        // off on its own (accessibility grant revoked while on) - a one-shot load would leave
+        // this screen showing a stale "on" switch.
+        viewModelScope.launch {
+            observeLidWakeGuardEnabledUseCase().collect { enabled ->
+                _uiState.value = _uiState.value.copy(lidWakeGuardEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            observeAutoFpsEnabledUseCase().collect { enabled ->
+                _uiState.value = _uiState.value.copy(autoFpsEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            observeTaskKillerEnabledUseCase().collect { enabled ->
+                _uiState.value = _uiState.value.copy(taskKillerEnabled = enabled)
+            }
+        }
+        viewModelScope.launch {
+            observeVolumeSyncEnabledUseCase().collect { enabled ->
+                _uiState.value = _uiState.value.copy(volumeSyncEnabled = enabled)
             }
         }
         viewModelScope.launch { reloadSettingsState() }
@@ -224,6 +284,14 @@ class SettingsViewModel(
             debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first(),
             retroAchievementsCredentials = observeRetroAchievementsCredentialsUseCase().first(),
             updateAchievementsOnScreensaverEnabled = observeUpdateOnScreensaverUseCase().first(),
+            // lidWakeGuardEnabled/autoFpsEnabled/taskKillerEnabled/volumeSyncEnabled are NOT
+            // loaded here - they're continuously collected in init instead, same reasoning as
+            // installedApps above (a coordinator can flip any of them back off on its own; a
+            // one-shot load here would just be immediately overwritten by, or race with, that
+            // live collector). volumeSyncMode has no such coordinator-driven path - only this
+            // screen's own onVolumeSyncModeChanged ever changes it - so a one-shot load is fine.
+            hallSensorCalibration = observeHallSensorCalibrationUseCase().first(),
+            volumeSyncMode = observeVolumeSyncModeUseCase().first(),
         )
     }
 
@@ -244,6 +312,15 @@ class SettingsViewModel(
 
     fun refreshPermissionState(granted: Boolean) {
         _uiState.value = _uiState.value.copy(permissionGranted = granted)
+    }
+
+    /** Unlike [thorPrivilegedServiceAvailable][SettingsUiState.thorPrivilegedServiceAvailable]
+     * (effectively fixed for the process lifetime, since a firmware's set of privileged system
+     * services doesn't change while running), the accessibility grant is a real Settings toggle
+     * the user can flip while this screen is backgrounded - refreshed the same resume-driven way
+     * as [refreshPermissionState]. */
+    fun refreshThorAccessibilityGranted(granted: Boolean) {
+        _uiState.value = _uiState.value.copy(thorAccessibilityGranted = granted)
     }
 
     fun onLogFolderPicked(path: String) {
@@ -362,6 +439,36 @@ class SettingsViewModel(
     fun onUpdateAchievementsOnScreensaverEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(updateAchievementsOnScreensaverEnabled = enabled)
         viewModelScope.launch { setUpdateOnScreensaverUseCase(enabled) }
+    }
+
+    fun onLidWakeGuardEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(lidWakeGuardEnabled = enabled)
+        viewModelScope.launch { setLidWakeGuardEnabledUseCase(enabled) }
+    }
+
+    fun onHallSensorCalibrationChanged(calibration: HallSensorCalibration) {
+        _uiState.value = _uiState.value.copy(hallSensorCalibration = calibration)
+        viewModelScope.launch { setHallSensorCalibrationUseCase(calibration) }
+    }
+
+    fun onAutoFpsEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(autoFpsEnabled = enabled)
+        viewModelScope.launch { setAutoFpsEnabledUseCase(enabled) }
+    }
+
+    fun onTaskKillerEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(taskKillerEnabled = enabled)
+        viewModelScope.launch { setTaskKillerEnabledUseCase(enabled) }
+    }
+
+    fun onVolumeSyncEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(volumeSyncEnabled = enabled)
+        viewModelScope.launch { setVolumeSyncEnabledUseCase(enabled) }
+    }
+
+    fun onVolumeSyncModeChanged(mode: VolumeSyncMode) {
+        _uiState.value = _uiState.value.copy(volumeSyncMode = mode)
+        viewModelScope.launch { setVolumeSyncModeUseCase(mode) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

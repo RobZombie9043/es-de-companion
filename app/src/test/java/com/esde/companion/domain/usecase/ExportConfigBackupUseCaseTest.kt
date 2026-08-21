@@ -8,6 +8,7 @@ import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GridDimensions
+import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
@@ -15,24 +16,17 @@ import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.repository.BackupRepositories
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ExportConfigBackupUseCaseTest {
-    private fun placedWidget() =
-        PlacedWidget(
-            id = "widget-1",
-            widgetType = WidgetType.ColorBackground(colorArgb = 0xFF112233, alpha = 1f),
-            gridColumn = 0,
-            gridRow = 0,
-            columnSpan = 2,
-            rowSpan = 2,
-            zIndex = 0,
-        )
-
-    private fun onboardingWithSampleValues(fabAssignments: FabAssignments) =
+/** Fixture repositories with distinctive, non-default values for the export test - split out
+ * of the test method itself purely to stay under detekt's LongMethod threshold. */
+private class ExportFixture {
+    val fabAssignments = FabAssignments.Default.copy(bottomStart = FabSlot(FabType.CustomApp, "com.example.app"))
+    val onboarding =
         FakeOnboardingRepository(
             logFolderPath = "/storage/emulated/0/CustomESDE",
             mediaFolderPath = "/storage/emulated/0/CustomESDE/media",
@@ -59,48 +53,59 @@ class ExportConfigBackupUseCaseTest {
             debugLoggingEnabled = true,
             updateAchievementsOnScreensaverEnabled = false,
         )
+    val appDrawer =
+        FakeAppDrawerSettingsRepository(
+            hiddenApps = setOf("com.hidden.app"),
+            gridColumns = 6,
+            otherScreenLaunchApps = setOf("com.other.app"),
+            sortFoldersOnTop = false,
+            showSearchBar = false,
+        )
+    val folder = AppFolder(id = "folder-1", name = "Arcade", memberPackageNames = setOf("com.arcade.app"))
+    val appFolders = FakeAppFolderRepository(folders = listOf(folder))
+    val dock =
+        FakeDockSettingsRepository(
+            dockEnabled = true,
+            dockMaxApps = 3,
+            dockSize = DockSize.Large,
+            dockApps = listOf("com.dock.app"),
+        )
+    val canvas = SavedWidgetCanvas(grid = GridDimensions(columns = 8, rows = 5), widgets = listOf(samplePlacedWidget()))
+    val widgets = FakeWidgetLayoutRepository(initial = mapOf(StateGroup.System to canvas))
+    val calibration =
+        HallSensorCalibration(sensorType = 5, sensorName = "Hall Sensor", closedValue = 1f, openValue = 0f)
+    val thorSettings =
+        FakeThorSettingsRepository(
+            lidWakeGuardEnabled = true,
+            hallSensorCalibration = calibration,
+            autoFpsEnabled = true,
+            autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
+        )
+    val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
+    val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
+    val repositories =
+        BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings, gameMatchOverrides)
 
+    private fun samplePlacedWidget() =
+        PlacedWidget(
+            id = "widget-1",
+            widgetType = WidgetType.ColorBackground(colorArgb = 0xFF112233, alpha = 1f),
+            gridColumn = 0,
+            gridRow = 0,
+            columnSpan = 2,
+            rowSpan = 2,
+            zIndex = 0,
+        )
+}
+
+class ExportConfigBackupUseCaseTest {
     @Test
     fun `every field from every repository is present in the exported snapshot`() =
         runTest {
-            val fabAssignments =
-                FabAssignments.Default.copy(bottomStart = FabSlot(FabType.CustomApp, "com.example.app"))
-            val onboarding = onboardingWithSampleValues(fabAssignments)
-            val appDrawer =
-                FakeAppDrawerSettingsRepository(
-                    hiddenApps = setOf("com.hidden.app"),
-                    gridColumns = 6,
-                    otherScreenLaunchApps = setOf("com.other.app"),
-                    sortFoldersOnTop = false,
-                    showSearchBar = false,
-                )
-            val folder = AppFolder(id = "folder-1", name = "Arcade", memberPackageNames = setOf("com.arcade.app"))
-            val appFolders = FakeAppFolderRepository(folders = listOf(folder))
-            val dock =
-                FakeDockSettingsRepository(
-                    dockEnabled = true,
-                    dockMaxApps = 3,
-                    dockSize = DockSize.Large,
-                    dockApps = listOf("com.dock.app"),
-                )
-            val canvasGrid = GridDimensions(columns = 8, rows = 5)
-            val canvas = SavedWidgetCanvas(grid = canvasGrid, widgets = listOf(placedWidget()))
-            val widgets = FakeWidgetLayoutRepository(initial = mapOf(StateGroup.System to canvas))
-            val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
-            val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
+            val fixture = ExportFixture()
             val configBackupRepository = JsonConfigBackupRepository()
-
-            val useCase =
-                ExportConfigBackupUseCase(
-                    onboarding,
-                    appDrawer,
-                    appFolders,
-                    dock,
-                    widgets,
-                    gameMatchOverrides,
-                    configBackupRepository,
-                )
-            val snapshot = configBackupRepository.deserialize(useCase()).getOrThrow()
+            val json = ExportConfigBackupUseCase(fixture.repositories, configBackupRepository)()
+            val snapshot = configBackupRepository.deserialize(json).getOrThrow()
             val emptyCanvas = SavedWidgetCanvas(grid = null, widgets = emptyList())
 
             assertEquals("/storage/emulated/0/CustomESDE", snapshot.logFolderPath)
@@ -115,12 +120,16 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(MusicDuckingMode.Pause, snapshot.musicDuckingMode)
             assertEquals(setOf("com.hidden.app"), snapshot.hiddenApps)
             assertEquals(6, snapshot.gridColumns)
-            assertEquals(listOf(folder), snapshot.folders)
+            assertEquals(listOf(fixture.folder), snapshot.folders)
             assertEquals(DockSize.Large, snapshot.dockSize)
             assertEquals(listOf("com.dock.app"), snapshot.dockApps)
-            assertEquals(canvas, snapshot.widgetCanvases[StateGroup.System])
+            assertEquals(fixture.canvas, snapshot.widgetCanvases[StateGroup.System])
             assertEquals(emptyCanvas, snapshot.widgetCanvases[StateGroup.Playing])
-            assertEquals(listOf(override), snapshot.gameMatchOverrides)
+            assertEquals(listOf(fixture.override), snapshot.gameMatchOverrides)
             assertEquals(false, snapshot.updateAchievementsOnScreensaverEnabled)
+            assertTrue(snapshot.lidWakeGuardEnabled)
+            assertEquals(fixture.calibration, snapshot.hallSensorCalibration)
+            assertTrue(snapshot.autoFpsEnabled)
+            assertEquals(setOf("org.libretro.retroarch"), snapshot.autoFpsTriggerPackages)
         }
 }

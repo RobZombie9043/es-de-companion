@@ -56,6 +56,14 @@ data class AppConfigBackup(
     val widgetCanvases: Map<StateGroup, SavedWidgetCanvas>,
     val gameMatchOverrides: List<GameMatchOverride> = emptyList(),
     val updateAchievementsOnScreensaverEnabled: Boolean = true,
+    val lidWakeGuardEnabled: Boolean,
+    val hallSensorCalibration: HallSensorCalibration,
+    val autoFpsEnabled: Boolean,
+    val autoFpsTriggerPackages: Set<String>,
+    val taskKillerEnabled: Boolean,
+    val taskKillerExcludedPackages: Set<String>,
+    val volumeSyncEnabled: Boolean,
+    val volumeSyncMode: VolumeSyncMode,
 ) {
     companion object {
         const val CURRENT_VERSION = 1
