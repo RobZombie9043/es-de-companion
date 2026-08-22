@@ -20,6 +20,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.retroachivements.api.RetroClient
 import org.retroachivements.api.data.RetroCredentials
+import org.retroachivements.api.data.pojo.ErrorResponse
 import org.retroachivements.api.data.pojo.comments.GetComments
 import org.retroachivements.api.data.pojo.game.GetGameInfoAndUserProgress
 import org.retroachivements.api.data.pojo.game.GetGameProgression
@@ -92,7 +93,7 @@ class RetroClientRetroAchievementsApi(
             // fetchAchievementTypesById's kdoc for the confirmed root cause - so achievement
             // type/classification (Missable/Progression/WinCondition) is fetched separately and
             // merged in below.
-            val progressDeferred = async { api.getGameInfoAndUserProgress(username, gameId, includeUserAward = 1) }
+            val progressDeferred = async { fetchGameInfoAndUserProgressWithRetry(username, gameId) }
             val typesDeferred = async { fetchAchievementTypesById(gameId) }
             // Community-wide median beat/complete/master times (see GamePlaytimeStats' kdoc) -
             // a separate, unrelated-to-the-user endpoint, so a failure here degrades to "no
@@ -104,6 +105,30 @@ class RetroClientRetroAchievementsApi(
             val playtimeStats = (playtimeDeferred.await() as? NetworkResponse.Success)?.body?.toPlaytimeStats()
             progressResult.toApiResult { it.toSummary(typesById, playtimeStats) }
         }
+
+    /**
+     * Retries the underlying `GetGameInfoAndUserProgress` call once on any [NetworkResponse.Error] -
+     * confirmed on-device as the fix for "Couldn't load achievements: ...Use
+     * JsonReader.setLenient(true) to accept malformed JSON..." surfacing after fast-scrolling
+     * ES-DE's game list and settling on a not-yet-cached game. That message is cnradapter's
+     * [NetworkResponse.Error] wrapping a genuine (not merely cancelled) response whose body
+     * failed to parse as JSON - i.e. a real, completed request got back a bad body, not a stale
+     * request racing a live one (the debounce in [RetroAchievementsViewModel] already handles
+     * that case). A single settle now fires several concurrent RA requests at once (this call,
+     * [fetchAchievementTypesById], [GamePlaytimeStats]' progression fetch, and - one level up -
+     * two leaderboard calls), and this symptom reads like an occasional connection-reuse/timing
+     * hiccup under that burst rather than a persistent failure - a debounced settle represents
+     * one deliberate user action, so it shouldn't read as "no achievements" when a second attempt
+     * reliably succeeds.
+     */
+    private suspend fun fetchGameInfoAndUserProgressWithRetry(
+        username: String,
+        gameId: Long,
+    ): NetworkResponse<GetGameInfoAndUserProgress.Response, ErrorResponse> {
+        val first = api.getGameInfoAndUserProgress(username, gameId, includeUserAward = 1)
+        if (first !is NetworkResponse.Error) return first
+        return api.getGameInfoAndUserProgress(username, gameId, includeUserAward = 1)
+    }
 
     /**
      * A narrow, deliberate exception to "RetroAchievements traffic only goes through api-kotlin"
