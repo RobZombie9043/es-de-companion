@@ -11,15 +11,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.ShieldMoon
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SyncAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -396,35 +400,30 @@ private fun VolumeControlModePicker(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val selection = if (enabled) mode else null
+    val selections = listOf(null, VolumeSyncMode.Linked, VolumeSyncMode.FollowFocus)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = selection == null,
-                enabled = selectionEnabled,
-                onClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onSelectionChanged(null)
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-            ) { Text("None") }
-            SegmentedButton(
-                selected = selection == VolumeSyncMode.Linked,
-                enabled = selectionEnabled,
-                onClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onSelectionChanged(VolumeSyncMode.Linked)
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-            ) { Text("Synced") }
-            SegmentedButton(
-                selected = selection == VolumeSyncMode.FollowFocus,
-                enabled = selectionEnabled,
-                onClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onSelectionChanged(VolumeSyncMode.FollowFocus)
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-            ) { Text("Focus") }
+            selections.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = selection == option,
+                    enabled = selectionEnabled,
+                    onClick = {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSelectionChanged(option)
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = selections.size),
+                    icon = {
+                        SegmentedButtonDefaults.Icon(active = selection == option) {
+                            Icon(
+                                imageVector = option.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                            )
+                        }
+                    },
+                    label = { Text(option.label) },
+                )
+            }
         }
         Text(
             text =
@@ -437,6 +436,23 @@ private fun VolumeControlModePicker(
         )
     }
 }
+
+// Presentation-only icon/label, same reasoning as ThemePreference.icon/label in UISettingsContent.
+private val VolumeSyncMode?.icon: ImageVector
+    get() =
+        when (this) {
+            null -> Icons.AutoMirrored.Filled.VolumeUp
+            VolumeSyncMode.Linked -> Icons.Filled.SyncAlt
+            VolumeSyncMode.FollowFocus -> Icons.Filled.CenterFocusStrong
+        }
+
+private val VolumeSyncMode?.label: String
+    get() =
+        when (this) {
+            null -> "Default"
+            VolumeSyncMode.Linked -> "Synced"
+            VolumeSyncMode.FollowFocus -> "Focus"
+        }
 
 /** Shared "navigate to the app picker" row for Auto FPS's trigger-apps picker and Task
  * Killer's excluded-apps picker - identical shape, different destination/label. */
