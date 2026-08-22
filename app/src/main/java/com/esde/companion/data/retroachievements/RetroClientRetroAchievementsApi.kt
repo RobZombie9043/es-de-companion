@@ -176,6 +176,13 @@ class RetroClientRetroAchievementsApi(
      * under a `Server` account (e.g. "X uploaded this achievement.", edit/promotion notices) -
      * confirmed via this endpoint's own mock response data. Those aren't user comments, so they're
      * filtered out here rather than left for the UI to reason about.
+     *
+     * `sort` defaults to `"submitted"` (oldest first, confirmed via this endpoint's own mock
+     * response data - a 2020 comment ahead of a 2024 one). Explicitly requesting `"-submitted"`
+     * both orders the UI newest-first and - since `count` caps the page at
+     * [ACHIEVEMENT_COMMENTS_PAGE_SIZE] with no "load more" - ensures a wall with more comments
+     * than that page size actually surfaces its most recent comments instead of silently
+     * truncating to only the oldest ones.
      */
     override suspend fun getAchievementComments(achievementId: Long): AchievementCommentsResult {
         val response =
@@ -183,6 +190,7 @@ class RetroClientRetroAchievementsApi(
                 achievementId = achievementId,
                 count = ACHIEVEMENT_COMMENTS_PAGE_SIZE,
                 offset = 0,
+                sort = "-submitted",
             )
         return response.toApiResult { comments ->
             comments.results
