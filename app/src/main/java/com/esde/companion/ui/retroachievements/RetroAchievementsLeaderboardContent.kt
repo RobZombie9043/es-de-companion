@@ -108,22 +108,23 @@ internal fun RetroAchievementsModeBody(
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                HashMatchIndicatorIcon(
+                    indicator = achievements.hashMatchIndicator,
+                    onTapped = achievements.onHashMatchIndicatorTapped,
+                    modifier = Modifier.size(HASH_MISMATCH_ICON_SIZE),
+                )
                 Text(
                     text = achievementsSummary?.gameTitle.orEmpty(),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     modifier = Modifier.weight(1f, fill = false).basicMarquee(),
-                )
-                HashMatchIndicatorIcon(
-                    indicator = achievements.hashMatchIndicator,
-                    onTapped = achievements.onHashMatchIndicatorTapped,
-                    modifier = Modifier.size(HASH_MISMATCH_ICON_SIZE),
                 )
             }
             RetroAchievementsModeToggleRow(
