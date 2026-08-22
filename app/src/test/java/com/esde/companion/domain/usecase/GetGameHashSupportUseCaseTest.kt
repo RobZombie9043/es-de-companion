@@ -36,6 +36,13 @@ class GetGameHashSupportUseCaseTest {
         override suspend fun getUserGameProgress() = error("not used in this test")
 
         override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
     }
 
     private class FakeGameRomHashRepository(

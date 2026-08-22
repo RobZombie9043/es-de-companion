@@ -7,10 +7,12 @@ import com.esde.companion.domain.model.AchievementFilterOption
 import com.esde.companion.domain.model.AchievementSortOrder
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.LeaderboardSortOrder
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.resolveAchievementsGame
 import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
+import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
@@ -18,15 +20,29 @@ import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverE
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
 import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 private data class CurrentGame(val reference: GameReference, val name: String)
+
+// Fast-scrolling ES-DE's game list drives a distinct CurrentGame through this ViewModel for every
+// momentarily-highlighted game, each of which would otherwise kick off its own resolve + two
+// concurrent RetroAchievements fetches (achievement summary, leaderboards) - almost all of them
+// abandoned within milliseconds as scrolling continues. Debouncing before resolveAndFetch ever
+// runs means only the game the user actually settles on triggers a fetch, rather than a burst of
+// concurrent in-flight requests per scrolled-past game - confirmed on-device as the trigger for a
+// transient "Couldn't load achievements: ...malformed JSON..." error that a manual Refresh always
+// recovered from (consistent with an abandoned-but-still-executing request racing a live one).
+private const val RESOLVE_DEBOUNCE_MILLIS = 400L
 
 /**
  * Drives the RetroAchievements FAB/summary view. Re-resolves whenever the signed-in state
@@ -48,7 +64,10 @@ private data class CurrentGame(val reference: GameReference, val name: String)
  *
  * [collectLatest] cancels an in-flight resolve/fetch as soon as the game or sign-in state
  * moves on, rather than letting a stale network call finish and overwrite newer state.
+ * [currentGame] is additionally debounced ([RESOLVE_DEBOUNCE_MILLIS]) before reaching that
+ * pipeline - see the constant's own kdoc for why fast list-scrolling needs this.
  */
+@OptIn(FlowPreview::class)
 @Suppress("LongParameterList", "TooManyFunctions")
 class RetroAchievementsViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
@@ -59,6 +78,7 @@ class RetroAchievementsViewModel(
     private val searchGames: SearchRetroAchievementsGamesUseCase,
     private val setGameMatchOverride: SetGameMatchOverrideUseCase,
     private val getAchievementComments: GetAchievementCommentsUseCase,
+    private val getLeaderboardEntries: GetLeaderboardEntriesUseCase,
 ) : ViewModel() {
     // Set by MainActivity via onOverlayVisibilityChanged, reflecting whether this screen is
     // actually on screen right now (its AnimatedVisibility condition) - see
@@ -78,6 +98,7 @@ class RetroAchievementsViewModel(
         currentGameContext()
             .map { resolved -> resolved?.let { (reference, name) -> CurrentGame(reference, name) } }
             .distinctUntilChanged()
+            .debounce(RESOLVE_DEBOUNCE_MILLIS)
 
     private val _resolution =
         MutableStateFlow<RetroAchievementsResolutionState>(RetroAchievementsResolutionState.NoGame)
@@ -100,6 +121,19 @@ class RetroAchievementsViewModel(
     val filter: StateFlow<Set<AchievementFilterOption>> = achievementDisplay.filter
     val displayField: StateFlow<AchievementDisplayField> = achievementDisplay.displayField
     val expanded: StateFlow<ExpandedAchievementComments?> = achievementDisplay.expanded
+
+    // The Achievements/Leaderboards chip toggle and its own sort/tap-to-expand controls - see
+    // LeaderboardDisplayController's kdoc. Shared with RetroAchievementsSystemGamesViewModel,
+    // which owns its own instance for its own leaderboard list.
+    private val _mode = MutableStateFlow(RetroAchievementsMode.Achievements)
+    val mode: StateFlow<RetroAchievementsMode> = _mode
+
+    private val _leaderboardsFetch = MutableStateFlow<LeaderboardsFetchState>(LeaderboardsFetchState.Idle)
+    val leaderboardsFetch: StateFlow<LeaderboardsFetchState> = _leaderboardsFetch
+
+    private val leaderboardDisplay = LeaderboardDisplayController(getLeaderboardEntries, viewModelScope)
+    val leaderboardSortOrder: StateFlow<LeaderboardSortOrder> = leaderboardDisplay.sortOrder
+    val leaderboardExpanded: StateFlow<ExpandedLeaderboardEntries?> = leaderboardDisplay.expanded
 
     private val _hashSupport = MutableStateFlow<HashSupportState>(HashSupportState.Hidden)
     val hashSupport: StateFlow<HashSupportState> = _hashSupport
@@ -166,6 +200,14 @@ class RetroAchievementsViewModel(
 
     fun onAchievementTapped(achievementId: Long) = achievementDisplay.onAchievementTapped(achievementId)
 
+    fun onModeChanged(mode: RetroAchievementsMode) {
+        _mode.value = mode
+    }
+
+    fun onLeaderboardSortOrderChanged(order: LeaderboardSortOrder) = leaderboardDisplay.onSortOrderChanged(order)
+
+    fun onLeaderboardTapped(leaderboardId: Long) = leaderboardDisplay.onLeaderboardTapped(leaderboardId)
+
     /** Forces the next fetch to bypass [RetroAchievementsDetailUseCases.getAchievementSummary]'s cache. */
     fun onRefreshRequested() = forceRefresh.request()
 
@@ -184,6 +226,8 @@ class RetroAchievementsViewModel(
         _searchResults.value = emptyList()
         _hashSupport.value = HashSupportState.Hidden
         achievementDisplay.onTargetChanged()
+        leaderboardDisplay.onTargetChanged()
+        _leaderboardsFetch.value = LeaderboardsFetchState.Idle
 
         if (!signedIn) {
             _resolution.value = RetroAchievementsResolutionState.NotSignedIn
@@ -208,7 +252,18 @@ class RetroAchievementsViewModel(
                 lastGameId = match.gameId
                 _resolution.value = RetroAchievementsResolutionState.Found(match.method)
                 _fetch.value = RetroAchievementsFetchState.Loading
-                _fetch.value = detailUseCases.getAchievementSummary(match.gameId, forceRefresh.consume()).toFetchState()
+                _leaderboardsFetch.value = LeaderboardsFetchState.Loading
+                // Both fetched concurrently, and both consume the same forceRefresh flag - see
+                // this ViewModel's kdoc/CLAUDE.md for why leaderboards are fetched eagerly
+                // (the chip toggle needs a real leaderboard count immediately) and why one
+                // consume() call feeds both (so the kebab's "Refresh" bypasses both caches).
+                val refresh = forceRefresh.consume()
+                coroutineScope {
+                    val achievementsDeferred = async { detailUseCases.getAchievementSummary(match.gameId, refresh) }
+                    val leaderboardsDeferred = async { detailUseCases.getGameLeaderboards(match.gameId, refresh) }
+                    _fetch.value = achievementsDeferred.await().toFetchState()
+                    _leaderboardsFetch.value = leaderboardsDeferred.await().toFetchState()
+                }
             }
         }
     }

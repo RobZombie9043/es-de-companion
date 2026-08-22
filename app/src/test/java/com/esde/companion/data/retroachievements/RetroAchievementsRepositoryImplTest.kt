@@ -4,6 +4,10 @@ import com.esde.companion.domain.model.AchievementComment
 import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.GameAchievementSummary
+import com.esde.companion.domain.model.GameLeaderboardsSummary
+import com.esde.companion.domain.model.LeaderboardEntriesFetchResult
+import com.esde.companion.domain.model.LeaderboardEntry
+import com.esde.companion.domain.model.LeaderboardsFetchResult
 import com.esde.companion.domain.model.ProgressStatus
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
@@ -18,6 +22,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 private typealias CommentsApiResult = RetroAchievementsApiResult<List<AchievementComment>>
+private typealias LeaderboardsApiResult = RetroAchievementsApiResult<GameLeaderboardsSummary>
+private typealias LeaderboardEntriesApiResult = RetroAchievementsApiResult<List<LeaderboardEntry>>
 
 class RetroAchievementsRepositoryImplTest {
     private class FakeRetroAchievementsApi(
@@ -53,6 +59,10 @@ class RetroAchievementsRepositoryImplTest {
         }
 
         override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(gameId: Long) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
     }
 
     private class CountingGameInfoApi(
@@ -80,6 +90,10 @@ class RetroAchievementsRepositoryImplTest {
         ) = error("not used in this test")
 
         override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(gameId: Long) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
     }
 
     private class FakeCommentsApi(
@@ -106,6 +120,72 @@ class RetroAchievementsRepositoryImplTest {
         override suspend fun getAchievementComments(achievementId: Long): CommentsApiResult {
             callCount++
             return commentsResult
+        }
+
+        override suspend fun getGameLeaderboards(gameId: Long) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
+    }
+
+    private class FakeLeaderboardsApi(
+        private val leaderboardsResult: LeaderboardsApiResult,
+    ) : RetroAchievementsApi {
+        var callCount = 0
+            private set
+
+        override suspend fun getUserSummary(username: String) = error("not used in this test")
+
+        override suspend fun getGameList(consoleId: Long) = error("not used in this test")
+
+        override suspend fun getGameInfoAndUserProgress(
+            username: String,
+            gameId: Long,
+        ) = error("not used in this test")
+
+        override suspend fun getUserCompletionProgress(
+            username: String,
+            offset: Int,
+            count: Int,
+        ) = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(gameId: Long): LeaderboardsApiResult {
+            callCount++
+            return leaderboardsResult
+        }
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
+    }
+
+    private class FakeLeaderboardEntriesApi(
+        private val entriesResult: LeaderboardEntriesApiResult,
+    ) : RetroAchievementsApi {
+        var callCount = 0
+            private set
+
+        override suspend fun getUserSummary(username: String) = error("not used in this test")
+
+        override suspend fun getGameList(consoleId: Long) = error("not used in this test")
+
+        override suspend fun getGameInfoAndUserProgress(
+            username: String,
+            gameId: Long,
+        ) = error("not used in this test")
+
+        override suspend fun getUserCompletionProgress(
+            username: String,
+            offset: Int,
+            count: Int,
+        ) = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(gameId: Long) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long): LeaderboardEntriesApiResult {
+            callCount++
+            return entriesResult
         }
     }
 
@@ -142,14 +222,22 @@ class RetroAchievementsRepositoryImplTest {
     private fun repositoryWith(
         api: RetroAchievementsApi,
         signedInAs: RetroAchievementsCredentials? = credentials,
-    ) = RetroAchievementsRepositoryImpl(
-        credentialsRepository = FakeCredentialsRepository(signedInAs),
-        gameListCache = GameListCache(FakeGameListCacheStore()),
-        userProgressCache = UserProgressCache(FakeUserProgressCacheStore()),
-        achievementSummaryCache = AchievementSummaryCache(),
-        achievementCommentsCache = AchievementCommentsCache(),
-        apiFactory = { api },
-    )
+    ): RetroAchievementsRepositoryImpl {
+        val caches =
+            RetroAchievementsCaches(
+                gameList = GameListCache(FakeGameListCacheStore()),
+                userProgress = UserProgressCache(FakeUserProgressCacheStore()),
+                achievementSummary = AchievementSummaryCache(),
+                achievementComments = AchievementCommentsCache(),
+                gameLeaderboards = GameLeaderboardsCache(),
+                leaderboardEntries = LeaderboardEntriesCache(),
+            )
+        return RetroAchievementsRepositoryImpl(
+            credentialsRepository = FakeCredentialsRepository(signedInAs),
+            caches = caches,
+            apiFactory = { api },
+        )
+    }
 
     @Test
     fun `a successful user summary maps to SignedIn with the username, points, and full avatar url`() =
@@ -350,6 +438,111 @@ class RetroAchievementsRepositoryImplTest {
 
             repository.getAchievementComments(achievementId = 1L)
             repository.getAchievementComments(achievementId = 1L)
+
+            assertEquals(1, fakeApi.callCount)
+        }
+
+    @Test
+    fun `getGameLeaderboards reports NotFound when nobody is signed in`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi(), signedInAs = null)
+
+            val result = repository.getGameLeaderboards(gameId = 1L)
+
+            assertEquals(LeaderboardsFetchResult.NotFound, result)
+        }
+
+    @Test
+    fun `getGameLeaderboards maps a successful fetch to Success`() =
+        runTest {
+            val summary = GameLeaderboardsSummary(gameId = 1L, leaderboards = emptyList())
+            val fakeApi = FakeLeaderboardsApi(RetroAchievementsApiResult.Success(summary))
+            val repository = repositoryWith(fakeApi)
+
+            val result = repository.getGameLeaderboards(gameId = 1L)
+
+            assertEquals(LeaderboardsFetchResult.Success(summary), result)
+        }
+
+    @Test
+    fun `getGameLeaderboards maps an api error to NetworkError with the same message`() =
+        runTest {
+            val fakeApi = FakeLeaderboardsApi(RetroAchievementsApiResult.Error("offline"))
+            val repository = repositoryWith(fakeApi)
+
+            val result = repository.getGameLeaderboards(gameId = 1L)
+
+            assertEquals(LeaderboardsFetchResult.NetworkError("offline"), result)
+        }
+
+    @Test
+    fun `getGameLeaderboards caches a successful fetch and does not re-query the api on a second call`() =
+        runTest {
+            val summary = GameLeaderboardsSummary(gameId = 1L, leaderboards = emptyList())
+            val fakeApi = FakeLeaderboardsApi(RetroAchievementsApiResult.Success(summary))
+            val repository = repositoryWith(fakeApi)
+
+            repository.getGameLeaderboards(gameId = 1L)
+            repository.getGameLeaderboards(gameId = 1L)
+
+            assertEquals(1, fakeApi.callCount)
+        }
+
+    @Test
+    fun `getGameLeaderboards with forceRefresh re-queries the api even when a fresh cache entry exists`() =
+        runTest {
+            val summary = GameLeaderboardsSummary(gameId = 1L, leaderboards = emptyList())
+            val fakeApi = FakeLeaderboardsApi(RetroAchievementsApiResult.Success(summary))
+            val repository = repositoryWith(fakeApi)
+
+            repository.getGameLeaderboards(gameId = 1L)
+            repository.getGameLeaderboards(gameId = 1L, forceRefresh = true)
+
+            assertEquals(2, fakeApi.callCount)
+        }
+
+    @Test
+    fun `getLeaderboardEntries reports an empty list when nobody is signed in`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi(), signedInAs = null)
+
+            val result = repository.getLeaderboardEntries(leaderboardId = 1L)
+
+            assertEquals(LeaderboardEntriesFetchResult.Success(emptyList()), result)
+        }
+
+    @Test
+    fun `getLeaderboardEntries maps a successful fetch to Success`() =
+        runTest {
+            val entry = LeaderboardEntry(rank = 1L, user = "player1", formattedScore = "100", submittedAtMillis = 0L)
+            val fakeApi = FakeLeaderboardEntriesApi(RetroAchievementsApiResult.Success(listOf(entry)))
+            val repository = repositoryWith(fakeApi)
+
+            val result = repository.getLeaderboardEntries(leaderboardId = 1L)
+
+            assertEquals(LeaderboardEntriesFetchResult.Success(listOf(entry)), result)
+        }
+
+    @Test
+    fun `getLeaderboardEntries maps an api error to NetworkError with the same message`() =
+        runTest {
+            val fakeApi = FakeLeaderboardEntriesApi(RetroAchievementsApiResult.Error("offline"))
+            val repository = repositoryWith(fakeApi)
+
+            val result = repository.getLeaderboardEntries(leaderboardId = 1L)
+
+            assertEquals(LeaderboardEntriesFetchResult.NetworkError("offline"), result)
+        }
+
+    @Test
+    fun `getLeaderboardEntries caches a successful fetch and does not re-query the api on a second call`() =
+        runTest {
+            val entry = LeaderboardEntry(rank = 1L, user = "player1", formattedScore = "100", submittedAtMillis = 0L)
+            val fakeApi = FakeLeaderboardEntriesApi(RetroAchievementsApiResult.Success(listOf(entry)))
+            val repository = repositoryWith(fakeApi)
+
+            repository.getLeaderboardEntries(leaderboardId = 1L)
+            repository.getLeaderboardEntries(leaderboardId = 1L)
 
             assertEquals(1, fakeApi.callCount)
         }

@@ -15,6 +15,7 @@ class RetroAchievementsViewModelFactory(
         val detailUseCases =
             RetroAchievementsDetailUseCases(
                 getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
+                getGameLeaderboards = appContainer.getGameLeaderboardsUseCase,
                 getHashSupport = appContainer.getGameHashSupportUseCase,
             )
         val observeUpdateOnScreensaver = appContainer.observeUpdateAchievementsOnScreensaverEnabledUseCase
@@ -27,6 +28,7 @@ class RetroAchievementsViewModelFactory(
             searchGames = appContainer.searchRetroAchievementsGamesUseCase,
             setGameMatchOverride = appContainer.setGameMatchOverrideUseCase,
             getAchievementComments = appContainer.getAchievementCommentsUseCase,
+            getLeaderboardEntries = appContainer.getLeaderboardEntriesUseCase,
         ) as T
     }
 }

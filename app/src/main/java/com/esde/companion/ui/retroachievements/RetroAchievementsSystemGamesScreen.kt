@@ -93,6 +93,7 @@ fun RetroAchievementsSystemGamesScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val selectedGameFetch by viewModel.selectedGameFetch.collectAsStateWithLifecycle()
+    val selectedGameLeaderboardsFetch by viewModel.selectedGameLeaderboardsFetch.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
 
     var page by remember { mutableStateOf<SystemGamesPage>(SystemGamesPage.Browse) }
@@ -155,7 +156,7 @@ fun RetroAchievementsSystemGamesScreen(
                     is SystemGamesPage.Detail ->
                         GameDetailPage(
                             viewModel = viewModel,
-                            fetch = selectedGameFetch,
+                            fetch = GameDetailFetch(selectedGameFetch, selectedGameLeaderboardsFetch),
                             overlayOpacityPercent = overlayOpacityPercent,
                             onBack = onBack,
                             onExit = onExit,
@@ -374,10 +375,20 @@ private fun GameTile(
     }
 }
 
+/**
+ * Bundles the two independently-resolving fetch states [GameDetailPage] receives from its
+ * caller - same "bundle related params to stay under detekt's LongParameterList limit"
+ * convention [AchievementListControls]/[AchievementModeContent] use.
+ */
+private data class GameDetailFetch(
+    val achievements: RetroAchievementsFetchState,
+    val leaderboards: LeaderboardsFetchState,
+)
+
 @Composable
 private fun GameDetailPage(
     viewModel: RetroAchievementsSystemGamesViewModel,
-    fetch: RetroAchievementsFetchState,
+    fetch: GameDetailFetch,
     overlayOpacityPercent: Int,
     onBack: () -> Unit,
     onExit: () -> Unit,
@@ -386,20 +397,43 @@ private fun GameDetailPage(
     val filter by viewModel.gameFilter.collectAsStateWithLifecycle()
     val displayField by viewModel.gameDisplayField.collectAsStateWithLifecycle()
     val expanded by viewModel.expanded.collectAsStateWithLifecycle()
-    val listControls =
+    val achievementListControls =
         AchievementListControls(
             sort = DropdownSelection(sortOrder, viewModel::onGameSortOrderChanged),
             filter = DropdownSelection(filter, viewModel::onGameFilterChanged),
             display = DropdownSelection(displayField, viewModel::onGameDisplayFieldChanged),
             overlayOpacityPercent = overlayOpacityPercent,
         )
-    val expansion = AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped)
+    val achievements =
+        AchievementModeContent(
+            fetch = fetch.achievements,
+            listControls = achievementListControls,
+            expansion = AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped),
+        )
+
+    val mode by viewModel.mode.collectAsStateWithLifecycle()
+    val leaderboardSortOrder by viewModel.leaderboardSortOrder.collectAsStateWithLifecycle()
+    val leaderboardExpanded by viewModel.leaderboardExpanded.collectAsStateWithLifecycle()
+    val leaderboardListControls =
+        LeaderboardListControls(
+            sort = DropdownSelection(leaderboardSortOrder, viewModel::onLeaderboardSortOrderChanged),
+            overlayOpacityPercent = overlayOpacityPercent,
+        )
+    val leaderboardExpansion =
+        LeaderboardExpansionState(expanded = leaderboardExpanded, onTap = viewModel::onLeaderboardTapped)
+    val leaderboards =
+        LeaderboardModeContent(
+            fetch = fetch.leaderboards,
+            listControls = leaderboardListControls,
+            expansion = leaderboardExpansion,
+        )
+
     Column(modifier = Modifier.fillMaxSize()) {
         GameDetailTopBar(onBack = onBack, onExit = onExit, onRefresh = viewModel::onRefreshRequested)
-        RetroAchievementsFetchBody(
-            fetch = fetch,
-            listControls = listControls,
-            expansion = expansion,
+        RetroAchievementsModeBody(
+            modeSelection = DropdownSelection(mode, viewModel::onModeChanged),
+            achievements = achievements,
+            leaderboards = leaderboards,
             modifier = Modifier.fillMaxSize(),
         )
     }

@@ -60,6 +60,10 @@ class UserProgressCacheTest {
         }
 
         override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(gameId: Long) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
     }
 
     private val now = Instant.parse("2026-08-12T12:00:00Z")

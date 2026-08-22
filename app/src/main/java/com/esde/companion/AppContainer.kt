@@ -29,7 +29,10 @@ import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
 import com.esde.companion.data.retroachievements.DataStoreGameMatchOverrideRepository
 import com.esde.companion.data.retroachievements.DataStoreUserProgressCacheStore
 import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
+import com.esde.companion.data.retroachievements.GameLeaderboardsCache
 import com.esde.companion.data.retroachievements.GameListCache
+import com.esde.companion.data.retroachievements.LeaderboardEntriesCache
+import com.esde.companion.data.retroachievements.RetroAchievementsCaches
 import com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImpl
 import com.esde.companion.data.retroachievements.RetroClientRetroAchievementsApi
 import com.esde.companion.data.retroachievements.UserProgressCache
@@ -97,6 +100,8 @@ import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
 import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.GetGameHashSupportUseCase
+import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
+import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
@@ -563,21 +568,35 @@ class AppContainer(context: Context) {
     // TTL, with a manual forceRefresh bypass wired to that screen's kebab "Refresh" entry - see
     // its kdoc for why it isn't disk-backed like the other two. A fourth, AchievementCommentsCache,
     // covers per-achievement wall comments (fetched on-demand when a row is expanded) - in-memory
-    // only, keyed by achievementId alone (public data, not per-user), 30-minute TTL. None of the
-    // four caches are covered by Backup & Restore, same as the credentials.
+    // only, keyed by achievementId alone (public data, not per-user), 30-minute TTL. A fifth,
+    // GameLeaderboardsCache, covers the per-game leaderboard list (the same screen's Leaderboards
+    // tab) - in-memory only, keyed by (username, gameId) same as AchievementSummaryCache since
+    // each row's myEntry is per-user, 15-minute TTL, refreshed alongside the achievement summary
+    // by the same kebab "Refresh" entry. A sixth, LeaderboardEntriesCache, covers one leaderboard's
+    // entries (fetched on-demand when a row is expanded) - in-memory only, keyed by leaderboardId
+    // alone (public data), 15-minute TTL. None of the six caches are covered by Backup & Restore,
+    // same as the credentials.
     private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
         EncryptedRetroAchievementsCredentialsRepository(appContext)
     private val gameListCache = GameListCache(store = DataStoreGameListCacheStore(appContext))
     private val userProgressCache = UserProgressCache(store = DataStoreUserProgressCacheStore(appContext))
     private val achievementSummaryCache = AchievementSummaryCache()
     private val achievementCommentsCache = AchievementCommentsCache()
+    private val gameLeaderboardsCache = GameLeaderboardsCache()
+    private val leaderboardEntriesCache = LeaderboardEntriesCache()
+    private val retroAchievementsCaches =
+        RetroAchievementsCaches(
+            gameList = gameListCache,
+            userProgress = userProgressCache,
+            achievementSummary = achievementSummaryCache,
+            achievementComments = achievementCommentsCache,
+            gameLeaderboards = gameLeaderboardsCache,
+            leaderboardEntries = leaderboardEntriesCache,
+        )
     private val retroAchievementsRepository: RetroAchievementsRepository =
         RetroAchievementsRepositoryImpl(
             credentialsRepository = retroAchievementsCredentialsRepository,
-            gameListCache = gameListCache,
-            userProgressCache = userProgressCache,
-            achievementSummaryCache = achievementSummaryCache,
-            achievementCommentsCache = achievementCommentsCache,
+            caches = retroAchievementsCaches,
             apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) },
         )
 
@@ -601,6 +620,8 @@ class AppContainer(context: Context) {
     val getRetroAchievementsSystemGamesUseCase = GetRetroAchievementsSystemGamesUseCase(retroAchievementsRepository)
     val getUserGameProgressUseCase = GetUserGameProgressUseCase(retroAchievementsRepository)
     val getAchievementCommentsUseCase = GetAchievementCommentsUseCase(retroAchievementsRepository)
+    val getGameLeaderboardsUseCase = GetGameLeaderboardsUseCase(retroAchievementsRepository)
+    val getLeaderboardEntriesUseCase = GetLeaderboardEntriesUseCase(retroAchievementsRepository)
 
     // Constructed unconditionally (cheap - same as the self-healing directory watchers above),
     // but each coordinator's *internal* listeners/receivers stay gated behind its own

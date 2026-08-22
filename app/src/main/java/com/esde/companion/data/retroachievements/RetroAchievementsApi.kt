@@ -2,6 +2,8 @@ package com.esde.companion.data.retroachievements
 
 import com.esde.companion.domain.model.AchievementComment
 import com.esde.companion.domain.model.GameAchievementSummary
+import com.esde.companion.domain.model.GameLeaderboardsSummary
+import com.esde.companion.domain.model.LeaderboardEntry
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.UserGameProgress
 
@@ -36,6 +38,12 @@ interface RetroAchievementsApi {
 
     /** [achievementId]'s wall comments, most recent page only (see `RetroClientRetroAchievementsApi`'s kdoc). */
     suspend fun getAchievementComments(achievementId: Long): RetroAchievementsApiResult<List<AchievementComment>>
+
+    /** [gameId]'s full leaderboard list, already merged with the signed-in user's own entries. */
+    suspend fun getGameLeaderboards(gameId: Long): RetroAchievementsApiResult<GameLeaderboardsSummary>
+
+    /** [leaderboardId]'s entries, most recent page only (see `RetroClientRetroAchievementsApi`'s kdoc). */
+    suspend fun getLeaderboardEntries(leaderboardId: Long): RetroAchievementsApiResult<List<LeaderboardEntry>>
 }
 
 /**

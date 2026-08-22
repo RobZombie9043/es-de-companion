@@ -72,9 +72,9 @@ fun RetroAchievementsScreen(
     modifier: Modifier = Modifier,
 ) {
     val resolution by viewModel.resolution.collectAsStateWithLifecycle()
-    val fetch by viewModel.fetch.collectAsStateWithLifecycle()
-    val listControls = rememberAchievementListControls(viewModel, overlayOpacityPercent)
-    val expansion = rememberAchievementExpansionState(viewModel)
+    val mode by viewModel.mode.collectAsStateWithLifecycle()
+    val achievements = rememberAchievementModeContent(viewModel, overlayOpacityPercent)
+    val leaderboards = rememberLeaderboardModeContent(viewModel, overlayOpacityPercent)
     var showCorrectionDialog by remember { mutableStateOf(false) }
 
     // Only composed while this screen is showing (AnimatedVisibility in MainActivity), so
@@ -127,9 +127,9 @@ fun RetroAchievementsScreen(
                 RetroAchievementsTopBar(onExit = onExit, menuActions = menuActions)
                 RetroAchievementsBody(
                     resolution = resolution,
-                    fetch = fetch,
-                    listControls = listControls,
-                    expansion = expansion,
+                    modeSelection = DropdownSelection(mode, viewModel::onModeChanged),
+                    achievements = achievements,
+                    leaderboards = leaderboards,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -144,33 +144,52 @@ fun RetroAchievementsScreen(
 }
 
 /**
- * Collects [RetroAchievementsViewModel]'s sort/filter/display state into one
- * [AchievementListControls] - pulled out so [RetroAchievementsScreen] itself stays short.
+ * Collects [RetroAchievementsViewModel]'s achievement fetch/sort/filter/display/expand state into
+ * one [AchievementModeContent] - pulled out so [RetroAchievementsScreen] itself stays short.
  */
 @Composable
-private fun rememberAchievementListControls(
+private fun rememberAchievementModeContent(
     viewModel: RetroAchievementsViewModel,
     overlayOpacityPercent: Int,
-): AchievementListControls {
+): AchievementModeContent {
+    val fetch by viewModel.fetch.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val displayField by viewModel.displayField.collectAsStateWithLifecycle()
-    return AchievementListControls(
-        sort = DropdownSelection(sortOrder, viewModel::onSortOrderChanged),
-        filter = DropdownSelection(filter, viewModel::onFilterChanged),
-        display = DropdownSelection(displayField, viewModel::onDisplayFieldChanged),
-        overlayOpacityPercent = overlayOpacityPercent,
+    val expanded by viewModel.expanded.collectAsStateWithLifecycle()
+    val listControls =
+        AchievementListControls(
+            sort = DropdownSelection(sortOrder, viewModel::onSortOrderChanged),
+            filter = DropdownSelection(filter, viewModel::onFilterChanged),
+            display = DropdownSelection(displayField, viewModel::onDisplayFieldChanged),
+            overlayOpacityPercent = overlayOpacityPercent,
+        )
+    return AchievementModeContent(
+        fetch = fetch,
+        listControls = listControls,
+        expansion = AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped),
     )
 }
 
-/**
- * Collects [RetroAchievementsViewModel]'s expand/comments state into one
- * [AchievementExpansionState] - pulled out so [RetroAchievementsScreen] itself stays short.
- */
+/** Same shape as [rememberAchievementModeContent], for the Leaderboards tab. */
 @Composable
-private fun rememberAchievementExpansionState(viewModel: RetroAchievementsViewModel): AchievementExpansionState {
-    val expanded by viewModel.expanded.collectAsStateWithLifecycle()
-    return AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped)
+private fun rememberLeaderboardModeContent(
+    viewModel: RetroAchievementsViewModel,
+    overlayOpacityPercent: Int,
+): LeaderboardModeContent {
+    val fetch by viewModel.leaderboardsFetch.collectAsStateWithLifecycle()
+    val sortOrder by viewModel.leaderboardSortOrder.collectAsStateWithLifecycle()
+    val expanded by viewModel.leaderboardExpanded.collectAsStateWithLifecycle()
+    val listControls =
+        LeaderboardListControls(
+            sort = DropdownSelection(sortOrder, viewModel::onLeaderboardSortOrderChanged),
+            overlayOpacityPercent = overlayOpacityPercent,
+        )
+    return LeaderboardModeContent(
+        fetch = fetch,
+        listControls = listControls,
+        expansion = LeaderboardExpansionState(expanded = expanded, onTap = viewModel::onLeaderboardTapped),
+    )
 }
 
 /** Both non-inline dialogs this screen can show, pulled out so [RetroAchievementsScreen] itself stays short. */
@@ -300,9 +319,9 @@ private fun OptionsMenu(actions: OptionsMenuActions) {
 @Composable
 private fun RetroAchievementsBody(
     resolution: RetroAchievementsResolutionState,
-    fetch: RetroAchievementsFetchState,
-    listControls: AchievementListControls,
-    expansion: AchievementExpansionState,
+    modeSelection: DropdownSelection<RetroAchievementsMode>,
+    achievements: AchievementModeContent,
+    leaderboards: LeaderboardModeContent,
     modifier: Modifier,
 ) {
     when (resolution) {
@@ -317,11 +336,10 @@ private fun RetroAchievementsBody(
         RetroAchievementsResolutionState.NoMatch ->
             RetroAchievementsMessage("No RetroAchievements entry found for this game.", modifier)
         is RetroAchievementsResolutionState.Found ->
-            RetroAchievementsFetchBody(
-                fetch = fetch,
-                listControls = listControls,
-                expansion = expansion,
-                isHashMatched = resolution.method == MatchMethod.RomHash,
+            RetroAchievementsModeBody(
+                modeSelection = modeSelection,
+                achievements = achievements.copy(isHashMatched = resolution.method == MatchMethod.RomHash),
+                leaderboards = leaderboards,
                 modifier = modifier,
             )
     }

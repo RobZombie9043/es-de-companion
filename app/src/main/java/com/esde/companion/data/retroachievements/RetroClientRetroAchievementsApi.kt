@@ -3,6 +3,8 @@ package com.esde.companion.data.retroachievements
 import com.esde.companion.domain.model.AchievementComment
 import com.esde.companion.domain.model.AchievementItem
 import com.esde.companion.domain.model.GameAchievementSummary
+import com.esde.companion.domain.model.GameLeaderboardsSummary
+import com.esde.companion.domain.model.LeaderboardEntry
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.UserGameProgress
@@ -17,11 +19,10 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.retroachivements.api.RetroClient
 import org.retroachivements.api.data.RetroCredentials
-import org.retroachivements.api.data.pojo.ErrorResponse
 import org.retroachivements.api.data.pojo.comments.GetComments
 import org.retroachivements.api.data.pojo.game.GetGameInfoAndUserProgress
+import org.retroachivements.api.data.pojo.game.GetUserGameLeaderboard
 import org.retroachivements.api.data.pojo.user.GetUserCompletionProgress
-import org.retroachivements.api.data.pojo.user.GetUserSummary
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -50,10 +51,15 @@ private const val ACHIEVEMENT_TYPES_READ_TIMEOUT_MS = 15_000
 // Revisit if a heavily-commented achievement ever needs pagination.
 private const val ACHIEVEMENT_COMMENTS_PAGE_SIZE = 50
 
+// Single page only, same "no load more UI yet" convention as ACHIEVEMENT_COMMENTS_PAGE_SIZE -
+// generous enough to cover a leaderboard's top entries for the accordion drill-down.
+private const val LEADERBOARD_ENTRIES_PAGE_SIZE = 100
+
 // RA's automated audit-log account - see getAchievementComments' kdoc for why its entries are filtered out.
 private const val RA_SERVER_USERNAME = "Server"
 
 private typealias AchievementCommentsResult = RetroAchievementsApiResult<List<AchievementComment>>
+private typealias LeaderboardEntriesResult = RetroAchievementsApiResult<List<LeaderboardEntry>>
 
 /**
  * Real [RetroAchievementsApi], wrapping api-kotlin's `RetroClient(credentials).api`. A
@@ -185,21 +191,39 @@ class RetroClientRetroAchievementsApi(
         }
     }
 
-    private fun GetUserSummary.Response.toUserSummary() =
-        RetroAchievementsUserSummary(
-            username = user,
-            points = totalPoints?.toInt() ?: 0,
-            avatarUrl = userPic?.let { "$MEDIA_BASE_URL$it" },
-        )
-
-    private fun <S, T> NetworkResponse<S, ErrorResponse>.toApiResult(map: (S) -> T): RetroAchievementsApiResult<T> =
-        when (this) {
-            is NetworkResponse.Success -> RetroAchievementsApiResult.Success(map(body))
-            is NetworkResponse.Error ->
-                RetroAchievementsApiResult.Error(
-                    body?.message ?: error?.message ?: "RetroAchievements request failed",
-                )
+    /**
+     * Merges the game's public leaderboard list with the signed-in user's own entries via two
+     * concurrent calls, the same [coroutineScope]/[async] shape [getGameInfoAndUserProgress] uses
+     * to merge achievement-type data. A failure fetching the user's own entries degrades to "no
+     * `myEntry` for any row" rather than failing the whole leaderboard list - the same
+     * graceful-degradation shape [fetchAchievementTypesById] already uses for its own secondary
+     * merge.
+     */
+    override suspend fun getGameLeaderboards(gameId: Long): RetroAchievementsApiResult<GameLeaderboardsSummary> =
+        coroutineScope {
+            val leaderboardsDeferred = async { api.getGameLeaderboards(gameId) }
+            val userEntriesDeferred = async { api.getUserGameLeaderboards(gameId, credentials.username) }
+            val leaderboardsResult = leaderboardsDeferred.await()
+            // userEntry is typed non-null on the compiled class, but the same "declared non-null,
+            // actually null via Gson" risk applies here as GetGameLeaderboards.Leaderboard.topEntry
+            // (see toLeaderboardSummary's kdoc) - laundering through an explicit nullable local
+            // and mapNotNull, rather than trusting the declared type, avoids the same crash shape.
+            val myEntriesById =
+                (userEntriesDeferred.await() as? NetworkResponse.Success)
+                    ?.body
+                    ?.results
+                    .orEmpty()
+                    .mapNotNull { result ->
+                        val userEntry: GetUserGameLeaderboard.Response.Result.UserEntry? = result.userEntry
+                        userEntry?.let { result.id.toLong() to it.toUserEntry() }
+                    }
+                    .toMap()
+            leaderboardsResult.toApiResult { it.toGameLeaderboardsSummary(gameId, myEntriesById) }
         }
+
+    override suspend fun getLeaderboardEntries(leaderboardId: Long): LeaderboardEntriesResult =
+        api.getLeaderboardEntries(leaderboardId, count = LEADERBOARD_ENTRIES_PAGE_SIZE)
+            .toApiResult { response -> response.results.map { it.toLeaderboardEntry() } }
 }
 
 /**
@@ -321,7 +345,7 @@ private fun GetUserCompletionProgress.Progress.toUserGameProgress(): UserGamePro
  * response ever deviates from that, this yields `null` (an "unknown unlock time", not a
  * crash) rather than trusting an unverified format string absolutely.
  */
-private fun parseRaTimestamp(value: String): Long? =
+internal fun parseRaTimestamp(value: String): Long? =
     try {
         LocalDateTime.parse(value, RA_TIMESTAMP_FORMAT).toInstant(ZoneOffset.UTC).toEpochMilli()
     } catch (

@@ -2,6 +2,8 @@ package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
+import com.esde.companion.domain.model.LeaderboardEntriesFetchResult
+import com.esde.companion.domain.model.LeaderboardsFetchResult
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsConsole
@@ -47,4 +49,16 @@ interface RetroAchievementsRepository {
 
     /** [achievementId]'s wall comments, already resolved through whatever caching the implementation applies. */
     suspend fun getAchievementComments(achievementId: Long): AchievementCommentsFetchResult
+
+    /**
+     * [gameId]'s full leaderboard list, merged with the signed-in user's own entries.
+     * [forceRefresh] bypasses whatever caching the implementation applies, same as [getAchievementSummary].
+     */
+    suspend fun getGameLeaderboards(
+        gameId: Long,
+        forceRefresh: Boolean = false,
+    ): LeaderboardsFetchResult
+
+    /** [leaderboardId]'s entries, already resolved through whatever caching the implementation applies. */
+    suspend fun getLeaderboardEntries(leaderboardId: Long): LeaderboardEntriesFetchResult
 }

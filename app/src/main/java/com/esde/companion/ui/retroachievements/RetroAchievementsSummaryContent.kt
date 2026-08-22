@@ -20,10 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -87,7 +84,6 @@ internal fun RetroAchievementsFetchBody(
     listControls: AchievementListControls,
     expansion: AchievementExpansionState,
     modifier: Modifier,
-    isHashMatched: Boolean = true,
 ) {
     when (fetch) {
         RetroAchievementsFetchState.Idle, RetroAchievementsFetchState.Loading ->
@@ -97,7 +93,6 @@ internal fun RetroAchievementsFetchBody(
                 summary = fetch.summary,
                 listControls = listControls,
                 expansion = expansion,
-                isHashMatched = isHashMatched,
                 modifier = modifier,
             )
         RetroAchievementsFetchState.NotFound ->
@@ -128,7 +123,6 @@ internal fun AchievementSummaryList(
     listControls: AchievementListControls,
     expansion: AchievementExpansionState,
     modifier: Modifier,
-    isHashMatched: Boolean = true,
 ) {
     if (summary.achievements.isEmpty()) {
         RetroAchievementsMessage("This game has no achievements.", modifier)
@@ -153,7 +147,7 @@ internal fun AchievementSummaryList(
     }
 
     Column(modifier = modifier) {
-        AchievementSummaryHeader(summary, isHashMatched)
+        AchievementStatsHeader(summary)
         AchievementSortFilterRow(
             sort = listControls.sort,
             filter = listControls.filter,
@@ -184,29 +178,13 @@ internal fun AchievementSummaryList(
 }
 
 /**
- * [isHashMatched] defaults to true (no indicator) since this header is shared with
- * [RetroAchievementsSystemGamesScreen]'s [GameDetailPage] drill-down, where the game was
- * explicitly tapped rather than resolved via [MatchMethod] - there's no match-confidence
- * concept to show there. [RetroAchievementsScreen] passes the real value, so a title-only
- * match (as opposed to [MatchMethod.RomHash]) gets a small info icon next to the title -
- * see that screen's kdoc on why title matches aren't flagged as *wrong*, just unverified.
+ * The game title itself (plus the hash-match-confidence icon) now lives in the shared title row
+ * next to the Achievements/Leaderboards toggle - see [RetroAchievementsModeBody]'s kdoc - so this
+ * only renders the unlock/points/completion stats line beneath it.
  */
 @Composable
-internal fun AchievementSummaryHeader(
-    summary: GameAchievementSummary,
-    isHashMatched: Boolean = true,
-) {
+internal fun AchievementStatsHeader(summary: GameAchievementSummary) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text = summary.gameTitle, style = MaterialTheme.typography.titleMedium)
-            if (!isHashMatched) {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = "Matched by title, not verified by ROM hash",
-                    modifier = Modifier.size(HASH_MISMATCH_ICON_SIZE),
-                )
-            }
-        }
         val unlockedCount = summary.achievements.count { it.unlocked }
         val completionPercent = summary.completionPercent.roundToInt()
         val statsText =
@@ -337,7 +315,6 @@ private fun formatCommentDate(submittedAtMillis: Long): String {
     return date.format(UNLOCK_DATE_FORMAT)
 }
 
-private val HASH_MISMATCH_ICON_SIZE = 18.dp
 private val ACHIEVEMENT_BADGE_SIZE = 48.dp
 private val COMMENTS_PROGRESS_SIZE = 20.dp
 private val UNLOCK_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")

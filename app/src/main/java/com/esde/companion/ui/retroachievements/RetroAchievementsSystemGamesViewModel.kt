@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.AchievementDisplayField
 import com.esde.companion.domain.model.AchievementFilterOption
 import com.esde.companion.domain.model.AchievementSortOrder
 import com.esde.companion.domain.model.EsdeSystemToRaConsoleMapping
+import com.esde.companion.domain.model.LeaderboardSortOrder
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroGameType
 import com.esde.companion.domain.model.SystemGameFilters
@@ -16,6 +17,8 @@ import com.esde.companion.domain.model.retroGameTypes
 import com.esde.companion.domain.model.sortedBySystemGameOrder
 import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
 import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
+import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
+import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
@@ -23,6 +26,8 @@ import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseC
 import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -81,6 +86,8 @@ class RetroAchievementsSystemGamesViewModel(
     private val getAchievementSummary: GetGameAchievementSummaryUseCase,
     private val getUserGameProgress: GetUserGameProgressUseCase,
     private val getAchievementComments: GetAchievementCommentsUseCase,
+    private val getGameLeaderboards: GetGameLeaderboardsUseCase,
+    private val getLeaderboardEntries: GetLeaderboardEntriesUseCase,
 ) : ViewModel() {
     // Set by MainActivity via onOverlayVisibilityChanged - see resolveAchievementsSystem's kdoc
     // (via resolveAchievementsGame's) for why the screensaver-hold logic needs this.
@@ -143,6 +150,20 @@ class RetroAchievementsSystemGamesViewModel(
     val gameDisplayField: StateFlow<AchievementDisplayField> = achievementDisplay.displayField
     val expanded: StateFlow<ExpandedAchievementComments?> = achievementDisplay.expanded
 
+    // The drill-down's own Achievements/Leaderboards chip toggle and leaderboard sort/tap-to-expand
+    // controls - see LeaderboardDisplayController's kdoc. Shared with RetroAchievementsViewModel,
+    // which owns its own instance for its own leaderboard list.
+    private val _mode = MutableStateFlow(RetroAchievementsMode.Achievements)
+    val mode: StateFlow<RetroAchievementsMode> = _mode
+
+    private val _selectedGameLeaderboardsFetch =
+        MutableStateFlow<LeaderboardsFetchState>(LeaderboardsFetchState.Idle)
+    val selectedGameLeaderboardsFetch: StateFlow<LeaderboardsFetchState> = _selectedGameLeaderboardsFetch
+
+    private val leaderboardDisplay = LeaderboardDisplayController(getLeaderboardEntries, viewModelScope)
+    val leaderboardSortOrder: StateFlow<LeaderboardSortOrder> = leaderboardDisplay.sortOrder
+    val leaderboardExpanded: StateFlow<ExpandedLeaderboardEntries?> = leaderboardDisplay.expanded
+
     // Bumped by onRefreshRequested to force loadSelectedGame to re-run even though
     // selectedGame itself hasn't changed - same mechanism RetroAchievementsViewModel uses
     // for its own manual refresh.
@@ -185,6 +206,14 @@ class RetroAchievementsSystemGamesViewModel(
 
     fun onAchievementTapped(achievementId: Long) = achievementDisplay.onAchievementTapped(achievementId)
 
+    fun onModeChanged(mode: RetroAchievementsMode) {
+        _mode.value = mode
+    }
+
+    fun onLeaderboardSortOrderChanged(order: LeaderboardSortOrder) = leaderboardDisplay.onSortOrderChanged(order)
+
+    fun onLeaderboardTapped(leaderboardId: Long) = leaderboardDisplay.onLeaderboardTapped(leaderboardId)
+
     /** Forces the next fetch to bypass [GetGameAchievementSummaryUseCase]'s cache. */
     fun onRefreshRequested() = forceRefresh.request()
 
@@ -195,12 +224,23 @@ class RetroAchievementsSystemGamesViewModel(
 
     private suspend fun loadSelectedGame(game: RetroAchievementsCandidateGame?) {
         achievementDisplay.onTargetChanged()
+        leaderboardDisplay.onTargetChanged()
+        _selectedGameLeaderboardsFetch.value = LeaderboardsFetchState.Idle
         if (game == null) {
             _selectedGameFetch.value = RetroAchievementsFetchState.Idle
             return
         }
         _selectedGameFetch.value = RetroAchievementsFetchState.Loading
-        _selectedGameFetch.value = getAchievementSummary(game.gameId, forceRefresh.consume()).toFetchState()
+        _selectedGameLeaderboardsFetch.value = LeaderboardsFetchState.Loading
+        // Both fetched concurrently, and both consume the same forceRefresh flag - see
+        // RetroAchievementsViewModel.resolveAndFetch's equivalent comment.
+        val refresh = forceRefresh.consume()
+        coroutineScope {
+            val achievementsDeferred = async { getAchievementSummary(game.gameId, refresh) }
+            val leaderboardsDeferred = async { getGameLeaderboards(game.gameId, refresh) }
+            _selectedGameFetch.value = achievementsDeferred.await().toFetchState()
+            _selectedGameLeaderboardsFetch.value = leaderboardsDeferred.await().toFetchState()
+        }
     }
 
     private suspend fun load(
