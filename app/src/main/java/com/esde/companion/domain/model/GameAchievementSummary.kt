@@ -14,4 +14,5 @@ data class GameAchievementSummary(
     val completionPercent: Float,
     val achievements: List<AchievementItem>,
     val totalPlayers: Int = 0,
+    val playtimeStats: GamePlaytimeStats? = null,
 )

@@ -4,6 +4,7 @@ import com.esde.companion.domain.model.AchievementComment
 import com.esde.companion.domain.model.AchievementItem
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.GameLeaderboardsSummary
+import com.esde.companion.domain.model.GamePlaytimeStats
 import com.esde.companion.domain.model.LeaderboardEntry
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsCredentials
@@ -21,6 +22,7 @@ import org.retroachivements.api.RetroClient
 import org.retroachivements.api.data.RetroCredentials
 import org.retroachivements.api.data.pojo.comments.GetComments
 import org.retroachivements.api.data.pojo.game.GetGameInfoAndUserProgress
+import org.retroachivements.api.data.pojo.game.GetGameProgression
 import org.retroachivements.api.data.pojo.game.GetUserGameLeaderboard
 import org.retroachivements.api.data.pojo.user.GetUserCompletionProgress
 import java.io.IOException
@@ -92,9 +94,15 @@ class RetroClientRetroAchievementsApi(
             // merged in below.
             val progressDeferred = async { api.getGameInfoAndUserProgress(username, gameId, includeUserAward = 1) }
             val typesDeferred = async { fetchAchievementTypesById(gameId) }
+            // Community-wide median beat/complete/master times (see GamePlaytimeStats' kdoc) -
+            // a separate, unrelated-to-the-user endpoint, so a failure here degrades to "no
+            // playtime stats line" rather than failing the whole achievement summary, same
+            // graceful-degradation shape getGameLeaderboards' userEntriesDeferred uses.
+            val playtimeDeferred = async { api.getGameProgression(gameId) }
             val progressResult = progressDeferred.await()
             val typesById = typesDeferred.await()
-            progressResult.toApiResult { it.toSummary(typesById) }
+            val playtimeStats = (playtimeDeferred.await() as? NetworkResponse.Success)?.body?.toPlaytimeStats()
+            progressResult.toApiResult { it.toSummary(typesById, playtimeStats) }
         }
 
     /**
@@ -262,7 +270,10 @@ private fun org.retroachivements.api.data.pojo.system.GetGameList.Response.Game.
         hashes = hashes.orEmpty(),
     )
 
-private fun GetGameInfoAndUserProgress.Response.toSummary(typesById: Map<Long, String?>): GameAchievementSummary {
+private fun GetGameInfoAndUserProgress.Response.toSummary(
+    typesById: Map<Long, String?>,
+    playtimeStats: GamePlaytimeStats?,
+): GameAchievementSummary {
     val achievementItems = achievements.values.map { it.toAchievementItem(typesById) }
     val unlockedItems = achievementItems.filter { it.unlocked }
     val completionPercent =
@@ -281,8 +292,23 @@ private fun GetGameInfoAndUserProgress.Response.toSummary(typesById: Map<Long, S
         // numDistinctPlayers and playersTotal are interchangeable in practice; prefer whichever
         // is actually populated rather than trusting one field name absolutely.
         totalPlayers = numDistinctPlayers.toInt().takeIf { it > 0 } ?: playersTotal,
+        playtimeStats = playtimeStats,
     )
 }
+
+/**
+ * A milestone's median is only meaningful once at least one player has actually reached it -
+ * RA's `TimesUsedIn*Median` counters report exactly that, so a zero count degrades that one
+ * field to `null` ("no data yet") rather than a misleading `0h 0m`.
+ */
+private fun GetGameProgression.Response.toPlaytimeStats(): GamePlaytimeStats =
+    GamePlaytimeStats(
+        beatSeconds = medianTimeToBeat.takeIf { timesUsedInBeatMedian > 0 },
+        beatHardcoreSeconds = medianTimeToBeatHardcore.takeIf { timesUsedInHardcoreBeatMedia > 0 },
+        // mediaTimeToComplete (not "median") is api-kotlin's own field name - a library typo, not ours.
+        completedSeconds = mediaTimeToComplete.takeIf { timesUsedInCompletionMedian > 0 },
+        masteredSeconds = medianTimeToMaster.takeIf { timesUsedInMasteryMedian > 0 },
+    )
 
 private typealias RaAchievement = GetGameInfoAndUserProgress.Response.Achievement
 

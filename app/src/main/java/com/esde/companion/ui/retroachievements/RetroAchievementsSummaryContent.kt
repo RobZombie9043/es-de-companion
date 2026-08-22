@@ -59,12 +59,16 @@ import kotlin.math.roundToInt
  * one [DropdownSelection] (value + its own setter, can't drift apart) rather than a value and a
  * setter passed as two separate fields, and so the functions below stay well under detekt's
  * parameter-count limit despite there now being three independent controls.
+ * [playtimeStatsHardcoreMode] backs [GamePlaytimeStatsRow]'s Casual/Hardcore toggle - global
+ * (not per-game) persisted state owned by the ViewModel, not local Compose state, so switching
+ * games (or screens) doesn't reset it - see `OnboardingRepository.observePlaytimeStatsHardcoreModeEnabled`'s kdoc.
  */
 internal data class AchievementListControls(
     val sort: DropdownSelection<AchievementSortOrder>,
     val filter: DropdownSelection<Set<AchievementFilterOption>>,
     val display: DropdownSelection<AchievementDisplayField>,
     val overlayOpacityPercent: Int,
+    val playtimeStatsHardcoreMode: DropdownSelection<Boolean>,
 )
 
 /**
@@ -148,6 +152,7 @@ internal fun AchievementSummaryList(
 
     Column(modifier = modifier) {
         AchievementStatsHeader(summary)
+        GamePlaytimeStatsRow(stats = summary.playtimeStats, hardcoreMode = listControls.playtimeStatsHardcoreMode)
         AchievementSortFilterRow(
             sort = listControls.sort,
             filter = listControls.filter,

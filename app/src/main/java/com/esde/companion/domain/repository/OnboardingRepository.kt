@@ -202,4 +202,15 @@ interface OnboardingRepository {
     suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean)
 
     fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean>
+
+    /**
+     * Whether the achievement screens' "Playtime Stats" line (see `GamePlaytimeStatsRow`) is
+     * currently showing the hardcore medians (`true`) or the softcore/"Casual" ones (`false`).
+     * Global, not per-game - toggling it while looking at one game affects every other game's
+     * Playtime Stats line too, the same way RA's own website widget remembers the last toggle
+     * state across games. Defaults to false (Casual).
+     */
+    suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean)
+
+    fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean>
 }

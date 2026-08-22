@@ -397,12 +397,16 @@ private fun GameDetailPage(
     val filter by viewModel.gameFilter.collectAsStateWithLifecycle()
     val displayField by viewModel.gameDisplayField.collectAsStateWithLifecycle()
     val expanded by viewModel.expanded.collectAsStateWithLifecycle()
+    val isPlaytimeStatsHardcoreMode by viewModel.isPlaytimeStatsHardcoreMode.collectAsStateWithLifecycle()
+    val playtimeStatsHardcoreMode =
+        DropdownSelection(isPlaytimeStatsHardcoreMode, viewModel::onPlaytimeStatsHardcoreModeToggled)
     val achievementListControls =
         AchievementListControls(
             sort = DropdownSelection(sortOrder, viewModel::onGameSortOrderChanged),
             filter = DropdownSelection(filter, viewModel::onGameFilterChanged),
             display = DropdownSelection(displayField, viewModel::onGameDisplayFieldChanged),
             overlayOpacityPercent = overlayOpacityPercent,
+            playtimeStatsHardcoreMode = playtimeStatsHardcoreMode,
         )
     val achievements =
         AchievementModeContent(

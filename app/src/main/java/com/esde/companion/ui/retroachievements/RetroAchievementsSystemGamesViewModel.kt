@@ -22,9 +22,11 @@ import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObservePlaytimeStatsHardcoreModeEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.SetPlaytimeStatsHardcoreModeEnabledUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -82,6 +84,8 @@ class RetroAchievementsSystemGamesViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
     observeUpdateAchievementsOnScreensaverEnabled: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
+    observePlaytimeStatsHardcoreModeEnabled: ObservePlaytimeStatsHardcoreModeEnabledUseCase,
+    private val setPlaytimeStatsHardcoreModeEnabled: SetPlaytimeStatsHardcoreModeEnabledUseCase,
     private val getSystemGames: GetRetroAchievementsSystemGamesUseCase,
     private val getAchievementSummary: GetGameAchievementSummaryUseCase,
     private val getUserGameProgress: GetUserGameProgressUseCase,
@@ -164,6 +168,13 @@ class RetroAchievementsSystemGamesViewModel(
     val leaderboardSortOrder: StateFlow<LeaderboardSortOrder> = leaderboardDisplay.sortOrder
     val leaderboardExpanded: StateFlow<ExpandedLeaderboardEntries?> = leaderboardDisplay.expanded
 
+    // Global (not per-game) Casual/Hardcore toggle for the Playtime Stats line - shared with
+    // RetroAchievementsViewModel (same underlying preference), see
+    // OnboardingRepository.observePlaytimeStatsHardcoreModeEnabled's kdoc.
+    val isPlaytimeStatsHardcoreMode: StateFlow<Boolean> =
+        observePlaytimeStatsHardcoreModeEnabled()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STATE_STOP_TIMEOUT_MILLIS), false)
+
     // Bumped by onRefreshRequested to force loadSelectedGame to re-run even though
     // selectedGame itself hasn't changed - same mechanism RetroAchievementsViewModel uses
     // for its own manual refresh.
@@ -216,6 +227,10 @@ class RetroAchievementsSystemGamesViewModel(
 
     /** Forces the next fetch to bypass [GetGameAchievementSummaryUseCase]'s cache. */
     fun onRefreshRequested() = forceRefresh.request()
+
+    fun onPlaytimeStatsHardcoreModeToggled(enabled: Boolean) {
+        viewModelScope.launch { setPlaytimeStatsHardcoreModeEnabled(enabled) }
+    }
 
     /** Called by MainActivity whenever this screen's own on-screen visibility changes. */
     fun onOverlayVisibilityChanged(visible: Boolean) {

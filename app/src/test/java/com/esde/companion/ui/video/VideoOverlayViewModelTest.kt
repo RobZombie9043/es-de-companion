@@ -194,6 +194,10 @@ class VideoOverlayViewModelTest {
 
         override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
 
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
         override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)

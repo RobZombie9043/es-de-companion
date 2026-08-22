@@ -23,6 +23,8 @@ class RetroAchievementsViewModelFactory(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeCredentials = appContainer.observeRetroAchievementsCredentialsUseCase,
             observeUpdateAchievementsOnScreensaverEnabled = observeUpdateOnScreensaver,
+            observePlaytimeStatsHardcoreModeEnabled = appContainer.observePlaytimeStatsHardcoreModeEnabledUseCase,
+            setPlaytimeStatsHardcoreModeEnabled = appContainer.setPlaytimeStatsHardcoreModeEnabledUseCase,
             resolveGame = appContainer.resolveRetroAchievementsGameUseCase,
             detailUseCases = detailUseCases,
             searchGames = appContainer.searchRetroAchievementsGamesUseCase,

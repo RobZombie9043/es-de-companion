@@ -157,12 +157,16 @@ private fun rememberAchievementModeContent(
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val displayField by viewModel.displayField.collectAsStateWithLifecycle()
     val expanded by viewModel.expanded.collectAsStateWithLifecycle()
+    val isPlaytimeStatsHardcoreMode by viewModel.isPlaytimeStatsHardcoreMode.collectAsStateWithLifecycle()
+    val playtimeStatsHardcoreMode =
+        DropdownSelection(isPlaytimeStatsHardcoreMode, viewModel::onPlaytimeStatsHardcoreModeToggled)
     val listControls =
         AchievementListControls(
             sort = DropdownSelection(sortOrder, viewModel::onSortOrderChanged),
             filter = DropdownSelection(filter, viewModel::onFilterChanged),
             display = DropdownSelection(displayField, viewModel::onDisplayFieldChanged),
             overlayOpacityPercent = overlayOpacityPercent,
+            playtimeStatsHardcoreMode = playtimeStatsHardcoreMode,
         )
     return AchievementModeContent(
         fetch = fetch,

@@ -149,6 +149,10 @@ class ObserveScreensaverAwareContextUseCaseTest {
         }
 
         override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = updateOnScreensaver
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
     }
 
     private fun buildUseCase(

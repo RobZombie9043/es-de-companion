@@ -138,6 +138,7 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUse
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObservePlaytimeStatsHardcoreModeEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
@@ -193,6 +194,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.SetPlaytimeStatsHardcoreModeEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
@@ -552,6 +554,13 @@ class AppContainer(context: Context) {
         ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
     val setUpdateAchievementsOnScreensaverEnabledUseCase =
         SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+
+    // The achievement screens' Playtime Stats line's Casual/Hardcore toggle - global, not
+    // per-game, see OnboardingRepository.observePlaytimeStatsHardcoreModeEnabled's kdoc.
+    val observePlaytimeStatsHardcoreModeEnabledUseCase =
+        ObservePlaytimeStatsHardcoreModeEnabledUseCase(onboardingRepository)
+    val setPlaytimeStatsHardcoreModeEnabledUseCase =
+        SetPlaytimeStatsHardcoreModeEnabledUseCase(onboardingRepository)
 
     // RetroAchievements sign-in (Settings > RetroAchievements). Credentials get their own
     // EncryptedSharedPreferences-backed repository rather than DataStore - see CLAUDE.md and

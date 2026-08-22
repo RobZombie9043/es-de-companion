@@ -299,6 +299,13 @@ class FileOnboardingRepository(
     override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY] ?: true }
 
+    override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[PLAYTIME_STATS_HARDCORE_MODE_ENABLED_KEY] = enabled }
+    }
+
+    override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[PLAYTIME_STATS_HARDCORE_MODE_ENABLED_KEY] ?: false }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
         const val MAX_VIDEO_DELAY_SECONDS = 10
@@ -339,5 +346,6 @@ class FileOnboardingRepository(
         val DEBUG_LOGGING_ENABLED_KEY = booleanPreferencesKey("debug_logging_enabled")
         val UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY =
             booleanPreferencesKey("update_achievements_on_screensaver_enabled")
+        val PLAYTIME_STATS_HARDCORE_MODE_ENABLED_KEY = booleanPreferencesKey("playtime_stats_hardcore_mode_enabled")
     }
 }

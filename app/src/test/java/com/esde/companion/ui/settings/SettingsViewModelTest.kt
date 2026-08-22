@@ -286,6 +286,10 @@ class SettingsViewModelTest {
         override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
             return flowOf(updateAchievementsOnScreensaverEnabled)
         }
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
     }
 
     private class FakeAppDrawerSettingsRepository(

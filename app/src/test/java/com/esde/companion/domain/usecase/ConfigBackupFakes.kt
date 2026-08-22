@@ -254,6 +254,13 @@ internal class FakeOnboardingRepository(
     override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
         return updateAchievementsOnScreensaverEnabledFlow
     }
+
+    // Deliberately not part of this fake's constructor params, same as the RetroAchievements
+    // credentials repository - see AppContainer's Backup & Restore wiring comment for why this
+    // preference is excluded from Export/RestoreConfigBackupUseCase.
+    override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+    override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = MutableStateFlow(false)
 }
 
 internal class FakeAppDrawerSettingsRepository(

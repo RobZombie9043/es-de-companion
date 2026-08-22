@@ -14,22 +14,26 @@ import com.esde.companion.domain.model.resolveAchievementsGame
 import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
 import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObservePlaytimeStatsHardcoreModeEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
 import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
+import com.esde.companion.domain.usecase.SetPlaytimeStatsHardcoreModeEnabledUseCase
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 private data class CurrentGame(val reference: GameReference, val name: String)
@@ -43,6 +47,7 @@ private data class CurrentGame(val reference: GameReference, val name: String)
 // transient "Couldn't load achievements: ...malformed JSON..." error that a manual Refresh always
 // recovered from (consistent with an abandoned-but-still-executing request racing a live one).
 private const val RESOLVE_DEBOUNCE_MILLIS = 400L
+private const val STATE_STOP_TIMEOUT_MILLIS = 5_000L
 
 /**
  * Drives the RetroAchievements FAB/summary view. Re-resolves whenever the signed-in state
@@ -73,6 +78,8 @@ class RetroAchievementsViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeCredentials: ObserveRetroAchievementsCredentialsUseCase,
     observeUpdateAchievementsOnScreensaverEnabled: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
+    observePlaytimeStatsHardcoreModeEnabled: ObservePlaytimeStatsHardcoreModeEnabledUseCase,
+    private val setPlaytimeStatsHardcoreModeEnabled: SetPlaytimeStatsHardcoreModeEnabledUseCase,
     private val resolveGame: ResolveRetroAchievementsGameUseCase,
     private val detailUseCases: RetroAchievementsDetailUseCases,
     private val searchGames: SearchRetroAchievementsGamesUseCase,
@@ -138,6 +145,12 @@ class RetroAchievementsViewModel(
     private val _hashSupport = MutableStateFlow<HashSupportState>(HashSupportState.Hidden)
     val hashSupport: StateFlow<HashSupportState> = _hashSupport
 
+    // Global (not per-game) Casual/Hardcore toggle for the Playtime Stats line - see
+    // OnboardingRepository.observePlaytimeStatsHardcoreModeEnabled's kdoc.
+    val isPlaytimeStatsHardcoreMode: StateFlow<Boolean> =
+        observePlaytimeStatsHardcoreModeEnabled()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STATE_STOP_TIMEOUT_MILLIS), false)
+
     // Set at the start of every resolveAndFetch call (a single collectLatest coroutine, so
     // no concurrent-write race) - the correction picker's search scope and onGameCorrected's
     // target both need "which game is this screen currently about", which resolution/fetch
@@ -196,6 +209,10 @@ class RetroAchievementsViewModel(
 
     fun onHashSupportDismissed() {
         _hashSupport.value = HashSupportState.Hidden
+    }
+
+    fun onPlaytimeStatsHardcoreModeToggled(enabled: Boolean) {
+        viewModelScope.launch { setPlaytimeStatsHardcoreModeEnabled(enabled) }
     }
 
     fun onAchievementTapped(achievementId: Long) = achievementDisplay.onAchievementTapped(achievementId)

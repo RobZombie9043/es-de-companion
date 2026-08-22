@@ -105,7 +105,7 @@ internal fun RetroAchievementsModeBody(
 
     Column(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(

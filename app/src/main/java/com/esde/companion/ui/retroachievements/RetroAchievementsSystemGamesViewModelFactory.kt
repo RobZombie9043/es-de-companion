@@ -17,6 +17,8 @@ class RetroAchievementsSystemGamesViewModelFactory(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeCredentials = appContainer.observeRetroAchievementsCredentialsUseCase,
             observeUpdateAchievementsOnScreensaverEnabled = observeUpdateOnScreensaver,
+            observePlaytimeStatsHardcoreModeEnabled = appContainer.observePlaytimeStatsHardcoreModeEnabledUseCase,
+            setPlaytimeStatsHardcoreModeEnabled = appContainer.setPlaytimeStatsHardcoreModeEnabledUseCase,
             getSystemGames = appContainer.getRetroAchievementsSystemGamesUseCase,
             getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
             getUserGameProgress = appContainer.getUserGameProgressUseCase,
