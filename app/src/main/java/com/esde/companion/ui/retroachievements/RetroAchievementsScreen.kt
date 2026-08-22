@@ -168,6 +168,7 @@ private fun rememberAchievementModeContent(
         fetch = fetch,
         listControls = listControls,
         expansion = AchievementExpansionState(expanded = expanded, onTap = viewModel::onAchievementTapped),
+        onHashMatchIndicatorTapped = viewModel::onRequestHashSupport,
     )
 }
 
@@ -335,13 +336,20 @@ private fun RetroAchievementsBody(
             RetroAchievementsMessage("RetroAchievements doesn't support this system.", modifier)
         RetroAchievementsResolutionState.NoMatch ->
             RetroAchievementsMessage("No RetroAchievements entry found for this game.", modifier)
-        is RetroAchievementsResolutionState.Found ->
+        is RetroAchievementsResolutionState.Found -> {
+            val hashMatchIndicator =
+                if (resolution.method == MatchMethod.RomHash) {
+                    HashMatchIndicator.Matched
+                } else {
+                    HashMatchIndicator.TitleOnly
+                }
             RetroAchievementsModeBody(
                 modeSelection = modeSelection,
-                achievements = achievements.copy(isHashMatched = resolution.method == MatchMethod.RomHash),
+                achievements = achievements.copy(hashMatchIndicator = hashMatchIndicator),
                 leaderboards = leaderboards,
                 modifier = modifier,
             )
+        }
     }
 }
 

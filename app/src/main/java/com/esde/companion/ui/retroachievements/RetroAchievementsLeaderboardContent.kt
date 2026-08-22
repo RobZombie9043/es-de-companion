@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,16 +46,32 @@ import java.time.format.DateTimeFormatter
 /**
  * Bundles everything [RetroAchievementsModeBody] needs to render the Achievements facet - same
  * "bundle related params to stay under detekt's LongParameterList limit" convention
- * [AchievementListControls]/[LeaderboardListControls] use. [isHashMatched] defaults to true (no
- * indicator) since only [RetroAchievementsScreen] has a match-confidence concept to show - see
- * [RetroAchievementsModeBody]'s kdoc.
+ * [AchievementListControls]/[LeaderboardListControls] use. [hashMatchIndicator] defaults to
+ * [HashMatchIndicator.None] since only [RetroAchievementsScreen] has a match-confidence concept
+ * to show - see [RetroAchievementsModeBody]'s kdoc.
  */
 internal data class AchievementModeContent(
     val fetch: RetroAchievementsFetchState,
     val listControls: AchievementListControls,
     val expansion: AchievementExpansionState,
-    val isHashMatched: Boolean = true,
+    val hashMatchIndicator: HashMatchIndicator = HashMatchIndicator.None,
+    val onHashMatchIndicatorTapped: () -> Unit = {},
 )
+
+/**
+ * Whether/how [RetroAchievementsModeBody] should show a match-confidence icon next to the game
+ * title. [None] means the concept doesn't apply at all here (e.g.
+ * `RetroAchievementsSystemGamesScreen`'s `GameDetailPage`, which never sets this) - not "matched,
+ * nothing to show". [Matched]/[TitleOnly] are both tappable via
+ * [AchievementModeContent.onHashMatchIndicatorTapped], opening the same "Supported Hashes"
+ * dialog either way, so a user can see the actual hash values being compared regardless of which
+ * way the match went.
+ */
+internal enum class HashMatchIndicator {
+    None,
+    Matched,
+    TitleOnly,
+}
 
 /** Same bundling as [AchievementModeContent], for the Leaderboards facet. */
 internal data class LeaderboardModeContent(
@@ -64,7 +81,7 @@ internal data class LeaderboardModeContent(
 )
 
 /**
- * Renders a title row - the game name (plus [AchievementModeContent.isHashMatched]'s
+ * Renders a title row - the game name (plus [AchievementModeContent.hashMatchIndicator]'s
  * match-confidence icon - a title-only match isn't *wrong*, just unverified, see
  * `ResolveRetroAchievementsGameUseCase`'s kdoc) on the left, with [RetroAchievementsModeToggleRow]
  * right-aligned in the same row rather than occupying its own full-width row below - then
@@ -100,13 +117,11 @@ internal fun RetroAchievementsModeBody(
                     text = achievementsSummary?.gameTitle.orEmpty(),
                     style = MaterialTheme.typography.titleMedium,
                 )
-                if (!achievements.isHashMatched) {
-                    Icon(
-                        imageVector = Icons.Filled.Info,
-                        contentDescription = "Matched by title, not verified by ROM hash",
-                        modifier = Modifier.size(HASH_MISMATCH_ICON_SIZE),
-                    )
-                }
+                HashMatchIndicatorIcon(
+                    indicator = achievements.hashMatchIndicator,
+                    onTapped = achievements.onHashMatchIndicatorTapped,
+                    modifier = Modifier.size(HASH_MISMATCH_ICON_SIZE),
+                )
             }
             RetroAchievementsModeToggleRow(
                 mode = modeSelection.value,
@@ -131,6 +146,36 @@ internal fun RetroAchievementsModeBody(
                     modifier = Modifier.fillMaxSize(),
                 )
         }
+    }
+}
+
+/**
+ * Renders [AchievementModeContent.hashMatchIndicator] - [HashMatchIndicator.Matched] uses
+ * [Icons.Filled.CheckCircle] (a filled circle with a checkmark cut out) rather than a
+ * hash-themed icon specifically so it visually reads as a sibling of
+ * [HashMatchIndicator.TitleOnly]'s [Icons.Filled.Info] (same "filled circle, glyph cut out"
+ * Material icon family), instead of two visually unrelated icons sitting side by side.
+ */
+@Composable
+private fun HashMatchIndicatorIcon(
+    indicator: HashMatchIndicator,
+    onTapped: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (indicator) {
+        HashMatchIndicator.None -> Unit
+        HashMatchIndicator.Matched ->
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = "Matched by ROM hash - tap to view supported hashes",
+                modifier = modifier.clickable(onClick = onTapped),
+            )
+        HashMatchIndicator.TitleOnly ->
+            Icon(
+                imageVector = Icons.Filled.Info,
+                contentDescription = "Matched by title, not verified by ROM hash - tap to view supported hashes",
+                modifier = modifier.clickable(onClick = onTapped),
+            )
     }
 }
 
