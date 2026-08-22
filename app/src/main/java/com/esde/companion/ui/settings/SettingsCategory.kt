@@ -57,7 +57,7 @@ enum class SettingsCategory(val title: String, val description: String, val icon
     ),
     Thor(
         title = "Thor Settings",
-        description = "Lid Wake Guard and Auto FPS Mode",
+        description = "Miscellaneous Thor utilities",
         icon = Icons.Filled.Devices,
     ),
 }
