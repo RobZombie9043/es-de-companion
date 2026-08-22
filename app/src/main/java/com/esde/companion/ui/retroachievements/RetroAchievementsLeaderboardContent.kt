@@ -3,6 +3,7 @@ package com.esde.companion.ui.retroachievements
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -116,6 +117,8 @@ internal fun RetroAchievementsModeBody(
                 Text(
                     text = achievementsSummary?.gameTitle.orEmpty(),
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false).basicMarquee(),
                 )
                 HashMatchIndicatorIcon(
                     indicator = achievements.hashMatchIndicator,
