@@ -18,6 +18,7 @@ class EditWidgetsViewModelFactory(
             resolveGameMedia = appContainer.resolveGameMediaUseCase,
             resolveRandomSystemMedia = appContainer.resolveRandomSystemMediaUseCase,
             resolveGameDescription = appContainer.resolveGameDescriptionUseCase,
+            resolveGameRating = appContainer.resolveGameRatingUseCase,
             resolveCustomSystemImage = appContainer.resolveCustomSystemImageUseCase,
             resolveCustomSystemLogo = appContainer.resolveCustomSystemLogoUseCase,
             resolveBundledSystemLogo = appContainer.resolveBundledSystemLogoUseCase,

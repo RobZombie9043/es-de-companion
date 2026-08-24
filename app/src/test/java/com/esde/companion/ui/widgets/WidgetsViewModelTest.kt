@@ -3,6 +3,7 @@ package com.esde.companion.ui.widgets
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
+import com.esde.companion.domain.model.GameRating
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.MediaType
@@ -18,6 +19,7 @@ import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRatingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
@@ -28,6 +30,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -120,6 +123,21 @@ class WidgetsViewModelTest {
         }
     }
 
+    private class RecordingGameRatingRepository(
+        private val rating: GameRating = GameRating(value = null),
+    ) : GameRatingRepository {
+        var callCount = 0
+            private set
+
+        override suspend fun resolveRating(
+            systemShortName: String,
+            romPath: String,
+        ): GameRating {
+            callCount++
+            return rating
+        }
+    }
+
     /** Returns a distinct value every call - used to prove the ViewModel's own
      * per-system cache (not the repository's) is what keeps repeated resolutions for the
      * same system stable, per WidgetsViewModel's documented "A -> B -> A" rule. */
@@ -197,6 +215,7 @@ class WidgetsViewModelTest {
         widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
         gameMediaRepository: GameMediaRepository = RecordingGameMediaRepository(),
         gameDescriptionRepository: GameDescriptionRepository = RecordingGameDescriptionRepository(),
+        gameRatingRepository: GameRatingRepository = RecordingGameRatingRepository(),
         systemMediaRepository: SystemMediaRepository = CountingSystemMediaRepository(),
         customSystemImageRepository: CustomSystemImageRepository = RecordingCustomSystemImageRepository(),
         customSystemLogoRepository: CustomSystemLogoRepository = RecordingCustomSystemLogoRepository(),
@@ -211,6 +230,7 @@ class WidgetsViewModelTest {
                 resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
                 resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
                 resolveGameDescription = ResolveGameDescriptionUseCase(gameDescriptionRepository),
+                resolveGameRating = ResolveGameRatingUseCase(gameRatingRepository),
                 resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
                 resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),
                 resolveBundledSystemLogo = ResolveBundledSystemLogoUseCase(bundledSystemLogoRepository),

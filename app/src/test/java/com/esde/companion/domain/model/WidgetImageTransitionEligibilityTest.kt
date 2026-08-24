@@ -42,10 +42,11 @@ class WidgetImageTransitionEligibilityTest {
     }
 
     @Test
-    fun `SystemLogo, ColorBackground, and GameDescription never support the picker`() {
+    fun `SystemLogo, ColorBackground, GameDescription, and Rating never support the picker`() {
         assertFalse(WidgetType.SystemLogo(ScaleMode.Fill).supportsImageTransition)
         assertFalse(WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 1f).supportsImageTransition)
         assertFalse(WidgetType.GameDescription().supportsImageTransition)
+        assertFalse(WidgetType.Rating().supportsImageTransition)
     }
 
     // --- allowsFadeTransition ----------------------------------------------------------------

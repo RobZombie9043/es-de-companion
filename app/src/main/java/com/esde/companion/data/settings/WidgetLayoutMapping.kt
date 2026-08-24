@@ -5,6 +5,7 @@ import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.NoRatingBehavior
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
@@ -22,6 +23,10 @@ private fun String.toImageTransitionMode() = ImageTransitionMode.valueOf(this)
 private fun LogoTransitionMode.toDto() = name
 
 private fun String.toLogoTransitionMode() = LogoTransitionMode.valueOf(this)
+
+private fun NoRatingBehavior.toDto() = name
+
+private fun String.toNoRatingBehavior() = NoRatingBehavior.valueOf(this)
 
 // See WidgetTypeDto's kdoc for the tri-state reasoning: null means "not present in the
 // JSON at all" (old data, or a widget never explicitly reconfigured), the literal string
@@ -84,6 +89,14 @@ private fun WidgetType.toDto(): WidgetTypeDto =
             )
         is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha)
         is WidgetType.GameDescription -> WidgetTypeDto.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
+        is WidgetType.Rating ->
+            WidgetTypeDto.Rating(
+                noRatingBehavior.toDto(),
+                filledColorArgb,
+                outlineColorArgb,
+                backgroundColorArgb,
+                backgroundAlpha,
+            )
     }
 
 private fun WidgetTypeDto.toDomain(): WidgetType =
@@ -139,7 +152,17 @@ private fun WidgetTypeDto.toDomain(): WidgetType =
         is WidgetTypeDto.ColorBackground -> WidgetType.ColorBackground(colorArgb, alpha)
         is WidgetTypeDto.GameDescription ->
             WidgetType.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
+        is WidgetTypeDto.Rating -> toDomainRating()
     }
+
+private fun WidgetTypeDto.Rating.toDomainRating(): WidgetType.Rating =
+    WidgetType.Rating(
+        noRatingBehavior.toNoRatingBehavior(),
+        filledColorArgb,
+        outlineColorArgb,
+        backgroundColorArgb,
+        backgroundAlpha,
+    )
 
 private fun PlacedWidget.toDto() = PlacedWidgetDto(id, widgetType.toDto(), gridColumn, gridRow, columnSpan, rowSpan, zIndex)
 

@@ -96,6 +96,7 @@ import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.NoRatingBehavior
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
@@ -172,6 +173,7 @@ internal fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
             listOf(
                 WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
                 WidgetType.GameDescription(),
+                WidgetType.Rating(),
                 WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit),
                 WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit),
                 WidgetType.GameMedia(MediaType.MixImages, ScaleMode.Fill),
@@ -1059,6 +1061,7 @@ private fun WidgetType.label(): String =
         is WidgetType.CustomImage -> "Custom Image"
         is WidgetType.ColorBackground -> "Color Background"
         is WidgetType.GameDescription -> "Description"
+        is WidgetType.Rating -> "Rating"
     }
 
 /** Display label for a MediaType-backed System-canvas widget - only FanArt/Screenshots
@@ -1243,6 +1246,9 @@ private fun ConfigureWidgetDialog(
 
                     is WidgetType.GameDescription ->
                         GameDescriptionConfig(current = widgetType, onChange = onChange)
+
+                    is WidgetType.Rating ->
+                        RatingConfig(current = widgetType, onChange = onChange)
                 }
             }
         },
@@ -1686,6 +1692,102 @@ private fun GameDescriptionConfig(
                 valueRange = 0f..1f,
             )
         }
+    }
+}
+
+/**
+ * What a Rating widget shows for a game with no <rating> at all in gamelist.xml - see
+ * [WidgetType.Rating.noRatingBehavior]'s kdoc for why this is distinct from a rating of
+ * exactly 0.
+ */
+private fun NoRatingBehavior.displayLabel(): String =
+    when (this) {
+        NoRatingBehavior.Hide -> "Hide Widget"
+        NoRatingBehavior.ShowEmptyStars -> "Show Empty Stars"
+    }
+
+@Composable
+private fun RatingConfig(
+    current: WidgetType.Rating,
+    onChange: (WidgetType.Rating) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "No Rating Behavior", style = MaterialTheme.typography.titleSmall)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                NoRatingBehavior.entries.forEachIndexed { index, behavior ->
+                    SegmentedButton(
+                        selected = behavior == current.noRatingBehavior,
+                        onClick = { onChange(current.copy(noRatingBehavior = behavior)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = NoRatingBehavior.entries.size),
+                        label = { Text(behavior.displayLabel()) },
+                    )
+                }
+            }
+        }
+        ColorSwatchPicker(
+            label = "Star Fill Color",
+            current = current.filledColorArgb,
+        ) { onChange(current.copy(filledColorArgb = it)) }
+        ColorSwatchPicker(
+            label = "Star Outline Color",
+            current = current.outlineColorArgb,
+        ) { onChange(current.copy(outlineColorArgb = it)) }
+        ColorSwatchPicker(
+            label = "Background Color",
+            current = current.backgroundColorArgb,
+        ) { onChange(current.copy(backgroundColorArgb = it)) }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Background Transparency: ${(current.backgroundAlpha * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Slider(
+                value = current.backgroundAlpha,
+                onValueChange = { onChange(current.copy(backgroundAlpha = it)) },
+                valueRange = 0f..1f,
+            )
+        }
+    }
+}
+
+/**
+ * A labeled preset-swatch row + [HexColorInput], the exact block ColorBackgroundConfig/
+ * GameDescriptionConfig each inline once or twice - extracted here since RatingConfig
+ * needs it three times (fill, outline, background) in one dialog.
+ */
+@Composable
+private fun ColorSwatchPicker(
+    label: String,
+    current: Long,
+    onChange: (Long) -> Unit,
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = label, style = MaterialTheme.typography.titleSmall)
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            COLOR_PRESETS.forEach { colorArgb ->
+                Box(
+                    modifier =
+                        Modifier
+                            .padding(4.dp)
+                            .size(36.dp)
+                            .background(Color(colorArgb), CircleShape)
+                            .then(
+                                if (colorArgb == current) {
+                                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .clickable {
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onChange(colorArgb)
+                            },
+                )
+            }
+        }
+        HexColorInput(current = current, onValidHex = onChange)
     }
 }
 
