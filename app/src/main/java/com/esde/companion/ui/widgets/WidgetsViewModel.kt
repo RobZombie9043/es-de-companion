@@ -101,6 +101,7 @@ class WidgetsViewModel(
                 ContentIdentity(
                     stateGroup = group,
                     gameRef = appState.currentGameReference(),
+                    isBrowsingGame = appState is AppState.BrowsingGame,
                     systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
                     systemFullName = (appState as? AppState.BrowsingSystem)?.systemFullName,
                     gameName =
@@ -151,10 +152,11 @@ class WidgetsViewModel(
         // otherwise a lone FanArt widget's Screenshots fallback would only ever resolve
         // by coincidence, when some other widget on the same canvas also happens to need
         // Screenshots. See WidgetContentResolver/resolveMediaWidgetContent's kdoc.
+        val hasVideoWidget = widgets.any { it.widgetType is WidgetType.Video }
         val neededGameMediaTypes =
             widgets.mapNotNull { it.widgetType as? WidgetType.GameMedia }
                 .flatMap { listOfNotNull(it.mediaType, it.fallbackMediaType) }
-                .toSet()
+                .toSet() + if (hasVideoWidget) setOf(MediaType.Videos) else emptySet()
         val gameMedia =
             identity.gameRef?.let {
                 resolveGameMedia(
@@ -222,6 +224,7 @@ class WidgetsViewModel(
                     fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET,
                     systemNameLookup = { identity.systemFullName },
                     gameNameLookup = { identity.gameName },
+                    videoLookup = { gameMedia?.path(MediaType.Videos).takeIf { identity.isBrowsingGame } },
                 )
         }
     }
@@ -229,6 +232,7 @@ class WidgetsViewModel(
     private data class ContentIdentity(
         val stateGroup: StateGroup,
         val gameRef: GameReference?,
+        val isBrowsingGame: Boolean,
         val systemShortName: String?,
         val systemFullName: String?,
         val gameName: String?,

@@ -114,9 +114,6 @@ import com.esde.companion.ui.update.UpdateAvailableDialog
 import com.esde.companion.ui.update.UpdateViewModel
 import com.esde.companion.ui.update.UpdateViewModelFactory
 import com.esde.companion.ui.update.WhatsNewDialog
-import com.esde.companion.ui.video.VideoOverlayScreen
-import com.esde.companion.ui.video.VideoOverlayViewModel
-import com.esde.companion.ui.video.VideoOverlayViewModelFactory
 import com.esde.companion.ui.video.VideoPlaybackEvent
 import com.esde.companion.ui.widgets.WidgetOverlay
 import com.esde.companion.ui.widgets.WidgetsViewModel
@@ -431,17 +428,9 @@ class MainActivity : ComponentActivity() {
                                 systemGamesViewModel.onOverlayVisibilityChanged(retroAchievementsSystemVisible)
                             }
 
-                            val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
-
                             val isActivityVisible by produceState(initialValue = true) {
                                 appContainer.activityVisibilityRepository.observeIsVisible().collect { value = it }
                             }
-
-                            val videoOverlayViewModel: VideoOverlayViewModel =
-                                viewModel(factory = VideoOverlayViewModelFactory(appContainer))
-                            val videoPath by videoOverlayViewModel.videoPath.collectAsStateWithLifecycle()
-                            val videoDelaySeconds by videoOverlayViewModel.delaySeconds.collectAsStateWithLifecycle()
-                            val videoAudioEnabled by videoOverlayViewModel.audioEnabled.collectAsStateWithLifecycle()
 
                             val musicControlsViewModel: MusicControlsViewModel =
                                 viewModel(factory = MusicControlsViewModelFactory(appContainer))
@@ -597,14 +586,6 @@ class MainActivity : ComponentActivity() {
                                     else -> 0
                                 }
 
-                            val isBrowsingGame =
-                                (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
-                            val showVideoOverlay =
-                                videoPlaybackEnabled &&
-                                    isBrowsingGame &&
-                                    mainScreenActive &&
-                                    isActivityVisible
-
                             // Shows either because Game Playing Behavior is set to Manual
                             // (and the user hasn't dismissed it for this game), or because
                             // the Game Manual FAB was tapped - either way, only if a manual
@@ -748,7 +729,21 @@ class MainActivity : ComponentActivity() {
                                         .fillMaxSize()
                                         .blur(longPressMenuBlurRadius),
                             ) {
-                                WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
+                                WidgetOverlay(
+                                    viewModel = widgetsViewModel,
+                                    videoPlaybackEligible = mainScreenActive && isActivityVisible,
+                                    onVideoPlaybackEvent = { event ->
+                                        when (event) {
+                                            is VideoPlaybackEvent.PlayingChanged ->
+                                                appContainer.videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
+                                            is VideoPlaybackEvent.Started ->
+                                                appContainer.logVideoPlaybackStarted(event.path)
+                                            is VideoPlaybackEvent.Error ->
+                                                appContainer.logVideoPlaybackError(event.path, event.message)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
                                 // Full-content swap (not an overlay appearing over
                                 // existing content), so Crossfade rather than
@@ -925,31 +920,6 @@ class MainActivity : ComponentActivity() {
                                         onExit = { showRetroAchievementsOverlay = false },
                                         modifier = Modifier.fillMaxSize(),
                                     )
-                                }
-
-                                if (showVideoOverlay) {
-                                    videoPath?.let { resolvedVideoPath ->
-                                        val videoPlaybackStateRepository = appContainer.videoPlaybackStateRepository
-                                        VideoOverlayScreen(
-                                            videoPath = resolvedVideoPath,
-                                            delaySeconds = videoDelaySeconds,
-                                            audioEnabled = videoAudioEnabled,
-                                            modifier = Modifier.fillMaxSize(),
-                                            onPlaybackEvent = { event ->
-                                                when (event) {
-                                                    is VideoPlaybackEvent.PlayingChanged ->
-                                                        videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
-                                                    VideoPlaybackEvent.Started ->
-                                                        appContainer.logVideoPlaybackStarted(resolvedVideoPath)
-                                                    is VideoPlaybackEvent.Error ->
-                                                        appContainer.logVideoPlaybackError(
-                                                            resolvedVideoPath,
-                                                            event.message,
-                                                        )
-                                                }
-                                            },
-                                        )
-                                    }
                                 }
 
                                 // Update checker dialogs (silent startup check + manual

@@ -23,8 +23,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.imageLoader
+import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.ui.main.requestFor
 import com.esde.companion.ui.theme.LocalIsDarkTheme
+import com.esde.companion.ui.video.VideoPlaybackEvent
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -33,10 +35,21 @@ import kotlinx.coroutines.withTimeoutOrNull
  * resolves - the same fallback background MainScreenImages used to show when there's no
  * active canvas, with a centered "Waiting for ES-DE" message once the grid is known and
  * genuinely nothing applies (Idle / not connected - see [WidgetCanvasState.Disconnected]).
+ *
+ * [videoPlaybackEligible] mirrors the retired full-screen video overlay's own
+ * `mainScreenActive && isActivityVisible` gate - [WidgetsViewModel] itself only knows
+ * about AppState (BrowsingGame-only, see its `videoLookup`), not whether some other
+ * overlay (Settings, Edit Widgets, App Drawer) is currently drawn on top or whether the
+ * Activity itself is visible, so that context is supplied here by the caller and applied
+ * by substituting [WidgetContent.Empty] for any [WidgetContent.Video] entries while
+ * ineligible - the same "drop back to nothing" effect the old overlay got for free by not
+ * being composed at all.
  */
 @Composable
 fun WidgetOverlay(
     viewModel: WidgetsViewModel,
+    onVideoPlaybackEvent: (VideoPlaybackEvent) -> Unit = {},
+    videoPlaybackEligible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
@@ -74,10 +87,19 @@ fun WidgetOverlay(
 
             is WidgetCanvasState.Showing -> {
                 val displayed = rememberDisplayedCanvas(state)
+                val contentByWidgetId =
+                    if (videoPlaybackEligible) {
+                        displayed.contentByWidgetId
+                    } else {
+                        displayed.contentByWidgetId.mapValues { (_, content) ->
+                            if (content is WidgetContent.Video) WidgetContent.Empty else content
+                        }
+                    }
                 WidgetCanvas(
                     widgets = displayed.widgets,
-                    contentByWidgetId = displayed.contentByWidgetId,
+                    contentByWidgetId = contentByWidgetId,
                     navigationDirection = displayed.navigationDirection,
+                    onVideoPlaybackEvent = onVideoPlaybackEvent,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

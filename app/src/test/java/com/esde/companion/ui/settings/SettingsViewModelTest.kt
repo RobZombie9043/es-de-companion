@@ -57,9 +57,6 @@ import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
@@ -90,9 +87,6 @@ import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -116,9 +110,6 @@ class SettingsViewModelTest {
     private class FakeOnboardingRepository : OnboardingRepository {
         var gamePlayingBehavior = ScreenBehavior.Nothing
         var gamePlayingDimPercent = 50
-        var videoPlaybackEnabled = false
-        var videoDelaySeconds = 0
-        var videoAudioEnabled = true
         var screensaverBehavior = ScreenBehavior.Nothing
         var screensaverDimPercent = 50
         var themePreference = ThemePreference.Auto
@@ -166,24 +157,6 @@ class SettingsViewModelTest {
         override suspend fun markOnboardingComplete() {}
 
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
-            videoPlaybackEnabled = enabled
-        }
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(videoPlaybackEnabled)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {
-            videoDelaySeconds = seconds
-        }
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(videoDelaySeconds)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {
-            videoAudioEnabled = enabled
-        }
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(videoAudioEnabled)
 
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {
             gamePlayingBehavior = behavior
@@ -484,12 +457,6 @@ class SettingsViewModelTest {
                 validateLogFolderUseCase = ValidateEsdeLogFolderUseCase(onboardingRepository),
                 validateMediaFolderUseCase = ValidateEsdeMediaFolderUseCase(onboardingRepository),
                 observeGamePlayingBehaviorUseCase = ObserveGamePlayingBehaviorUseCase(onboardingRepository),
-                observeVideoPlaybackEnabledUseCase = ObserveVideoPlaybackEnabledUseCase(onboardingRepository),
-                setVideoPlaybackEnabledUseCase = SetVideoPlaybackEnabledUseCase(onboardingRepository),
-                observeVideoDelaySecondsUseCase = ObserveVideoDelaySecondsUseCase(onboardingRepository),
-                setVideoDelaySecondsUseCase = SetVideoDelaySecondsUseCase(onboardingRepository),
-                observeVideoAudioEnabledUseCase = ObserveVideoAudioEnabledUseCase(onboardingRepository),
-                setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository),
                 setGamePlayingBehaviorUseCase = SetGamePlayingBehaviorUseCase(onboardingRepository),
                 observeGamePlayingDimPercentUseCase = ObserveGamePlayingDimPercentUseCase(onboardingRepository),
                 setGamePlayingDimPercentUseCase = SetGamePlayingDimPercentUseCase(onboardingRepository),

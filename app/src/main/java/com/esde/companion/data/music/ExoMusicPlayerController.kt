@@ -17,7 +17,7 @@ import java.io.File
 
 /**
  * Headless ExoPlayer (audio only, no PlayerView) held for the app's whole process
- * lifetime - unlike VideoOverlayScreen's per-composable player, this one is constructed
+ * lifetime - unlike WidgetVideoContent's per-composable player, this one is constructed
  * once in AppContainer and never released, since background music has no "screen" to be
  * scoped to. repeatMode is REPEAT_MODE_OFF (not REPEAT_MODE_ONE like the video overlay)
  * so STATE_ENDED actually fires, which is what drives [observeTrackCompletion].

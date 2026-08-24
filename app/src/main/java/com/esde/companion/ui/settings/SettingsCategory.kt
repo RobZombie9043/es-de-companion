@@ -8,7 +8,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -35,11 +34,6 @@ enum class SettingsCategory(val title: String, val description: String, val icon
         title = "App Drawer and Dock",
         description = "Visible apps, grid columns, dock",
         icon = Icons.Filled.Apps,
-    ),
-    VideoPlayback(
-        title = "Video Playback",
-        description = "Game video playback while browsing",
-        icon = Icons.Filled.Videocam,
     ),
     Sound(
         title = "Background Music",

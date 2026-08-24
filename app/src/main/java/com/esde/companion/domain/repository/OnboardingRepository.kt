@@ -89,25 +89,6 @@ interface OnboardingRepository {
 
     fun observeScreensaverDimPercent(): Flow<Int>
 
-    /**
-     * Settings > Video Playback: whether game videos auto-play while AppState is
-     * BrowsingGame. Defaults to false - opt-in, same as other non-default display
-     * behaviors.
-     */
-    suspend fun setVideoPlaybackEnabled(enabled: Boolean)
-
-    fun observeVideoPlaybackEnabled(): Flow<Boolean>
-
-    /** Delay in seconds before playback starts once a video becomes eligible to play. */
-    suspend fun setVideoDelaySeconds(seconds: Int)
-
-    fun observeVideoDelaySeconds(): Flow<Int>
-
-    /** Whether video audio is audible; false mutes playback entirely. Defaults to true. */
-    suspend fun setVideoAudioEnabled(enabled: Boolean)
-
-    fun observeVideoAudioEnabled(): Flow<Boolean>
-
     /** Master toggle for background music. Defaults to true. */
     suspend fun setMusicEnabled(enabled: Boolean)
 

@@ -77,7 +77,6 @@ import com.esde.companion.ui.settings.SoundSettingsContent
 import com.esde.companion.ui.settings.TaskKillerSettingsState
 import com.esde.companion.ui.settings.ThorSettingsContent
 import com.esde.companion.ui.settings.UISettingsContent
-import com.esde.companion.ui.settings.VideoPlaybackSettingsContent
 import com.esde.companion.ui.settings.VolumeSyncSettingsState
 import com.esde.companion.ui.settings.WidgetsSettingsContent
 import com.esde.companion.ui.theme.LocalIsDarkTheme
@@ -358,16 +357,6 @@ fun LongPressSettingsMenu(
                                         onFabTypeChanged = settingsViewModel::onFabTypeChanged,
                                         onFabCustomAppChanged = settingsViewModel::onFabCustomAppChanged,
                                         onBluetoothPermissionRequested = onBluetoothPermissionRequested,
-                                    )
-                                SettingsCategory.VideoPlayback ->
-                                    VideoPlaybackSettingsContent(
-                                        videoPlaybackEnabled = uiState.videoPlaybackEnabled,
-                                        onVideoPlaybackEnabledChanged =
-                                            settingsViewModel::onVideoPlaybackEnabledChanged,
-                                        videoDelaySeconds = uiState.videoDelaySeconds,
-                                        onVideoDelaySecondsChanged = settingsViewModel::onVideoDelaySecondsChanged,
-                                        videoAudioEnabled = uiState.videoAudioEnabled,
-                                        onVideoAudioEnabledChanged = settingsViewModel::onVideoAudioEnabledChanged,
                                     )
                                 SettingsCategory.AppDrawer ->
                                     AppDrawerSettingsContent(

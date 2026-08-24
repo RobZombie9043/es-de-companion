@@ -168,29 +168,6 @@ class FileOnboardingRepository(
     override fun observeScreensaverDimPercent(): Flow<Int> =
         context.onboardingDataStore.data.map { it[SCREENSAVER_DIM_PERCENT_KEY] ?: DEFAULT_DIM_PERCENT }
 
-    override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
-        context.onboardingDataStore.edit { it[VIDEO_PLAYBACK_ENABLED_KEY] = enabled }
-    }
-
-    override fun observeVideoPlaybackEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[VIDEO_PLAYBACK_ENABLED_KEY] ?: false }
-
-    override suspend fun setVideoDelaySeconds(seconds: Int) {
-        context.onboardingDataStore.edit { it[VIDEO_DELAY_SECONDS_KEY] = seconds.coerceIn(0, MAX_VIDEO_DELAY_SECONDS) }
-    }
-
-    override fun observeVideoDelaySeconds(): Flow<Int> =
-        context.onboardingDataStore.data.map { it[VIDEO_DELAY_SECONDS_KEY] ?: DEFAULT_VIDEO_DELAY_SECONDS }
-
-    override suspend fun setVideoAudioEnabled(enabled: Boolean) {
-        context.onboardingDataStore.edit { it[VIDEO_AUDIO_ENABLED_KEY] = enabled }
-    }
-
-    override fun observeVideoAudioEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map {
-            it[VIDEO_AUDIO_ENABLED_KEY] ?: true
-        }
-
     override suspend fun setMusicEnabled(enabled: Boolean) {
         context.onboardingDataStore.edit { it[MUSIC_ENABLED_KEY] = enabled }
     }
@@ -342,8 +319,6 @@ class FileOnboardingRepository(
 
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
-        const val MAX_VIDEO_DELAY_SECONDS = 10
-        const val DEFAULT_VIDEO_DELAY_SECONDS = 3
         const val DEFAULT_OVERLAY_OPACITY_PERCENT = 80
         const val DEFAULT_DIM_PERCENT = 50
 
@@ -357,9 +332,6 @@ class FileOnboardingRepository(
         val GAME_PLAYING_DIM_PERCENT_KEY = intPreferencesKey("game_playing_dim_percent")
         val SCREENSAVER_BEHAVIOR_KEY = stringPreferencesKey("screensaver_behavior")
         val SCREENSAVER_DIM_PERCENT_KEY = intPreferencesKey("screensaver_dim_percent")
-        val VIDEO_PLAYBACK_ENABLED_KEY = booleanPreferencesKey("video_playback_enabled")
-        val VIDEO_DELAY_SECONDS_KEY = intPreferencesKey("video_delay_seconds")
-        val VIDEO_AUDIO_ENABLED_KEY = booleanPreferencesKey("video_audio_enabled")
         val MUSIC_ENABLED_KEY = booleanPreferencesKey("music_enabled")
         val MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY = booleanPreferencesKey("music_play_while_browsing_systems")
         val MUSIC_PLAY_WHILE_BROWSING_GAMES_KEY = booleanPreferencesKey("music_play_while_browsing_games")

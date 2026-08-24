@@ -7,6 +7,7 @@ import com.esde.companion.domain.model.GameRating
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
@@ -567,6 +568,76 @@ class WidgetsViewModelTest {
             advanceUntilIdle()
 
             assertTrue(customSystemImageRepository.callCount > 0)
+        }
+
+    // --- Video widget: BrowsingGame-only eligibility ---------------------------------------
+
+    @Test
+    fun `a Video widget resolves WidgetContent Video while BrowsingGame`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("video", WidgetType.Video())))
+            val videoMedia =
+                GameMedia(baseRelativePath = null, filesByType = mapOf(MediaType.Videos to "/media/game.mp4"))
+            val gameMediaRepository = RecordingGameMediaRepository(media = videoMedia)
+            val viewModel =
+                buildViewModel(esdeLogRepository, widgetLayoutRepository, gameMediaRepository = gameMediaRepository)
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            val state = viewModel.canvasState.value
+            check(state is WidgetCanvasState.Showing)
+            assertEquals(
+                WidgetContent.Video(
+                    path = "/media/game.mp4",
+                    scaleMode = ScaleMode.Fit,
+                    audioEnabled = true,
+                    delaySeconds = 0,
+                    pillarboxMode = PillarboxMode.Black,
+                ),
+                state.contentByWidgetId["video"],
+            )
+        }
+
+    @Test
+    fun `a Video widget resolves Empty once the game is actually being played, not just browsed`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("video", WidgetType.Video())))
+            val videoMedia =
+                GameMedia(baseRelativePath = null, filesByType = mapOf(MediaType.Videos to "/media/game.mp4"))
+            val gameMediaRepository = RecordingGameMediaRepository(media = videoMedia)
+            val viewModel =
+                buildViewModel(esdeLogRepository, widgetLayoutRepository, gameMediaRepository = gameMediaRepository)
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            val state = viewModel.canvasState.value
+            check(state is WidgetCanvasState.Showing)
+            assertEquals(WidgetContent.Empty, state.contentByWidgetId["video"])
+        }
+
+    @Test
+    fun `a Video widget on the canvas requests MediaType Videos`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("video", WidgetType.Video())))
+            val gameMediaRepository = RecordingGameMediaRepository()
+            val viewModel =
+                buildViewModel(esdeLogRepository, widgetLayoutRepository, gameMediaRepository = gameMediaRepository)
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            assertEquals(setOf(MediaType.Videos), gameMediaRepository.lastRequestedTypes)
         }
 
     // --- setGridDimensions re-threading ------------------------------------------------

@@ -13,6 +13,7 @@ object WidgetContentResolver {
         fallbackBackgroundAssetPath: String?,
         systemNameLookup: () -> String? = { null },
         gameNameLookup: () -> String? = { null },
+        videoLookup: () -> String? = { null },
     ): WidgetContent =
         when (widgetType) {
             is WidgetType.SystemLogo ->
@@ -127,6 +128,17 @@ object WidgetContentResolver {
                     WidgetContent.Empty
                 }
             }
+
+            is WidgetType.Video ->
+                videoLookup()?.let {
+                    WidgetContent.Video(
+                        path = it,
+                        scaleMode = widgetType.scaleMode,
+                        audioEnabled = widgetType.audioEnabled,
+                        delaySeconds = widgetType.delaySeconds,
+                        pillarboxMode = widgetType.pillarboxMode,
+                    )
+                } ?: WidgetContent.Empty
         }
 
     /** A gamelist.xml <rating> is a 0f..1f score - the widget always renders on a 5-star

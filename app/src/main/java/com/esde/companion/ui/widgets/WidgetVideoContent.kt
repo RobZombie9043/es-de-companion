@@ -1,6 +1,6 @@
 @file:OptIn(UnstableApi::class)
 
-package com.esde.companion.ui.video
+package com.esde.companion.ui.widgets
 
 import android.content.Context
 import android.net.Uri
@@ -25,6 +25,10 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.esde.companion.domain.model.PillarboxMode
+import com.esde.companion.domain.model.ScaleMode
+import com.esde.companion.domain.model.WidgetContent
+import com.esde.companion.ui.video.VideoPlaybackEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
@@ -33,58 +37,39 @@ import java.io.File
 private const val MILLIS_PER_SECOND = 1000L
 
 /**
- * Opaque full-screen video cover - see MainActivity's showVideoOverlay for the gating
- * that decides when this is composed at all.
+ * Widget-canvas rendering of a [WidgetContent.Video] - sized to its widget's placed
+ * bounds (via [modifier]) rather than a full-screen overlay, the widget-ized replacement
+ * for the retired `ui/video/VideoOverlayScreen`. The double-buffered ExoPlayer prepare-
+ * then-promote mechanics below are carried over unchanged from that screen - see its
+ * original kdoc history for why: the incoming player is built muted and only promoted/
+ * unmuted once it has real decoded frames ready, so a video swap (browsing to a new game)
+ * never flashes blank or double-plays audio during the handoff.
  *
- * [videoPath] is the *target* video; what's actually attached to the on-screen
- * [PlayerView] is tracked separately as `displayedPlayer`/`displayedPath`. A nonzero
- * [delaySeconds] is a deliberate "don't show a video yet" pause - intended to keep videos
- * from flickering past while the user is just scrolling the game list - so the previous
- * game's video is dropped immediately (back to the widget canvas) rather than held onto
- * through that wait; see `dropDisplayedVideoForDelay`. What *is* bridged is the purely
- * technical buffering gap right before playback: once the wait (if any) is over, the
- * previous video (only present when [delaySeconds] is 0, since a nonzero delay already
- * dropped it above) keeps playing until the next one has real decoded frames ready
- * (`Player.isPlaying` true), at which point the swap happens in a single step and the
- * outgoing player is released - the same pre-decode-before-swap principle as
- * CrossfadeAsyncImage, applied to video. The very first video (no prior `displayedPlayer`
- * to hold onto) still renders nothing until it's ready, same as before this change.
- *
- * The incoming player is built muted (`volume = 0f`) and only unmuted at the moment
- * it's promoted to `displayedPlayer` - both players are genuinely decoding audio during
- * the overlap window (audio isn't gated by which one is attached to the visible
- * [PlayerView]), so without this a transitioning video would briefly double up on audio
- * with the outgoing one.
- *
- * [onPlaybackEvent] only fires for the currently-*displayed* player's state changes
- * (gated by identity inside the listener), not for an incoming player still buffering -
- * otherwise a still-buffering player's very first `isPlaying = true` would report
- * "playing" a moment before it's actually promoted/audible. The promotion itself
- * explicitly fires [VideoPlaybackEvent.PlayingChanged]\(true\) and
- * [VideoPlaybackEvent.Started] once, since the listener's gate wouldn't otherwise catch
- * that specific transition (the player wasn't "displayed" yet at the instant it fired).
+ * [content.scaleMode] maps to [PlayerView]'s resize mode (Contain -> RESIZE_MODE_FIT,
+ * Cover -> RESIZE_MODE_ZOOM, ExoPlayer's crop-to-fill mode). [content.pillarboxMode] sets
+ * the background behind the video - only visible under Contain, where a mismatched aspect
+ * ratio leaves empty space around the frame; Cover always fills its bounds, so the
+ * background never shows through regardless of this setting.
  */
 @Composable
-fun VideoOverlayScreen(
-    videoPath: String,
-    delaySeconds: Int,
-    audioEnabled: Boolean,
+internal fun WidgetVideoContent(
+    content: WidgetContent.Video,
+    onPlaybackEvent: (VideoPlaybackEvent) -> Unit,
     modifier: Modifier = Modifier,
-    onPlaybackEvent: (VideoPlaybackEvent) -> Unit = {},
 ) {
     val context = LocalContext.current
 
     var displayedPath by remember { mutableStateOf<String?>(null) }
     var displayedPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
 
-    LaunchedEffect(videoPath) {
-        if (videoPath == displayedPath) return@LaunchedEffect
+    LaunchedEffect(content.path) {
+        if (content.path == displayedPath) return@LaunchedEffect
         val displayedSlot =
             DisplayedVideoSlot(
                 current = { displayedPlayer },
                 promote = { player ->
                     displayedPlayer = player
-                    displayedPath = videoPath
+                    displayedPath = content.path
                 },
                 clear = {
                     displayedPlayer = null
@@ -93,23 +78,23 @@ fun VideoOverlayScreen(
             )
         transitionToVideo(
             context = context,
-            videoPath = videoPath,
-            settings = VideoTransitionSettings(delaySeconds, audioEnabled),
+            videoPath = content.path,
+            settings = VideoTransitionSettings(content.delaySeconds, content.audioEnabled),
             displayedSlot = displayedSlot,
             onPlaybackEvent = onPlaybackEvent,
         )
     }
 
-    LaunchedEffect(displayedPlayer, audioEnabled) {
-        displayedPlayer?.volume = if (audioEnabled) 1f else 0f
+    LaunchedEffect(displayedPlayer, content.audioEnabled) {
+        displayedPlayer?.volume = if (content.audioEnabled) 1f else 0f
     }
 
     DisposableEffect(Unit) {
         onDispose {
             // release() doesn't reliably re-fire onIsPlayingChanged, so without this
-            // explicit call a video that becomes ineligible (context change, app
-            // backgrounded) could leave the last "true" stuck, permanently ducking
-            // background music.
+            // explicit call a video that becomes ineligible (browsed away from, widget
+            // removed) could leave the last "true" stuck, permanently ducking background
+            // music - see VideoOverlayScreen's original kdoc for the same reasoning.
             if (displayedPlayer != null) onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(false))
             displayedPlayer?.release()
         }
@@ -117,7 +102,7 @@ fun VideoOverlayScreen(
 
     val player = displayedPlayer
     if (player != null) {
-        Box(modifier = modifier.background(Color.Black)) {
+        Box(modifier = modifier.background(content.pillarboxMode.toBackgroundColor())) {
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
@@ -131,13 +116,25 @@ fun VideoOverlayScreen(
                 // forever.
                 update = { playerView ->
                     playerView.player = player
-                    playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    playerView.resizeMode = content.scaleMode.toResizeMode()
                 },
                 modifier = Modifier.fillMaxSize(),
             )
         }
     }
 }
+
+private fun ScaleMode.toResizeMode(): Int =
+    when (this) {
+        ScaleMode.Fit -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+        ScaleMode.Fill -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+    }
+
+private fun PillarboxMode.toBackgroundColor(): Color =
+    when (this) {
+        PillarboxMode.Black -> Color.Black
+        PillarboxMode.Transparent -> Color.Transparent
+    }
 
 /**
  * The currently-displayed player, bundled with how to replace it - grouped into one type
@@ -159,7 +156,7 @@ private class VideoTransitionSettings(
 /**
  * Prepares [videoPath] off-screen (muted) and, once it has real decoded frames ready,
  * hands it to [DisplayedVideoSlot.promote] and releases whatever
- * [DisplayedVideoSlot.current] returned beforehand - see [VideoOverlayScreen]'s kdoc for
+ * [DisplayedVideoSlot.current] returned beforehand - see [WidgetVideoContent]'s kdoc for
  * why the promotion happens in one step rather than dropping through "nothing displayed"
  * while this prepares.
  */
@@ -191,7 +188,7 @@ private suspend fun transitionToVideo(
         val outgoing = displayedSlot.current()
         displayedSlot.promote(incoming)
         onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(true))
-        onPlaybackEvent(VideoPlaybackEvent.Started)
+        onPlaybackEvent(VideoPlaybackEvent.Started(videoPath))
         outgoing?.release()
     } catch (cancellation: CancellationException) {
         throw cancellation
@@ -226,7 +223,7 @@ private fun dropDisplayedVideoForDelay(
  * on a player error) - the readiness signal the caller awaits before promoting it to the
  * displayed player. [displayedPlayerProvider] is polled on every `isPlaying` change (not
  * captured once) so the listener only forwards to [onPlaybackEvent] once this exact
- * player instance has actually been promoted - see [VideoOverlayScreen]'s kdoc.
+ * player instance has actually been promoted - see [WidgetVideoContent]'s kdoc.
  */
 private fun createIncomingPlayer(
     context: Context,
@@ -244,13 +241,13 @@ private fun createIncomingPlayer(
             override fun onIsPlayingChanged(playing: Boolean) {
                 if (incoming === displayedPlayerProvider()) {
                     onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(playing))
-                    if (playing) onPlaybackEvent(VideoPlaybackEvent.Started)
+                    if (playing) onPlaybackEvent(VideoPlaybackEvent.Started(videoPath))
                 }
                 if (playing) ready.complete(Unit)
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                onPlaybackEvent(VideoPlaybackEvent.Error(error.message ?: error.toString()))
+                onPlaybackEvent(VideoPlaybackEvent.Error(videoPath, error.message ?: error.toString()))
                 ready.completeExceptionally(error)
             }
         },

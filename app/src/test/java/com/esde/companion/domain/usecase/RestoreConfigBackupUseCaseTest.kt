@@ -39,8 +39,6 @@ private class SourceFixture {
             screensaverDimPercent = 25,
             overlayOpacityPercent = 33,
             fabAssignments = fabAssignments,
-            videoPlaybackEnabled = true,
-            videoDelaySeconds = 9,
             musicDuckingMode = MusicDuckingMode.Pause,
             debugLoggingEnabled = true,
             updateAchievementsOnScreensaverEnabled = false,

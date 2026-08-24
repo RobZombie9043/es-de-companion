@@ -148,6 +148,21 @@ sealed class WidgetType {
         val backgroundColorArgb: Long = 0xFF000000,
         val backgroundAlpha: Float = 0.5f,
     ) : WidgetType()
+
+    /**
+     * A game's video (ES-DE's `videos` media type), playing while the game is browsed -
+     * see WidgetContentResolver's Video branch and [WidgetType.supportsPillarbox]/
+     * [PillarboxMode] for the Contain-only pillarbox choice. Only ever resolves while
+     * AppState.BrowsingGame (never during actual gameplay) - narrower than every other
+     * GameMedia-style widget, enforced by the caller supplying WidgetContentResolver's
+     * videoLookup, not by this type itself. No ImageEffects - not Coil-backed.
+     */
+    data class Video(
+        val scaleMode: ScaleMode = ScaleMode.Fit,
+        val audioEnabled: Boolean = true,
+        val delaySeconds: Int = 0,
+        val pillarboxMode: PillarboxMode = PillarboxMode.Black,
+    ) : WidgetType()
 }
 
 /** What a Rating widget shows for a game with no <rating> in gamelist.xml at all. See
@@ -156,3 +171,19 @@ enum class NoRatingBehavior {
     Hide,
     ShowEmptyStars,
 }
+
+/** How a [WidgetType.Video] widget fills the letterboxed space [ScaleMode.Fit] ("Contain")
+ * leaves around a video whose aspect ratio doesn't match its placed bounds - a solid black
+ * bar, or leaving the space transparent so whatever's behind the widget shows through. Not
+ * offered under [ScaleMode.Fill] ("Cover"), which crops to fill the whole widget and never
+ * has empty space - see [WidgetType.supportsPillarbox]. */
+enum class PillarboxMode {
+    Black,
+    Transparent,
+}
+
+/** Whether this widget type's Configure dialog should offer the pillarbox picker at all -
+ * only [WidgetType.Video] widgets scaled with [ScaleMode.Fit] ever have letterboxed space
+ * to fill. Purely structural, mirroring [WidgetType.supportsPanZoom]'s pattern. */
+val WidgetType.supportsPillarbox: Boolean
+    get() = this is WidgetType.Video && scaleMode == ScaleMode.Fit

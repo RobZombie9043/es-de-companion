@@ -47,9 +47,6 @@ internal class FakeOnboardingRepository(
     screensaverDimPercent: Int = 50,
     overlayOpacityPercent: Int = 80,
     fabAssignments: FabAssignments = FabAssignments.Default,
-    videoPlaybackEnabled: Boolean = false,
-    videoDelaySeconds: Int = 3,
-    videoAudioEnabled: Boolean = true,
     musicEnabled: Boolean = true,
     musicPlayWhileBrowsingSystems: Boolean = true,
     musicPlayWhileBrowsingGames: Boolean = true,
@@ -72,9 +69,6 @@ internal class FakeOnboardingRepository(
     private val screensaverDimPercentFlow = MutableStateFlow(screensaverDimPercent)
     private val overlayOpacityPercentFlow = MutableStateFlow(overlayOpacityPercent)
     private val fabAssignmentsFlow = MutableStateFlow(fabAssignments)
-    private val videoPlaybackEnabledFlow = MutableStateFlow(videoPlaybackEnabled)
-    private val videoDelaySecondsFlow = MutableStateFlow(videoDelaySeconds)
-    private val videoAudioEnabledFlow = MutableStateFlow(videoAudioEnabled)
     private val musicEnabledFlow = MutableStateFlow(musicEnabled)
     private val musicPlayWhileBrowsingSystemsFlow = MutableStateFlow(musicPlayWhileBrowsingSystems)
     private val musicPlayWhileBrowsingGamesFlow = MutableStateFlow(musicPlayWhileBrowsingGames)
@@ -158,24 +152,6 @@ internal class FakeOnboardingRepository(
     }
 
     override fun observeScreensaverDimPercent(): Flow<Int> = screensaverDimPercentFlow
-
-    override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
-        videoPlaybackEnabledFlow.value = enabled
-    }
-
-    override fun observeVideoPlaybackEnabled(): Flow<Boolean> = videoPlaybackEnabledFlow
-
-    override suspend fun setVideoDelaySeconds(seconds: Int) {
-        videoDelaySecondsFlow.value = seconds
-    }
-
-    override fun observeVideoDelaySeconds(): Flow<Int> = videoDelaySecondsFlow
-
-    override suspend fun setVideoAudioEnabled(enabled: Boolean) {
-        videoAudioEnabledFlow.value = enabled
-    }
-
-    override fun observeVideoAudioEnabled(): Flow<Boolean> = videoAudioEnabledFlow
 
     override suspend fun setMusicEnabled(enabled: Boolean) {
         musicEnabledFlow.value = enabled

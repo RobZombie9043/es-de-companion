@@ -29,6 +29,7 @@ import com.esde.companion.domain.model.logoTransitionMode
 import com.esde.companion.domain.model.supportsFallbackArtwork
 import com.esde.companion.domain.model.supportsImageTransition
 import com.esde.companion.domain.model.supportsPanZoom
+import com.esde.companion.domain.model.supportsPillarbox
 
 internal fun WidgetType.label(): String =
     when (this) {
@@ -40,6 +41,7 @@ internal fun WidgetType.label(): String =
         is WidgetType.ColorBackground -> "Color Background"
         is WidgetType.GameDescription -> "Description"
         is WidgetType.Rating -> "Rating"
+        is WidgetType.Video -> "Video"
     }
 
 /** Display label for a MediaType-backed System-canvas widget - only FanArt/Screenshots
@@ -241,6 +243,21 @@ internal fun ConfigureWidgetDialog(
 
                     is WidgetType.Rating ->
                         RatingConfig(current = widgetType, onChange = onChange)
+
+                    is WidgetType.Video -> {
+                        ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
+                        if (widgetType.supportsPillarbox) {
+                            PillarboxConfig(
+                                current = widgetType.pillarboxMode,
+                            ) { onChange(widgetType.copy(pillarboxMode = it)) }
+                        }
+                        VideoDelayConfig(
+                            delaySeconds = widgetType.delaySeconds,
+                        ) { onChange(widgetType.copy(delaySeconds = it)) }
+                        VideoAudioConfig(
+                            enabled = widgetType.audioEnabled,
+                        ) { onChange(widgetType.copy(audioEnabled = it)) }
+                    }
                 }
             }
         },

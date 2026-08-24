@@ -46,9 +46,6 @@ import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
@@ -79,9 +76,6 @@ import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -121,12 +115,6 @@ class SettingsViewModel(
     private val setDockMaxAppsUseCase: SetDockMaxAppsUseCase,
     private val observeDockSizeUseCase: ObserveDockSizeUseCase,
     private val setDockSizeUseCase: SetDockSizeUseCase,
-    private val observeVideoPlaybackEnabledUseCase: ObserveVideoPlaybackEnabledUseCase,
-    private val setVideoPlaybackEnabledUseCase: SetVideoPlaybackEnabledUseCase,
-    private val observeVideoDelaySecondsUseCase: ObserveVideoDelaySecondsUseCase,
-    private val setVideoDelaySecondsUseCase: SetVideoDelaySecondsUseCase,
-    private val observeVideoAudioEnabledUseCase: ObserveVideoAudioEnabledUseCase,
-    private val setVideoAudioEnabledUseCase: SetVideoAudioEnabledUseCase,
     private val observeMusicEnabledUseCase: ObserveMusicEnabledUseCase,
     private val setMusicEnabledUseCase: SetMusicEnabledUseCase,
     private val observeMusicPlayWhileBrowsingSystemsUseCase: ObserveMusicPlayWhileBrowsingSystemsUseCase,
@@ -273,9 +261,6 @@ class SettingsViewModel(
             dockEnabled = observeDockEnabledUseCase().first(),
             dockMaxApps = observeDockMaxAppsUseCase().first(),
             dockSize = observeDockSizeUseCase().first(),
-            videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first(),
-            videoDelaySeconds = observeVideoDelaySecondsUseCase().first(),
-            videoAudioEnabled = observeVideoAudioEnabledUseCase().first(),
             musicEnabled = observeMusicEnabledUseCase().first(),
             musicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase().first(),
             musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first(),
@@ -360,21 +345,6 @@ class SettingsViewModel(
     fun onScreensaverDimPercentChanged(percent: Int) {
         _uiState.value = _uiState.value.copy(screensaverDimPercent = percent)
         viewModelScope.launch { setScreensaverDimPercentUseCase(percent) }
-    }
-
-    fun onVideoPlaybackEnabledChanged(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(videoPlaybackEnabled = enabled)
-        viewModelScope.launch { setVideoPlaybackEnabledUseCase(enabled) }
-    }
-
-    fun onVideoDelaySecondsChanged(seconds: Int) {
-        _uiState.value = _uiState.value.copy(videoDelaySeconds = seconds)
-        viewModelScope.launch { setVideoDelaySecondsUseCase(seconds) }
-    }
-
-    fun onVideoAudioEnabledChanged(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(videoAudioEnabled = enabled)
-        viewModelScope.launch { setVideoAudioEnabledUseCase(enabled) }
     }
 
     fun onMusicEnabledChanged(enabled: Boolean) {
