@@ -266,18 +266,6 @@ class EditWidgetsViewModelTest {
 
         override fun observeScreensaverDimPercent(): Flow<Int> = flowOf(50)
 
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {}
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-
         override suspend fun setMusicEnabled(enabled: Boolean) {}
 
         override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)

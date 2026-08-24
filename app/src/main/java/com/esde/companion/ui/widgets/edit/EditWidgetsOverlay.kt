@@ -69,6 +69,7 @@ import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.ui.CORNER_BUTTON_EDGE_PADDING
 import com.esde.companion.ui.CornerFab
 import com.esde.companion.ui.dock.DockPreview
+import com.esde.companion.ui.widgets.WidgetContentDisplayOptions
 import com.esde.companion.ui.widgets.WidgetContentView
 import com.esde.companion.ui.widgets.gridDimensionsFor
 
@@ -120,6 +121,7 @@ internal fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
                 WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit),
                 WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
                 WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
+                WidgetType.Video(),
             )
     }
 
@@ -673,7 +675,7 @@ private fun PlaceholderWidgetBox(
                 content = content,
                 widgetType = widget.widgetType,
                 modifier = Modifier.fillMaxSize(),
-                textUserScrollEnabled = false,
+                displayOptions = WidgetContentDisplayOptions(textUserScrollEnabled = false),
             )
         }
     }

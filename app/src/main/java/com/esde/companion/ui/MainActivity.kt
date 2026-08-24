@@ -114,10 +114,8 @@ import com.esde.companion.ui.update.UpdateAvailableDialog
 import com.esde.companion.ui.update.UpdateViewModel
 import com.esde.companion.ui.update.UpdateViewModelFactory
 import com.esde.companion.ui.update.WhatsNewDialog
-import com.esde.companion.ui.video.VideoOverlayScreen
-import com.esde.companion.ui.video.VideoOverlayViewModel
-import com.esde.companion.ui.video.VideoOverlayViewModelFactory
 import com.esde.companion.ui.video.VideoPlaybackEvent
+import com.esde.companion.ui.widgets.TopLayerVideoWidgets
 import com.esde.companion.ui.widgets.WidgetOverlay
 import com.esde.companion.ui.widgets.WidgetsViewModel
 import com.esde.companion.ui.widgets.WidgetsViewModelFactory
@@ -431,17 +429,9 @@ class MainActivity : ComponentActivity() {
                                 systemGamesViewModel.onOverlayVisibilityChanged(retroAchievementsSystemVisible)
                             }
 
-                            val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
-
                             val isActivityVisible by produceState(initialValue = true) {
                                 appContainer.activityVisibilityRepository.observeIsVisible().collect { value = it }
                             }
-
-                            val videoOverlayViewModel: VideoOverlayViewModel =
-                                viewModel(factory = VideoOverlayViewModelFactory(appContainer))
-                            val videoPath by videoOverlayViewModel.videoPath.collectAsStateWithLifecycle()
-                            val videoDelaySeconds by videoOverlayViewModel.delaySeconds.collectAsStateWithLifecycle()
-                            val videoAudioEnabled by videoOverlayViewModel.audioEnabled.collectAsStateWithLifecycle()
 
                             val musicControlsViewModel: MusicControlsViewModel =
                                 viewModel(factory = MusicControlsViewModelFactory(appContainer))
@@ -597,14 +587,6 @@ class MainActivity : ComponentActivity() {
                                     else -> 0
                                 }
 
-                            val isBrowsingGame =
-                                (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
-                            val showVideoOverlay =
-                                videoPlaybackEnabled &&
-                                    isBrowsingGame &&
-                                    mainScreenActive &&
-                                    isActivityVisible
-
                             // Shows either because Game Playing Behavior is set to Manual
                             // (and the user hasn't dismissed it for this game), or because
                             // the Game Manual FAB was tapped - either way, only if a manual
@@ -742,13 +724,35 @@ class MainActivity : ComponentActivity() {
                                 label = "longPressMenuBlur",
                             )
 
+                            // Shared by both WidgetOverlay's ordinary canvas-layer video
+                            // widgets and TopLayerVideoWidgets' renderAboveUi ones below -
+                            // the two are mutually exclusive per widget (see
+                            // WidgetType.Video.renderAboveUi's kdoc), so there's no risk of
+                            // double-reporting the same widget's events through this.
+                            val onVideoPlaybackEvent: (VideoPlaybackEvent) -> Unit = { event ->
+                                when (event) {
+                                    is VideoPlaybackEvent.PlayingChanged ->
+                                        appContainer.videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
+                                    is VideoPlaybackEvent.Started ->
+                                        appContainer.logVideoPlaybackStarted(event.path)
+                                    is VideoPlaybackEvent.Error ->
+                                        appContainer.logVideoPlaybackError(event.path, event.message)
+                                }
+                            }
+                            val videoPlaybackEligible = mainScreenActive && isActivityVisible
+
                             Box(
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
                                         .blur(longPressMenuBlurRadius),
                             ) {
-                                WidgetOverlay(viewModel = widgetsViewModel, modifier = Modifier.fillMaxSize())
+                                WidgetOverlay(
+                                    viewModel = widgetsViewModel,
+                                    videoPlaybackEligible = videoPlaybackEligible,
+                                    onVideoPlaybackEvent = onVideoPlaybackEvent,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
                                 // Full-content swap (not an overlay appearing over
                                 // existing content), so Crossfade rather than
@@ -927,30 +931,18 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                if (showVideoOverlay) {
-                                    videoPath?.let { resolvedVideoPath ->
-                                        val videoPlaybackStateRepository = appContainer.videoPlaybackStateRepository
-                                        VideoOverlayScreen(
-                                            videoPath = resolvedVideoPath,
-                                            delaySeconds = videoDelaySeconds,
-                                            audioEnabled = videoAudioEnabled,
-                                            modifier = Modifier.fillMaxSize(),
-                                            onPlaybackEvent = { event ->
-                                                when (event) {
-                                                    is VideoPlaybackEvent.PlayingChanged ->
-                                                        videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
-                                                    VideoPlaybackEvent.Started ->
-                                                        appContainer.logVideoPlaybackStarted(resolvedVideoPath)
-                                                    is VideoPlaybackEvent.Error ->
-                                                        appContainer.logVideoPlaybackError(
-                                                            resolvedVideoPath,
-                                                            event.message,
-                                                        )
-                                                }
-                                            },
-                                        )
-                                    }
-                                }
+                                // Video widgets with their Configure Widget "Render Above
+                                // UI" toggle on - drawn last in this Box (above literally
+                                // everything else here: FABs/App Dock/App Drawer inside
+                                // MainScreen, the Dim/Black covers, GameManual, and
+                                // RetroAchievements) to match where the retired full-screen
+                                // VideoOverlayScreen always used to sit.
+                                TopLayerVideoWidgets(
+                                    viewModel = widgetsViewModel,
+                                    videoPlaybackEligible = videoPlaybackEligible,
+                                    onVideoPlaybackEvent = onVideoPlaybackEvent,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
                                 // Update checker dialogs (silent startup check + manual
                                 // "Check for Updates" in Settings > Setup both funnel into

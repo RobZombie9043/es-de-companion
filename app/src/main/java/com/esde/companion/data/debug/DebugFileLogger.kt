@@ -132,9 +132,9 @@ class DebugFileLogger(
     ) = log { listOf(tag to message) }
 
     /**
-     * Logged once a music track or video overlay actually starts playing - see
+     * Logged once a music track or video widget actually starts playing - see
      * [MusicPlaybackCoordinator][com.esde.companion.domain.music.MusicPlaybackCoordinator]
-     * (tag "Music") and VideoOverlayScreen's Player.Listener.onIsPlayingChanged (tag
+     * (tag "Music") and WidgetVideoContent's Player.Listener.onIsPlayingChanged (tag
      * "Video"). A single pair of started/error functions covering both media kinds, rather
      * than four near-identical ones, keeps this class's function count from ballooning for
      * what's really the same shape of event twice.
@@ -147,9 +147,9 @@ class DebugFileLogger(
     /**
      * Logged when a music or video player reports it couldn't play something - see
      * [MusicPlayerController.observePlaybackError][com.esde.companion.domain.repository.MusicPlayerController.observePlaybackError]
-     * and VideoOverlayScreen's Player.Listener.onPlayerError. [path] is whatever the caller
+     * and WidgetVideoContent's Player.Listener.onPlayerError. [path] is whatever the caller
      * believed was current at the time, for context - it can be null if the error arrives
-     * with nothing loaded (music only; a video overlay always has a path).
+     * with nothing loaded (music only; a video widget always has a path).
      */
     fun logPlaybackError(
         tag: String,

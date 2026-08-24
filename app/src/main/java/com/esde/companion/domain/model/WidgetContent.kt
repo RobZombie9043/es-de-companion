@@ -61,6 +61,18 @@ sealed class WidgetContent {
         val backgroundColorArgb: Long,
         val backgroundAlpha: Float,
     ) : WidgetContent()
+
+    /** A resolved game video path, ready to play - see WidgetContentResolver's Video
+     * branch. Fields mirror [WidgetType.Video] exactly (this is a snapshot of that config
+     * plus the resolved [path]), threaded straight through to WidgetVideoContent. */
+    data class Video(
+        val path: String,
+        val scaleMode: ScaleMode,
+        val audioEnabled: Boolean,
+        val delaySeconds: Int,
+        val pillarboxMode: PillarboxMode,
+        val renderAboveUi: Boolean,
+    ) : WidgetContent()
 }
 
 /** Media types that are transparent overlay-style content rather than an opaque
@@ -88,6 +100,7 @@ val WidgetType.isLogoStyle: Boolean
             is WidgetType.ColorBackground,
             is WidgetType.GameDescription,
             is WidgetType.Rating,
+            is WidgetType.Video,
             -> false
         }
 
@@ -176,6 +189,7 @@ val WidgetType.supportsImageTransition: Boolean
             is WidgetType.ColorBackground,
             is WidgetType.GameDescription,
             is WidgetType.Rating,
+            is WidgetType.Video,
             -> false
         }
 
@@ -234,6 +248,7 @@ val WidgetType.supportsPanZoom: Boolean
             is WidgetType.ColorBackground,
             is WidgetType.GameDescription,
             is WidgetType.Rating,
+            is WidgetType.Video,
             -> false
         }
 

@@ -134,18 +134,6 @@ class AppDrawerViewModelTest {
 
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(true)
 
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {}
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
 
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)

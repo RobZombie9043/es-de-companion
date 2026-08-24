@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.NoRatingBehavior
+import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
@@ -27,6 +28,10 @@ private fun String.toLogoTransitionMode() = LogoTransitionMode.valueOf(this)
 private fun NoRatingBehavior.toDto() = name
 
 private fun String.toNoRatingBehavior() = NoRatingBehavior.valueOf(this)
+
+private fun PillarboxMode.toDto() = name
+
+private fun String.toPillarboxMode() = PillarboxMode.valueOf(this)
 
 // See WidgetTypeDto's kdoc for the tri-state reasoning: null means "not present in the
 // JSON at all" (old data, or a widget never explicitly reconfigured), the literal string
@@ -109,6 +114,14 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 backgroundColorArgb,
                 backgroundAlpha,
             )
+        is WidgetType.Video ->
+            WidgetTypeDto.Video(
+                scaleMode.toDto(),
+                audioEnabled,
+                delaySeconds,
+                pillarboxMode.toDto(),
+                renderAboveUi,
+            )
     }
 
 private fun WidgetTypeDto.toDomain(): WidgetType =
@@ -165,6 +178,7 @@ private fun WidgetTypeDto.toDomain(): WidgetType =
         is WidgetTypeDto.GameDescription ->
             WidgetType.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
         is WidgetTypeDto.Rating -> toDomainRating()
+        is WidgetTypeDto.Video -> toDomainVideo()
     }
 
 private fun WidgetTypeDto.Rating.toDomainRating(): WidgetType.Rating =
@@ -174,6 +188,15 @@ private fun WidgetTypeDto.Rating.toDomainRating(): WidgetType.Rating =
         outlineColorArgb,
         backgroundColorArgb,
         backgroundAlpha,
+    )
+
+private fun WidgetTypeDto.Video.toDomainVideo(): WidgetType.Video =
+    WidgetType.Video(
+        scaleMode.toScaleMode(),
+        audioEnabled,
+        delaySeconds,
+        pillarboxMode.toPillarboxMode(),
+        renderAboveUi,
     )
 
 private fun PlacedWidget.toDto() =

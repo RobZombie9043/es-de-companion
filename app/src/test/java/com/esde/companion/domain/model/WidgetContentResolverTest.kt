@@ -16,6 +16,7 @@ class WidgetContentResolverTest {
         fallbackBackgroundAssetPath: String? = "fallback.webp",
         systemNameLookup: () -> String? = { null },
         gameNameLookup: () -> String? = { null },
+        videoLookup: () -> String? = { null },
     ): WidgetContent =
         WidgetContentResolver.resolve(
             widgetType = widgetType,
@@ -29,6 +30,7 @@ class WidgetContentResolverTest {
             fallbackBackgroundAssetPath = fallbackBackgroundAssetPath,
             systemNameLookup = systemNameLookup,
             gameNameLookup = gameNameLookup,
+            videoLookup = videoLookup,
         )
 
     // --- SystemImage: generic background fallback ---------------------------------------
@@ -407,5 +409,47 @@ class WidgetContentResolverTest {
             ),
             content,
         )
+    }
+
+    // --- Video: resolves only when the caller supplies a path (eligibility gate lives
+    // entirely in the caller's videoLookup, not in the resolver itself) ------------------
+
+    @Test
+    fun `Video resolves to WidgetContent Video when videoLookup returns a path`() {
+        val widgetType =
+            WidgetType.Video(
+                scaleMode = ScaleMode.Fit,
+                audioEnabled = false,
+                delaySeconds = 5,
+                pillarboxMode = PillarboxMode.Transparent,
+                renderAboveUi = true,
+            )
+        val content = resolve(widgetType = widgetType, videoLookup = { "/media/video.mp4" })
+
+        assertEquals(
+            WidgetContent.Video(
+                path = "/media/video.mp4",
+                scaleMode = ScaleMode.Fit,
+                audioEnabled = false,
+                delaySeconds = 5,
+                pillarboxMode = PillarboxMode.Transparent,
+                renderAboveUi = true,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Video resolves to Empty when videoLookup returns null (not eligible or no video found)`() {
+        val content = resolve(widgetType = WidgetType.Video(), videoLookup = { null })
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    @Test
+    fun `Video resolves to Empty by default when the caller supplies no videoLookup at all`() {
+        val content = resolve(widgetType = WidgetType.Video())
+
+        assertEquals(WidgetContent.Empty, content)
     }
 }

@@ -122,4 +122,13 @@ internal sealed class WidgetTypeDto {
         val backgroundColorArgb: Long = 0xFF000000,
         val backgroundAlpha: Float = 0.5f,
     ) : WidgetTypeDto()
+
+    @Serializable
+    data class Video(
+        val scaleMode: String,
+        val audioEnabled: Boolean = true,
+        val delaySeconds: Int = 0,
+        val pillarboxMode: String = "Black",
+        val renderAboveUi: Boolean = false,
+    ) : WidgetTypeDto()
 }

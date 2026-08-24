@@ -40,9 +40,6 @@ private class ExportFixture {
             screensaverDimPercent = 20,
             overlayOpacityPercent = 42,
             fabAssignments = fabAssignments,
-            videoPlaybackEnabled = true,
-            videoDelaySeconds = 7,
-            videoAudioEnabled = false,
             musicEnabled = false,
             musicPlayWhileBrowsingSystems = false,
             musicPlayWhileBrowsingGames = false,
@@ -116,7 +113,6 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(42, snapshot.overlayOpacityPercent)
             assertEquals(FabType.CustomApp, snapshot.fabAssignments.bottomStart.type)
             assertEquals("com.example.app", snapshot.fabAssignments.bottomStart.customAppPackageName)
-            assertTrue(snapshot.videoPlaybackEnabled)
             assertEquals(MusicDuckingMode.Pause, snapshot.musicDuckingMode)
             assertEquals(setOf("com.hidden.app"), snapshot.hiddenApps)
             assertEquals(6, snapshot.gridColumns)

@@ -12,6 +12,8 @@ import com.esde.companion.domain.parser.TitleMatchResult
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameRomHashRepository
 import com.esde.companion.domain.repository.RetroAchievementsRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Identification only - no achievement fetch, see [GetGameAchievementSummaryUseCase] for
@@ -72,22 +74,43 @@ class ResolveRetroAchievementsGameUseCase(
         }
 
         val candidates = retroAchievementsRepository.getCandidateGames(console)
-
         val romHash = gameRomHashRepository.resolveRomHash(gameReference.systemShortName, gameReference.romPath).value
-        val hashMatch = romHash?.let { GameHashMatcher.match(it, candidates) }
+        val fileNameGuess = gameReference.romFileNameGuess()
+
+        // GameHashMatcher/GameTitleMatcher are real, synchronous CPU work scaling with
+        // this console's candidate-list size - GameTitleMatcher in particular runs
+        // several linear scans with per-candidate title normalization, no memoization.
+        // Left on whatever thread called invoke() (in practice, Main - RetroAchievementsViewModel
+        // launches this with no dispatcher specified), this was heavy enough on a large
+        // roster (NES has 800+ RA entries) to visibly stutter a concurrently-running
+        // widget-canvas animation. Dispatchers.Default, not IO - this is CPU-bound, no I/O.
+        val outcome =
+            withContext(Dispatchers.Default) {
+                val hashMatch = romHash?.let { GameHashMatcher.match(it, candidates) }
+                if (hashMatch != null) {
+                    MatchOutcome(hashMatch = hashMatch)
+                } else {
+                    val gameNameMatch = matchAgainst(gameName, candidates)
+                    val fileNameMatch = gameNameMatch ?: matchAgainst(fileNameGuess, candidates)
+                    MatchOutcome(gameNameMatch = gameNameMatch, fileNameMatch = fileNameMatch)
+                }
+            }
+
+        val hashMatch = outcome.hashMatch
         if (hashMatch != null) {
             val result = RetroAchievementsGameMatch.Found(hashMatch.gameId, MatchMethod.RomHash)
             val details = "via=RomHash hash=$romHash gameId=${hashMatch.gameId} title=\"${hashMatch.title}\""
             return report(gameReference, details, result)
         }
 
-        val gameNameMatch = matchAgainst(gameName, candidates)
-        val fileNameGuess = gameReference.romFileNameGuess()
-        val matched = gameNameMatch ?: matchAgainst(fileNameGuess, candidates)
-
+        val matched = outcome.gameNameMatch ?: outcome.fileNameMatch
         if (matched != null) {
             val signal =
-                if (gameNameMatch != null) "gameName query=\"$gameName\"" else "filename query=\"$fileNameGuess\""
+                if (outcome.gameNameMatch != null) {
+                    "gameName query=\"$gameName\""
+                } else {
+                    "filename query=\"$fileNameGuess\""
+                }
             val method = matched.method.toMatchMethod()
             val candidate = matched.candidate
             val details = "via=$method signal=$signal gameId=${candidate.gameId} title=\"${candidate.title}\""
@@ -133,4 +156,15 @@ class ResolveRetroAchievementsGameUseCase(
             TitleMatchMethod.SpaceInsensitiveTitle -> MatchMethod.SpaceInsensitiveTitle
             TitleMatchMethod.PartialTitle -> MatchMethod.PartialTitle
         }
+
+    /** Carries [withContext]'s result back out to the caller - a suspend function can't
+     * `return` from inside a `withContext` lambda, so the hash/title tiers' short-circuit
+     * branching happens inside the block (see the call site above) and is only acted on
+     * (building the log message, returning the final [RetroAchievementsGameMatch]) once
+     * back on the original dispatcher. */
+    private data class MatchOutcome(
+        val hashMatch: RetroAchievementsCandidateGame? = null,
+        val gameNameMatch: TitleMatchResult.Matched? = null,
+        val fileNameMatch: TitleMatchResult.Matched? = null,
+    )
 }

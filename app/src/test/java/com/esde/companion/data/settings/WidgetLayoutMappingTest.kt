@@ -4,6 +4,7 @@ import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.NoRatingBehavior
+import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
@@ -323,6 +324,35 @@ class WidgetLayoutMappingTest {
                 outlineColorArgb = 0xFFFFFFFF,
                 backgroundColorArgb = 0xFF000000,
                 backgroundAlpha = 0.5f,
+            ),
+            decoded,
+        )
+    }
+
+    @Test
+    fun `Video round-trips scaleMode, audioEnabled, delaySeconds, pillarboxMode, and renderAboveUi`() {
+        val widget =
+            WidgetType.Video(
+                scaleMode = ScaleMode.Fit,
+                audioEnabled = false,
+                delaySeconds = 5,
+                pillarboxMode = PillarboxMode.Transparent,
+                renderAboveUi = true,
+            )
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON for Video without optional keys decodes to their defaults`() {
+        val json = """{"scaleMode":"Fill"}"""
+        val decoded = Json.decodeFromString(WidgetTypeDto.Video.serializer(), json)
+        assertEquals(
+            WidgetTypeDto.Video(
+                scaleMode = "Fill",
+                audioEnabled = true,
+                delaySeconds = 0,
+                pillarboxMode = "Black",
+                renderAboveUi = false,
             ),
             decoded,
         )

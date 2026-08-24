@@ -157,9 +157,6 @@ import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
@@ -214,9 +211,6 @@ import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -287,11 +281,11 @@ class AppContainer(context: Context) {
             clock = Clock.systemDefaultZone(),
         )
 
-    // Video-overlay playback events (VideoOverlayScreen) are reported from a Compose/
+    // Video widget playback events (WidgetVideoContent) are reported from a Compose/
     // ExoPlayer callback, not through a use case - exposed as plain function references
     // (rather than the DebugFileLogger type itself) so MainActivity, which already wires
     // other domain-typed callbacks like videoPlaybackStateRepository::setIsPlaying down
-    // into VideoOverlayScreen, can do the same here without reaching into the data layer.
+    // into the widget canvas, can do the same here without reaching into the data layer.
     val logVideoPlaybackStarted: (String) -> Unit = { path -> debugFileLogger.logPlaybackStarted("Video", path) }
     val logVideoPlaybackError: (String, String) -> Unit =
         { path, message -> debugFileLogger.logPlaybackError("Video", path, message) }
@@ -551,12 +545,6 @@ class AppContainer(context: Context) {
     val setScreensaverDimPercentUseCase = SetScreensaverDimPercentUseCase(onboardingRepository)
     val observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository)
     val setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository)
-    val observeVideoPlaybackEnabledUseCase = ObserveVideoPlaybackEnabledUseCase(onboardingRepository)
-    val setVideoPlaybackEnabledUseCase = SetVideoPlaybackEnabledUseCase(onboardingRepository)
-    val observeVideoDelaySecondsUseCase = ObserveVideoDelaySecondsUseCase(onboardingRepository)
-    val setVideoDelaySecondsUseCase = SetVideoDelaySecondsUseCase(onboardingRepository)
-    val observeVideoAudioEnabledUseCase = ObserveVideoAudioEnabledUseCase(onboardingRepository)
-    val setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository)
 
     val observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository)
     val setMusicEnabledUseCase = SetMusicEnabledUseCase(onboardingRepository)
