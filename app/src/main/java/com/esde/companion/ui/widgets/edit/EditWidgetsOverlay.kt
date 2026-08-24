@@ -1703,7 +1703,7 @@ private fun GameDescriptionConfig(
 private fun NoRatingBehavior.displayLabel(): String =
     when (this) {
         NoRatingBehavior.Hide -> "Hide Widget"
-        NoRatingBehavior.ShowEmptyStars -> "Show Empty Stars"
+        NoRatingBehavior.ShowEmptyStars -> "Show Empty"
     }
 
 @Composable
