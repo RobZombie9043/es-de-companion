@@ -113,4 +113,13 @@ internal sealed class WidgetTypeDto {
         val backgroundColorArgb: Long = 0xFF000000,
         val backgroundAlpha: Float = 0.5f,
     ) : WidgetTypeDto()
+
+    @Serializable
+    data class Rating(
+        val noRatingBehavior: String = "Hide",
+        val filledColorArgb: Long = 0xFFFFC107,
+        val outlineColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+    ) : WidgetTypeDto()
 }

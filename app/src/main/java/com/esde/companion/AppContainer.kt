@@ -8,7 +8,9 @@ import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.gamelist.LoggingGameDescriptionRepository
+import com.esde.companion.data.gamelist.LoggingGameRatingRepository
 import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
+import com.esde.companion.data.gamelist.ReactiveGameRatingRepository
 import com.esde.companion.data.log.EsdeLogFileRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.log.SharedEsdeLogRepository
@@ -59,6 +61,7 @@ import com.esde.companion.domain.repository.EsdeInstallationRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRatingRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.MusicLibraryRepository
@@ -136,6 +139,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
@@ -318,6 +322,13 @@ class AppContainer(context: Context) {
             debugFileLogger = debugFileLogger,
         )
 
+    // Same reactive-to-Settings reasoning as gameDescriptionRepository above.
+    private val gameRatingRepository: GameRatingRepository =
+        LoggingGameRatingRepository(
+            inner = ReactiveGameRatingRepository(esdeRootPath = onboardingRepository.observeLogFolderPath()),
+            debugFileLogger = debugFileLogger,
+        )
+
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
 
@@ -463,6 +474,7 @@ class AppContainer(context: Context) {
     val observeEsdeQuitEventUseCase = ObserveEsdeQuitEventUseCase(logRepository)
     val resolveGameMediaUseCase = ResolveGameMediaUseCase(gameMediaRepository)
     val resolveGameDescriptionUseCase = ResolveGameDescriptionUseCase(gameDescriptionRepository)
+    val resolveGameRatingUseCase = ResolveGameRatingUseCase(gameRatingRepository)
     val resolveRandomSystemMediaUseCase = ResolveRandomSystemMediaUseCase(systemMediaRepository)
 
     val validateEsdeLogFolderUseCase = ValidateEsdeLogFolderUseCase(onboardingRepository)

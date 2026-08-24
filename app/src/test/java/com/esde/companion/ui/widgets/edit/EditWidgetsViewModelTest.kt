@@ -4,6 +4,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
+import com.esde.companion.domain.model.GameRating
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.InstalledApp
@@ -25,6 +26,7 @@ import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRatingRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.OnboardingRepository
@@ -44,6 +46,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import kotlinx.coroutines.Dispatchers
@@ -135,6 +138,15 @@ class EditWidgetsViewModelTest {
             systemShortName: String,
             romPath: String,
         ): GameDescription = description
+    }
+
+    private class FakeGameRatingRepository(
+        private val rating: GameRating = GameRating(value = null),
+    ) : GameRatingRepository {
+        override suspend fun resolveRating(
+            systemShortName: String,
+            romPath: String,
+        ): GameRating = rating
     }
 
     private class FakeSystemMediaRepository(
@@ -408,6 +420,7 @@ class EditWidgetsViewModelTest {
         saveWidgetCanvas = SaveWidgetCanvasUseCase(widgetLayoutRepository),
         resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
         resolveGameDescription = ResolveGameDescriptionUseCase(FakeGameDescriptionRepository()),
+        resolveGameRating = ResolveGameRatingUseCase(FakeGameRatingRepository()),
         resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
         resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
         resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),

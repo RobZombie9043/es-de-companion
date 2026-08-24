@@ -12,6 +12,7 @@ class WidgetContentResolverTest {
         systemMediaLookup: (MediaType) -> String? = { null },
         gameMediaLookup: (MediaType) -> String? = { null },
         gameDescriptionLookup: () -> String? = { null },
+        gameRatingLookup: () -> Float? = { null },
         fallbackBackgroundAssetPath: String? = "fallback.webp",
         systemNameLookup: () -> String? = { null },
         gameNameLookup: () -> String? = { null },
@@ -24,6 +25,7 @@ class WidgetContentResolverTest {
             systemMediaLookup = systemMediaLookup,
             gameMediaLookup = gameMediaLookup,
             gameDescriptionLookup = gameDescriptionLookup,
+            gameRatingLookup = gameRatingLookup,
             fallbackBackgroundAssetPath = fallbackBackgroundAssetPath,
             systemNameLookup = systemNameLookup,
             gameNameLookup = gameNameLookup,
@@ -279,5 +281,101 @@ class WidgetContentResolverTest {
             )
 
         assertEquals(WidgetContent.Image("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false), content)
+    }
+
+    // --- Rating: 0f..1f -> 0f..5f star conversion and no-rating behavior ------------------
+
+    @Test
+    fun `Rating converts a 0f to 1f gamelist value onto a 0f to 5f star scale`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(),
+                gameRatingLookup = { 0.8f },
+            )
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 4f,
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Rating with Hide behavior resolves to Empty when the game has no rating`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(noRatingBehavior = NoRatingBehavior.Hide),
+                gameRatingLookup = { null },
+            )
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    @Test
+    fun `Rating with ShowEmptyStars behavior resolves to zero filled stars when the game has no rating`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(noRatingBehavior = NoRatingBehavior.ShowEmptyStars),
+                gameRatingLookup = { null },
+            )
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 0f,
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Rating of exactly 0 always renders as zero filled stars regardless of noRatingBehavior`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(noRatingBehavior = NoRatingBehavior.Hide),
+                gameRatingLookup = { 0f },
+            )
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 0f,
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Rating threads through the widget's own configured colors`() {
+        val widgetType =
+            WidgetType.Rating(
+                filledColorArgb = 0xFFAABBCC,
+                outlineColorArgb = 0xFF112233,
+                backgroundColorArgb = 0xFF445566,
+                backgroundAlpha = 0.25f,
+            )
+        val content = resolve(widgetType = widgetType, gameRatingLookup = { 1f })
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 5f,
+                filledColorArgb = 0xFFAABBCC,
+                outlineColorArgb = 0xFF112233,
+                backgroundColorArgb = 0xFF445566,
+                backgroundAlpha = 0.25f,
+            ),
+            content,
+        )
     }
 }

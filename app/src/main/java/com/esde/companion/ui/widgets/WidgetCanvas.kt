@@ -231,6 +231,22 @@ internal fun WidgetContentView(
                     userScrollEnabled = textUserScrollEnabled,
                 )
             }
+
+        is WidgetContent.Rating ->
+            Box(
+                modifier =
+                    modifier.background(
+                        Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                RatingStars(
+                    starCount = content.starCount,
+                    filledColorArgb = content.filledColorArgb,
+                    outlineColorArgb = content.outlineColorArgb,
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                )
+            }
     }
 }
 

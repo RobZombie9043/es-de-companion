@@ -23,6 +23,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,6 +52,7 @@ class WidgetsViewModel(
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
+    private val resolveGameRating: ResolveGameRatingUseCase,
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
@@ -159,6 +161,7 @@ class WidgetsViewModel(
                 )
             }
         val gameDescription = identity.gameRef?.let { resolveGameDescription(it.systemShortName, it.romPath) }
+        val gameRating = identity.gameRef?.let { resolveGameRating(it.systemShortName, it.romPath) }
         val systemShortName = identity.systemShortName
 
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
@@ -199,6 +202,7 @@ class WidgetsViewModel(
                     systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
                     gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
                     gameDescriptionLookup = { gameDescription?.text },
+                    gameRatingLookup = { gameRating?.value },
                     fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET, // null in EditWidgetsViewModel, as today
                     systemNameLookup = { identity.systemFullName },
                     gameNameLookup = { identity.gameName },
