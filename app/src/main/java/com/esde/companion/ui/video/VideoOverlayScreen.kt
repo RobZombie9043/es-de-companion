@@ -30,6 +30,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import java.io.File
 
+private const val MILLIS_PER_SECOND = 1000L
+
 /**
  * Opaque full-screen video cover - see MainActivity's showVideoOverlay for the gating
  * that decides when this is composed at all.
@@ -181,7 +183,7 @@ private suspend fun transitionToVideo(
     val incoming = createIncomingPlayer(context, videoPath, displayedSlot.current, ready, onPlaybackEvent)
 
     try {
-        delay(settings.delaySeconds * 1000L)
+        delay(settings.delaySeconds * MILLIS_PER_SECOND)
         incoming.play()
         ready.await()
 

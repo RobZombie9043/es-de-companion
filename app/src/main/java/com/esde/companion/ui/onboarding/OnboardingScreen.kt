@@ -48,20 +48,27 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 
-/** Fixed position in the wizard's forward order (see OnboardingStep's kdoc) - used purely
- * to pick the step-transition slide direction below, since [OnboardingStep] is a sealed
- * class (no built-in ordinal) and some steps are conditionally skipped, so adjacent steps
- * in a given run aren't always adjacent here. */
+/** Forward order (see OnboardingStep's kdoc) - a plain list rather than a `when`-mapped
+ * ordinal since [OnboardingStep] is a sealed class with no built-in ordinal. */
+private val ORDERED_ONBOARDING_STEPS =
+    listOf(
+        OnboardingStep.Permission,
+        OnboardingStep.EsdeFolder,
+        OnboardingStep.MediaFolder,
+        OnboardingStep.LegacyScripts,
+        OnboardingStep.EventScriptSettings,
+        OnboardingStep.LiveLogCheck,
+    )
+
+/** Fixed position in the wizard's forward order - used purely to pick the step-transition
+ * slide direction below, since some steps are conditionally skipped, so adjacent steps in
+ * a given run aren't always adjacent here. */
 private val OnboardingStep.order: Int
-    get() =
-        when (this) {
-            OnboardingStep.Permission -> 0
-            OnboardingStep.EsdeFolder -> 1
-            OnboardingStep.MediaFolder -> 2
-            OnboardingStep.LegacyScripts -> 3
-            OnboardingStep.EventScriptSettings -> 4
-            OnboardingStep.LiveLogCheck -> 5
-        }
+    get() = ORDERED_ONBOARDING_STEPS.indexOf(this)
+
+/** Slide/fade durations for the step-to-step wizard transition. */
+private const val STEP_SLIDE_DURATION_MS = 220
+private const val STEP_FADE_OUT_DURATION_MS = 150
 
 /** Onboarding text renders directly over the themed fallback background image rather than
  * an opaque Material surface, so it can't rely on colorScheme.onBackground/onSurface for
@@ -132,15 +139,21 @@ fun OnboardingScreen(
                             val movingForward = targetState.order > initialState.order
                             val slideDistance = { width: Int -> width / 3 }
                             if (movingForward) {
-                                (slideInHorizontally(tween(220)) { slideDistance(it) } + fadeIn(tween(220)))
-                                    .togetherWith(
-                                        slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)),
-                                    )
+                                (
+                                    slideInHorizontally(tween(STEP_SLIDE_DURATION_MS)) { slideDistance(it) } +
+                                        fadeIn(tween(STEP_SLIDE_DURATION_MS))
+                                ).togetherWith(
+                                    slideOutHorizontally(tween(STEP_SLIDE_DURATION_MS)) { -slideDistance(it) } +
+                                        fadeOut(tween(STEP_FADE_OUT_DURATION_MS)),
+                                )
                             } else {
-                                (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
-                                    .togetherWith(
-                                        slideOutHorizontally(tween(220)) { slideDistance(it) } + fadeOut(tween(150)),
-                                    )
+                                (
+                                    slideInHorizontally(tween(STEP_SLIDE_DURATION_MS)) { -slideDistance(it) } +
+                                        fadeIn(tween(STEP_SLIDE_DURATION_MS))
+                                ).togetherWith(
+                                    slideOutHorizontally(tween(STEP_SLIDE_DURATION_MS)) { slideDistance(it) } +
+                                        fadeOut(tween(STEP_FADE_OUT_DURATION_MS)),
+                                )
                             }
                         },
                         label = "onboardingStepContent",

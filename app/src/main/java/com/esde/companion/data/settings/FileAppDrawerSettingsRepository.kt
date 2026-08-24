@@ -9,6 +9,9 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+private const val MIN_GRID_COLUMNS = 3
+private const val MAX_GRID_COLUMNS = 6
+
 /**
  * DataStore-backed [AppDrawerSettingsRepository]. [context] is expected to be an
  * application context (see AppContainer), not an Activity context - same note as
@@ -27,7 +30,9 @@ class FileAppDrawerSettingsRepository(
         }
 
     override suspend fun setGridColumns(columns: Int) {
-        context.appDrawerSettingsDataStore.edit { it[GRID_COLUMNS_KEY] = columns.coerceIn(3, 6) }
+        context.appDrawerSettingsDataStore.edit {
+            it[GRID_COLUMNS_KEY] = columns.coerceIn(MIN_GRID_COLUMNS, MAX_GRID_COLUMNS)
+        }
     }
 
     override fun observeGridColumns(): Flow<Int> =

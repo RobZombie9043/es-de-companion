@@ -94,6 +94,10 @@ import kotlinx.coroutines.launch
  * of trying it. */
 private const val EASTER_EGG_TAP_THRESHOLD = 7
 
+/** Slide/fade durations for the Home -> Category -> ManageApps drill-down transition. */
+private const val PAGE_SLIDE_DURATION_MS = 220
+private const val PAGE_FADE_OUT_DURATION_MS = 150
+
 private val EasterEggMessages =
     listOf(
         "It's dangerous to go alone! Take this.",
@@ -278,13 +282,21 @@ fun LongPressSettingsMenu(
                         val enteringDeeper = targetState.depth > initialState.depth
                         val slideDistance = { width: Int -> width / 3 }
                         if (enteringDeeper) {
-                            (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
-                                .togetherWith(
-                                    slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)),
-                                )
+                            (
+                                slideInHorizontally(tween(PAGE_SLIDE_DURATION_MS), slideDistance) +
+                                    fadeIn(tween(PAGE_SLIDE_DURATION_MS))
+                            ).togetherWith(
+                                slideOutHorizontally(tween(PAGE_SLIDE_DURATION_MS)) { -slideDistance(it) } +
+                                    fadeOut(tween(PAGE_FADE_OUT_DURATION_MS)),
+                            )
                         } else {
-                            (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
+                            (
+                                slideInHorizontally(tween(PAGE_SLIDE_DURATION_MS)) { -slideDistance(it) } +
+                                    fadeIn(tween(PAGE_SLIDE_DURATION_MS))
+                            ).togetherWith(
+                                slideOutHorizontally(tween(PAGE_SLIDE_DURATION_MS), slideDistance) +
+                                    fadeOut(tween(PAGE_FADE_OUT_DURATION_MS)),
+                            )
                         }
                     },
                     label = "longPressSettingsContent",

@@ -31,7 +31,9 @@ class FileDockSettingsRepository(
         }
 
     override suspend fun setDockMaxApps(maxApps: Int) {
-        context.dockSettingsDataStore.edit { it[DOCK_MAX_APPS_KEY] = maxApps.coerceIn(2, 5) }
+        context.dockSettingsDataStore.edit {
+            it[DOCK_MAX_APPS_KEY] = maxApps.coerceIn(MIN_DOCK_MAX_APPS, MAX_DOCK_MAX_APPS)
+        }
     }
 
     override fun observeDockMaxApps(): Flow<Int> =
@@ -59,6 +61,8 @@ class FileDockSettingsRepository(
 
     private companion object {
         const val DEFAULT_DOCK_MAX_APPS = 5
+        const val MIN_DOCK_MAX_APPS = 2
+        const val MAX_DOCK_MAX_APPS = 5
 
         val DOCK_ENABLED_KEY = booleanPreferencesKey("dock_enabled")
         val DOCK_MAX_APPS_KEY = intPreferencesKey("dock_max_apps")

@@ -40,11 +40,15 @@ val CORNER_BUTTON_EDGE_PADDING = 16.dp
  * translucent overlay surface in the app reads as one consistent family of shapes. */
 private val CORNER_BUTTON_SHAPE = RoundedCornerShape(16.dp)
 
+/** Below this luminance, the surface reads as dark mode - same threshold
+ * MusicControlsOverlay/AppDock/AppDrawer use for their own theme detection. */
+private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
+
 /** Black-on-dark/white-on-light background+content color pair shared by [CornerFab] and
  * [WideCornerFab], factored out so both pick up the same theme-aware styling by construction. */
 @Composable
 private fun cornerButtonColors(): Pair<Color, Color> {
-    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
     return if (isDarkTheme) Color.Black to Color.White else Color.White to Color.Black
 }
 

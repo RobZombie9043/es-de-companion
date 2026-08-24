@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 
+private const val MIN_PERCENT = 0
+private const val MAX_PERCENT = 100
+
 /**
  * DataStore-backed [OnboardingRepository]. Folder existence/log-file checks are plain
  * File I/O (this app isn't Play-Store distributed, so MANAGE_EXTERNAL_STORAGE is granted
@@ -137,7 +140,9 @@ class FileOnboardingRepository(
         }
 
     override suspend fun setGamePlayingDimPercent(percent: Int) {
-        context.onboardingDataStore.edit { it[GAME_PLAYING_DIM_PERCENT_KEY] = percent.coerceIn(0, 100) }
+        context.onboardingDataStore.edit {
+            it[GAME_PLAYING_DIM_PERCENT_KEY] = percent.coerceIn(MIN_PERCENT, MAX_PERCENT)
+        }
     }
 
     override fun observeGamePlayingDimPercent(): Flow<Int> =
@@ -155,7 +160,9 @@ class FileOnboardingRepository(
         }
 
     override suspend fun setScreensaverDimPercent(percent: Int) {
-        context.onboardingDataStore.edit { it[SCREENSAVER_DIM_PERCENT_KEY] = percent.coerceIn(0, 100) }
+        context.onboardingDataStore.edit {
+            it[SCREENSAVER_DIM_PERCENT_KEY] = percent.coerceIn(MIN_PERCENT, MAX_PERCENT)
+        }
     }
 
     override fun observeScreensaverDimPercent(): Flow<Int> =
@@ -228,7 +235,7 @@ class FileOnboardingRepository(
         }
 
     override suspend fun setOverlayOpacityPercent(percent: Int) {
-        context.onboardingDataStore.edit { it[OVERLAY_OPACITY_KEY] = percent.coerceIn(0, 100) }
+        context.onboardingDataStore.edit { it[OVERLAY_OPACITY_KEY] = percent.coerceIn(MIN_PERCENT, MAX_PERCENT) }
     }
 
     override fun observeOverlayOpacityPercent(): Flow<Int> =

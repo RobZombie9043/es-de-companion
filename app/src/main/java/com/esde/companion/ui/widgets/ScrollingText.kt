@@ -23,6 +23,7 @@ private const val PAUSE_AT_TOP_MS = 4_500L
 private const val PAUSE_AT_BOTTOM_MS = 7_000L
 private const val PIXELS_PER_SECOND = 35f
 private const val MIN_SCROLL_DURATION_MS = 600
+private const val MILLIS_PER_SECOND = 1000
 
 /**
  * Renders [text] wrapped to the available width. If the wrapped content is taller than
@@ -78,7 +79,8 @@ fun ScrollingText(
 
         val maxValue = scrollState.maxValue
         if (maxValue <= 0) return@LaunchedEffect
-        val scrollDurationMs = ((maxValue / PIXELS_PER_SECOND) * 1000).toInt().coerceAtLeast(MIN_SCROLL_DURATION_MS)
+        val scrollDurationMs =
+            ((maxValue / PIXELS_PER_SECOND) * MILLIS_PER_SECOND).toInt().coerceAtLeast(MIN_SCROLL_DURATION_MS)
         val spec = tween<Float>(durationMillis = scrollDurationMs, easing = LinearEasing)
 
         while (true) {
