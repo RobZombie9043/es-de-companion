@@ -158,6 +158,10 @@ class DebugFileLoggerTest {
         override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
 
         override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
     }
 
     // Mirrors DebugFileLogger's private eventColumnWidth - kept in sync manually since

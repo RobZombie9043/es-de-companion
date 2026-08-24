@@ -261,6 +261,14 @@ internal class FakeOnboardingRepository(
     override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
 
     override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = MutableStateFlow(false)
+
+    private val bluetoothPermissionRequestedFlow = MutableStateFlow(false)
+
+    override suspend fun setBluetoothPermissionRequested(requested: Boolean) {
+        bluetoothPermissionRequestedFlow.value = requested
+    }
+
+    override fun observeBluetoothPermissionRequested(): Flow<Boolean> = bluetoothPermissionRequestedFlow
 }
 
 internal class FakeAppDrawerSettingsRepository(

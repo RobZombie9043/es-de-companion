@@ -188,6 +188,7 @@ fun LongPressSettingsMenu(
     val onTaskKillerEnabledChanged = settingsViewModel::onTaskKillerEnabledChanged
     val onVolumeSyncEnabledChanged = settingsViewModel::onVolumeSyncEnabledChanged
     val onVolumeSyncModeChanged = settingsViewModel::onVolumeSyncModeChanged
+    val onBluetoothPermissionRequested = settingsViewModel::onBluetoothPermissionRequested
 
     val currentOnRefresh = rememberUpdatedState(settingsViewModel::refreshPermissionState)
     val currentOnRefreshThorAccessibility = rememberUpdatedState(settingsViewModel::refreshThorAccessibilityGranted)
@@ -337,6 +338,7 @@ fun LongPressSettingsMenu(
                                         installedApps = uiState.installedApps,
                                         onFabTypeChanged = settingsViewModel::onFabTypeChanged,
                                         onFabCustomAppChanged = settingsViewModel::onFabCustomAppChanged,
+                                        onBluetoothPermissionRequested = onBluetoothPermissionRequested,
                                     )
                                 SettingsCategory.VideoPlayback ->
                                     VideoPlaybackSettingsContent(

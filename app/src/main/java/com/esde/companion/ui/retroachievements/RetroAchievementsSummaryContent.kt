@@ -189,12 +189,8 @@ internal fun AchievementSummaryList(
  */
 @Composable
 internal fun AchievementStatsHeader(summary: GameAchievementSummary) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp),
-    ) {
+    val columnModifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp)
+    Column(modifier = columnModifier) {
         val unlockedCount = summary.achievements.count { it.unlocked }
         val completionPercent = summary.completionPercent.roundToInt()
         val statsText =

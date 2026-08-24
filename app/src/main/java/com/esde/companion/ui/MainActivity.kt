@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -43,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -59,6 +61,8 @@ import com.esde.companion.data.apps.AppLauncher
 import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.AppState
+import com.esde.companion.domain.model.BatteryStatus
+import com.esde.companion.domain.model.BatteryTier
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
@@ -68,6 +72,7 @@ import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.MusicPlaybackState
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
+import com.esde.companion.domain.model.SystemStatus
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.stateGroup
 import com.esde.companion.ui.dock.AppDockViewModel
@@ -472,6 +477,29 @@ class MainActivity : ComponentActivity() {
                                 appContainer.observeFabAssignmentsUseCase().collect { value = it }
                             }
 
+                            // Backs the Clock/SystemStatus/ClockAndSystemStatus FABs. Initial
+                            // value shows nothing (every flag false/lowest tier) until the
+                            // first real read arrives.
+                            val initialSystemStatus =
+                                SystemStatus(
+                                    battery = BatteryStatus(BatteryTier.Low, isCharging = false),
+                                    wifiConnected = false,
+                                    bluetoothConnected = false,
+                                )
+                            val systemStatus by produceState(initialValue = initialSystemStatus) {
+                                appContainer.observeSystemStatusUseCase().collect { value = it }
+                            }
+                            val bluetoothPermissionRequested by produceState(initialValue = true) {
+                                appContainer.observeBluetoothPermissionRequestedUseCase().collect { value = it }
+                            }
+                            val bluetoothPermissionScope = rememberCoroutineScope()
+
+                            // Reported live by whichever wide FAB (Clock/SystemStatus/
+                            // ClockAndSystemStatus) occupies a top corner - see
+                            // MusicFabContent's reservedWidth below, which reads this instead
+                            // of assuming every FAB is CORNER_BUTTON_SIZE wide.
+                            val measuredFabWidthsPx = remember { mutableStateMapOf<FabPosition, Int>() }
+
                             // Backs the Custom App FAB (FAB Control) - resolving its icon/
                             // label needs the full installed-apps list, same source the App
                             // Drawer/App Dock already use.
@@ -600,6 +628,28 @@ class MainActivity : ComponentActivity() {
                             // content per type is a top-level composable (see
                             // MusicFabContent/GameManualFabContent below this class) so
                             // this dispatcher itself stays a short, single-purpose `when`.
+                            val bluetoothPermissionState =
+                                BluetoothPermissionState(
+                                    requested = bluetoothPermissionRequested,
+                                    onRequested = {
+                                        bluetoothPermissionScope.launch {
+                                            appContainer.setBluetoothPermissionRequestedUseCase(true)
+                                        }
+                                    },
+                                    onRecheck = { appContainer.bluetoothPermissionRecheckSignal.notifyChanged() },
+                                )
+
+                            // Shared by Clock/SystemStatus/ClockAndSystemStatus below - all
+                            // three use the same visibility condition and width-reporting
+                            // callback, unlike Music/GameManual/CustomApp which each differ.
+                            fun wideFabContext(position: FabPosition) =
+                                WideFabContext(
+                                    position = position,
+                                    visible = !isBlanked && isActivityVisible,
+                                    overlayOpacityPercent = overlayOpacityPercent,
+                                    onWidthMeasured = { px -> measuredFabWidthsPx[position] = px },
+                                )
+
                             fun fabSlotContent(position: FabPosition): @Composable BoxScope.() -> Unit =
                                 {
                                     val slot = fabAssignments[position]
@@ -608,6 +658,7 @@ class MainActivity : ComponentActivity() {
                                             MusicFabContent(
                                                 position = position,
                                                 fabAssignments = fabAssignments,
+                                                measuredFabWidthsPx = measuredFabWidthsPx,
                                                 visible =
                                                     !isBlanked && isActivityVisible && musicEnabled &&
                                                         musicPlaybackState != MusicPlaybackState.Stopped,
@@ -641,6 +692,19 @@ class MainActivity : ComponentActivity() {
                                                         heldRetroAchievementsFabMode != RetroAchievementsFabMode.None,
                                                 overlayOpacityPercent = overlayOpacityPercent,
                                                 onClick = { showRetroAchievementsOverlay = true },
+                                            )
+                                        FabType.Clock -> ClockFabContent(wideFabContext(position))
+                                        FabType.SystemStatus ->
+                                            SystemStatusFabContent(
+                                                context = wideFabContext(position),
+                                                systemStatus = systemStatus,
+                                                bluetoothPermission = bluetoothPermissionState,
+                                            )
+                                        FabType.ClockAndSystemStatus ->
+                                            ClockAndSystemStatusFabContent(
+                                                context = wideFabContext(position),
+                                                systemStatus = systemStatus,
+                                                bluetoothPermission = bluetoothPermissionState,
                                             )
                                         FabType.Settings, FabType.AppDrawer, FabType.None -> {}
                                     }
@@ -925,11 +989,18 @@ class MainActivity : ComponentActivity() {
  * a fixed gap from the FAB's own leading edge, so both sit flush against the screen's right
  * side as one visual unit) and grows leftward, the mirror image of the TopStart case rather
  * than always expanding rightward regardless of which corner the FAB is actually in.
+ *
+ * [measuredFabWidthsPx] holds the live-measured width (see Clock/SystemStatus/
+ * ClockAndSystemStatusFabContent's onWidthMeasured) of whatever wide FAB currently occupies
+ * a top corner - falls back to the fixed CORNER_BUTTON_SIZE assumption below for every other
+ * FAB type, which is correct since they're all fixed-size squares. Without this, a wide FAB
+ * in the opposite corner would be under-reserved-for and the panel would overlap it.
  */
 @Composable
 private fun BoxScope.MusicFabContent(
     position: FabPosition,
     fabAssignments: FabAssignments,
+    measuredFabWidthsPx: Map<FabPosition, Int>,
     visible: Boolean,
     controlsRevealed: Boolean,
     onControlsRevealedChanged: (Boolean) -> Unit,
@@ -943,11 +1014,14 @@ private fun BoxScope.MusicFabContent(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val alignment = position.toAlignment()
         val opposite = position.topOpposite
+        val density = LocalDensity.current
         val reservedWidth =
-            if (opposite != null && fabAssignments[opposite].type != FabType.None) {
-                CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE
-            } else {
+            if (opposite == null || fabAssignments[opposite].type == FabType.None) {
                 0.dp
+            } else {
+                val measuredPx = measuredFabWidthsPx[opposite]
+                val oppositeWidth = if (measuredPx != null) with(density) { measuredPx.toDp() } else CORNER_BUTTON_SIZE
+                CORNER_BUTTON_EDGE_PADDING + oppositeWidth
             }
         val expansionGap = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP
 

@@ -64,6 +64,7 @@ import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
+import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -132,6 +133,7 @@ class SettingsViewModelTest {
         var launchEsdeOnStartEnabled = false
         var debugLoggingEnabled = false
         var updateAchievementsOnScreensaverEnabled = true
+        var bluetoothPermissionRequested = false
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
 
@@ -290,6 +292,12 @@ class SettingsViewModelTest {
         override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
 
         override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {
+            bluetoothPermissionRequested = requested
+        }
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(bluetoothPermissionRequested)
     }
 
     private class FakeAppDrawerSettingsRepository(
@@ -519,6 +527,8 @@ class SettingsViewModelTest {
                 setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
                 observeFabAssignmentsUseCase = ObserveFabAssignmentsUseCase(onboardingRepository),
                 setFabAssignmentUseCase = SetFabAssignmentUseCase(onboardingRepository),
+                setBluetoothPermissionRequestedUseCase = SetBluetoothPermissionRequestedUseCase(onboardingRepository),
+                notifyBluetoothPermissionRecheck = {},
                 observeInstalledAppsUseCase = ObserveInstalledAppsUseCase(installedAppsRepository),
                 observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository),
                 setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository),

@@ -316,6 +316,10 @@ class EditWidgetsViewModelTest {
 
         override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
 
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
         override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)

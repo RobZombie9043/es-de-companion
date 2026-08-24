@@ -60,6 +60,8 @@ class SettingsViewModelFactory(
             setCloseCompanionOnQuitEnabledUseCase = appContainer.setCloseCompanionOnQuitEnabledUseCase,
             observeFabAssignmentsUseCase = appContainer.observeFabAssignmentsUseCase,
             setFabAssignmentUseCase = appContainer.setFabAssignmentUseCase,
+            setBluetoothPermissionRequestedUseCase = appContainer.setBluetoothPermissionRequestedUseCase,
+            notifyBluetoothPermissionRecheck = appContainer.bluetoothPermissionRecheckSignal::notifyChanged,
             observeInstalledAppsUseCase = appContainer.observeInstalledAppsUseCase,
             observeLaunchEsdeOnStartEnabledUseCase = appContainer.observeLaunchEsdeOnStartEnabledUseCase,
             setLaunchEsdeOnStartEnabledUseCase = appContainer.setLaunchEsdeOnStartEnabledUseCase,

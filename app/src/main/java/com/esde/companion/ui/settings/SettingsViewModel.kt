@@ -53,6 +53,7 @@ import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
+import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -140,6 +141,8 @@ class SettingsViewModel(
     private val setCloseCompanionOnQuitEnabledUseCase: SetCloseCompanionOnQuitEnabledUseCase,
     private val observeFabAssignmentsUseCase: ObserveFabAssignmentsUseCase,
     private val setFabAssignmentUseCase: SetFabAssignmentUseCase,
+    private val setBluetoothPermissionRequestedUseCase: SetBluetoothPermissionRequestedUseCase,
+    private val notifyBluetoothPermissionRecheck: () -> Unit,
     private val observeInstalledAppsUseCase: ObserveInstalledAppsUseCase,
     private val observeLaunchEsdeOnStartEnabledUseCase: ObserveLaunchEsdeOnStartEnabledUseCase,
     private val setLaunchEsdeOnStartEnabledUseCase: SetLaunchEsdeOnStartEnabledUseCase,
@@ -424,6 +427,16 @@ class SettingsViewModel(
             val slot = FabSlot(FabType.CustomApp, packageName)
             _uiState.value = _uiState.value.copy(fabAssignments = setFabAssignmentUseCase(position, slot))
         }
+    }
+
+    // Called when the user taps "Grant Permission" in the SystemStatus/ClockAndSystemStatus
+    // FAB Control row - marks the one-shot auto-prompt (see SystemStatusFabContent) as
+    // already handled, and immediately nudges the shared SystemStatusRepository to
+    // re-evaluate Bluetooth (there's no real Activity onResume when just closing this
+    // in-app Settings popup, so its own recheck-on-ON_RESUME wouldn't otherwise fire here).
+    fun onBluetoothPermissionRequested() {
+        viewModelScope.launch { setBluetoothPermissionRequestedUseCase(true) }
+        notifyBluetoothPermissionRecheck()
     }
 
     fun onLaunchEsdeOnStartEnabledChanged(enabled: Boolean) {
