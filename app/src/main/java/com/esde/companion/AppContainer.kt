@@ -30,6 +30,9 @@ import com.esde.companion.data.storage.SelfHealConfig
 import com.esde.companion.data.storage.StorageMountEvents
 import com.esde.companion.data.systems.LoggingSystemPathRepository
 import com.esde.companion.data.systems.ReactiveSystemPathRepository
+import com.esde.companion.data.systemstatus.AndroidSystemStatusRepository
+import com.esde.companion.data.systemstatus.BluetoothPermissionRecheckSignal
+import com.esde.companion.data.systemstatus.SharedSystemStatusRepository
 import com.esde.companion.data.thor.AutoFpsCoordinator
 import com.esde.companion.data.thor.FileThorSettingsRepository
 import com.esde.companion.data.thor.LidWakeGuardCoordinator
@@ -63,6 +66,7 @@ import com.esde.companion.domain.repository.MusicPlayerController
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.SystemPathRepository
+import com.esde.companion.domain.repository.SystemStatusRepository
 import com.esde.companion.domain.repository.ThorSettingsRepository
 import com.esde.companion.domain.repository.UpdateRepository
 import com.esde.companion.domain.repository.UpdateStateRepository
@@ -80,6 +84,7 @@ import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsTriggerPackagesUseCase
+import com.esde.companion.domain.usecase.ObserveBluetoothPermissionRequestedUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
@@ -114,6 +119,7 @@ import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.ObserveSystemStatusUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
@@ -136,6 +142,7 @@ import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsTriggerPackagesUseCase
+import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
@@ -201,6 +208,24 @@ class AppContainer(context: Context) {
     // tear down cleanly on removal. Public: the receiver reaches this via
     // (application as CompanionApplication).appContainer.storageMountEvents.
     val storageMountEvents = StorageMountEvents()
+
+    // Fed by SystemStatusFabContent's ON_RESUME check - there's no OS broadcast for "a
+    // runtime permission changed while the app was backgrounded", so this lets
+    // systemStatusRepository below re-evaluate its Bluetooth half after the user
+    // grants/revokes BLUETOOTH_CONNECT via system Settings. Same shape as storageMountEvents.
+    val bluetoothPermissionRecheckSignal = BluetoothPermissionRecheckSignal()
+
+    private val androidSystemStatusRepository =
+        AndroidSystemStatusRepository(
+            context = appContext,
+            bluetoothPermissionRecheck = bluetoothPermissionRecheckSignal.events,
+        )
+
+    // Shared (not rebuilt per subscriber) since both top FAB corners could reference this at
+    // once (e.g. ClockAndSystemStatus in one, SystemStatus in the other) - same reasoning as
+    // logRepository below.
+    private val systemStatusRepository: SystemStatusRepository =
+        SharedSystemStatusRepository(inner = androidSystemStatusRepository, scope = applicationScope)
 
     val esdeInstallationRepository: EsdeInstallationRepository =
         FileEsdeInstallationRepository(storageEvents = storageMountEvents.events)
@@ -488,6 +513,9 @@ class AppContainer(context: Context) {
     val setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository)
     val observeFabAssignmentsUseCase = ObserveFabAssignmentsUseCase(onboardingRepository)
     val setFabAssignmentUseCase = SetFabAssignmentUseCase(onboardingRepository)
+    val observeSystemStatusUseCase = ObserveSystemStatusUseCase(systemStatusRepository)
+    val observeBluetoothPermissionRequestedUseCase = ObserveBluetoothPermissionRequestedUseCase(onboardingRepository)
+    val setBluetoothPermissionRequestedUseCase = SetBluetoothPermissionRequestedUseCase(onboardingRepository)
     val observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository)

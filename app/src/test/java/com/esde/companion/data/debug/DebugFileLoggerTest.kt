@@ -150,6 +150,10 @@ class DebugFileLoggerTest {
         }
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = debugLoggingEnabled
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
     }
 
     // Mirrors DebugFileLogger's private eventColumnWidth - kept in sync manually since

@@ -133,6 +133,10 @@ class SetFabAssignmentUseCaseTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setFabAssignments(assignments: FabAssignments) {
             persisted += assignments
             fabAssignments.value = assignments

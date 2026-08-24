@@ -24,6 +24,16 @@
     <!-- Thor Settings > Task Killer: the confirmation buzz once a held BACK button reaches
          the force-quit threshold (see data/thor/Vibration.kt). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- SystemStatus/ClockAndSystemStatus FAB: Wifi connectivity and Bluetooth connection
+         state (see AndroidSystemStatusRepository). ACCESS_NETWORK_STATE/ACCESS_WIFI_STATE are
+         normal permissions (no runtime prompt). BLUETOOTH/BLUETOOTH_ADMIN are normal
+         permissions needed only pre-API-31 for adapter state; BLUETOOTH_CONNECT is the
+         API 31+ dangerous permission requested at runtime - see BluetoothConnectPermission. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <queries>
         <intent>
