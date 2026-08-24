@@ -22,6 +22,13 @@ import coil3.imageLoader
 import coil3.request.SuccessResult
 
 /**
+ * Reproduces android.view.animation.DecelerateInterpolator's default (factor = 1.0)
+ * curve - fast start, easing into the landing point - since Compose has no built-in
+ * equivalent and the legacy Glide-based transition used it explicitly.
+ */
+private val DecelerateEasing = Easing { fraction -> 1f - (1f - fraction) * (1f - fraction) }
+
+/**
  * Crossfades from whatever model was previously shown to [model], never showing a
  * blank/partial frame.
  *
@@ -56,14 +63,6 @@ import coil3.request.SuccessResult
  * The outgoing (previous) layer stays fully opaque - since both layers are the same size,
  * a static backdrop plus a fading-in foreground already looks like a clean crossfade.
  */
-
-/**
- * Reproduces android.view.animation.DecelerateInterpolator's default (factor = 1.0)
- * curve - fast start, easing into the landing point - since Compose has no built-in
- * equivalent and the legacy Glide-based transition used it explicitly.
- */
-private val DecelerateEasing = Easing { fraction -> 1f - (1f - fraction) * (1f - fraction) }
-
 @Composable
 fun CrossfadeAsyncImage(
     model: Any?,

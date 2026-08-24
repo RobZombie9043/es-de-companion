@@ -507,7 +507,8 @@ fun EditWidgetsOverlay(
                             showAddPicker = true
                         },
                     )
-                    if (selectedWidgetId != null) {
+                    val selectedId = selectedWidgetId
+                    if (selectedId != null) {
                         DropdownMenuItem(
                             text = { Text("Configure Widget") },
                             leadingIcon = { Icon(imageVector = Icons.Filled.Settings, contentDescription = null) },
@@ -520,7 +521,7 @@ fun EditWidgetsOverlay(
                             text = { Text("Move Forwards") },
                             leadingIcon = { Icon(imageVector = Icons.Filled.FlipToFront, contentDescription = null) },
                             onClick = {
-                                viewModel.moveUp(selectedWidgetId!!)
+                                viewModel.moveUp(selectedId)
                                 menuExpanded = false
                             },
                         )
@@ -528,7 +529,7 @@ fun EditWidgetsOverlay(
                             text = { Text("Move Backwards") },
                             leadingIcon = { Icon(imageVector = Icons.Filled.FlipToBack, contentDescription = null) },
                             onClick = {
-                                viewModel.moveDown(selectedWidgetId!!)
+                                viewModel.moveDown(selectedId)
                                 menuExpanded = false
                             },
                         )
@@ -537,7 +538,7 @@ fun EditWidgetsOverlay(
                             leadingIcon = { Icon(imageVector = Icons.Filled.Delete, contentDescription = null) },
                             onClick = {
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.removeWidget(selectedWidgetId!!)
+                                viewModel.removeWidget(selectedId)
                                 menuExpanded = false
                             },
                         )
@@ -1560,14 +1561,22 @@ private fun GlintConfig(
  * (tint/darken behind other widgets) with a much simpler UI. */
 private val COLOR_PRESETS =
     listOf(
-        0xFF000000L, // black
-        0xFFFFFFFFL, // white
-        0xFF9E9E9EL, // gray
-        0xFFF44336L, // red
-        0xFF2196F3L, // blue
-        0xFF4CAF50L, // green
-        0xFFFFEB3BL, // yellow
-        0xFF9C27B0L, // purple
+        // black
+        0xFF000000L,
+        // white
+        0xFFFFFFFFL,
+        // gray
+        0xFF9E9E9EL,
+        // red
+        0xFFF44336L,
+        // blue
+        0xFF2196F3L,
+        // green
+        0xFF4CAF50L,
+        // yellow
+        0xFFFFEB3BL,
+        // purple
+        0xFF9C27B0L,
     )
 
 @Composable
