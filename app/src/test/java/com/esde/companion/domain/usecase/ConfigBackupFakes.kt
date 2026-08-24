@@ -3,6 +3,8 @@ package com.esde.companion.domain.usecase
 import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.GameMatchOverride
+import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.LogFolderValidation
@@ -17,6 +19,7 @@ import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.ThorSettingsRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
@@ -55,6 +58,7 @@ internal class FakeOnboardingRepository(
     closeCompanionOnQuitEnabled: Boolean = false,
     launchEsdeOnStartEnabled: Boolean = false,
     debugLoggingEnabled: Boolean = false,
+    updateAchievementsOnScreensaverEnabled: Boolean = true,
 ) : OnboardingRepository {
     private val logFolderPathFlow = MutableStateFlow(logFolderPath)
     private val mediaFolderPathFlow = MutableStateFlow(mediaFolderPath)
@@ -79,6 +83,7 @@ internal class FakeOnboardingRepository(
     private val closeCompanionOnQuitEnabledFlow = MutableStateFlow(closeCompanionOnQuitEnabled)
     private val launchEsdeOnStartEnabledFlow = MutableStateFlow(launchEsdeOnStartEnabled)
     private val debugLoggingEnabledFlow = MutableStateFlow(debugLoggingEnabled)
+    private val updateAchievementsOnScreensaverEnabledFlow = MutableStateFlow(updateAchievementsOnScreensaverEnabled)
 
     override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
 
@@ -241,6 +246,21 @@ internal class FakeOnboardingRepository(
     }
 
     override fun observeDebugLoggingEnabled(): Flow<Boolean> = debugLoggingEnabledFlow
+
+    override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {
+        updateAchievementsOnScreensaverEnabledFlow.value = enabled
+    }
+
+    override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
+        return updateAchievementsOnScreensaverEnabledFlow
+    }
+
+    // Deliberately not part of this fake's constructor params, same as the RetroAchievements
+    // credentials repository - see AppContainer's Backup & Restore wiring comment for why this
+    // preference is excluded from Export/RestoreConfigBackupUseCase.
+    override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+    override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = MutableStateFlow(false)
 
     private val bluetoothPermissionRequestedFlow = MutableStateFlow(false)
 
@@ -429,4 +449,29 @@ internal class FakeWidgetLayoutRepository(
     ) {
         canvases.getValue(stateGroup).value = SavedWidgetCanvas(grid = grid, widgets = widgets)
     }
+}
+
+internal class FakeGameMatchOverrideRepository(
+    initial: List<GameMatchOverride> = emptyList(),
+) : GameMatchOverrideRepository {
+    private val overridesFlow = MutableStateFlow(initial)
+
+    override suspend fun setOverride(override: GameMatchOverride) {
+        overridesFlow.value = overridesFlow.value.filterNot { it.matchesReference(override) } + override
+    }
+
+    override suspend fun clearOverride(gameReference: GameReference) {
+        overridesFlow.value = overridesFlow.value.filterNot { it.matchesReference(gameReference) }
+    }
+
+    override suspend fun getOverride(gameReference: GameReference): GameMatchOverride? =
+        overridesFlow.value.firstOrNull { it.matchesReference(gameReference) }
+
+    override fun observeAllOverrides(): Flow<List<GameMatchOverride>> = overridesFlow
+
+    private fun GameMatchOverride.matchesReference(other: GameMatchOverride) =
+        systemShortName == other.systemShortName && romPath == other.romPath
+
+    private fun GameMatchOverride.matchesReference(reference: GameReference) =
+        systemShortName == reference.systemShortName && romPath == reference.romPath
 }

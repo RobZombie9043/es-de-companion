@@ -10,6 +10,10 @@ import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.RetroAchievementsAuthState
+import com.esde.companion.domain.model.RetroAchievementsCandidateGame
+import com.esde.companion.domain.model.RetroAchievementsConsole
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
@@ -17,8 +21,12 @@ import com.esde.companion.domain.repository.BackupRepositories
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
+import com.esde.companion.domain.repository.RetroAchievementsRepository
+import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FakeAppFolderRepository
+import com.esde.companion.domain.usecase.FakeGameMatchOverrideRepository
 import com.esde.companion.domain.usecase.FakeThorSettingsRepository
 import com.esde.companion.domain.usecase.FakeWidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
@@ -41,12 +49,14 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCas
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
@@ -79,6 +89,7 @@ import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
+import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
 import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
 import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
@@ -86,6 +97,7 @@ import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
+import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,6 +132,7 @@ class SettingsViewModelTest {
         var fabAssignments = FabAssignments.Default
         var launchEsdeOnStartEnabled = false
         var debugLoggingEnabled = false
+        var updateAchievementsOnScreensaverEnabled = true
         var bluetoothPermissionRequested = false
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
@@ -268,6 +281,18 @@ class SettingsViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(debugLoggingEnabled)
 
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {
+            updateAchievementsOnScreensaverEnabled = enabled
+        }
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
+            return flowOf(updateAchievementsOnScreensaverEnabled)
+        }
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setBluetoothPermissionRequested(requested: Boolean) {
             bluetoothPermissionRequested = requested
         }
@@ -349,6 +374,46 @@ class SettingsViewModelTest {
         override fun observeInstalledApps(): Flow<List<InstalledApp>> = flowOf(apps)
     }
 
+    private class FakeRetroAchievementsCredentialsRepository : RetroAchievementsCredentialsRepository {
+        private val credentialsFlow = MutableStateFlow<RetroAchievementsCredentials?>(null)
+
+        override suspend fun setCredentials(credentials: RetroAchievementsCredentials) {
+            credentialsFlow.value = credentials
+        }
+
+        override suspend fun clearCredentials() {
+            credentialsFlow.value = null
+        }
+
+        override fun observeCredentials(): Flow<RetroAchievementsCredentials?> = credentialsFlow
+    }
+
+    private class FakeRetroAchievementsRepository : RetroAchievementsRepository {
+        override suspend fun validateCredentials(creds: RetroAchievementsCredentials): RetroAchievementsAuthState {
+            return RetroAchievementsAuthState.Error("not implemented in this test")
+        }
+
+        override suspend fun getCandidateGames(c: RetroAchievementsConsole): List<RetroAchievementsCandidateGame> {
+            return emptyList()
+        }
+
+        override suspend fun getAchievementSummary(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("not used in this test")
+
+        override suspend fun getUserGameProgress() = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
+    }
+
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
@@ -379,6 +444,7 @@ class SettingsViewModelTest {
                 dockSettingsRepository,
                 FakeWidgetLayoutRepository(),
                 thorSettingsRepository,
+                FakeGameMatchOverrideRepository(),
             )
         val export = ExportConfigBackupUseCase(repositories, configBackupRepository)
         val restore = RestoreConfigBackupUseCase(repositories, configBackupRepository)
@@ -399,6 +465,19 @@ class SettingsViewModelTest {
                 dockSettingsRepository,
                 thorSettingsRepository,
             )
+        val retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository()
+        val observeRetroAchievementsCredentialsUseCase =
+            ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+        val validateRetroAchievementsCredentialsUseCase =
+            ValidateRetroAchievementsCredentialsUseCase(
+                FakeRetroAchievementsRepository(),
+                retroAchievementsCredentialsRepository,
+            )
+        val clearRetroAchievementsCredentialsUseCase =
+            ClearRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+        val observeUpdateOnScreensaverUseCase =
+            ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+        val setUpdateOnScreensaverUseCase = SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
         val viewModel =
             SettingsViewModel(
                 onboardingRepository = onboardingRepository,
@@ -457,6 +536,11 @@ class SettingsViewModelTest {
                 setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository),
                 exportConfigBackupUseCase = exportConfigBackupUseCase,
                 restoreConfigBackupUseCase = restoreConfigBackupUseCase,
+                observeRetroAchievementsCredentialsUseCase = observeRetroAchievementsCredentialsUseCase,
+                validateRetroAchievementsCredentialsUseCase = validateRetroAchievementsCredentialsUseCase,
+                clearRetroAchievementsCredentialsUseCase = clearRetroAchievementsCredentialsUseCase,
+                observeUpdateOnScreensaverUseCase = observeUpdateOnScreensaverUseCase,
+                setUpdateOnScreensaverUseCase = setUpdateOnScreensaverUseCase,
                 observeLidWakeGuardEnabledUseCase = ObserveLidWakeGuardEnabledUseCase(thorSettingsRepository),
                 setLidWakeGuardEnabledUseCase = SetLidWakeGuardEnabledUseCase(thorSettingsRepository),
                 observeHallSensorCalibrationUseCase = ObserveHallSensorCalibrationUseCase(thorSettingsRepository),
@@ -537,6 +621,22 @@ class SettingsViewModelTest {
 
             advanceUntilIdle()
             assertEquals(true, onboardingRepository.launchEsdeOnStartEnabled)
+        }
+
+    @Test
+    fun `onUpdateAchievementsOnScreensaverEnabledChanged updates ui state immediately and persists`() =
+        runTest(testDispatcher) {
+            val onboardingRepository = FakeOnboardingRepository()
+            val (viewModel, _) = buildViewModel(onboardingRepository = onboardingRepository)
+            advanceUntilIdle()
+
+            viewModel.onUpdateAchievementsOnScreensaverEnabledChanged(false)
+
+            // ui state updates synchronously, before the persistence coroutine runs.
+            assertEquals(false, viewModel.uiState.value.updateAchievementsOnScreensaverEnabled)
+
+            advanceUntilIdle()
+            assertEquals(false, onboardingRepository.updateAchievementsOnScreensaverEnabled)
         }
 
     @Test

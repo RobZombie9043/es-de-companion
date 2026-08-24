@@ -386,7 +386,7 @@ private fun MainScreenContent(
                         ) {
                             Icon(imageVector = Icons.Filled.Apps, contentDescription = "App Drawer")
                         }
-                    FabType.Music, FabType.GameManual, FabType.CustomApp,
+                    FabType.Music, FabType.GameManual, FabType.CustomApp, FabType.RetroAchievements,
                     FabType.Clock, FabType.SystemStatus, FabType.ClockAndSystemStatus, FabType.None,
                     -> {}
                 }

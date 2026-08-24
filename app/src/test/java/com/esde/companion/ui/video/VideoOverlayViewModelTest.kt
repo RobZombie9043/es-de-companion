@@ -190,6 +190,14 @@ class VideoOverlayViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
 
         override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)

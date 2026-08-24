@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -89,11 +91,20 @@ import com.esde.companion.ui.music.MusicControlsViewModelFactory
 import com.esde.companion.ui.onboarding.OnboardingScreen
 import com.esde.companion.ui.onboarding.OnboardingViewModel
 import com.esde.companion.ui.onboarding.OnboardingViewModelFactory
+import com.esde.companion.ui.retroachievements.RetroAchievementsResolutionState
+import com.esde.companion.ui.retroachievements.RetroAchievementsScreen
+import com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesScreen
+import com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesViewModel
+import com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesViewModelFactory
+import com.esde.companion.ui.retroachievements.RetroAchievementsViewModel
+import com.esde.companion.ui.retroachievements.RetroAchievementsViewModelFactory
+import com.esde.companion.ui.retroachievements.SystemGamesUiState
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModelFactory
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.settings.SettingsViewModelFactory
 import com.esde.companion.ui.theme.EsdeCompanionTheme
+import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModel
 import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModelFactory
 import com.esde.companion.ui.thor.TaskKillerExcludedAppsViewModel
@@ -112,6 +123,7 @@ import com.esde.companion.ui.widgets.WidgetsViewModelFactory
 import com.esde.companion.ui.widgets.edit.EditWidgetsOverlay
 import com.esde.companion.ui.widgets.edit.EditWidgetsViewModel
 import com.esde.companion.ui.widgets.edit.EditWidgetsViewModelFactory
+import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -308,6 +320,98 @@ class MainActivity : ComponentActivity() {
                             // Manual setting does, independent of that setting. Reset
                             // together with manualDismissed below.
                             var manualViewerOpenedViaFab by rememberSaveable { mutableStateOf(false) }
+
+                            val retroAchievementsViewModel: RetroAchievementsViewModel =
+                                viewModel(factory = RetroAchievementsViewModelFactory(appContainer))
+                            val retroAchievementsResolution by
+                                retroAchievementsViewModel.resolution.collectAsStateWithLifecycle()
+                            val retroAchievementsHasContent =
+                                retroAchievementsResolution != RetroAchievementsResolutionState.NotSignedIn &&
+                                    retroAchievementsResolution != RetroAchievementsResolutionState.NoGame
+
+                            val systemGamesViewModel: RetroAchievementsSystemGamesViewModel =
+                                viewModel(factory = RetroAchievementsSystemGamesViewModelFactory(appContainer))
+                            val systemGamesState by systemGamesViewModel.state.collectAsStateWithLifecycle()
+                            // True for every state that means "signed in and browsing an
+                            // actual system" - not just Loaded. Loading is included since
+                            // RetroAchievementsSystemGamesViewModel only ever enters it once
+                            // the browsed system is confirmed RA-supported (see its kdoc), so
+                            // the FAB shows as soon as that's known rather than waiting on the
+                            // games-list fetch to finish - a system with a huge catalog (gba,
+                            // psx) can take a while, or transiently fail, to fetch/cache, and
+                            // gating the FAB on Loaded alone made it disappear for that entire
+                            // window even though the system definitely has achievements.
+                            // UnsupportedSystem is included too - the FAB should still open to
+                            // an explicit "doesn't support this system" message rather than
+                            // vanish, and staying System-mode here (instead of falling through
+                            // to None) also means navigating from a supported to an unsupported
+                            // system while the viewer is already open switches its content
+                            // instead of auto-dismissing it (see the LaunchedEffect below).
+                            val systemGamesHasContent =
+                                systemGamesState is SystemGamesUiState.Loading ||
+                                    systemGamesState is SystemGamesUiState.Loaded ||
+                                    systemGamesState is SystemGamesUiState.UnsupportedSystem
+
+                            // One FAB, contextually aware of what ES-DE is currently
+                            // showing rather than a separate FAB type per screen: whichever
+                            // of the game-achievements/system-games ViewModels currently has
+                            // content wins (the two are naturally mutually exclusive - RA-DE
+                            // is either browsing a system or a game/screensaver at once, so
+                            // at most one of the two "has content" flags above is ever true).
+                            // Read live (not just at FAB-tap time) below so the open overlay
+                            // itself flips between the two screens if the browsed system/game
+                            // changes while it's still showing, rather than staying stuck on
+                            // whichever one was open when the FAB was tapped.
+                            val retroAchievementsFabMode =
+                                when {
+                                    retroAchievementsHasContent -> RetroAchievementsFabMode.Game
+                                    systemGamesHasContent -> RetroAchievementsFabMode.System
+                                    else -> RetroAchievementsFabMode.None
+                                }
+                            // See rememberHeldRetroAchievementsFabMode's kdoc: retroAchievementsFabMode
+                            // genuinely is None for one or more frames during a live system<->game
+                            // navigation, since the two source ViewModels resolve independently and
+                            // asynchronously - this holds the previous mode through that gap rather
+                            // than reacting to a momentary None.
+                            val heldRetroAchievementsFabMode =
+                                rememberHeldRetroAchievementsFabMode(retroAchievementsFabMode)
+
+                            // Set by tapping the RetroAchievements FAB (FAB Control); closed
+                            // via either screen's own close button. No automatic open-on-launch
+                            // in this phase (see CLAUDE.md's RetroAchievements section). Which
+                            // of the two screens actually renders while this is true is
+                            // decided live from heldRetroAchievementsFabMode below, not frozen at
+                            // the moment this was set - see the two AnimatedVisibility blocks.
+                            var showRetroAchievementsOverlay by rememberSaveable { mutableStateOf(false) }
+
+                            // Auto-dismiss if navigating away leaves neither screen with
+                            // anything to show (e.g. back to Idle, or off to an unsupported
+                            // system) - keeping a stale screen open would show content for
+                            // a game/system that's no longer the one ES-DE is on. Keyed on the
+                            // held mode, not the raw one, so a momentary gap mid-navigation
+                            // never triggers this.
+                            LaunchedEffect(heldRetroAchievementsFabMode) {
+                                if (heldRetroAchievementsFabMode == RetroAchievementsFabMode.None) {
+                                    showRetroAchievementsOverlay = false
+                                }
+                            }
+
+                            // Fed into each ViewModel's onOverlayVisibilityChanged below so its
+                            // own screensaver-hold logic (resolveAchievementsGame/System) only
+                            // freezes the displayed game/system while that exact screen is
+                            // genuinely on screen, matching these AnimatedVisibility conditions.
+                            val retroAchievementsGameVisible =
+                                showRetroAchievementsOverlay && mainScreenActive &&
+                                    heldRetroAchievementsFabMode == RetroAchievementsFabMode.Game
+                            val retroAchievementsSystemVisible =
+                                showRetroAchievementsOverlay && mainScreenActive &&
+                                    heldRetroAchievementsFabMode == RetroAchievementsFabMode.System
+                            LaunchedEffect(retroAchievementsGameVisible) {
+                                retroAchievementsViewModel.onOverlayVisibilityChanged(retroAchievementsGameVisible)
+                            }
+                            LaunchedEffect(retroAchievementsSystemVisible) {
+                                systemGamesViewModel.onOverlayVisibilityChanged(retroAchievementsSystemVisible)
+                            }
 
                             val videoPlaybackEnabled by viewModel.videoPlaybackEnabled.collectAsStateWithLifecycle()
 
@@ -580,6 +684,15 @@ class MainActivity : ComponentActivity() {
                                                 otherScreenLaunchApps = otherScreenLaunchApps,
                                                 onRecordLaunchLocation = ::recordFabLaunchLocation,
                                             )
+                                        FabType.RetroAchievements ->
+                                            RetroAchievementsFabContent(
+                                                position = position,
+                                                visible =
+                                                    !isBlanked && isActivityVisible &&
+                                                        heldRetroAchievementsFabMode != RetroAchievementsFabMode.None,
+                                                overlayOpacityPercent = overlayOpacityPercent,
+                                                onClick = { showRetroAchievementsOverlay = true },
+                                            )
                                         FabType.Clock -> ClockFabContent(wideFabContext(position))
                                         FabType.SystemStatus ->
                                             SystemStatusFabContent(
@@ -715,6 +828,69 @@ class MainActivity : ComponentActivity() {
                                             manualDismissed = true
                                             manualViewerOpenedViaFab = false
                                         },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+
+                                // RetroAchievements (RetroAchievements FAB) - same
+                                // placement/guard as GameManual above, opened/closed purely
+                                // via showRetroAchievementsOverlay (no automatic Game
+                                // Playing Behavior-style trigger in this phase). Which of
+                                // these two screens is actually visible is decided live by
+                                // heldRetroAchievementsFabMode, not frozen at tap time, so the
+                                // overlay flips from one to the other if the browsed
+                                // system/game changes while it's still open.
+                                //
+                                // The two screens below are each their own AnimatedVisibility,
+                                // fading independently - during a Game<->System handoff both
+                                // are simultaneously mid-fade (one fading out, one fading in),
+                                // so their combined opacity dips below 100% for the whole
+                                // crossfade, letting WidgetOverlay's live canvas bleed through
+                                // underneath at partial opacity. This backdrop sits beneath
+                                // both, sharing their "overlay is up" visibility condition
+                                // (which does NOT change on a Game<->System handoff, only on
+                                // open/close), so it stays fully opaque for the entire handoff
+                                // and only fades with the screens on genuine open/close. Uses
+                                // the same fallback asset both screens already paint as their
+                                // own base layer, so any residual blend during open/close reads
+                                // as "the same background", not a mismatched flash.
+                                AnimatedVisibility(
+                                    visible =
+                                        showRetroAchievementsOverlay && mainScreenActive &&
+                                            heldRetroAchievementsFabMode != RetroAchievementsFabMode.None,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    AsyncImage(
+                                        model = fallbackBackgroundAssetPath(LocalIsDarkTheme.current),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = retroAchievementsGameVisible,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    RetroAchievementsScreen(
+                                        viewModel = retroAchievementsViewModel,
+                                        overlayOpacityPercent = overlayOpacityPercent,
+                                        onExit = { showRetroAchievementsOverlay = false },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = retroAchievementsSystemVisible,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    RetroAchievementsSystemGamesScreen(
+                                        viewModel = systemGamesViewModel,
+                                        overlayOpacityPercent = overlayOpacityPercent,
+                                        onExit = { showRetroAchievementsOverlay = false },
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
@@ -913,6 +1089,84 @@ private fun BoxScope.GameManualFabContent(
         modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
     ) {
         Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+    }
+}
+
+/**
+ * Which of the two RetroAchievements screens the shared [FabType.RetroAchievements] FAB
+ * currently points at - [Game] while browsing a game/screensaver/playing (see
+ * RetroAchievementsViewModel.resolution), [System] while browsing a system's game list (see
+ * RetroAchievementsSystemGamesViewModel.state), [None] when neither has anything to show
+ * (e.g. signed out, or Idle). The two source states are naturally mutually exclusive - ES-DE
+ * is never simultaneously "browsing a system" and "browsing/playing a game" - so this is a
+ * plain priority pick, not a merge of overlapping signals. Note that mutually exclusive
+ * *states* doesn't mean atomic *transitions* between them - see
+ * [rememberHeldRetroAchievementsFabMode].
+ */
+private enum class RetroAchievementsFabMode { Game, System, None }
+
+/**
+ * Holds the previous non-[RetroAchievementsFabMode.None] mode for
+ * [RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS] before actually reporting
+ * [RetroAchievementsFabMode.None], rather than propagating a momentary None straight
+ * through to the UI.
+ *
+ * `RetroAchievementsViewModel` and `RetroAchievementsSystemGamesViewModel` are independent,
+ * each resolving asynchronously (a candidate-list/ROM-hash lookup, or a system's cached game
+ * list) - on a live system<->game navigation, the side losing context drops to "no content"
+ * synchronously (its ViewModel sees the game/system disappear from AppState) while the side
+ * gaining context is still mid-resolve, so [target] genuinely is
+ * [RetroAchievementsFabMode.None] for one or more frames even though the transition is
+ * expected to land on a real mode shortly after. Without this hold, that frame both hides
+ * both RetroAchievements screens (MainActivity's two `AnimatedVisibility` blocks require a
+ * mode match) and permanently auto-dismisses the overlay (see MainActivity's
+ * `LaunchedEffect` keyed on this value) - exposing the widget canvas underneath and
+ * requiring the FAB to be tapped again to reopen. Confirmed on-device: the backdrop-image
+ * flash this was mistaken for during a WidgetOverlay fix turned out to be this instead, once
+ * that fix didn't resolve it.
+ *
+ * A genuine "nothing to show" (signed out, Idle, both screens truly inapplicable) still
+ * resolves to [RetroAchievementsFabMode.None] once the grace period elapses with no
+ * non-None [target] having arrived.
+ */
+@Composable
+private fun rememberHeldRetroAchievementsFabMode(target: RetroAchievementsFabMode): RetroAchievementsFabMode {
+    var held by remember { mutableStateOf(target) }
+    LaunchedEffect(target) {
+        if (target != RetroAchievementsFabMode.None) {
+            held = target
+            return@LaunchedEffect
+        }
+        delay(RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS)
+        held = RetroAchievementsFabMode.None
+    }
+    return held
+}
+
+private const val RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS = 500L
+
+/**
+ * Content for a corner assigned [FabType.RetroAchievements] (see MainActivity's
+ * fabSlotContent) - one FAB, contextually aware of `RetroAchievementsFabMode`: opens
+ * [RetroAchievementsScreen] for the current game or [RetroAchievementsSystemGamesScreen]
+ * for the current system, whichever currently applies. Same trophy icon in both contexts -
+ * the FAB doesn't hint at which screen a tap opens, since that already flips live once the
+ * screen itself is open (see MainActivity's `retroAchievementsFabMode` usage below).
+ */
+@Composable
+private fun BoxScope.RetroAchievementsFabContent(
+    position: FabPosition,
+    visible: Boolean,
+    overlayOpacityPercent: Int,
+    onClick: () -> Unit,
+) {
+    if (!visible) return
+    CornerFab(
+        onClick = onClick,
+        opacityPercent = overlayOpacityPercent,
+        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
+    ) {
+        Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = "RetroAchievements")
     }
 }
 

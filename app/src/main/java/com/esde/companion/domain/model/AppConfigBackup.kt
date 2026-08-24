@@ -6,6 +6,10 @@ package com.esde.companion.domain.model
  * user configuration: [OnboardingRepository.observeOnboardingComplete] (this app's
  * first-run flag), anything from `LastKnownContextRepository` (transient widget-edit-mode
  * tracking data), and `UpdateStateRepository`'s last-seen-changelog-version bookkeeping.
+ * [gameMatchOverrides] is user-curated library data rather than sensitive, so - unlike
+ * RetroAchievements' username/Web API Key, which are deliberately never wired into
+ * [com.esde.companion.domain.usecase.ExportConfigBackupUseCase]/
+ * [com.esde.companion.domain.usecase.RestoreConfigBackupUseCase] - it's included here.
  *
  * [version] lets a future schema change be detected on restore - see
  * [com.esde.companion.domain.repository.ConfigBackupRepository]'s kdoc for the exact rules.
@@ -50,6 +54,8 @@ data class AppConfigBackup(
     val dockSize: DockSize,
     val dockApps: List<String>,
     val widgetCanvases: Map<StateGroup, SavedWidgetCanvas>,
+    val gameMatchOverrides: List<GameMatchOverride> = emptyList(),
+    val updateAchievementsOnScreensaverEnabled: Boolean = true,
     val lidWakeGuardEnabled: Boolean,
     val hallSensorCalibration: HallSensorCalibration,
     val autoFpsEnabled: Boolean,

@@ -7,6 +7,7 @@ import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
@@ -53,6 +54,12 @@ data class SettingsUiState(
     val installedApps: List<InstalledApp> = emptyList(),
     val launchEsdeOnStartEnabled: Boolean = false,
     val debugLoggingEnabled: Boolean = false,
+    val retroAchievementsCredentials: RetroAchievementsCredentials? = null,
+    val retroAchievementsUsernameInput: String = "",
+    val retroAchievementsWebApiKeyInput: String = "",
+    val isConnectingToRetroAchievements: Boolean = false,
+    val retroAchievementsConnectError: String? = null,
+    val updateAchievementsOnScreensaverEnabled: Boolean = true,
     val lidWakeGuardEnabled: Boolean = false,
     val hallSensorCalibration: HallSensorCalibration = HallSensorCalibration.Uncalibrated,
     val autoFpsEnabled: Boolean = false,

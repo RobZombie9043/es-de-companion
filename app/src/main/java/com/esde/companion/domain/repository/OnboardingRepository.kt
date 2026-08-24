@@ -193,6 +193,28 @@ interface OnboardingRepository {
     fun observeDebugLoggingEnabled(): Flow<Boolean>
 
     /**
+     * Settings > RetroAchievements: whether the achievement pages (per-game and the system
+     * games browser) switch to whatever ES-DE's screensaver is showing while it's active.
+     * Defaults to true - matches the pre-existing behavior of always following the live
+     * [com.esde.companion.domain.model.AppState]. Turning it off freezes both screens on
+     * whatever they were showing immediately before the screensaver started.
+     */
+    suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean)
+
+    fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean>
+
+    /**
+     * Whether the achievement screens' "Playtime Stats" line (see `GamePlaytimeStatsRow`) is
+     * currently showing the hardcore medians (`true`) or the softcore/"Casual" ones (`false`).
+     * Global, not per-game - toggling it while looking at one game affects every other game's
+     * Playtime Stats line too, the same way RA's own website widget remembers the last toggle
+     * state across games. Defaults to false (Casual).
+     */
+    suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean)
+
+    fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean>
+
+    /**
      * Whether the SystemStatus/ClockAndSystemStatus FABs have already shown their one-shot
      * BLUETOOTH_CONNECT rationale prompt (see BluetoothConnectPermission). Defaults to false.
      * Never reset - once shown, it's never shown again automatically; a user who denied it

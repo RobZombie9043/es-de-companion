@@ -11,6 +11,7 @@ import com.esde.companion.domain.repository.ConfigBackupRepository
  * [Result] rather than throwing if [contents] isn't a valid/supported backup, without
  * touching any repository - callers can treat a failed restore as a no-op on current state.
  */
+@Suppress("LongParameterList")
 class RestoreConfigBackupUseCase(
     private val repositories: BackupRepositories,
     private val configBackupRepository: ConfigBackupRepository,
@@ -51,6 +52,11 @@ class RestoreConfigBackupUseCase(
             setVolumeSyncEnabled(snapshot.volumeSyncEnabled)
             setVolumeSyncMode(snapshot.volumeSyncMode)
         }
+        // Re-applies each saved override rather than clearing every existing one first -
+        // GameMatchOverrideRepository has no bulk-clear operation, and a stray override
+        // this snapshot doesn't mention is harmless leftover corrective data, unlike a
+        // stale toggle/path the settings above would silently keep if not overwritten.
+        snapshot.gameMatchOverrides.forEach { repositories.gameMatchOverrideRepository.setOverride(it) }
     }
 
     private suspend fun applyOnboardingSettings(snapshot: AppConfigBackup) {
@@ -90,6 +96,7 @@ class RestoreConfigBackupUseCase(
             setCloseCompanionOnQuitEnabled(snapshot.closeCompanionOnQuitEnabled)
             setLaunchEsdeOnStartEnabled(snapshot.launchEsdeOnStartEnabled)
             setDebugLoggingEnabled(snapshot.debugLoggingEnabled)
+            setUpdateAchievementsOnScreensaverEnabled(snapshot.updateAchievementsOnScreensaverEnabled)
         }
     }
 }

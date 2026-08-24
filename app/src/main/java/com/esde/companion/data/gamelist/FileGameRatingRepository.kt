@@ -1,57 +1,25 @@
 package com.esde.companion.data.gamelist
 
 import com.esde.companion.domain.model.GameRating
-import com.esde.companion.domain.parser.GameListRatingParser
-import com.esde.companion.domain.parser.LegacyGamelistPathResolver
+import com.esde.companion.domain.parser.GameListParser
 import com.esde.companion.domain.repository.GameRatingRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Reads and parses gamelist.xml to find a game's <rating> - same standard-then-legacy
- * location resolution, same per-file content cache (keyed by absolute path +
- * lastModified()), and same concurrency reasoning as FileGameDescriptionRepository; see
- * its kdoc for the full rationale. Kept as its own independent cache/repository rather
- * than sharing FileGameDescriptionRepository's, the same per-feature independence
- * GameDescription/GameMedia already follow elsewhere in this codebase.
+ * Parses a game's <rating> out of whatever gamelist.xml content [reader] hands back - see
+ * [GamelistFileReader] for how the file is located, cached, and kept reactive to the
+ * configured ES-DE root. Mirrors [FileGameDescriptionRepository]'s shape exactly, sharing
+ * the same reader instance (see `AppContainer`) rather than each maintaining its own file
+ * cache.
  */
 class FileGameRatingRepository(
-    private val esdeRootPath: String,
+    private val reader: GamelistFileReader,
 ) : GameRatingRepository {
-    private val cache = ConcurrentHashMap<String, CacheEntry>()
-
     override suspend fun resolveRating(
         systemShortName: String,
         romPath: String,
-    ): GameRating =
-        withContext(Dispatchers.IO) {
-            val file = resolveGamelistFile(systemShortName, romPath) ?: return@withContext GameRating(value = null)
-
-            val lastModified = file.lastModified()
-            val cached = cache[file.path]
-            val content =
-                if (cached != null && cached.lastModified == lastModified) {
-                    cached.content
-                } else {
-                    file.readText().also { cache[file.path] = CacheEntry(lastModified, it) }
-                }
-
-            val value = GameListRatingParser.findRating(content, romPath)
-            GameRating(value = value, gamelistPath = file.path)
-        }
-
-    private fun resolveGamelistFile(
-        systemShortName: String,
-        romPath: String,
-    ): File? {
-        val standard = File(esdeRootPath, "gamelists/$systemShortName/gamelist.xml")
-        if (standard.isFile) return standard
-
-        val legacyPath = LegacyGamelistPathResolver.resolvePath(systemShortName, romPath) ?: return null
-        return File(legacyPath).takeIf { it.isFile }
+    ): GameRating {
+        val file = reader.read(systemShortName, romPath) ?: return GameRating(value = null)
+        val value = GameListParser.findRating(file.content, romPath)
+        return GameRating(value = value, gamelistPath = file.path)
     }
-
-    private data class CacheEntry(val lastModified: Long, val content: String)
 }
