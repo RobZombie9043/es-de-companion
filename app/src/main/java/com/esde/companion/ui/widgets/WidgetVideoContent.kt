@@ -4,7 +4,6 @@ package com.esde.companion.ui.widgets
 
 import android.content.Context
 import android.net.Uri
-import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,10 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -46,17 +47,22 @@ private const val MILLIS_PER_SECOND = 1000L
  * unmuted once it has real decoded frames ready, so a video swap (browsing to a new game)
  * never flashes blank or double-plays audio during the handoff.
  *
- * Two things below are kept long-lived across the whole browsing session, both to avoid
- * stuttering a concurrently-running logo slide animation when a nonzero Start Delay
- * repeatedly drops/re-shows the displayed video mid-browse: the two [ExoPlayer] instances
- * themselves, pooled via [VideoPlayerPool] rather than built/released per browsed game
- * (`ExoPlayer.Builder(context).build()`/`release()` are real work); and the [PlayerView]
- * itself, mounted once via [AndroidView] for this composable's entire lifetime rather than
- * conditionally composed only while a player is displayed - a conditional mount re-runs
- * `AndroidView`'s `factory` on every reshow, constructing (then tearing down) a brand-new
- * compound view wrapping a Surface/TextureView, which turned out to be the actually-heavy
- * part; toggling the mounted View's own `visibility` between `VISIBLE`/`GONE` in `update`
- * is comparatively free.
+ * Three things below are kept long-lived/fixed across the whole browsing session, all in
+ * service of the same goal: never touch an [ExoPlayer]'s actual video-output Surface
+ * attachment during an ordinary transition, since that turned out to be the real cost
+ * stuttering a concurrently-running logo slide animation whenever a nonzero Start Delay
+ * repeatedly drops/re-shows the displayed video mid-browse. (1) The two [ExoPlayer]
+ * instances themselves are pooled via [VideoPlayerPool] rather than built/released per
+ * browsed game. (2) Each pooled player gets its own dedicated [PlayerView], created once
+ * in [AndroidView]'s `factory` with `player` assigned there and *never reassigned again* -
+ * earlier attempts still called `playerView.player = x` on every transition (whether or
+ * not the View/Player objects themselves were freshly built), which makes ExoPlayer
+ * renegotiate the decoder's output Surface on every swap; real, measurable work, not
+ * "comparatively free" the way a plain View property write normally is. (3) Only a
+ * Compose-level [alpha] toggles which of the two PlayerViews is visible - not the
+ * underlying `View.visibility`, since a hidden/`GONE` `SurfaceView` (PlayerView's default
+ * video output) can itself tear down and recreate its Surface, reintroducing the exact
+ * cost this is trying to avoid.
  *
  * [content.scaleMode] maps to [PlayerView]'s resize mode (Contain -> RESIZE_MODE_FIT,
  * Cover -> RESIZE_MODE_ZOOM, ExoPlayer's crop-to-fill mode). [content.pillarboxMode] sets
@@ -119,30 +125,26 @@ internal fun WidgetVideoContent(
     val player = displayedPlayer
     val backgroundColor = if (player != null) content.pillarboxMode.toBackgroundColor() else Color.Transparent
     Box(modifier = modifier.background(backgroundColor)) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = false
-                }
-            },
-            // update (unlike factory) re-runs on every recomposition, which is what
-            // rebinds this PlayerView to a new ExoPlayer instance when the displayed
-            // player changes. This AndroidView is mounted unconditionally - kept for this
-            // whole composable's lifetime rather than only while player != null - and
-            // View.GONE/VISIBLE is what actually hides it during a delay wait, not
-            // removing it from composition. A conditional `if (player != null) { AndroidView(...) }`
-            // here (the original shape) re-runs `factory` on every reshow, constructing a
-            // brand-new PlayerView - itself a compound view wrapping a Surface/TextureView,
-            // non-trivial to inflate/attach - on every delay-triggered hide/reshow cycle,
-            // which was heavy enough to visibly stutter a concurrently-running logo slide
-            // animation. Toggling a native View's visibility is comparatively free.
-            update = { playerView ->
-                playerView.visibility = if (player != null) View.VISIBLE else View.GONE
-                playerView.player = player
-                playerView.resizeMode = content.scaleMode.toResizeMode()
-            },
-            modifier = Modifier.fillMaxSize(),
-        )
+        // One PlayerView per pooled player, each permanently bound to that exact player in
+        // `factory` and never reassigned - see the class kdoc for why `playerView.player = x`
+        // reassignment was itself the remaining stutter source, not merely which View/Player
+        // objects get built. Only a Compose-level `alpha` toggles which one is visible; the
+        // hidden one still has real (muted-or-stopped) content bound to its own Surface, so
+        // nothing about its ExoPlayer<->Surface attachment ever needs to change.
+        for (pooledPlayer in playerPool.players) {
+            key(pooledPlayer) {
+                AndroidView(
+                    factory = { ctx ->
+                        PlayerView(ctx).apply {
+                            useController = false
+                            this.player = pooledPlayer
+                        }
+                    },
+                    update = { playerView -> playerView.resizeMode = content.scaleMode.toResizeMode() },
+                    modifier = Modifier.fillMaxSize().alpha(if (pooledPlayer === player) 1f else 0f),
+                )
+            }
+        }
     }
 }
 
@@ -294,7 +296,9 @@ private fun prepareIncomingPlayer(
  * time, [borrow]'s `exclude` parameter unambiguously picks the other one.
  */
 private class VideoPlayerPool(context: Context) {
-    private val players = List(POOL_SIZE) { ExoPlayer.Builder(context).build() }
+    /** Exposed so [WidgetVideoContent] can give each one its own permanently-bound
+     * [PlayerView] - see that composable's kdoc. */
+    val players = List(POOL_SIZE) { ExoPlayer.Builder(context).build() }
     private val attachedListeners = mutableMapOf<ExoPlayer, Player.Listener>()
 
     /**
