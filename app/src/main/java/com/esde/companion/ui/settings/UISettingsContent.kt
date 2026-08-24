@@ -1,5 +1,7 @@
 package com.esde.companion.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Brightness1
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +53,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -60,9 +65,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
+import com.esde.companion.data.systemstatus.BluetoothConnectPermission
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
@@ -90,6 +99,7 @@ internal fun UISettingsContent(
     installedApps: List<InstalledApp>,
     onFabTypeChanged: (FabPosition, FabType) -> Unit,
     onFabCustomAppChanged: (FabPosition, String) -> Unit,
+    onBluetoothPermissionRequested: () -> Unit,
 ) {
     Column(
         modifier =
@@ -122,6 +132,7 @@ internal fun UISettingsContent(
             installedApps = installedApps,
             onFabTypeChanged = onFabTypeChanged,
             onFabCustomAppChanged = onFabCustomAppChanged,
+            onBluetoothPermissionRequested = onBluetoothPermissionRequested,
         )
     }
 }
@@ -130,7 +141,10 @@ internal fun UISettingsContent(
 // FabAssignments.with) - so the picker itself simply never presents the option there
 // rather than needing runtime validation to reject an invalid selection.
 private val TOP_FAB_OPTIONS =
-    listOf(FabType.Music, FabType.Settings, FabType.GameManual, FabType.AppDrawer, FabType.CustomApp, FabType.None)
+    listOf(
+        FabType.Music, FabType.Settings, FabType.GameManual, FabType.AppDrawer, FabType.CustomApp,
+        FabType.Clock, FabType.SystemStatus, FabType.ClockAndSystemStatus, FabType.None,
+    )
 private val BOTTOM_FAB_OPTIONS =
     listOf(FabType.Settings, FabType.GameManual, FabType.AppDrawer, FabType.CustomApp, FabType.None)
 
@@ -280,6 +294,7 @@ private fun FabControlSetting(
     installedApps: List<InstalledApp>,
     onFabTypeChanged: (FabPosition, FabType) -> Unit,
     onFabCustomAppChanged: (FabPosition, String) -> Unit,
+    onBluetoothPermissionRequested: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -298,6 +313,7 @@ private fun FabControlSetting(
                 installedApps = installedApps,
                 onTypeSelected = { onFabTypeChanged(FabPosition.TopStart, it) },
                 onAppSelected = { onFabCustomAppChanged(FabPosition.TopStart, it) },
+                onBluetoothPermissionRequested = onBluetoothPermissionRequested,
             )
             FabPositionRow(
                 title = "Top Right",
@@ -306,6 +322,7 @@ private fun FabControlSetting(
                 installedApps = installedApps,
                 onTypeSelected = { onFabTypeChanged(FabPosition.TopEnd, it) },
                 onAppSelected = { onFabCustomAppChanged(FabPosition.TopEnd, it) },
+                onBluetoothPermissionRequested = onBluetoothPermissionRequested,
             )
             FabPositionRow(
                 title = "Bottom Left",
@@ -314,6 +331,7 @@ private fun FabControlSetting(
                 installedApps = installedApps,
                 onTypeSelected = { onFabTypeChanged(FabPosition.BottomStart, it) },
                 onAppSelected = { onFabCustomAppChanged(FabPosition.BottomStart, it) },
+                onBluetoothPermissionRequested = onBluetoothPermissionRequested,
             )
             FabPositionRow(
                 title = "Bottom Right",
@@ -322,6 +340,7 @@ private fun FabControlSetting(
                 installedApps = installedApps,
                 onTypeSelected = { onFabTypeChanged(FabPosition.BottomEnd, it) },
                 onAppSelected = { onFabCustomAppChanged(FabPosition.BottomEnd, it) },
+                onBluetoothPermissionRequested = onBluetoothPermissionRequested,
             )
         }
     }
@@ -337,6 +356,7 @@ private fun FabPositionRow(
     installedApps: List<InstalledApp>,
     onTypeSelected: (FabType) -> Unit,
     onAppSelected: (String) -> Unit,
+    onBluetoothPermissionRequested: () -> Unit,
 ) {
     var showAppPicker by remember { mutableStateOf(false) }
 
@@ -350,6 +370,9 @@ private fun FabPositionRow(
                 Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
             }
         }
+        if (slot.type == FabType.SystemStatus || slot.type == FabType.ClockAndSystemStatus) {
+            BluetoothPermissionRow(onRequested = onBluetoothPermissionRequested)
+        }
     }
 
     if (showAppPicker) {
@@ -361,6 +384,51 @@ private fun FabPositionRow(
             },
             onDismiss = { showAppPicker = false },
         )
+    }
+}
+
+/**
+ * Shown under the FAB type dropdown once [FabType.SystemStatus]/[FabType.ClockAndSystemStatus]
+ * is selected and BLUETOOTH_CONNECT isn't granted - the discoverable way to (re-)request the
+ * permission, since the live FAB itself is a plain display and doesn't request it on tap.
+ * Absent once granted, or if the device has no Bluetooth hardware at all.
+ */
+@Composable
+private fun BluetoothPermissionRow(onRequested: () -> Unit) {
+    val context = LocalContext.current
+    val hasHardware = remember { BluetoothConnectPermission.hasBluetoothHardware(context) }
+    var granted by remember { mutableStateOf(BluetoothConnectPermission.isGranted(context)) }
+
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            granted = BluetoothConnectPermission.isGranted(context)
+            onRequested()
+        }
+
+    // Covers granting via system Settings after backgrounding this screen, same idiom as
+    // OnboardingScreen's AllFilesAccessPermission check.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    granted = BluetoothConnectPermission.isGranted(context)
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (hasHardware && !granted) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "Bluetooth permission needed to show Bluetooth status.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(onClick = { launcher.launch(BluetoothConnectPermission.PERMISSION) }) {
+                Text("Grant Permission")
+            }
+        }
     }
 }
 
@@ -477,6 +545,9 @@ private val FabType.icon: ImageVector
             FabType.GameManual -> Icons.AutoMirrored.Filled.MenuBook
             FabType.AppDrawer -> Icons.Filled.Apps
             FabType.CustomApp -> Icons.AutoMirrored.Filled.Launch
+            FabType.Clock -> Icons.Filled.AccessTime
+            FabType.SystemStatus -> Icons.Filled.Wifi
+            FabType.ClockAndSystemStatus -> Icons.Filled.AccessTime
             FabType.None -> Icons.Filled.Clear
         }
 
@@ -488,6 +559,9 @@ private val FabType.label: String
             FabType.GameManual -> "Manual"
             FabType.AppDrawer -> "App Drawer"
             FabType.CustomApp -> "App"
+            FabType.Clock -> "Clock"
+            FabType.SystemStatus -> "System Status"
+            FabType.ClockAndSystemStatus -> "Clock & Status"
             FabType.None -> "None"
         }
 

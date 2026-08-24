@@ -241,6 +241,14 @@ internal class FakeOnboardingRepository(
     }
 
     override fun observeDebugLoggingEnabled(): Flow<Boolean> = debugLoggingEnabledFlow
+
+    private val bluetoothPermissionRequestedFlow = MutableStateFlow(false)
+
+    override suspend fun setBluetoothPermissionRequested(requested: Boolean) {
+        bluetoothPermissionRequestedFlow.value = requested
+    }
+
+    override fun observeBluetoothPermissionRequested(): Flow<Boolean> = bluetoothPermissionRequestedFlow
 }
 
 internal class FakeAppDrawerSettingsRepository(

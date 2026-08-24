@@ -191,4 +191,14 @@ interface OnboardingRepository {
     suspend fun setDebugLoggingEnabled(enabled: Boolean)
 
     fun observeDebugLoggingEnabled(): Flow<Boolean>
+
+    /**
+     * Whether the SystemStatus/ClockAndSystemStatus FABs have already shown their one-shot
+     * BLUETOOTH_CONNECT rationale prompt (see BluetoothConnectPermission). Defaults to false.
+     * Never reset - once shown, it's never shown again automatically; a user who denied it
+     * can still grant it later via system Settings, picked up on the next ON_RESUME.
+     */
+    suspend fun setBluetoothPermissionRequested(requested: Boolean)
+
+    fun observeBluetoothPermissionRequested(): Flow<Boolean>
 }
