@@ -4,6 +4,7 @@ package com.esde.companion.ui.widgets
 
 import android.content.Context
 import android.net.Uri
+import android.view.LayoutInflater
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +28,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.esde.companion.R
 import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
@@ -62,7 +64,14 @@ private const val MILLIS_PER_SECOND = 1000L
  * Compose-level [alpha] toggles which of the two PlayerViews is visible - not the
  * underlying `View.visibility`, since a hidden/`GONE` `SurfaceView` (PlayerView's default
  * video output) can itself tear down and recreate its Surface, reintroducing the exact
- * cost this is trying to avoid.
+ * cost this is trying to avoid. (4) That default `SurfaceView` output is itself swapped
+ * for a `TextureView` (`res/layout/widget_video_player_view.xml`'s `app:surface_type`,
+ * inflated in `factory` rather than constructing `PlayerView(ctx)` directly - there's no
+ * programmatic setter) - two overlapping `SurfaceView`s distinguished only by Compose
+ * `alpha` don't reliably composite in view z-order (each renders via its own separate
+ * hardware surface), confirmed on-device as the hidden one intermittently winning: the
+ * previous video visibly frozen on screen while the newly-promoted one's audio plays.
+ * `TextureView` draws as an ordinary View, so it always respects Compose's alpha/z-order.
  *
  * [content.scaleMode] maps to [PlayerView]'s resize mode (Contain -> RESIZE_MODE_FIT,
  * Cover -> RESIZE_MODE_ZOOM, ExoPlayer's crop-to-fill mode). [content.pillarboxMode] sets
@@ -135,10 +144,12 @@ internal fun WidgetVideoContent(
             key(pooledPlayer) {
                 AndroidView(
                     factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            useController = false
-                            this.player = pooledPlayer
-                        }
+                        // Inflated, not `PlayerView(ctx)` directly - see
+                        // res/layout/widget_video_player_view.xml's kdoc for why this
+                        // needs `app:surface_type="texture_view"`, the one thing about a
+                        // PlayerView only settable via XML/AttributeSet.
+                        val playerView = LayoutInflater.from(ctx).inflate(R.layout.widget_video_player_view, null)
+                        (playerView as PlayerView).apply { this.player = pooledPlayer }
                     },
                     update = { playerView -> playerView.resizeMode = content.scaleMode.toResizeMode() },
                     modifier = Modifier.fillMaxSize().alpha(if (pooledPlayer === player) 1f else 0f),

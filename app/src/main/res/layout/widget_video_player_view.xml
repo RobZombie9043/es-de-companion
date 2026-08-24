@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Media3's PlayerView only exposes surface_type (SurfaceView vs TextureView) via this XML
+  attribute - there's no programmatic setter, so this is the one XML layout resource in an
+  otherwise fully-Compose app. See WidgetVideoContent.kt's kdoc for why texture_view is
+  required here specifically: two of these are stacked and distinguished only by a
+  Compose-level alpha, and a SurfaceView (the default) composites via a separate hardware
+  surface that doesn't reliably respect that alpha/z-order - confirmed on-device as the
+  hidden one sometimes winning and showing through instead of the intended visible one.
+  TextureView draws as a normal View, so it composites correctly with everything else.
+-->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:surface_type="texture_view"
+    app:use_controller="false" />
