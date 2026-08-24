@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -291,6 +292,14 @@ class MainActivity : ComponentActivity() {
                             // represents "the user is in Settings" the same way showSettings
                             // used to, before that was retired in favor of this popup.
                             var longPressMenuOpen by remember { mutableStateOf(false) }
+
+                            // Incremented by a tap on the Clock/SystemStatus/
+                            // ClockAndSystemStatus FAB (see wideFabContext below) - those
+                            // FABs are rendered here, outside MainScreen, so they can't reach
+                            // MainScreen's local setLongPressMenuOpen closure the way its own
+                            // Settings FAB does. Passed down as openSettingsMenuRequest;
+                            // MainScreen opens its menu on every new (unconsumed) increment.
+                            var openSettingsMenuRequest by remember { mutableIntStateOf(0) }
 
                             // Reported by MainScreen (via AppDrawer) through
                             // onFolderOpenChanged - folded into mainScreenActive below so
@@ -657,6 +666,7 @@ class MainActivity : ComponentActivity() {
                                     visible = !isBlanked && isActivityVisible,
                                     overlayOpacityPercent = overlayOpacityPercent,
                                     onWidthMeasured = { px -> measuredFabWidthsPx[position] = px },
+                                    onClick = { openSettingsMenuRequest++ },
                                 )
 
                             fun fabSlotContent(position: FabPosition): @Composable BoxScope.() -> Unit =
@@ -770,6 +780,7 @@ class MainActivity : ComponentActivity() {
                                             onDrawerOpenChanged = { drawerOpen = it },
                                             onLongPressMenuOpenChanged = { longPressMenuOpen = it },
                                             onFolderOpenChanged = { folderOpen = it },
+                                            openSettingsMenuRequest = openSettingsMenuRequest,
                                             topStartOverlay = fabSlotContent(FabPosition.TopStart),
                                             topEndOverlay = fabSlotContent(FabPosition.TopEnd),
                                             bottomStartOverlay = fabSlotContent(FabPosition.BottomStart),

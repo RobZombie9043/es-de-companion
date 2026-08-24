@@ -48,18 +48,21 @@ import kotlinx.coroutines.isActive
 import java.util.Date
 
 /**
- * Bundles position/visible/overlayOpacityPercent/onWidthMeasured - shared by all three
+ * Bundles position/visible/overlayOpacityPercent/onWidthMeasured/onClick - shared by all three
  * Clock/SystemStatus/ClockAndSystemStatusFabContent composables below - into one value.
  * These are BoxScope extension functions, whose receiver counts toward this project's
  * LongParameterList limit alongside their explicit parameters, so keeping the always-together
- * quartet bundled (rather than four separate parameters) is what keeps them under threshold -
- * same reasoning as SelfHealConfig/BackupRepositories elsewhere.
+ * set bundled (rather than five separate parameters) is what keeps them under threshold -
+ * same reasoning as SelfHealConfig/BackupRepositories elsewhere. [onClick] opens the same main
+ * menu the Settings FAB does (see MainActivity's openSettingsMenuRequest) - these FABs are
+ * otherwise purely informational, so a tap has nothing more specific to do.
  */
 internal data class WideFabContext(
     val position: FabPosition,
     val visible: Boolean,
     val overlayOpacityPercent: Int,
     val onWidthMeasured: (Int) -> Unit,
+    val onClick: () -> Unit,
 )
 
 private fun BoxScope.wideFabModifier(context: WideFabContext): Modifier =
@@ -70,7 +73,9 @@ private fun BoxScope.wideFabModifier(context: WideFabContext): Modifier =
  * Content for a corner assigned [com.esde.companion.domain.model.FabType.Clock] - a
  * fixed-height, content-width FAB showing the current time, ticking once a second. Uses the
  * system's own 12h/24h time-format preference (DateFormat.getTimeFormat) rather than a
- * hardcoded format.
+ * hardcoded format. Tapping it opens the main menu, same as the Settings FAB (see
+ * MainActivity's openSettingsMenuRequest) - it's otherwise purely informational, so a tap has
+ * nothing more specific to do.
  */
 @Composable
 internal fun BoxScope.ClockFabContent(context: WideFabContext) {
@@ -79,7 +84,11 @@ internal fun BoxScope.ClockFabContent(context: WideFabContext) {
         return
     }
     val timeText = rememberTickingTimeText()
-    WideCornerFab(onClick = {}, opacityPercent = context.overlayOpacityPercent, modifier = wideFabModifier(context)) {
+    WideCornerFab(
+        onClick = context.onClick,
+        opacityPercent = context.overlayOpacityPercent,
+        modifier = wideFabModifier(context),
+    ) {
         Text(text = timeText, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -88,11 +97,13 @@ internal fun BoxScope.ClockFabContent(context: WideFabContext) {
  * Content for a corner assigned [com.esde.companion.domain.model.FabType.SystemStatus] - a
  * fixed-height, content-width FAB showing a row of status icons (Wifi, Bluetooth, Battery).
  * Wifi/Bluetooth are omitted entirely when not connected (no "off" icon variant - see
- * SystemStatus's kdoc); Battery always shows. See [rememberBluetoothPermissionPrompt] for the
- * one-shot BLUETOOTH_CONNECT request this FAB triggers the first time it's shown - if
- * dismissed, the recovery path is Settings > UI Settings > Floating Action Buttons (see
- * UISettingsContent's BluetoothPermissionRow), not tapping the FAB itself, which stays a
- * plain non-interactive display.
+ * SystemStatus's kdoc); Battery always shows. Tapping it opens the main menu, same as the
+ * Settings FAB (see MainActivity's openSettingsMenuRequest) - it's otherwise purely
+ * informational, so a tap has nothing more specific to do. See
+ * [rememberBluetoothPermissionPrompt] for the one-shot BLUETOOTH_CONNECT request this FAB
+ * triggers the first time it's shown - if dismissed, the recovery path is Settings > UI
+ * Settings > Floating Action Buttons (see UISettingsContent's BluetoothPermissionRow), not
+ * tapping the FAB itself.
  */
 @Composable
 internal fun BoxScope.SystemStatusFabContent(
@@ -105,7 +116,11 @@ internal fun BoxScope.SystemStatusFabContent(
         return
     }
     rememberBluetoothPermissionPrompt(bluetoothPermission)
-    WideCornerFab(onClick = {}, opacityPercent = context.overlayOpacityPercent, modifier = wideFabModifier(context)) {
+    WideCornerFab(
+        onClick = context.onClick,
+        opacityPercent = context.overlayOpacityPercent,
+        modifier = wideFabModifier(context),
+    ) {
         SystemStatusIcons(systemStatus)
     }
 }
@@ -126,7 +141,11 @@ internal fun BoxScope.ClockAndSystemStatusFabContent(
     }
     rememberBluetoothPermissionPrompt(bluetoothPermission)
     val timeText = rememberTickingTimeText()
-    WideCornerFab(onClick = {}, opacityPercent = context.overlayOpacityPercent, modifier = wideFabModifier(context)) {
+    WideCornerFab(
+        onClick = context.onClick,
+        opacityPercent = context.overlayOpacityPercent,
+        modifier = wideFabModifier(context),
+    ) {
         Text(text = timeText, style = MaterialTheme.typography.bodyMedium)
         SystemStatusIcons(systemStatus)
     }
@@ -202,12 +221,10 @@ private fun batteryContentDescription(battery: BatteryStatus): String =
  * choice. The ON_RESUME recheck (same idiom as OnboardingScreen's AllFilesAccessPermission
  * check) picks up a grant made later via system Settings.
  *
- * Returns a manual trigger - wired to the FAB's own onClick (see SystemStatusFabContent/
- * ClockAndSystemStatusFabContent) - that re-opens the same dialog on demand, a no-op once the
- * permission is granted (or there's no Bluetooth hardware). This is the recovery path for a
- * user who dismissed the one-shot auto-prompt ("Not Now") - the recovery path for that case
- * is Settings > UI Settings > Floating Action Buttons (see UISettingsContent's
- * BluetoothPermissionRow), not this FAB itself.
+ * Not wired to the FAB's own onClick - that opens the main menu instead (same as the Settings
+ * FAB, see MainActivity's openSettingsMenuRequest), so a user who dismissed the one-shot
+ * auto-prompt ("Not Now") recovers via Settings > UI Settings > Floating Action Buttons (see
+ * UISettingsContent's BluetoothPermissionRow), not by tapping the FAB again.
  */
 @Composable
 private fun rememberBluetoothPermissionPrompt(state: BluetoothPermissionState) {
