@@ -22,7 +22,15 @@ object WidgetContentResolver {
                     // kdoc / CLAUDE.md) - a custom logo is expected to be a similarly
                     // transparent-background image, so it uses LogoTransitionMode at
                     // render time rather than a fade.
-                    ?.let { WidgetContent.Image(it, widgetType.scaleMode, isTransparentOverlay = true, isAsset = false, effects = widgetType.effects) }
+                    ?.let {
+                        WidgetContent.Image(
+                            it,
+                            widgetType.scaleMode,
+                            isTransparentOverlay = true,
+                            isAsset = false,
+                            effects = widgetType.effects,
+                        )
+                    }
                     ?: systemLogoAssetPath()
                         ?.let { WidgetContent.SystemLogoAsset(it, widgetType.scaleMode, widgetType.effects) }
                     ?: systemNameLookup()?.let { WidgetContent.NameFallback(it) }
@@ -30,7 +38,15 @@ object WidgetContentResolver {
 
             is WidgetType.SystemImage ->
                 customSystemImageLookup()
-                    ?.let { WidgetContent.Image(it, widgetType.scaleMode, isTransparentOverlay = false, isAsset = false, effects = widgetType.effects) }
+                    ?.let {
+                        WidgetContent.Image(
+                            it,
+                            widgetType.scaleMode,
+                            isTransparentOverlay = false,
+                            isAsset = false,
+                            effects = widgetType.effects,
+                        )
+                    }
                     ?: resolveMediaWidgetContent(
                         mediaType = MediaType.FanArt,
                         scaleMode = widgetType.scaleMode,

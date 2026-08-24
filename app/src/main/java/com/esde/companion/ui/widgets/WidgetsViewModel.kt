@@ -203,7 +203,8 @@ class WidgetsViewModel(
                     gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
                     gameDescriptionLookup = { gameDescription?.text },
                     gameRatingLookup = { gameRating?.value },
-                    fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET, // null in EditWidgetsViewModel, as today
+                    // null in EditWidgetsViewModel, as today
+                    fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET,
                     systemNameLookup = { identity.systemFullName },
                     gameNameLookup = { identity.gameName },
                 )

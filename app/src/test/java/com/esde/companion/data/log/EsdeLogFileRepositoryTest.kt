@@ -120,7 +120,8 @@ class EsdeLogFileRepositoryTest {
         runTest {
             val logFile = tempFolder.newFile("es_log.txt")
             logFile.writeText(
-                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" " +
+                    "\"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
             )
 
             // Simulates a reboot: the file's real mtime is "now" (test-run time), but boot
@@ -139,7 +140,8 @@ class EsdeLogFileRepositoryTest {
         runTest {
             val logFile = tempFolder.newFile("es_log.txt")
             logFile.writeText(
-                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" " +
+                    "\"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
             )
 
             // Boot reported as happening well before the file's real (test-run time) mtime -

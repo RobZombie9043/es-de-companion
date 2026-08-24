@@ -212,7 +212,8 @@ internal fun WidgetContentView(
                 DarkenOverlay(effects = content.effects)
             }
 
-        is WidgetContent.SystemLogoAsset -> Unit // unreachable: SystemLogoAsset only occurs for SystemLogo widgetType, which isLogoStyle handles above
+        // unreachable: SystemLogoAsset only occurs for SystemLogo widgetType, which isLogoStyle handles above
+        is WidgetContent.SystemLogoAsset -> Unit
 
         is WidgetContent.NameFallback -> Unit // unreachable: only ever produced for isLogoStyle widget types, handled above
 

@@ -582,7 +582,6 @@ class MainActivity : ComponentActivity() {
                             val isBrowsingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
                             val showVideoOverlay =
                                 videoPlaybackEnabled &&
-                                    videoPath != null &&
                                     isBrowsingGame &&
                                     mainScreenActive &&
                                     isActivityVisible
@@ -896,24 +895,28 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 if (showVideoOverlay) {
-                                    val resolvedVideoPath = videoPath!!
-                                    val videoPlaybackStateRepository = appContainer.videoPlaybackStateRepository
-                                    VideoOverlayScreen(
-                                        videoPath = resolvedVideoPath,
-                                        delaySeconds = videoDelaySeconds,
-                                        audioEnabled = videoAudioEnabled,
-                                        modifier = Modifier.fillMaxSize(),
-                                        onPlaybackEvent = { event ->
-                                            when (event) {
-                                                is VideoPlaybackEvent.PlayingChanged ->
-                                                    videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
-                                                VideoPlaybackEvent.Started ->
-                                                    appContainer.logVideoPlaybackStarted(resolvedVideoPath)
-                                                is VideoPlaybackEvent.Error ->
-                                                    appContainer.logVideoPlaybackError(resolvedVideoPath, event.message)
-                                            }
-                                        },
-                                    )
+                                    videoPath?.let { resolvedVideoPath ->
+                                        val videoPlaybackStateRepository = appContainer.videoPlaybackStateRepository
+                                        VideoOverlayScreen(
+                                            videoPath = resolvedVideoPath,
+                                            delaySeconds = videoDelaySeconds,
+                                            audioEnabled = videoAudioEnabled,
+                                            modifier = Modifier.fillMaxSize(),
+                                            onPlaybackEvent = { event ->
+                                                when (event) {
+                                                    is VideoPlaybackEvent.PlayingChanged ->
+                                                        videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
+                                                    VideoPlaybackEvent.Started ->
+                                                        appContainer.logVideoPlaybackStarted(resolvedVideoPath)
+                                                    is VideoPlaybackEvent.Error ->
+                                                        appContainer.logVideoPlaybackError(
+                                                            resolvedVideoPath,
+                                                            event.message,
+                                                        )
+                                                }
+                                            },
+                                        )
+                                    }
                                 }
 
                                 // Update checker dialogs (silent startup check + manual
