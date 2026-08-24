@@ -137,6 +137,7 @@ object WidgetContentResolver {
                         audioEnabled = widgetType.audioEnabled,
                         delaySeconds = widgetType.delaySeconds,
                         pillarboxMode = widgetType.pillarboxMode,
+                        renderAboveUi = widgetType.renderAboveUi,
                     )
                 } ?: WidgetContent.Empty
         }

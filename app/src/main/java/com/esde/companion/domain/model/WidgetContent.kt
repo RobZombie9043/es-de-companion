@@ -71,6 +71,7 @@ sealed class WidgetContent {
         val audioEnabled: Boolean,
         val delaySeconds: Int,
         val pillarboxMode: PillarboxMode,
+        val renderAboveUi: Boolean,
     ) : WidgetContent()
 }
 

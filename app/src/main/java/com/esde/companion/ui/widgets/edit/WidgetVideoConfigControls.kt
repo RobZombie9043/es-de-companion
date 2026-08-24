@@ -90,3 +90,30 @@ private fun PillarboxMode.displayLabel(): String =
         PillarboxMode.Black -> "Black"
         PillarboxMode.Transparent -> "Transparent"
     }
+
+/** Per-widget "Render Above UI" toggle - opts this Video widget out of the ordinary
+ * widget-canvas z-order (below FABs/App Dock/App Drawer/Dim/Black covers) and into a
+ * second layer drawn above literally everything else, matching where the retired
+ * full-screen video overlay always used to sit. See
+ * [com.esde.companion.domain.model.WidgetType.Video.renderAboveUi]'s kdoc. */
+@Composable
+internal fun RenderAboveUiConfig(
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = "Render Above UI", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "Draws over FABs, the App Dock, and App Drawer instead of behind them",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onChange)
+    }
+}

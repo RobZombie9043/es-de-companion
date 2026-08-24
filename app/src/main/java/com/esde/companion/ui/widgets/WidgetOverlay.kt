@@ -3,11 +3,14 @@ package com.esde.companion.ui.widgets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,7 +26,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.imageLoader
+import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.WidgetContent
+import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.ui.main.requestFor
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.video.VideoPlaybackEvent
@@ -106,6 +111,65 @@ fun WidgetOverlay(
         }
     }
 }
+
+/**
+ * Renders only the placed [com.esde.companion.domain.model.WidgetType.Video] widgets
+ * whose Configure Widget "Render Above UI" toggle is on, positioned identically to how
+ * [WidgetCanvas] would place them (same grid math against the same full-screen
+ * constraints, see [gridDimensionsFor]) but meant to be composed as a sibling much higher
+ * in MainActivity's own Box stack - above FABs, the App Dock, App Drawer, and the Dim/
+ * Black covers - matching where the retired full-screen `VideoOverlayScreen` always used
+ * to sit. [WidgetCanvas]'s own `WidgetContentView` skips rendering these same widgets
+ * entirely (see [com.esde.companion.domain.model.WidgetType.Video.renderAboveUi]'s kdoc)
+ * so an on-top video widget is only ever composed - and only ever owns one
+ * [VideoPlayerPool] - once, here.
+ *
+ * Uses the same [viewModel] instance [WidgetOverlay] does (both are cheap StateFlow
+ * collectors, not separate resolutions) and the same [videoPlaybackEligible] gate,
+ * applied the same way: an ineligible on-top video widget simply isn't composed, so its
+ * `WidgetVideoContent` instance tears down exactly like [WidgetOverlay]'s substituted-
+ * `Empty` case does.
+ */
+@Composable
+fun TopLayerVideoWidgets(
+    viewModel: WidgetsViewModel,
+    onVideoPlaybackEvent: (VideoPlaybackEvent) -> Unit = {},
+    videoPlaybackEligible: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    val canvasState by viewModel.canvasState.collectAsStateWithLifecycle()
+    val state = canvasState as? WidgetCanvasState.Showing ?: return
+    val onTopVideoWidgets = remember(state) { state.onTopVideoWidgets() }
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val grid = remember(maxWidth, maxHeight) { gridDimensionsFor(maxWidth, maxHeight) }
+        val cellWidth = maxWidth / grid.columns
+        val cellHeight = maxHeight / grid.rows
+
+        for ((widget, content) in onTopVideoWidgets) {
+            key(widget.id) {
+                if (videoPlaybackEligible) {
+                    val placement =
+                        Modifier
+                            .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
+                            .size(width = cellWidth * widget.columnSpan, height = cellHeight * widget.rowSpan)
+                    WidgetVideoContent(content = content, onPlaybackEvent = onVideoPlaybackEvent, modifier = placement)
+                }
+            }
+        }
+    }
+}
+
+/** The placed [WidgetType.Video] widgets in this canvas state whose "Render Above UI"
+ * toggle is on and which currently have real video content resolved, paired with that
+ * content - see [TopLayerVideoWidgets]. */
+private fun WidgetCanvasState.Showing.onTopVideoWidgets(): List<Pair<PlacedWidget, WidgetContent.Video>> =
+    widgets.mapNotNull { widget ->
+        val widgetType = widget.widgetType as? WidgetType.Video ?: return@mapNotNull null
+        if (!widgetType.renderAboveUi) return@mapNotNull null
+        val content = contentByWidgetId[widget.id] as? WidgetContent.Video ?: return@mapNotNull null
+        widget to content
+    }
 
 /**
  * Holds the previously-displayed canvas on screen until [target]'s backdrop image (see

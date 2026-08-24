@@ -115,6 +115,7 @@ import com.esde.companion.ui.update.UpdateViewModel
 import com.esde.companion.ui.update.UpdateViewModelFactory
 import com.esde.companion.ui.update.WhatsNewDialog
 import com.esde.companion.ui.video.VideoPlaybackEvent
+import com.esde.companion.ui.widgets.TopLayerVideoWidgets
 import com.esde.companion.ui.widgets.WidgetOverlay
 import com.esde.companion.ui.widgets.WidgetsViewModel
 import com.esde.companion.ui.widgets.WidgetsViewModelFactory
@@ -723,6 +724,23 @@ class MainActivity : ComponentActivity() {
                                 label = "longPressMenuBlur",
                             )
 
+                            // Shared by both WidgetOverlay's ordinary canvas-layer video
+                            // widgets and TopLayerVideoWidgets' renderAboveUi ones below -
+                            // the two are mutually exclusive per widget (see
+                            // WidgetType.Video.renderAboveUi's kdoc), so there's no risk of
+                            // double-reporting the same widget's events through this.
+                            val onVideoPlaybackEvent: (VideoPlaybackEvent) -> Unit = { event ->
+                                when (event) {
+                                    is VideoPlaybackEvent.PlayingChanged ->
+                                        appContainer.videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
+                                    is VideoPlaybackEvent.Started ->
+                                        appContainer.logVideoPlaybackStarted(event.path)
+                                    is VideoPlaybackEvent.Error ->
+                                        appContainer.logVideoPlaybackError(event.path, event.message)
+                                }
+                            }
+                            val videoPlaybackEligible = mainScreenActive && isActivityVisible
+
                             Box(
                                 modifier =
                                     Modifier
@@ -731,17 +749,8 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 WidgetOverlay(
                                     viewModel = widgetsViewModel,
-                                    videoPlaybackEligible = mainScreenActive && isActivityVisible,
-                                    onVideoPlaybackEvent = { event ->
-                                        when (event) {
-                                            is VideoPlaybackEvent.PlayingChanged ->
-                                                appContainer.videoPlaybackStateRepository.setIsPlaying(event.isPlaying)
-                                            is VideoPlaybackEvent.Started ->
-                                                appContainer.logVideoPlaybackStarted(event.path)
-                                            is VideoPlaybackEvent.Error ->
-                                                appContainer.logVideoPlaybackError(event.path, event.message)
-                                        }
-                                    },
+                                    videoPlaybackEligible = videoPlaybackEligible,
+                                    onVideoPlaybackEvent = onVideoPlaybackEvent,
                                     modifier = Modifier.fillMaxSize(),
                                 )
 
@@ -921,6 +930,19 @@ class MainActivity : ComponentActivity() {
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
+
+                                // Video widgets with their Configure Widget "Render Above
+                                // UI" toggle on - drawn last in this Box (above literally
+                                // everything else here: FABs/App Dock/App Drawer inside
+                                // MainScreen, the Dim/Black covers, GameManual, and
+                                // RetroAchievements) to match where the retired full-screen
+                                // VideoOverlayScreen always used to sit.
+                                TopLayerVideoWidgets(
+                                    viewModel = widgetsViewModel,
+                                    videoPlaybackEligible = videoPlaybackEligible,
+                                    onVideoPlaybackEvent = onVideoPlaybackEvent,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
 
                                 // Update checker dialogs (silent startup check + manual
                                 // "Check for Updates" in Settings > Setup both funnel into

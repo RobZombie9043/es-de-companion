@@ -45,6 +45,12 @@ private const val MILLIS_PER_SECOND = 1000L
  * unmuted once it has real decoded frames ready, so a video swap (browsing to a new game)
  * never flashes blank or double-plays audio during the handoff.
  *
+ * The two [ExoPlayer] instances themselves are long-lived, pooled via [VideoPlayerPool]
+ * for this composable's whole lifetime rather than built/released on every browsed game -
+ * see that class's kdoc for why (`ExoPlayer.Builder(context).build()`/`release()` are
+ * heavy enough, especially the latter when a nonzero Start Delay tears the displayed
+ * player down mid-browse, to visibly stutter a concurrently-running logo slide animation).
+ *
  * [content.scaleMode] maps to [PlayerView]'s resize mode (Contain -> RESIZE_MODE_FIT,
  * Cover -> RESIZE_MODE_ZOOM, ExoPlayer's crop-to-fill mode). [content.pillarboxMode] sets
  * the background behind the video - only visible under Contain, where a mismatched aspect
@@ -58,6 +64,7 @@ internal fun WidgetVideoContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val playerPool = remember { VideoPlayerPool(context) }
 
     var displayedPath by remember { mutableStateOf<String?>(null) }
     var displayedPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
@@ -77,7 +84,7 @@ internal fun WidgetVideoContent(
                 },
             )
         transitionToVideo(
-            context = context,
+            playerPool = playerPool,
             videoPath = content.path,
             settings = VideoTransitionSettings(content.delaySeconds, content.audioEnabled),
             displayedSlot = displayedSlot,
@@ -91,12 +98,14 @@ internal fun WidgetVideoContent(
 
     DisposableEffect(Unit) {
         onDispose {
+            // The real ExoPlayer.release() calls only ever happen here, once, when this
+            // widget is genuinely removed from the canvas - see VideoPlayerPool's kdoc.
             // release() doesn't reliably re-fire onIsPlayingChanged, so without this
             // explicit call a video that becomes ineligible (browsed away from, widget
             // removed) could leave the last "true" stuck, permanently ducking background
             // music - see VideoOverlayScreen's original kdoc for the same reasoning.
             if (displayedPlayer != null) onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(false))
-            displayedPlayer?.release()
+            playerPool.releaseAll()
         }
     }
 
@@ -155,13 +164,13 @@ private class VideoTransitionSettings(
 
 /**
  * Prepares [videoPath] off-screen (muted) and, once it has real decoded frames ready,
- * hands it to [DisplayedVideoSlot.promote] and releases whatever
- * [DisplayedVideoSlot.current] returned beforehand - see [WidgetVideoContent]'s kdoc for
- * why the promotion happens in one step rather than dropping through "nothing displayed"
- * while this prepares.
+ * hands it to [DisplayedVideoSlot.promote] and returns whatever [DisplayedVideoSlot.current]
+ * returned beforehand to [playerPool] - see [WidgetVideoContent]'s kdoc for why the
+ * promotion happens in one step rather than dropping through "nothing displayed" while
+ * this prepares.
  */
 private suspend fun transitionToVideo(
-    context: Context,
+    playerPool: VideoPlayerPool,
     videoPath: String,
     settings: VideoTransitionSettings,
     displayedSlot: DisplayedVideoSlot,
@@ -174,10 +183,10 @@ private suspend fun transitionToVideo(
     // only bridge (below) across the technical buffering gap that follows. A zero delay
     // has no such wait to occupy, so the previous video keeps playing straight into that
     // buffering gap, same as before this distinction existed.
-    if (settings.delaySeconds > 0) dropDisplayedVideoForDelay(displayedSlot, onPlaybackEvent)
+    if (settings.delaySeconds > 0) dropDisplayedVideoForDelay(playerPool, displayedSlot, onPlaybackEvent)
 
     val ready = CompletableDeferred<Unit>()
-    val incoming = createIncomingPlayer(context, videoPath, displayedSlot.current, ready, onPlaybackEvent)
+    val incoming = prepareIncomingPlayer(playerPool, videoPath, displayedSlot.current, ready, onPlaybackEvent)
 
     try {
         delay(settings.delaySeconds * MILLIS_PER_SECOND)
@@ -189,7 +198,7 @@ private suspend fun transitionToVideo(
         displayedSlot.promote(incoming)
         onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(true))
         onPlaybackEvent(VideoPlaybackEvent.Started(videoPath))
-        outgoing?.release()
+        outgoing?.let(playerPool::returnToPool)
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (expectedError: PlaybackException) {
@@ -198,45 +207,47 @@ private suspend fun transitionToVideo(
         // playing untouched rather than dropping through to the widget canvas. No
         // PlayingChanged here: the outgoing player (if any) is still genuinely playing.
     } finally {
-        if (displayedSlot.current() !== incoming) incoming.release()
+        if (displayedSlot.current() !== incoming) playerPool.returnToPool(incoming)
     }
 }
 
 /**
- * Releases whatever's currently displayed (if anything) and clears the slot, dropping back
- * to the widget canvas - see the call site in [transitionToVideo] for why this only runs
- * when there's a nonzero delay to wait out.
+ * Returns whatever's currently displayed (if anything) to [playerPool] and clears the
+ * slot, dropping back to the widget canvas - see the call site in [transitionToVideo] for
+ * why this only runs when there's a nonzero delay to wait out. A cheap `ExoPlayer.stop()`
+ * via [VideoPlayerPool.returnToPool], not a teardown - see that class's kdoc.
  */
 private fun dropDisplayedVideoForDelay(
+    playerPool: VideoPlayerPool,
     displayedSlot: DisplayedVideoSlot,
     onPlaybackEvent: (VideoPlaybackEvent) -> Unit,
 ) {
     val outgoing = displayedSlot.current() ?: return
     displayedSlot.clear()
     onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(false))
-    outgoing.release()
+    playerPool.returnToPool(outgoing)
 }
 
 /**
- * Builds a muted, prepared-but-not-yet-playing [ExoPlayer] for [videoPath], wired so that
- * [ready] completes once it actually starts rendering frames (or completes exceptionally
- * on a player error) - the readiness signal the caller awaits before promoting it to the
- * displayed player. [displayedPlayerProvider] is polled on every `isPlaying` change (not
- * captured once) so the listener only forwards to [onPlaybackEvent] once this exact
- * player instance has actually been promoted - see [WidgetVideoContent]'s kdoc.
+ * Borrows a muted, prepared-but-not-yet-playing [ExoPlayer] from [playerPool] for
+ * [videoPath], wired so that [ready] completes once it actually starts rendering frames
+ * (or completes exceptionally on a player error) - the readiness signal the caller awaits
+ * before promoting it to the displayed player. [displayedPlayerProvider] is polled on
+ * every `isPlaying` change (not captured once) so the listener only forwards to
+ * [onPlaybackEvent] once this exact player instance has actually been promoted - see
+ * [WidgetVideoContent]'s kdoc.
  */
-private fun createIncomingPlayer(
-    context: Context,
+private fun prepareIncomingPlayer(
+    playerPool: VideoPlayerPool,
     videoPath: String,
     displayedPlayerProvider: () -> ExoPlayer?,
     ready: CompletableDeferred<Unit>,
     onPlaybackEvent: (VideoPlaybackEvent) -> Unit,
-): ExoPlayer {
-    val incoming = ExoPlayer.Builder(context).build()
-    incoming.volume = 0f
-    incoming.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(videoPath))))
-    incoming.repeatMode = Player.REPEAT_MODE_ONE
-    incoming.addListener(
+): ExoPlayer =
+    playerPool.borrow(exclude = displayedPlayerProvider()) { incoming ->
+        incoming.volume = 0f
+        incoming.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(videoPath))))
+        incoming.prepare()
         object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 if (incoming === displayedPlayerProvider()) {
@@ -250,8 +261,63 @@ private fun createIncomingPlayer(
                 onPlaybackEvent(VideoPlaybackEvent.Error(videoPath, error.message ?: error.toString()))
                 ready.completeExceptionally(error)
             }
-        },
-    )
-    incoming.prepare()
-    return incoming
+        }
+    }
+
+/**
+ * A small reusable pool of exactly two [ExoPlayer] instances, held for [WidgetVideoContent]'s
+ * whole lifetime rather than built/released on every browsed game. `ExoPlayer.Builder(
+ * context).build()` initializes renderers/audio tracks, and `ExoPlayer.release()` tears
+ * them down again - both heavy enough that doing either on every game-browse event could
+ * visibly stutter a concurrently-running logo slide animation, confirmed worst with a
+ * nonzero Start Delay configured (which synchronously tears the *displayed* player down
+ * the moment a new game is browsed, via [dropDisplayedVideoForDelay], rather than only
+ * once buffering finishes). [borrow]/[returnToPool] replace those two calls with the much
+ * cheaper `ExoPlayer.stop()`/`setMediaItem()`/`prepare()` for every ordinary transition -
+ * a real `release()` only ever happens once each, in [releaseAll], when this composable
+ * itself leaves composition.
+ *
+ * Since the pool only ever holds two players and at most one is ever "displayed" at a
+ * time, [borrow]'s `exclude` parameter unambiguously picks the other one.
+ */
+private class VideoPlayerPool(context: Context) {
+    private val players = List(POOL_SIZE) { ExoPlayer.Builder(context).build() }
+    private val attachedListeners = mutableMapOf<ExoPlayer, Player.Listener>()
+
+    /**
+     * Hands back whichever pooled player isn't [exclude], reset via `stop()`/
+     * `clearMediaItems()` first so it starts from a clean slate, then configured by
+     * [configure] (set the media item, build a fresh listener, call `prepare()`) - a
+     * fresh listener every borrow, rather than accumulating one per borrow on the same
+     * long-lived player instance, replaces whatever listener the previous borrow attached.
+     */
+    fun borrow(
+        exclude: ExoPlayer?,
+        configure: (ExoPlayer) -> Player.Listener,
+    ): ExoPlayer {
+        val player = players.first { it !== exclude }
+        player.stop()
+        player.clearMediaItems()
+        attachedListeners.remove(player)?.let(player::removeListener)
+        val listener = configure(player)
+        attachedListeners[player] = listener
+        player.addListener(listener)
+        player.repeatMode = Player.REPEAT_MODE_ONE
+        return player
+    }
+
+    /** Cheaply idles a player that's no longer displayed/needed right now, keeping it
+     * around in the pool for the next [borrow] rather than releasing it. */
+    fun returnToPool(player: ExoPlayer) {
+        player.stop()
+    }
+
+    /** The only place `ExoPlayer.release()` is actually called - see the class kdoc. */
+    fun releaseAll() {
+        players.forEach { it.release() }
+    }
+
+    private companion object {
+        const val POOL_SIZE = 2
+    }
 }

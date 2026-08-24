@@ -330,13 +330,14 @@ class WidgetLayoutMappingTest {
     }
 
     @Test
-    fun `Video round-trips scaleMode, audioEnabled, delaySeconds, and pillarboxMode`() {
+    fun `Video round-trips scaleMode, audioEnabled, delaySeconds, pillarboxMode, and renderAboveUi`() {
         val widget =
             WidgetType.Video(
                 scaleMode = ScaleMode.Fit,
                 audioEnabled = false,
                 delaySeconds = 5,
                 pillarboxMode = PillarboxMode.Transparent,
+                renderAboveUi = true,
             )
         assertEquals(widget, roundTrip(widget))
     }
@@ -351,6 +352,7 @@ class WidgetLayoutMappingTest {
                 audioEnabled = true,
                 delaySeconds = 0,
                 pillarboxMode = "Black",
+                renderAboveUi = false,
             ),
             decoded,
         )

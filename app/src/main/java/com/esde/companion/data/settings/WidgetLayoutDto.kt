@@ -129,5 +129,6 @@ internal sealed class WidgetTypeDto {
         val audioEnabled: Boolean = true,
         val delaySeconds: Int = 0,
         val pillarboxMode: String = "Black",
+        val renderAboveUi: Boolean = false,
     ) : WidgetTypeDto()
 }

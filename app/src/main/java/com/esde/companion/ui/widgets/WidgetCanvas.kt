@@ -266,11 +266,17 @@ internal fun WidgetContentView(
             }
 
         is WidgetContent.Video ->
-            WidgetVideoContent(
-                content = content,
-                onPlaybackEvent = displayOptions.onVideoPlaybackEvent,
-                modifier = modifier,
-            )
+            // renderAboveUi widgets are rendered instead by WidgetOverlay's
+            // TopLayerVideoWidgets, above FABs/App Dock/App Drawer - see
+            // WidgetType.Video.renderAboveUi's kdoc. Skipped here entirely (not just
+            // moved) so this widget only ever owns one ExoPlayer pool/composable.
+            if (!content.renderAboveUi) {
+                WidgetVideoContent(
+                    content = content,
+                    onPlaybackEvent = displayOptions.onVideoPlaybackEvent,
+                    modifier = modifier,
+                )
+            }
     }
 }
 

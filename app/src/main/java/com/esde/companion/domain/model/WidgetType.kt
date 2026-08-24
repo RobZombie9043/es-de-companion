@@ -156,12 +156,22 @@ sealed class WidgetType {
      * AppState.BrowsingGame (never during actual gameplay) - narrower than every other
      * GameMedia-style widget, enforced by the caller supplying WidgetContentResolver's
      * videoLookup, not by this type itself. No ImageEffects - not Coil-backed.
+     *
+     * [renderAboveUi] opts this specific widget instance out of the ordinary widget-canvas
+     * z-order (below FABs/App Dock/App Drawer/Dim/Black covers) and into a second,
+     * MainActivity-level layer drawn above literally everything else - matching where the
+     * retired full-screen `VideoOverlayScreen` always used to sit. See
+     * `ui/widgets/WidgetOverlay.kt`'s `TopLayerVideoWidgets` for the actual rendering, and
+     * `WidgetContentView`'s Video branch for why the ordinary canvas layer renders nothing
+     * for a widget with this on (avoiding two ExoPlayer instances/composables for the same
+     * widget).
      */
     data class Video(
         val scaleMode: ScaleMode = ScaleMode.Fit,
         val audioEnabled: Boolean = true,
         val delaySeconds: Int = 0,
         val pillarboxMode: PillarboxMode = PillarboxMode.Black,
+        val renderAboveUi: Boolean = false,
     ) : WidgetType()
 }
 

@@ -120,6 +120,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 audioEnabled,
                 delaySeconds,
                 pillarboxMode.toDto(),
+                renderAboveUi,
             )
     }
 
@@ -195,6 +196,7 @@ private fun WidgetTypeDto.Video.toDomainVideo(): WidgetType.Video =
         audioEnabled,
         delaySeconds,
         pillarboxMode.toPillarboxMode(),
+        renderAboveUi,
     )
 
 private fun PlacedWidget.toDto() =
