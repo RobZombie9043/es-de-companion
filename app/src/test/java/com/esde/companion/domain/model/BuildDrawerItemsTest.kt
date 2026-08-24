@@ -65,7 +65,8 @@ class BuildDrawerItemsTest {
 
     @Test
     fun `a hidden app is excluded from its folder but the folder itself still renders`() {
-        val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, appB.packageName))
+        val folder =
+            AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, appB.packageName))
 
         val result =
             buildDrawerItems(
@@ -79,7 +80,8 @@ class BuildDrawerItemsTest {
 
     @Test
     fun `an uninstalled member is silently dropped from a folder`() {
-        val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, "com.example.gone"))
+        val folder =
+            AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, "com.example.gone"))
 
         val result =
             buildDrawerItems(
@@ -103,7 +105,10 @@ class BuildDrawerItemsTest {
                 sortFoldersOnTop = false,
             )
 
-        assertEquals(listOf(DrawerItem.App(appB), DrawerItem.Folder(folder, listOf(appA))).sortedBy { it.label }, result)
+        assertEquals(
+            listOf(DrawerItem.App(appB), DrawerItem.Folder(folder, listOf(appA))).sortedBy { it.label },
+            result,
+        )
     }
 
     @Test

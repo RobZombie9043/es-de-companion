@@ -133,10 +133,14 @@ fun OnboardingScreen(
                             val slideDistance = { width: Int -> width / 3 }
                             if (movingForward) {
                                 (slideInHorizontally(tween(220)) { slideDistance(it) } + fadeIn(tween(220)))
-                                    .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                                    .togetherWith(
+                                        slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)),
+                                    )
                             } else {
                                 (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
-                                    .togetherWith(slideOutHorizontally(tween(220)) { slideDistance(it) } + fadeOut(tween(150)))
+                                    .togetherWith(
+                                        slideOutHorizontally(tween(220)) { slideDistance(it) } + fadeOut(tween(150)),
+                                    )
                             }
                         },
                         label = "onboardingStepContent",
@@ -272,7 +276,10 @@ private fun EsdeFolderStep(
                     "This folder exists, but settings/es_settings.xml wasn't found inside it - " +
                         "it appears to be the incorrect folder. Choose the correct one to continue.",
                 )
-            validation is LogFolderValidation.FolderNotFound -> Text("This folder doesn't exist. Choose the correct folder.")
+            validation is LogFolderValidation.FolderNotFound ->
+                Text(
+                    "This folder doesn't exist. Choose the correct folder.",
+                )
         }
 
         if (isCheckingInstallation) {
@@ -315,7 +322,10 @@ private fun MediaFolderStep(
                 Text(
                     "ES-DE's settings point at this path, but it doesn't exist - choose the correct folder.",
                 )
-            validation is MediaFolderValidation.FolderNotFound -> Text("This folder doesn't exist. Choose the correct folder.")
+            validation is MediaFolderValidation.FolderNotFound ->
+                Text(
+                    "This folder doesn't exist. Choose the correct folder.",
+                )
         }
 
         OutlinedButton(onClick = { launcher.launch(null) }) {

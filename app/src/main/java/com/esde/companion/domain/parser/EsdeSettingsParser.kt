@@ -24,7 +24,13 @@ object EsdeSettingsParser {
         settingName: String,
     ): Boolean? = boolRegexFor(settingName).find(xmlContent)?.groupValues?.get(1)?.toBooleanStrictOrNull()
 
-    private fun stringRegexFor(settingName: String) = Regex("""<string\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""")
+    private fun stringRegexFor(settingName: String) =
+        Regex(
+            """<string\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""",
+        )
 
-    private fun boolRegexFor(settingName: String) = Regex("""<bool\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""")
+    private fun boolRegexFor(settingName: String) =
+        Regex(
+            """<bool\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/>""",
+        )
 }

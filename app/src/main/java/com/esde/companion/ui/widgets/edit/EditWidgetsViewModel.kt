@@ -381,7 +381,9 @@ class EditWidgetsViewModel(
         val systemMediaByType: Map<MediaType, String?> =
             lastSystemShortName?.let { shortName ->
                 neededSystemMediaTypes.associateWith { mediaType ->
-                    randomSystemMediaCache.getOrPut(shortName to mediaType) { resolveRandomSystemMedia(shortName, mediaType) }
+                    randomSystemMediaCache.getOrPut(shortName to mediaType) {
+                        resolveRandomSystemMedia(shortName, mediaType)
+                    }
                 }
             } ?: emptyMap()
 

@@ -79,7 +79,12 @@ class WidgetLayoutMappingTest {
 
     @Test
     fun `SystemLogo round-trips logoTransitionMode and glintEnabled`() {
-        val widget = WidgetType.SystemLogo(ScaleMode.Fit, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)
+        val widget =
+            WidgetType.SystemLogo(
+                ScaleMode.Fit,
+                logoTransitionMode = LogoTransitionMode.Slide,
+                glintEnabled = true,
+            )
         assertEquals(widget, roundTrip(widget))
     }
 

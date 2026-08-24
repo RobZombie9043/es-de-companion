@@ -30,7 +30,9 @@ class FileGameMediaRepository(
 
             val filesByType =
                 mediaTypes
-                    .mapNotNull { type -> findExistingFile(type, systemShortName, baseRelativePath)?.let { type to it } }
+                    .mapNotNull { type ->
+                        findExistingFile(type, systemShortName, baseRelativePath)?.let { type to it }
+                    }
                     .toMap()
 
             GameMedia(baseRelativePath = baseRelativePath, filesByType = filesByType)

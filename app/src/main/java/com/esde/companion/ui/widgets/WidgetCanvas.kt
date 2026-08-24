@@ -215,7 +215,8 @@ internal fun WidgetContentView(
         // unreachable: SystemLogoAsset only occurs for SystemLogo widgetType, which isLogoStyle handles above
         is WidgetContent.SystemLogoAsset -> Unit
 
-        is WidgetContent.NameFallback -> Unit // unreachable: only ever produced for isLogoStyle widget types, handled above
+        // unreachable: only ever produced for isLogoStyle widget types, handled above
+        is WidgetContent.NameFallback -> Unit
 
         is WidgetContent.Text ->
             Box(

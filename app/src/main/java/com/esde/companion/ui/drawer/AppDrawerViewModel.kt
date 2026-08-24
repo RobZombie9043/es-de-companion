@@ -181,7 +181,8 @@ class AppDrawerViewModel(
         packageName: String,
     ) {
         viewModelScope.launch {
-            val newFolder = AppFolder(id = UUID.randomUUID().toString(), name = name, memberPackageNames = setOf(packageName))
+            val newFolder =
+                AppFolder(id = UUID.randomUUID().toString(), name = name, memberPackageNames = setOf(packageName))
             setAppFolders(observeAppFolders().first() + newFolder)
         }
     }

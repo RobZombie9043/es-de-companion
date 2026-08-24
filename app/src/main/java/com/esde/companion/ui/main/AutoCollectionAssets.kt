@@ -19,4 +19,6 @@ private val AUTO_COLLECTION_ASSET_NAMES =
         "recent" to "auto-lastplayed",
     )
 
-fun systemLogoAssetName(systemShortName: String): String = AUTO_COLLECTION_ASSET_NAMES[systemShortName] ?: systemShortName
+fun systemLogoAssetName(systemShortName: String): String {
+    return AUTO_COLLECTION_ASSET_NAMES[systemShortName] ?: systemShortName
+}

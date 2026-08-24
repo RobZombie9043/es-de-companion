@@ -123,7 +123,11 @@ class WidgetsViewModel(
                     flowOf(WidgetCanvasState.Disconnected)
                 } else {
                     observeWidgetCanvas(identity.stateGroup, grid).map { widgets ->
-                        WidgetCanvasState.Showing(widgets, resolveContent(widgets, identity), identity.navigationDirection)
+                        WidgetCanvasState.Showing(
+                            widgets,
+                            resolveContent(widgets, identity),
+                            identity.navigationDirection,
+                        )
                     }
                 }
             }
@@ -173,14 +177,25 @@ class WidgetsViewModel(
             ).distinct()
         val systemMediaByType: Map<MediaType, String?> =
             systemShortName?.let { shortName ->
-                neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMediaCached(shortName, mediaType) }
+                neededSystemMediaTypes.associateWith { mediaType ->
+                    resolveRandomSystemMediaCached(shortName, mediaType)
+                }
             } ?: emptyMap()
 
         val systemLogoAssetPath = systemShortName?.let { resolveBundledSystemLogo(systemLogoAssetName(it)) }
 
         val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
         val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
-        val customSystemLogoPath = if (needsCustomLogo) systemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null
+        val customSystemLogoPath =
+            if (needsCustomLogo) {
+                systemShortName?.let {
+                    resolveCustomSystemLogo(
+                        systemLogoAssetName(it),
+                    )
+                }
+            } else {
+                null
+            }
         val customSystemImagePath =
             if (needsCustomImage) {
                 systemShortName?.let {

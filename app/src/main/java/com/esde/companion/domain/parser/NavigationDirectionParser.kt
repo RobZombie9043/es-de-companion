@@ -21,7 +21,9 @@ object NavigationDirectionParser {
      * or truncated (e.g. cut off mid-line at a tail-window boundary) - the tracker treats
      * that as unparseable noise, not a definitive "no direction" signal, and leaves
      * whatever direction was already tracked untouched. */
-    fun isWellFormedInputLine(rawLine: String): Boolean = isLogInputLine(rawLine) && BUTTON_REGEX.containsMatchIn(rawLine)
+    fun isWellFormedInputLine(rawLine: String): Boolean {
+        return isLogInputLine(rawLine) && BUTTON_REGEX.containsMatchIn(rawLine)
+    }
 
     /**
      * Returns the pressed direction for a well-formed directional button *press* line

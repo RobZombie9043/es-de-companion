@@ -69,7 +69,8 @@ class EsdeEventParserTest {
     fun `parses game-start with shell-escaped path and unescapes it`() {
         val line =
             "Jul 28 10:01:54 Debug:  Scripting::fireEvent(): game-start " +
-                "\"/storage/E2AB-E84A/ROMs/gba/Mega\\ Man\\ Battle\\ Network\\ 3\\ -\\ White\\ Version\\ \\(USA\\).zip\" " +
+                "\"/storage/E2AB-E84A/ROMs/gba/Mega\\ Man\\ Battle\\ Network\\ 3\\ -\\ White\\ Version\\ " +
+                "\\(USA\\).zip\" " +
                 "\"Mega Man Battle Network 3 : White\" \"gba\" \"Nintendo Game Boy Advance\""
 
         val result = parser.parseLine(line)

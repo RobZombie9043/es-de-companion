@@ -88,7 +88,10 @@ internal fun ColorBackgroundConfig(
             HexColorInput(current = current.colorArgb) { onChange(current.copy(colorArgb = it)) }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Transparency: ${(current.alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "Transparency: ${(current.alpha * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+            )
             Slider(
                 value = current.alpha,
                 onValueChange = { onChange(current.copy(alpha = it)) },

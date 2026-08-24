@@ -41,7 +41,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)
+        assertEquals(
+            WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true),
+            content,
+        )
     }
 
     @Test
@@ -64,7 +67,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false), content)
+        assertEquals(
+            WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
     }
 
     // --- SystemMedia/GameMedia: unaffected background-fallback behavior ------------------
@@ -77,7 +83,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)
+        assertEquals(
+            WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true),
+            content,
+        )
     }
 
     @Test
@@ -88,7 +97,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)
+        assertEquals(
+            WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true),
+            content,
+        )
     }
 
     @Test
@@ -183,7 +195,10 @@ class WidgetContentResolverTest {
                 },
             )
 
-        assertEquals(WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false), content)
+        assertEquals(
+            WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
     }
 
     // --- SystemLogo: name-text fallback ---------------------------------------------------
@@ -215,7 +230,10 @@ class WidgetContentResolverTest {
                 systemNameLookup = { "Sega Dreamcast" },
             )
 
-        assertEquals(WidgetContent.SystemLogoAsset("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit), content)
+        assertEquals(
+            WidgetContent.SystemLogoAsset("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit),
+            content,
+        )
     }
 
     // --- CustomImage: fixed user-picked path, independent of any lookup -------------------
@@ -224,11 +242,20 @@ class WidgetContentResolverTest {
     fun `CustomImage resolves to the widget's own fixed path`() {
         val content =
             resolve(
-                widgetType = WidgetType.CustomImage(path = "/storage/emulated/0/Pictures/cover.jpg", scaleMode = ScaleMode.Fill),
+                widgetType =
+                    WidgetType.CustomImage(
+                        path = "/storage/emulated/0/Pictures/cover.jpg",
+                        scaleMode = ScaleMode.Fill,
+                    ),
             )
 
         assertEquals(
-            WidgetContent.Image("/storage/emulated/0/Pictures/cover.jpg", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            WidgetContent.Image(
+                "/storage/emulated/0/Pictures/cover.jpg",
+                ScaleMode.Fill,
+                isTransparentOverlay = false,
+                isAsset = false,
+            ),
             content,
         )
     }
@@ -280,7 +307,10 @@ class WidgetContentResolverTest {
                 gameNameLookup = { "Crazy Taxi" },
             )
 
-        assertEquals(WidgetContent.Image("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false), content)
+        assertEquals(
+            WidgetContent.Image("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false),
+            content,
+        )
     }
 
     // --- Rating: 0f..1f -> 0f..5f star conversion and no-rating behavior ------------------

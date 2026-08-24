@@ -217,7 +217,9 @@ class OnboardingViewModelTest {
 
         override suspend fun readMediaDirectory(esdeRootPath: String): String? = mediaDirectory
 
-        override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? = eventScriptSettings
+        override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? {
+            return eventScriptSettings
+        }
 
         override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> =
             flow {
@@ -289,7 +291,10 @@ class OnboardingViewModelTest {
             // Valid and ready to go, but the user hasn't actually confirmed anything yet -
             // this is just the default guess, never explicitly chosen.
             assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
-            assertEquals(LogFolderValidation.FolderFound(settingsFileFound = true), viewModel.uiState.value.logFolderValidation)
+            assertEquals(
+                LogFolderValidation.FolderFound(settingsFileFound = true),
+                viewModel.uiState.value.logFolderValidation,
+            )
             assertTrue(onboardingRepo.savedLogPaths.isEmpty())
 
             viewModel.onEsdeFolderConfirmed()
@@ -342,7 +347,8 @@ class OnboardingViewModelTest {
                 FakeEsdeInstallationRepository().apply {
                     mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
                 }
-            val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+            val viewModel =
+                buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
             advanceUntilIdle()
             viewModel.onEsdeFolderConfirmed()
             advanceUntilIdle()
@@ -363,7 +369,8 @@ class OnboardingViewModelTest {
                 FakeEsdeInstallationRepository().apply {
                     mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
                 }
-            val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+            val viewModel =
+                buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
             advanceUntilIdle()
             viewModel.onEsdeFolderConfirmed()
             advanceUntilIdle()

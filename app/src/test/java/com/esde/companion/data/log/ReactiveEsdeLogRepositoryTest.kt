@@ -38,7 +38,9 @@ class ReactiveEsdeLogRepositoryTest {
             val repository =
                 ReactiveEsdeLogRepository(
                     logFolderPath = flowOf("/storage/emulated/0/ES-DE"),
-                    repositoryFactory = { folder -> FakeEsdeLogRepository(exists = folder == "/storage/emulated/0/ES-DE") },
+                    repositoryFactory = { folder ->
+                        FakeEsdeLogRepository(exists = folder == "/storage/emulated/0/ES-DE")
+                    },
                 )
 
             repository.observeLogFileExists().test {

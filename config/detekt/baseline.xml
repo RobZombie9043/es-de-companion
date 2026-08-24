@@ -2,141 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
-    <ID>ArgumentListWrapping:AppDock.kt$(alpha = 0.3f)</ID>
-    <ID>ArgumentListWrapping:AppDock.kt$(context)</ID>
-    <ID>ArgumentListWrapping:AppDock.kt$(context, app.packageName, displayId = SecondaryDisplayResolver.secondaryDisplayId(context))</ID>
-    <ID>ArgumentListWrapping:AppDockViewModel.kt$AppDockViewModel$(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 5)</ID>
-    <ID>ArgumentListWrapping:AppDockViewModel.kt$AppDockViewModel$(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = 80)</ID>
-    <ID>ArgumentListWrapping:AppDockViewModel.kt$AppDockViewModel$(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptyList())</ID>
-    <ID>ArgumentListWrapping:AppDockViewModel.kt$AppDockViewModel$(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = emptySet())</ID>
-    <ID>ArgumentListWrapping:AppDockViewModel.kt$AppDockViewModel$(scope = viewModelScope, started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), initialValue = false)</ID>
-    <ID>ArgumentListWrapping:AppDockViewModel.kt$AppDockViewModel$(stopTimeoutMillis = 5_000)</ID>
-    <ID>ArgumentListWrapping:AppDockViewModelTest.kt$AppDockViewModelTest$("com.example.a", "com.example.b", "com.example.c")</ID>
-    <ID>ArgumentListWrapping:AppDockViewModelTest.kt$AppDockViewModelTest$(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModel.kt$AppDrawerViewModel$(id = UUID.randomUUID().toString(), name = name, memberPackageNames = setOf(packageName))</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModel.kt$AppDrawerViewModel$(packageName)</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$("com.example.a")</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$("com.example.a", "com.example.b")</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2]), DrawerItem.Folder(folder, listOf(allApps[0])))</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(DrawerItem.Folder(folder, listOf(allApps[0])), DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2]))</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(allApps[0])</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(allApps[1])</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(allApps[2])</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(folder, listOf(allApps[0]))</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a", "com.example.b"))</ID>
-    <ID>ArgumentListWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$(initialOtherScreenLaunchApps = setOf("com.example.a"))</ID>
-    <ID>ArgumentListWrapping:AppStateReducerTest.kt$AppStateReducerTest$("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", direction = NavigationDirection.Up)</ID>
-    <ID>ArgumentListWrapping:AppStateReducerTest.kt$AppStateReducerTest$("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", navigationDirection = NavigationDirection.Up)</ID>
-    <ID>ArgumentListWrapping:AppStateReducerTest.kt$AppStateReducerTest$("dreamcast", "Sega Dreamcast", "/roms/dreamcast", direction = NavigationDirection.Right)</ID>
-    <ID>ArgumentListWrapping:AppStateReducerTest.kt$AppStateReducerTest$("dreamcast", "Sega Dreamcast", "/roms/dreamcast", navigationDirection = NavigationDirection.Right)</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(DrawerItem.App(appB), DrawerItem.Folder(folder, listOf(appA)))</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(appA)</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(appA.packageName, "com.example.gone")</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(appA.packageName, appB.packageName)</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(appB)</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(folder, listOf(appA))</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, "com.example.gone"))</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, appB.packageName))</ID>
-    <ID>ArgumentListWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$(listOf(DrawerItem.App(appB), DrawerItem.Folder(folder, listOf(appA))).sortedBy { it.label }, result)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(0f, y)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(8.dp)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(alpha = 0.6f)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(color = gridLineColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 2f)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(color = gridLineColor, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = 2f)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(size.width, y)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(x, 0f)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsOverlay.kt$(x, size.height)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(ScaleMode.Fit)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(id = "existing-a", zIndex = 0)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(id = "existing-b", zIndex = 3)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(id = "widget-a", zIndex = 0)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(id = "widget-a", zIndex = 0, widgetType = WidgetType.SystemLogo(ScaleMode.Fit))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(id = "widget-b", zIndex = 1)</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(placedWidget(id = "existing-a", zIndex = 0), placedWidget(id = "existing-b", zIndex = 3))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1))</ID>
-    <ID>ArgumentListWrapping:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.SystemLogo(ScaleMode.Fit)))</ID>
-    <ID>ArgumentListWrapping:EsdeSettingsParser.kt$EsdeSettingsParser$("""&lt;bool\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/&gt;""")</ID>
-    <ID>ArgumentListWrapping:EsdeSettingsParser.kt$EsdeSettingsParser$("""&lt;string\s+name="${Regex.escape(settingName)}"\s+value="([^"]*)"\s*/&gt;""")</ID>
-    <ID>ArgumentListWrapping:EsdeSettingsParser.kt$EsdeSettingsParser$(settingName)</ID>
-    <ID>ArgumentListWrapping:FileGameMediaRepository.kt$FileGameMediaRepository$(type, systemShortName, baseRelativePath)</ID>
-    <ID>ArgumentListWrapping:FindLegacyScriptFilesUseCase.kt$FindLegacyScriptFilesUseCase$(esdeRootPath)</ID>
-    <ID>ArgumentListWrapping:GameManualViewModel.kt$GameManualViewModel$(MediaType.Manuals)</ID>
-    <ID>ArgumentListWrapping:GameManualViewModel.kt$GameManualViewModel$(it.systemShortName, it.romPath)</ID>
-    <ID>ArgumentListWrapping:LongPressSettingsMenu.kt$(onEditWidgetsClick = onEditWidgetsClick)</ID>
-    <ID>ArgumentListWrapping:LongPressSettingsMenu.kt$(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(appContainer)</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(factory = AppDockViewModelFactory(appContainer))</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(factory = AppDrawerViewModelFactory(appContainer))</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(factory = GameManualViewModelFactory(appContainer))</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(factory = ManageAppsViewModelFactory(appContainer))</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(factory = SettingsViewModelFactory(appContainer))</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(factory = WidgetsViewModelFactory(appContainer))</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(videoPlaybackEnabled, videoPath, isBrowsingGame, mainScreenActive, isActivityVisible)</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(visible = isBlanked &amp;&amp; mainScreenActive, enter = fadeIn(), exit = fadeOut())</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(visible = isDimmed &amp;&amp; mainScreenActive, enter = fadeIn(), exit = fadeOut())</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(visible = musicControlsRevealed, enter = fadeIn(), exit = fadeOut())</ID>
-    <ID>ArgumentListWrapping:MainActivity.kt$MainActivity$(visible = showGameManual &amp;&amp; mainScreenActive, enter = fadeIn(), exit = fadeOut())</ID>
-    <ID>ArgumentListWrapping:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)))</ID>
-    <ID>ArgumentListWrapping:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$(logRepository, ObserveAppStateUseCase(logRepository, scope))</ID>
-    <ID>ArgumentListWrapping:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$(logRepository, scope)</ID>
-    <ID>ArgumentListWrapping:NavigationDirectionTrackerTest.kt$NavigationDirectionTrackerTest$("Scripting::fireEvent(): game-select \"/roms/game.zip\" \"Buggy Run\" \"mastersystem\" \"Sega Master System\"")</ID>
-    <ID>ArgumentListWrapping:NavigationDirectionTrackerTest.kt$NavigationDirectionTrackerTest$("Scripting::fireEvent(): system-select \"mastersystem\" \"Sega Master System\" \"/roms/mastersystem\" \"\"")</ID>
-    <ID>ArgumentListWrapping:OnboardingScreen.kt$("This folder doesn't exist. Choose the correct folder.")</ID>
-    <ID>ArgumentListWrapping:OnboardingScreen.kt$(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))</ID>
-    <ID>ArgumentListWrapping:OnboardingScreen.kt$(slideOutHorizontally(tween(220)) { slideDistance(it) } + fadeOut(tween(150)))</ID>
-    <ID>ArgumentListWrapping:OnboardingViewModelTest.kt$OnboardingViewModelTest$(LogFolderValidation.FolderFound(settingsFileFound = true), viewModel.uiState.value.logFolderValidation)</ID>
-    <ID>ArgumentListWrapping:OnboardingViewModelTest.kt$OnboardingViewModelTest$(onboardingRepository = onboardingRepo, installationRepository = installationRepo)</ID>
-    <ID>ArgumentListWrapping:OnboardingViewModelTest.kt$OnboardingViewModelTest$(settingsFileFound = true)</ID>
-    <ID>ArgumentListWrapping:ReactiveEsdeLogRepositoryTest.kt$ReactiveEsdeLogRepositoryTest$(exists = folder == "/storage/emulated/0/ES-DE")</ID>
-    <ID>ArgumentListWrapping:ReadEsdeMediaDirectoryUseCase.kt$ReadEsdeMediaDirectoryUseCase$(esdeRootPath)</ID>
-    <ID>ArgumentListWrapping:SetOtherScreenLaunchAppsUseCase.kt$SetOtherScreenLaunchAppsUseCase$(packageNames)</ID>
-    <ID>ArgumentListWrapping:SettingsViewModelTest.kt$SettingsViewModelTest$(onboardingRepository)</ID>
-    <ID>ArgumentListWrapping:UISettingsContent.kt$(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual)</ID>
-    <ID>ArgumentListWrapping:WidgetColorConfig.kt$(text = "Transparency: ${(current.alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)</ID>
-    <ID>ArgumentListWrapping:WidgetContent.kt$(fallbackBackgroundAssetPath, scaleMode, isTransparentOverlay = false, isAsset = true, effects = effects)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$("/storage/emulated/0/Pictures/cover.jpg", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$(WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false), content)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$(WidgetContent.Image("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false), content)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$(WidgetContent.SystemLogoAsset("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit), content)</ID>
-    <ID>ArgumentListWrapping:WidgetContentResolverTest.kt$WidgetContentResolverTest$(path = "/storage/emulated/0/Pictures/cover.jpg", scaleMode = ScaleMode.Fill)</ID>
-    <ID>ArgumentListWrapping:WidgetImageConfigControls.kt$(text = "Blur: ${(current.blurAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)</ID>
-    <ID>ArgumentListWrapping:WidgetImageConfigControls.kt$(text = "Darken: ${(current.darkenAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)</ID>
-    <ID>ArgumentListWrapping:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$("p", ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)</ID>
-    <ID>ArgumentListWrapping:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$(MediaType.Covers, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)</ID>
-    <ID>ArgumentListWrapping:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$(MediaType.FanArt, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)</ID>
-    <ID>ArgumentListWrapping:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$(MediaType.Screenshots, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)</ID>
-    <ID>ArgumentListWrapping:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$(ScaleMode.Fill, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)</ID>
-    <ID>ArgumentListWrapping:WidgetLayoutMapping.kt$(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)</ID>
-    <ID>ArgumentListWrapping:WidgetLayoutMapping.kt$(id, widgetType.toDomain(), gridColumn, gridRow, columnSpan, rowSpan, zIndex)</ID>
-    <ID>ArgumentListWrapping:WidgetLayoutMapping.kt$(id, widgetType.toDto(), gridColumn, gridRow, columnSpan, rowSpan, zIndex)</ID>
-    <ID>ArgumentListWrapping:WidgetLayoutMapping.kt$(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount, logoTransitionMode.toDto(), glintEnabled)</ID>
-    <ID>ArgumentListWrapping:WidgetLayoutMappingTest.kt$WidgetLayoutMappingTest$(ScaleMode.Fit, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(current = widgetType.logoTransitionMode)</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(enabled = widgetType.glintEnabled)</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(enabled = widgetType.panZoomEnabled)</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(glintEnabled = it)</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(logoTransitionMode = it)</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(panZoomEnabled = it)</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(widgetType.copy(glintEnabled = it))</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(widgetType.copy(logoTransitionMode = it))</ID>
-    <ID>ArgumentListWrapping:WidgetTypeDialogs.kt$(widgetType.copy(panZoomEnabled = it))</ID>
-    <ID>ArgumentListWrapping:WidgetsViewModel.kt$WidgetsViewModel$(it)</ID>
-    <ID>ArgumentListWrapping:WidgetsViewModel.kt$WidgetsViewModel$(systemLogoAssetName(it))</ID>
-    <ID>ArgumentListWrapping:WidgetsViewModel.kt$WidgetsViewModel$(widgets, identity)</ID>
-    <ID>ArgumentListWrapping:WidgetsViewModel.kt$WidgetsViewModel$(widgets, resolveContent(widgets, identity), identity.navigationDirection)</ID>
     <ID>CyclomaticComplexMethod:AppDrawer.kt$@OptIn(ExperimentalSharedTransitionApi::class) @Composable fun AppDrawer( viewModel: AppDrawerViewModel, onAppLaunched: () -&gt; Unit, onFolderOpenChanged: (Boolean) -&gt; Unit = {}, isDrawerOpen: Boolean = true, onOpenSettings: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
     <ID>CyclomaticComplexMethod:AppStateReducer.kt$AppStateReducer$fun reduce( current: AppState, event: EsdeEvent, ): AppState</ID>
     <ID>CyclomaticComplexMethod:EditWidgetsOverlay.kt$@Composable fun EditWidgetsOverlay( viewModel: EditWidgetsViewModel, initialCanvas: StateGroup, onDone: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
@@ -169,6 +34,7 @@
     <ID>Indentation:DefaultWidgetLayouts.kt$ </ID>
     <ID>Indentation:EditWidgetsOverlay.kt$ </ID>
     <ID>Indentation:EditWidgetsViewModel.kt$EditWidgetsViewModel$ </ID>
+    <ID>Indentation:FileEsdeInstallationRepository.kt$FileEsdeInstallationRepository$ </ID>
     <ID>Indentation:FolderContentsPopup.kt$ </ID>
     <ID>Indentation:GameManualScreen.kt$ </ID>
     <ID>Indentation:LongPressSettingsMenu.kt$ </ID>
@@ -176,11 +42,13 @@
     <ID>Indentation:MainScreen.kt$ </ID>
     <ID>Indentation:ManageAppsScreen.kt$ </ID>
     <ID>Indentation:ManageAppsViewModelTest.kt$ManageAppsViewModelTest$ </ID>
+    <ID>Indentation:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$ </ID>
     <ID>Indentation:OnboardingScreen.kt$ </ID>
     <ID>Indentation:OtherSettingsContent.kt$ </ID>
     <ID>Indentation:PanZoomImage.kt$ </ID>
     <ID>Indentation:ScrollingText.kt$ </ID>
     <ID>Indentation:SettingsShared.kt$ </ID>
+    <ID>Indentation:SettingsViewModelTest.kt$SettingsViewModelTest$ </ID>
     <ID>Indentation:SetupSettingsContent.kt$ </ID>
     <ID>Indentation:SoundSettingsContent.kt$ </ID>
     <ID>Indentation:ThorSettingsContent.kt$ </ID>
@@ -189,6 +57,7 @@
     <ID>Indentation:VideoPlaybackSettingsContent.kt$ </ID>
     <ID>Indentation:WidgetCanvas.kt$ </ID>
     <ID>Indentation:WidgetColorConfig.kt$ </ID>
+    <ID>Indentation:WidgetContentResolverTest.kt$WidgetContentResolverTest$ </ID>
     <ID>Indentation:WidgetResizeGeometry.kt$ </ID>
     <ID>Indentation:WidgetTextConfigControls.kt$ </ID>
     <ID>Indentation:WidgetTypeDialogs.kt$ </ID>
@@ -217,9 +86,11 @@
     <ID>LongMethod:SettingsViewModelTest.kt$SettingsViewModelTest$private fun buildViewModel( onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(), appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(), dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(), installedAppsRepository: FakeInstalledAppsRepository = FakeInstalledAppsRepository(), thorSettingsRepository: FakeThorSettingsRepository = FakeThorSettingsRepository(), ): Pair&lt;SettingsViewModel, FakeAppDrawerSettingsRepository&gt;</ID>
     <ID>LongMethod:WidgetCanvas.kt$@Composable internal fun WidgetContentView( content: WidgetContent, widgetType: WidgetType, navigationDirection: NavigationDirection? = null, modifier: Modifier = Modifier, textUserScrollEnabled: Boolean = true, )</ID>
     <ID>LongMethod:WidgetContentResolver.kt$WidgetContentResolver$fun resolve( widgetType: WidgetType, systemLogoAssetPath: () -&gt; String?, customSystemLogoLookup: () -&gt; String?, customSystemImageLookup: () -&gt; String?, systemMediaLookup: (MediaType) -&gt; String?, gameMediaLookup: (MediaType) -&gt; String?, gameDescriptionLookup: () -&gt; String?, gameRatingLookup: () -&gt; Float? = { null }, fallbackBackgroundAssetPath: String?, systemNameLookup: () -&gt; String? = { null }, gameNameLookup: () -&gt; String? = { null }, ): WidgetContent</ID>
+    <ID>LongMethod:WidgetLayoutMapping.kt$private fun WidgetType.toDto(): WidgetTypeDto</ID>
     <ID>LongMethod:WidgetResizeGeometry.kt$@Composable internal fun ResizeHandle( edge: ResizeEdge, widget: PlacedWidget, grid: GridDimensions, cellWidth: Dp, cellHeight: Dp, onResize: (widgetId: String, gridColumn: Int, gridRow: Int, columnSpan: Int, rowSpan: Int) -&gt; Unit, onDragStateChanged: (Boolean) -&gt; Unit, onDragEnd: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WidgetTextConfigControls.kt$@Composable internal fun GameDescriptionConfig( current: WidgetType.GameDescription, onChange: (WidgetType.GameDescription) -&gt; Unit, )</ID>
     <ID>LongMethod:WidgetTypeDialogs.kt$@Composable internal fun ConfigureWidgetDialog( widgetType: WidgetType, onChange: (WidgetType) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
+    <ID>LongMethod:WidgetsViewModel.kt$WidgetsViewModel$private suspend fun resolveContent( widgets: List&lt;PlacedWidget&gt;, identity: ContentIdentity, ): Map&lt;String, WidgetContent&gt;</ID>
     <ID>LongParameterList:AnimatedLogoImage.kt$( model: Any?, contentDescription: String?, contentScale: ContentScale, mode: LogoTransitionMode, direction: NavigationDirection? = null, glintEnabled: Boolean = false, modifier: Modifier = Modifier, durationMillis: Int = 500, )</ID>
     <ID>LongParameterList:AppDock.kt$( app: InstalledApp, iconDp: Dp, isAppDrawerShortcut: Boolean, isOtherScreenPreferred: Boolean, isLeftmost: Boolean, isRightmost: Boolean, onClick: () -&gt; Unit, onDoubleClick: () -&gt; Unit, onLaunchThisScreen: () -&gt; Unit, onLaunchOtherScreen: () -&gt; Unit, onAppInfo: () -&gt; Unit, onMoveLeft: () -&gt; Unit, onMoveRight: () -&gt; Unit, onRemove: () -&gt; Unit, )</ID>
     <ID>LongParameterList:AppDock.kt$( expanded: Boolean, appLabel: String, isAppDrawerShortcut: Boolean, isOtherScreenPreferred: Boolean, isLeftmost: Boolean, isRightmost: Boolean, onDismiss: () -&gt; Unit, onLaunchThisScreen: () -&gt; Unit, onLaunchOtherScreen: () -&gt; Unit, onAppInfo: () -&gt; Unit, onMoveLeft: () -&gt; Unit, onMoveRight: () -&gt; Unit, onRemove: () -&gt; Unit, )</ID>
@@ -298,222 +169,13 @@
     <ID>MagicNumber:WidgetColorConfig.kt$0xFFFFFFFFL</ID>
     <ID>MagicNumber:WidgetColorConfig.kt$16</ID>
     <ID>MagicNumber:WidgetColorConfig.kt$6</ID>
-    <ID>MaxLineLength:AppDock.kt$AppLauncher.launch(context, app.packageName, displayId = SecondaryDisplayResolver.secondaryDisplayId(context))</ID>
-    <ID>MaxLineLength:AppDock.kt$if (MaterialTheme.colorScheme.surface.luminance() &lt; 0.5f) Color.White.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.3f)</ID>
-    <ID>MaxLineLength:AppDock.kt$private</ID>
-    <ID>MaxLineLength:AppDockViewModel.kt$AppDockViewModel$.</ID>
-    <ID>MaxLineLength:AppDockViewModel.kt$AppDockViewModel$}</ID>
-    <ID>MaxLineLength:AppDockViewModelTest.kt$AppDockViewModelTest$val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))</ID>
-    <ID>MaxLineLength:AppDrawer.kt$internal</ID>
-    <ID>MaxLineLength:AppDrawerViewModel.kt$AppDrawerViewModel$val newFolder = AppFolder(id = UUID.randomUUID().toString(), name = name, memberPackageNames = setOf(packageName))</ID>
-    <ID>MaxLineLength:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$listOf(DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2]), DrawerItem.Folder(folder, listOf(allApps[0])))</ID>
-    <ID>MaxLineLength:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$listOf(DrawerItem.Folder(folder, listOf(allApps[0])), DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2]))</ID>
-    <ID>MaxLineLength:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a", "com.example.b"))</ID>
-    <ID>MaxLineLength:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$val settingsRepository = FakeAppDrawerSettingsRepository(initialOtherScreenLaunchApps = setOf("com.example.a"))</ID>
-    <ID>MaxLineLength:AppStateReducerTest.kt$AppStateReducerTest$AppState.BrowsingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", navigationDirection = NavigationDirection.Up)</ID>
-    <ID>MaxLineLength:AppStateReducerTest.kt$AppStateReducerTest$AppState.BrowsingSystem("dreamcast", "Sega Dreamcast", "/roms/dreamcast", navigationDirection = NavigationDirection.Right)</ID>
-    <ID>MaxLineLength:AppStateReducerTest.kt$AppStateReducerTest$fun</ID>
-    <ID>MaxLineLength:AppStateReducerTest.kt$AppStateReducerTest$val event = EsdeEvent.GameSelect("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", direction = NavigationDirection.Up)</ID>
-    <ID>MaxLineLength:AppStateReducerTest.kt$AppStateReducerTest$val event = EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast", direction = NavigationDirection.Right)</ID>
-    <ID>MaxLineLength:AutoCollectionAssets.kt$fun systemLogoAssetName(systemShortName: String): String</ID>
-    <ID>MaxLineLength:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$assertEquals(listOf(DrawerItem.App(appB), DrawerItem.Folder(folder, listOf(appA))).sortedBy { it.label }, result)</ID>
-    <ID>MaxLineLength:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, "com.example.gone"))</ID>
-    <ID>MaxLineLength:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, appB.packageName))</ID>
-    <ID>MaxLineLength:EditWidgetsOverlay.kt$Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))</ID>
-    <ID>MaxLineLength:EditWidgetsOverlay.kt$drawLine(color = gridLineColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 2f)</ID>
-    <ID>MaxLineLength:EditWidgetsOverlay.kt$drawLine(color = gridLineColor, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = 2f)</ID>
-    <ID>MaxLineLength:EditWidgetsViewModel.kt$EditWidgetsViewModel$randomSystemMediaCache.getOrPut(shortName to mediaType) { resolveRandomSystemMedia(shortName, mediaType) }</ID>
-    <ID>MaxLineLength:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$listOf(placedWidget(id = "existing-a", zIndex = 0), placedWidget(id = "existing-b", zIndex = 3))</ID>
-    <ID>MaxLineLength:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$listOf(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0))</ID>
-    <ID>MaxLineLength:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.SystemLogo(ScaleMode.Fit)))</ID>
-    <ID>MaxLineLength:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)))</ID>
-    <ID>MaxLineLength:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)))</ID>
-    <ID>MaxLineLength:EsdeEventParserTest.kt$EsdeEventParserTest$"\"/storage/E2AB-E84A/ROMs/gba/Mega\\ Man\\ Battle\\ Network\\ 3\\ -\\ White\\ Version\\ \\(USA\\).zip\" "</ID>
-    <ID>MaxLineLength:EsdeLogFileRepositoryTest.kt$EsdeLogFileRepositoryTest$"Jul 28 15:16:07 Debug: Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n"</ID>
     <ID>MaxLineLength:EsdeLogFileRepositoryTest.kt$EsdeLogFileRepositoryTest$fun</ID>
-    <ID>MaxLineLength:EsdeSettingsParser.kt$EsdeSettingsParser$private fun boolRegexFor(settingName: String)</ID>
-    <ID>MaxLineLength:EsdeSettingsParser.kt$EsdeSettingsParser$private fun stringRegexFor(settingName: String)</ID>
-    <ID>MaxLineLength:FileAppDrawerSettingsRepository.kt$FileAppDrawerSettingsRepository$override fun observeHiddenApps(): Flow&lt;Set&lt;String&gt;&gt;</ID>
-    <ID>MaxLineLength:FileDockSettingsRepository.kt$FileDockSettingsRepository$override fun observeDockEnabled(): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:FileDockSettingsRepository.kt$FileDockSettingsRepository$override fun observeDockMaxApps(): Flow&lt;Int&gt;</ID>
-    <ID>MaxLineLength:FileEsdeInstallationRepository.kt$FileEsdeInstallationRepository$customEventScriptsBrowsing = EsdeSettingsParser.findBoolValue(xml, "CustomEventScriptsBrowsing") ?: false</ID>
-    <ID>MaxLineLength:FileGameMediaRepository.kt$FileGameMediaRepository$.</ID>
-    <ID>MaxLineLength:FileLastKnownContextRepository.kt$FileLastKnownContextRepository$override fun observeLastSystemShortName(): Flow&lt;String?&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeCustomLogosFolderPath(): Flow&lt;String?&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeCustomMusicFolderPath(): Flow&lt;String?&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeLogFolderPath(): Flow&lt;String?&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeMediaFolderPath(): Flow&lt;String?&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeMusicEnabled(): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeOnboardingComplete(): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeSettingsFabVisible(): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$override fun observeVideoAudioEnabled(): Flow&lt;Boolean&gt;</ID>
-    <ID>MaxLineLength:FindLegacyScriptFilesUseCase.kt$FindLegacyScriptFilesUseCase$suspend operator fun invoke(esdeRootPath: String): List&lt;String&gt;</ID>
-    <ID>MaxLineLength:GameManualViewModel.kt$GameManualViewModel$.</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$.</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$SettingsCategory.Widgets -&gt; WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onCustomSystemImagesFolderCleared = settingsViewModel::onCustomSystemImagesFolderCleared</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onCustomSystemImagesFolderPicked = settingsViewModel::onCustomSystemImagesFolderPicked</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onGamePlayingDimPercentChanged = settingsViewModel::onGamePlayingDimPercentChanged</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onManageAppsClick = { page = MenuPage.ManageApps(fromCategory = targetPage.category) }</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onMusicPlayDuringScreensaverChanged = settingsViewModel::onMusicPlayDuringScreensaverChanged</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onMusicPlayWhileBrowsingGamesChanged = settingsViewModel::onMusicPlayWhileBrowsingGamesChanged</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onMusicPlayWhileBrowsingSystemsChanged = settingsViewModel::onMusicPlayWhileBrowsingSystemsChanged</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onScreensaverDimPercentChanged = settingsViewModel::onScreensaverDimPercentChanged</ID>
-    <ID>MaxLineLength:LongPressSettingsMenu.kt$onVideoPlaybackEnabledChanged = settingsViewModel::onVideoPlaybackEnabledChanged</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$"mainScreenActive=$mainScreenActive visible=$isActivityVisible -&gt; show=$showVideoOverlay"</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$AnimatedVisibility</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$LaunchedEffect</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val dockViewModel: AppDockViewModel = viewModel(factory = AppDockViewModelFactory(appContainer))</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val gameManualViewModel: GameManualViewModel = viewModel(factory = GameManualViewModelFactory(appContainer))</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val isBrowsingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val isPlayingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val overlayMaxWidth = maxWidth - overlayStart - SETTINGS_BUTTON_RESERVED_WIDTH</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val overlayStart = CORNER_BUTTON_EDGE_PADDING + CORNER_BUTTON_SIZE + MUSIC_OVERLAY_GAP</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))</ID>
-    <ID>MaxLineLength:MainActivity.kt$MainActivity$val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))</ID>
-    <ID>MaxLineLength:MusicControlsOverlay.kt$(0 until titleLayout.lineCount).maxOf { titleLayout.getLineRight(it) - titleLayout.getLineLeft(it) }.toDp()</ID>
-    <ID>MaxLineLength:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)))</ID>
-    <ID>MaxLineLength:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$val observeConnectionState = ObserveConnectionStateUseCase(logRepository, ObserveAppStateUseCase(logRepository, scope))</ID>
-    <ID>MaxLineLength:NavigationDirectionParser.kt$NavigationDirectionParser$fun</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:31 Debug: Window::logInput(Xbox Wireless Controller): Button 12, isMappedTo=down, value=1"</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:33 Debug: Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=0 "</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:33 Debug: Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=0"</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:33 Debug: Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=1"</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:34 Debug: Scripting::fireEvent(): game-select \"/roms/game.zip\" \"Game\" \"nes\" \"Nintendo\""</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:34 Debug: Window::logInput(Xbox Wireless Controller): Button 14, isMappedTo=right, value=1"</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:34 Debug: Window::logInput(Xbox Wireless Controller): Button 4, isMappedTo=leftshoulder, value=1"</ID>
-    <ID>MaxLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$val line = "Aug 02 13:31:35 Debug: Window::logInput(Xbox Wireless Controller): Button 13, isMappedTo=left, value=1"</ID>
-    <ID>MaxLineLength:NavigationDirectionTrackerTest.kt$NavigationDirectionTrackerTest$tracker.observeLine("Scripting::fireEvent(): game-select \"/roms/game.zip\" \"Buggy Run\" \"mastersystem\" \"Sega Master System\"")</ID>
-    <ID>MaxLineLength:NavigationDirectionTrackerTest.kt$NavigationDirectionTrackerTest$tracker.observeLine("Scripting::fireEvent(): system-select \"mastersystem\" \"Sega Master System\" \"/roms/mastersystem\" \"\"")</ID>
-    <ID>MaxLineLength:OnboardingScreen.kt$.</ID>
-    <ID>MaxLineLength:OnboardingScreen.kt$validation is LogFolderValidation.FolderNotFound -&gt; Text("This folder doesn't exist. Choose the correct folder.")</ID>
-    <ID>MaxLineLength:OnboardingScreen.kt$validation is MediaFolderValidation.FolderNotFound -&gt; Text("This folder doesn't exist. Choose the correct folder.")</ID>
-    <ID>MaxLineLength:OnboardingViewModelTest.kt$OnboardingViewModelTest$assertEquals(LogFolderValidation.FolderFound(settingsFileFound = true), viewModel.uiState.value.logFolderValidation)</ID>
-    <ID>MaxLineLength:OnboardingViewModelTest.kt$OnboardingViewModelTest$val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)</ID>
-    <ID>MaxLineLength:OnboardingViewModelTest.kt$OnboardingViewModelTest.FakeEsdeInstallationRepository$override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings?</ID>
-    <ID>MaxLineLength:ReactiveEsdeLogRepositoryTest.kt$ReactiveEsdeLogRepositoryTest$repositoryFactory = { folder -&gt; FakeEsdeLogRepository(exists = folder == "/storage/emulated/0/ES-DE") }</ID>
-    <ID>MaxLineLength:ReadEsdeMediaDirectoryUseCase.kt$ReadEsdeMediaDirectoryUseCase$suspend operator fun invoke(esdeRootPath: String): String?</ID>
-    <ID>MaxLineLength:SetOtherScreenLaunchAppsUseCase.kt$SetOtherScreenLaunchAppsUseCase$suspend operator fun invoke(packageNames: Set&lt;String&gt;)</ID>
-    <ID>MaxLineLength:SettingsContent.kt$text = "Show the Settings gear on the main screen. It's always reachable via the long-press menu regardless of this setting."</ID>
-    <ID>MaxLineLength:SettingsViewModel.kt$SettingsViewModel$_uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = false, customLogosFolderValidation = result)</ID>
-    <ID>MaxLineLength:SettingsViewModel.kt$SettingsViewModel$_uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = false, customMusicFolderValidation = result)</ID>
-    <ID>MaxLineLength:SettingsViewModelTest.kt$SettingsViewModelTest$observeCloseCompanionOnQuitEnabledUseCase = ObserveCloseCompanionOnQuitEnabledUseCase(onboardingRepository)</ID>
-    <ID>MaxLineLength:SettingsViewModelTest.kt$SettingsViewModelTest$observeMusicPlayDuringScreensaverUseCase = ObserveMusicPlayDuringScreensaverUseCase(onboardingRepository)</ID>
-    <ID>MaxLineLength:SettingsViewModelTest.kt$SettingsViewModelTest$observeMusicPlayWhileBrowsingGamesUseCase = ObserveMusicPlayWhileBrowsingGamesUseCase(onboardingRepository)</ID>
-    <ID>MaxLineLength:SettingsViewModelTest.kt$SettingsViewModelTest$observeMusicPlayWhileBrowsingSystemsUseCase = ObserveMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository)</ID>
-    <ID>MaxLineLength:SetupSettingsContent.kt$if (settingsFileFound) "settings/es_settings.xml found" else "Folder found, but appears to be the incorrect folder"</ID>
-    <ID>MaxLineLength:UISettingsContent.kt$options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual)</ID>
-    <ID>MaxLineLength:WidgetCanvas.kt$is WidgetContent.NameFallback -&gt; Unit</ID>
-    <ID>MaxLineLength:WidgetCanvas.kt$is WidgetContent.SystemLogoAsset -&gt; Unit</ID>
-    <ID>MaxLineLength:WidgetColorConfig.kt$Text(text = "Transparency: ${(current.alpha * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)</ID>
-    <ID>MaxLineLength:WidgetContent.kt$return WidgetContent.Image(fallbackBackgroundAssetPath, scaleMode, isTransparentOverlay = false, isAsset = true, effects = effects)</ID>
-    <ID>MaxLineLength:WidgetContentResolver.kt$WidgetContentResolver$?.</ID>
-    <ID>MaxLineLength:WidgetContentResolverTest.kt$WidgetContentResolverTest$WidgetContent.Image("/storage/emulated/0/Pictures/cover.jpg", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false)</ID>
-    <ID>MaxLineLength:WidgetContentResolverTest.kt$WidgetContentResolverTest$assertEquals(WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false), content)</ID>
-    <ID>MaxLineLength:WidgetContentResolverTest.kt$WidgetContentResolverTest$assertEquals(WidgetContent.Image("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false), content)</ID>
-    <ID>MaxLineLength:WidgetContentResolverTest.kt$WidgetContentResolverTest$assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)</ID>
-    <ID>MaxLineLength:WidgetContentResolverTest.kt$WidgetContentResolverTest$assertEquals(WidgetContent.SystemLogoAsset("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit), content)</ID>
-    <ID>MaxLineLength:WidgetContentResolverTest.kt$WidgetContentResolverTest$widgetType = WidgetType.CustomImage(path = "/storage/emulated/0/Pictures/cover.jpg", scaleMode = ScaleMode.Fill)</ID>
-    <ID>MaxLineLength:WidgetImageConfigControls.kt$Text(text = "Blur: ${(current.blurAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)</ID>
-    <ID>MaxLineLength:WidgetImageConfigControls.kt$Text(text = "Darken: ${(current.darkenAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)</ID>
-    <ID>MaxLineLength:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$WidgetType.CustomImage("p", ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode</ID>
-    <ID>MaxLineLength:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode</ID>
-    <ID>MaxLineLength:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode</ID>
-    <ID>MaxLineLength:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$val logo = WidgetType.SystemLogo(ScaleMode.Fill, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)</ID>
-    <ID>MaxLineLength:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$val widget = WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)</ID>
-    <ID>MaxLineLength:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$val widget = WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)</ID>
-    <ID>MaxLineLength:WidgetLayoutMapping.kt$WidgetTypeDto.SystemLogo(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount, logoTransitionMode.toDto(), glintEnabled)</ID>
-    <ID>MaxLineLength:WidgetLayoutMapping.kt$is WidgetType.GameDescription -&gt; WidgetTypeDto.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)</ID>
-    <ID>MaxLineLength:WidgetLayoutMapping.kt$private fun PlacedWidget.toDto()</ID>
-    <ID>MaxLineLength:WidgetLayoutMapping.kt$private fun PlacedWidgetDto.toDomain()</ID>
-    <ID>MaxLineLength:WidgetLayoutMappingTest.kt$WidgetLayoutMappingTest$val widget = WidgetType.SystemLogo(ScaleMode.Fit, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)</ID>
-    <ID>MaxLineLength:WidgetTypeDialogs.kt$GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }</ID>
-    <ID>MaxLineLength:WidgetTypeDialogs.kt$LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }</ID>
-    <ID>MaxLineLength:WidgetTypeDialogs.kt$PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }</ID>
-    <ID>MaxLineLength:WidgetsViewModel.kt$WidgetsViewModel$WidgetCanvasState.Showing(widgets, resolveContent(widgets, identity), identity.navigationDirection)</ID>
-    <ID>MaxLineLength:WidgetsViewModel.kt$WidgetsViewModel$neededSystemMediaTypes.associateWith { mediaType -&gt; resolveRandomSystemMediaCached(shortName, mediaType) }</ID>
-    <ID>MaxLineLength:WidgetsViewModel.kt$WidgetsViewModel$val customSystemLogoPath = if (needsCustomLogo) systemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null</ID>
-    <ID>MaximumLineLength:AppDock.kt$ </ID>
-    <ID>MaximumLineLength:AppDock.kt$private</ID>
-    <ID>MaximumLineLength:AppDockViewModel.kt$AppDockViewModel$ </ID>
-    <ID>MaximumLineLength:AppDockViewModelTest.kt$AppDockViewModelTest$ </ID>
-    <ID>MaximumLineLength:AppDrawer.kt$internal</ID>
-    <ID>MaximumLineLength:AppDrawerViewModel.kt$AppDrawerViewModel$ </ID>
-    <ID>MaximumLineLength:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$ </ID>
-    <ID>MaximumLineLength:AppStateReducerTest.kt$AppStateReducerTest$ </ID>
-    <ID>MaximumLineLength:AutoCollectionAssets.kt$fun</ID>
-    <ID>MaximumLineLength:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$ </ID>
-    <ID>MaximumLineLength:EditWidgetsOverlay.kt$ </ID>
-    <ID>MaximumLineLength:EditWidgetsViewModel.kt$EditWidgetsViewModel$ </ID>
-    <ID>MaximumLineLength:EditWidgetsViewModelTest.kt$EditWidgetsViewModelTest$ </ID>
-    <ID>MaximumLineLength:EsdeEventParserTest.kt$EsdeEventParserTest$ </ID>
     <ID>MaximumLineLength:EsdeLogFileRepositoryTest.kt$EsdeLogFileRepositoryTest$ </ID>
-    <ID>MaximumLineLength:EsdeSettingsParser.kt$EsdeSettingsParser$ </ID>
-    <ID>MaximumLineLength:FileAppDrawerSettingsRepository.kt$FileAppDrawerSettingsRepository$ </ID>
-    <ID>MaximumLineLength:FileDockSettingsRepository.kt$FileDockSettingsRepository$ </ID>
-    <ID>MaximumLineLength:FileEsdeInstallationRepository.kt$FileEsdeInstallationRepository$ </ID>
-    <ID>MaximumLineLength:FileGameMediaRepository.kt$FileGameMediaRepository$ </ID>
-    <ID>MaximumLineLength:FileLastKnownContextRepository.kt$FileLastKnownContextRepository$ </ID>
-    <ID>MaximumLineLength:FileOnboardingRepository.kt$FileOnboardingRepository$ </ID>
-    <ID>MaximumLineLength:FindLegacyScriptFilesUseCase.kt$FindLegacyScriptFilesUseCase$ </ID>
-    <ID>MaximumLineLength:GameManualViewModel.kt$GameManualViewModel$ </ID>
-    <ID>MaximumLineLength:LongPressSettingsMenu.kt$ </ID>
-    <ID>MaximumLineLength:MainActivity.kt$MainActivity$ </ID>
-    <ID>MaximumLineLength:MusicControlsOverlay.kt$ </ID>
-    <ID>MaximumLineLength:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$ </ID>
-    <ID>MaximumLineLength:NavigationDirectionParser.kt$NavigationDirectionParser$ </ID>
-    <ID>MaximumLineLength:NavigationDirectionParserTest.kt$NavigationDirectionParserTest$ </ID>
-    <ID>MaximumLineLength:NavigationDirectionTrackerTest.kt$NavigationDirectionTrackerTest$ </ID>
-    <ID>MaximumLineLength:OnboardingScreen.kt$ </ID>
-    <ID>MaximumLineLength:OnboardingViewModelTest.kt$OnboardingViewModelTest$ </ID>
-    <ID>MaximumLineLength:OnboardingViewModelTest.kt$OnboardingViewModelTest.FakeEsdeInstallationRepository$ </ID>
-    <ID>MaximumLineLength:ReactiveEsdeLogRepositoryTest.kt$ReactiveEsdeLogRepositoryTest$ </ID>
-    <ID>MaximumLineLength:ReadEsdeMediaDirectoryUseCase.kt$ReadEsdeMediaDirectoryUseCase$ </ID>
-    <ID>MaximumLineLength:SetOtherScreenLaunchAppsUseCase.kt$SetOtherScreenLaunchAppsUseCase$ </ID>
-    <ID>MaximumLineLength:SettingsViewModel.kt$SettingsViewModel$ </ID>
-    <ID>MaximumLineLength:SettingsViewModelTest.kt$SettingsViewModelTest$ </ID>
-    <ID>MaximumLineLength:SetupSettingsContent.kt$ </ID>
-    <ID>MaximumLineLength:UISettingsContent.kt$ </ID>
-    <ID>MaximumLineLength:WidgetCanvas.kt$ </ID>
-    <ID>MaximumLineLength:WidgetColorConfig.kt$ </ID>
-    <ID>MaximumLineLength:WidgetContent.kt$ </ID>
-    <ID>MaximumLineLength:WidgetContentResolver.kt$WidgetContentResolver$ </ID>
-    <ID>MaximumLineLength:WidgetContentResolverTest.kt$WidgetContentResolverTest$ </ID>
-    <ID>MaximumLineLength:WidgetImageConfigControls.kt$ </ID>
-    <ID>MaximumLineLength:WidgetImageTransitionEligibilityTest.kt$WidgetImageTransitionEligibilityTest$ </ID>
-    <ID>MaximumLineLength:WidgetLayoutMapping.kt$ </ID>
-    <ID>MaximumLineLength:WidgetLayoutMapping.kt$private</ID>
-    <ID>MaximumLineLength:WidgetLayoutMappingTest.kt$WidgetLayoutMappingTest$ </ID>
-    <ID>MaximumLineLength:WidgetTypeDialogs.kt$ </ID>
-    <ID>MaximumLineLength:WidgetsViewModel.kt$WidgetsViewModel$ </ID>
     <ID>NestedBlockDepth:EsdeLogFileRepository.kt$EsdeLogFileRepository$private fun findEventsSinceLastAnchor( file: File, directionTracker: NavigationDirectionTracker, ): List&lt;EsdeEvent&gt;</ID>
-    <ID>ParameterListWrapping:FindLegacyScriptFilesUseCase.kt$FindLegacyScriptFilesUseCase$(esdeRootPath: String)</ID>
-    <ID>ParameterListWrapping:NavigationDirectionParser.kt$NavigationDirectionParser$(rawLine: String)</ID>
-    <ID>ParameterListWrapping:ReadEsdeMediaDirectoryUseCase.kt$ReadEsdeMediaDirectoryUseCase$(esdeRootPath: String)</ID>
-    <ID>ParameterListWrapping:SetOtherScreenLaunchAppsUseCase.kt$SetOtherScreenLaunchAppsUseCase$(packageNames: Set&lt;String&gt;)</ID>
-    <ID>PropertyWrapping:AppDockViewModelTest.kt$AppDockViewModelTest$val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))</ID>
-    <ID>PropertyWrapping:AppDrawerViewModel.kt$AppDrawerViewModel$val newFolder = AppFolder(id = UUID.randomUUID().toString(), name = name, memberPackageNames = setOf(packageName))</ID>
-    <ID>PropertyWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a", "com.example.b"))</ID>
-    <ID>PropertyWrapping:AppDrawerViewModelTest.kt$AppDrawerViewModelTest$val settingsRepository = FakeAppDrawerSettingsRepository(initialOtherScreenLaunchApps = setOf("com.example.a"))</ID>
-    <ID>PropertyWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, "com.example.gone"))</ID>
-    <ID>PropertyWrapping:BuildDrawerItemsTest.kt$BuildDrawerItemsTest$val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf(appA.packageName, appB.packageName))</ID>
-    <ID>PropertyWrapping:MainActivity.kt$MainActivity$val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))</ID>
-    <ID>PropertyWrapping:MainActivity.kt$MainActivity$val dockViewModel: AppDockViewModel = viewModel(factory = AppDockViewModelFactory(appContainer))</ID>
-    <ID>PropertyWrapping:MainActivity.kt$MainActivity$val gameManualViewModel: GameManualViewModel = viewModel(factory = GameManualViewModelFactory(appContainer))</ID>
-    <ID>PropertyWrapping:MainActivity.kt$MainActivity$val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))</ID>
-    <ID>PropertyWrapping:MainActivity.kt$MainActivity$val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))</ID>
-    <ID>PropertyWrapping:MainActivity.kt$MainActivity$val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))</ID>
-    <ID>PropertyWrapping:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$val observeConnectionState = ObserveConnectionStateUseCase(logRepository, ObserveAppStateUseCase(logRepository, scope))</ID>
-    <ID>PropertyWrapping:OnboardingViewModelTest.kt$OnboardingViewModelTest$val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)</ID>
     <ID>ReturnCount:EsdeEventParser.kt$EsdeEventParser$fun parseLine(rawLine: String): EsdeEvent?</ID>
     <ID>ReturnCount:EsdeLogFileRepository.kt$EsdeLogFileRepository$private fun findEventsSinceLastAnchor( file: File, directionTracker: NavigationDirectionTracker, ): List&lt;EsdeEvent&gt;</ID>
     <ID>ReturnCount:GameListParser.kt$GameListParser$private fun String.extractGameListElement(): String?</ID>
     <ID>ReturnCount:GameListParser.kt$GameListParser$private fun findGameField( content: String, romPath: String, tagName: String, ): String?</ID>
-    <ID>ReturnCount:GameMediaPathResolver.kt$GameMediaPathResolver$fun resolveBaseRelativePath( systemShortName: String, romPath: String, romIsDirectory: Boolean, ): String?</ID>
     <ID>ReturnCount:GamelistFileReader.kt$GamelistFileReader$private fun resolveGamelistFile( root: String, systemShortName: String, romPath: String, ): File?</ID>
     <ID>ReturnCount:MusicPlayerAction.kt$MusicPlayerActionResolver$fun resolve( hasCurrentTrack: Boolean, eligible: Boolean, userPaused: Boolean, isDuckedByVideo: Boolean, duckingMode: MusicDuckingMode, ): MusicPlayerAction</ID>
     <ID>ReturnCount:NavigationDirectionParser.kt$NavigationDirectionParser$fun parseDirectionalPress(rawLine: String): NavigationDirection?</ID>
@@ -521,7 +183,6 @@
     <ID>ReturnCount:NormalizingSvgDecoder.kt$private fun dimensionsOf(openTag: String): Pair&lt;Double, Double&gt;?</ID>
     <ID>ReturnCount:ResolveRetroAchievementsGameUseCase.kt$ResolveRetroAchievementsGameUseCase$suspend operator fun invoke( gameReference: GameReference, gameName: String, ): RetroAchievementsGameMatch</ID>
     <ID>ReturnCount:RetroAchievementsSystemGamesViewModel.kt$RetroAchievementsSystemGamesViewModel$private suspend fun load( signedIn: Boolean, system: CurrentSystem?, )</ID>
-    <ID>ReturnCount:WidgetContent.kt$fun resolveMediaWidgetContent( mediaType: MediaType, scaleMode: ScaleMode, lookup: (MediaType) -&gt; String?, fallbackBackgroundAssetPath: String?, effects: ImageEffects = ImageEffects(), ): WidgetContent</ID>
     <ID>TooManyFunctions:AppDock.kt$com.esde.companion.ui.dock.AppDock.kt</ID>
     <ID>TooManyFunctions:AppDrawer.kt$com.esde.companion.ui.drawer.AppDrawer.kt</ID>
     <ID>TooManyFunctions:ConfigBackupMapping.kt$com.esde.companion.data.backup.ConfigBackupMapping.kt</ID>
@@ -532,19 +193,5 @@
     <ID>TooManyFunctions:SettingsViewModel.kt$SettingsViewModel : ViewModel</ID>
     <ID>TooManyFunctions:UISettingsContent.kt$com.esde.companion.ui.settings.UISettingsContent.kt</ID>
     <ID>TooManyFunctions:WidgetLayoutMapping.kt$com.esde.companion.data.settings.WidgetLayoutMapping.kt</ID>
-    <ID>Wrapping:FileAppDrawerSettingsRepository.kt$FileAppDrawerSettingsRepository$it[HIDDEN_APPS_KEY] ?: emptySet()</ID>
-    <ID>Wrapping:FileDockSettingsRepository.kt$FileDockSettingsRepository$it[DOCK_ENABLED_KEY] ?: false</ID>
-    <ID>Wrapping:FileDockSettingsRepository.kt$FileDockSettingsRepository$it[DOCK_MAX_APPS_KEY] ?: DEFAULT_DOCK_MAX_APPS</ID>
-    <ID>Wrapping:FileLastKnownContextRepository.kt$FileLastKnownContextRepository$it[SYSTEM_SHORT_NAME_KEY]</ID>
-    <ID>Wrapping:FileOnboardingRepository.kt$FileOnboardingRepository$it[CUSTOM_LOGOS_FOLDER_PATH_KEY]</ID>
-    <ID>Wrapping:FileOnboardingRepository.kt$FileOnboardingRepository$it[CUSTOM_MUSIC_FOLDER_PATH_KEY]</ID>
-    <ID>Wrapping:FileOnboardingRepository.kt$FileOnboardingRepository$it[MEDIA_FOLDER_PATH_KEY]</ID>
-    <ID>Wrapping:FileOnboardingRepository.kt$FileOnboardingRepository$it[MUSIC_ENABLED_KEY] ?: false</ID>
-    <ID>Wrapping:FileOnboardingRepository.kt$FileOnboardingRepository$it[ONBOARDING_COMPLETE_KEY] ?: false</ID>
-    <ID>Wrapping:FileOnboardingRepository.kt$FileOnboardingRepository$it[SETTINGS_FAB_VISIBLE_KEY] ?: true</ID>
-    <ID>Wrapping:FileOnboardingRepository.kt$FileOnboardingRepository$it[VIDEO_AUDIO_ENABLED_KEY] ?: true</ID>
-    <ID>Wrapping:WidgetContentResolver.kt$WidgetContentResolver$WidgetContent.Image(it, widgetType.scaleMode, isTransparentOverlay = false, isAsset = false, effects = widgetType.effects)</ID>
-    <ID>Wrapping:WidgetContentResolver.kt$WidgetContentResolver$WidgetContent.Image(it, widgetType.scaleMode, isTransparentOverlay = true, isAsset = false, effects = widgetType.effects)</ID>
-    <ID>Wrapping:WidgetsViewModel.kt$WidgetsViewModel$resolveCustomSystemLogo(systemLogoAssetName(it))</ID>
   </CurrentIssues>
 </SmellBaseline>

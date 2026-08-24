@@ -229,15 +229,19 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Destinations.MAIN) {
                             val viewModel: MainViewModel = viewModel(factory = MainViewModelFactory(appContainer))
-                            val appDrawerViewModel: AppDrawerViewModel = viewModel(factory = AppDrawerViewModelFactory(appContainer))
-                            val dockViewModel: AppDockViewModel = viewModel(factory = AppDockViewModelFactory(appContainer))
+                            val appDrawerViewModel: AppDrawerViewModel =
+                                viewModel(factory = AppDrawerViewModelFactory(appContainer))
+                            val dockViewModel: AppDockViewModel =
+                                viewModel(factory = AppDockViewModelFactory(appContainer))
                             // Constructed unconditionally now, rather than only while
                             // Settings was showing - the long-press popup that hosts this
                             // content is a child of MainScreen, which is always in
                             // composition (unlike the old standalone SettingsScreen
                             // destination it replaced).
-                            val settingsViewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(appContainer))
-                            val manageAppsViewModel: ManageAppsViewModel = viewModel(factory = ManageAppsViewModelFactory(appContainer))
+                            val settingsViewModel: SettingsViewModel =
+                                viewModel(factory = SettingsViewModelFactory(appContainer))
+                            val manageAppsViewModel: ManageAppsViewModel =
+                                viewModel(factory = ManageAppsViewModelFactory(appContainer))
                             val autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel =
                                 viewModel(factory = AutoFpsTriggerAppsViewModelFactory(appContainer))
                             val taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel =
@@ -303,9 +307,11 @@ class MainActivity : ComponentActivity() {
                             val gamePlayingDimPercent by viewModel.gamePlayingDimPercent.collectAsStateWithLifecycle()
                             val screensaverDimPercent by viewModel.screensaverDimPercent.collectAsStateWithLifecycle()
 
-                            val widgetsViewModel: WidgetsViewModel = viewModel(factory = WidgetsViewModelFactory(appContainer))
+                            val widgetsViewModel: WidgetsViewModel =
+                                viewModel(factory = WidgetsViewModelFactory(appContainer))
 
-                            val gameManualViewModel: GameManualViewModel = viewModel(factory = GameManualViewModelFactory(appContainer))
+                            val gameManualViewModel: GameManualViewModel =
+                                viewModel(factory = GameManualViewModelFactory(appContainer))
                             val manualPdfPath by gameManualViewModel.pdfPath.collectAsStateWithLifecycle()
 
                             // Manual "exit" dismissal for the GameManual cover - separate
@@ -579,7 +585,8 @@ class MainActivity : ComponentActivity() {
                                     else -> 0
                                 }
 
-                            val isBrowsingGame = (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
+                            val isBrowsingGame =
+                                (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingGame
                             val showVideoOverlay =
                                 videoPlaybackEnabled &&
                                     isBrowsingGame &&
@@ -772,7 +779,11 @@ class MainActivity : ComponentActivity() {
                                 // Screensaver Behavior). Purely visual - no clickable or
                                 // pointerInput, so touches pass straight through to
                                 // whatever's underneath, unlike the Black cover below.
-                                AnimatedVisibility(visible = isDimmed && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
+                                AnimatedVisibility(
+                                    visible = isDimmed && mainScreenActive,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
                                     Box(
                                         modifier =
                                             Modifier
@@ -796,7 +807,11 @@ class MainActivity : ComponentActivity() {
                                 // MainScreen's long-press-to-edit, widget taps - receives
                                 // input while blanked. "Blanked" should mean genuinely
                                 // unreachable, not just visually covered.
-                                AnimatedVisibility(visible = isBlanked && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
+                                AnimatedVisibility(
+                                    visible = isBlanked && mainScreenActive,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
                                     Box(
                                         modifier =
                                             Modifier
@@ -820,7 +835,11 @@ class MainActivity : ComponentActivity() {
                                 // its own branch rather than reusing isBlanked, since it
                                 // renders interactive content (paged/zoomable PDF) rather
                                 // than a plain cover.
-                                AnimatedVisibility(visible = showGameManual && mainScreenActive, enter = fadeIn(), exit = fadeOut()) {
+                                AnimatedVisibility(
+                                    visible = showGameManual && mainScreenActive,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
                                     GameManualScreen(
                                         viewModel = gameManualViewModel,
                                         onExit = {

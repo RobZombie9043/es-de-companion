@@ -396,7 +396,11 @@ private fun LogFolderValidation?.toStatusText(): String =
         null -> ""
         is LogFolderValidation.FolderNotFound -> "Folder not found"
         is LogFolderValidation.FolderFound ->
-            if (settingsFileFound) "settings/es_settings.xml found" else "Folder found, but appears to be the incorrect folder"
+            if (settingsFileFound) {
+                "settings/es_settings.xml found"
+            } else {
+                "Folder found, but appears to be the incorrect folder"
+            }
     }
 
 private fun MediaFolderValidation?.toStatusText(): String =

@@ -115,7 +115,9 @@ fun MusicControlsOverlay(
                 }
             val titleWidth =
                 with(density) {
-                    (0 until titleLayout.lineCount).maxOf { titleLayout.getLineRight(it) - titleLayout.getLineLeft(it) }.toDp()
+                    (0 until titleLayout.lineCount)
+                        .maxOf { titleLayout.getLineRight(it) - titleLayout.getLineLeft(it) }
+                        .toDp()
                 }
 
             Row(

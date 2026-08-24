@@ -118,7 +118,10 @@ internal fun ImageEffectsConfig(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Blur: ${(current.blurAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "Blur: ${(current.blurAmount * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+            )
             Slider(
                 value = current.blurAmount,
                 onValueChange = { onChange(current.copy(blurAmount = it)) },
@@ -126,7 +129,10 @@ internal fun ImageEffectsConfig(
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Darken: ${(current.darkenAmount * 100).roundToInt()}%", style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = "Darken: ${(current.darkenAmount * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+            )
             Slider(
                 value = current.darkenAmount,
                 onValueChange = { onChange(current.copy(darkenAmount = it)) },
