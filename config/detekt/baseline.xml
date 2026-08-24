@@ -132,43 +132,6 @@
     <ID>LongParameterList:WidgetResizeGeometry.kt$( edge: ResizeEdge, widget: PlacedWidget, grid: GridDimensions, cellWidth: Dp, cellHeight: Dp, onResize: (widgetId: String, gridColumn: Int, gridRow: Int, columnSpan: Int, rowSpan: Int) -&gt; Unit, onDragStateChanged: (Boolean) -&gt; Unit, onDragEnd: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:WidgetsViewModel.kt$WidgetsViewModel$( observeConnectionState: ObserveConnectionStateUseCase, private val observeWidgetCanvas: ObserveWidgetCanvasUseCase, private val resolveGameMedia: ResolveGameMediaUseCase, private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase, private val resolveGameDescription: ResolveGameDescriptionUseCase, private val resolveGameRating: ResolveGameRatingUseCase, private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase, private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase, private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase, )</ID>
     <ID>LoopWithTooManyJumpStatements:GameListParser.kt$GameListParser$for</ID>
-    <ID>MagicNumber:AnimatedLogoImage.kt$0.35f</ID>
-    <ID>MagicNumber:AnimatedLogoImage.kt$0.5f</ID>
-    <ID>MagicNumber:AnimatedLogoImage.kt$0.65f</ID>
-    <ID>MagicNumber:AppDock.kt$0.5f</ID>
-    <ID>MagicNumber:AppDrawer.kt$0.5f</ID>
-    <ID>MagicNumber:CornerButtonMetrics.kt$0.5f</ID>
-    <ID>MagicNumber:EditWidgetsViewModel.kt$EditWidgetsViewModel$5</ID>
-    <ID>MagicNumber:EditWidgetsViewModel.kt$EditWidgetsViewModel$80</ID>
-    <ID>MagicNumber:EsdeEventParser.kt$EsdeEventParser$3</ID>
-    <ID>MagicNumber:FileAppDrawerSettingsRepository.kt$FileAppDrawerSettingsRepository$3</ID>
-    <ID>MagicNumber:FileAppDrawerSettingsRepository.kt$FileAppDrawerSettingsRepository$6</ID>
-    <ID>MagicNumber:FileDockSettingsRepository.kt$FileDockSettingsRepository$5</ID>
-    <ID>MagicNumber:FileOnboardingRepository.kt$FileOnboardingRepository$100</ID>
-    <ID>MagicNumber:LongPressSettingsMenu.kt$150</ID>
-    <ID>MagicNumber:LongPressSettingsMenu.kt$220</ID>
-    <ID>MagicNumber:MainActivity.kt$MainActivity$4_000</ID>
-    <ID>MagicNumber:MusicControlsOverlay.kt$0.5f</ID>
-    <ID>MagicNumber:NormalizingSvgDecoder.kt$3</ID>
-    <ID>MagicNumber:NormalizingSvgDecoder.kt$4</ID>
-    <ID>MagicNumber:OnboardingScreen.kt$150</ID>
-    <ID>MagicNumber:OnboardingScreen.kt$220</ID>
-    <ID>MagicNumber:OnboardingScreen.kt$3</ID>
-    <ID>MagicNumber:OnboardingScreen.kt$4</ID>
-    <ID>MagicNumber:OnboardingScreen.kt$5</ID>
-    <ID>MagicNumber:ScrollingText.kt$1000</ID>
-    <ID>MagicNumber:VideoOverlayScreen.kt$1000L</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFF000000L</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFF2196F3L</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFF4CAF50L</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFF9C27B0L</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFF9E9E9EL</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFFF44336L</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFFFFEB3BL</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFFFFFF</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$0xFFFFFFFFL</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$16</ID>
-    <ID>MagicNumber:WidgetColorConfig.kt$6</ID>
     <ID>MaxLineLength:EsdeLogFileRepositoryTest.kt$EsdeLogFileRepositoryTest$fun</ID>
     <ID>MaximumLineLength:EsdeLogFileRepositoryTest.kt$EsdeLogFileRepositoryTest$ </ID>
     <ID>NestedBlockDepth:EsdeLogFileRepository.kt$EsdeLogFileRepository$private fun findEventsSinceLastAnchor( file: File, directionTracker: NavigationDirectionTracker, ): List&lt;EsdeEvent&gt;</ID>

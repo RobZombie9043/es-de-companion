@@ -106,18 +106,24 @@ private const val MAX_MOSAIC_ICONS = 4
 private val FOLDER_MOSAIC_CELL_SIZE = 24.dp
 private val FOLDER_MOSAIC_SPACING = 2.dp
 
+/** Below this luminance, the surface reads as dark mode - same threshold
+ * MusicControlsOverlay/CornerButtonMetrics/AppDock use for their own theme detection. */
+private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
+
 /** Drawer background base color: black in dark mode, white in light mode - matches
  * AppDock's [dockBackgroundColor] so the drawer and dock read as one consistent surface. */
 @Composable
 internal fun drawerBackgroundColor(): Color {
-    return if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    return if (isDark) Color.Black else Color.White
 }
 
 /** App label text color: the inverse of [drawerBackgroundColor], so labels stay readable
  * against the drawer's background in either theme. */
 @Composable
 internal fun drawerContentColor(): Color {
-    return if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    return if (isDark) Color.White else Color.Black
 }
 
 /** Two-step "add to folder" flow state, hoisted here (mirrors how AppDock hoists its own

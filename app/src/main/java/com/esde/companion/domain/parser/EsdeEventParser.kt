@@ -85,12 +85,12 @@ class EsdeEventParser {
     }
 
     private fun List<String>.toGameArgs(): GameArgs? {
-        val romPath = getOrNull(0) ?: return null
+        val romPath = getOrNull(GAME_ARG_ROM_PATH_INDEX) ?: return null
         return GameArgs(
             romPath = romPath,
-            gameName = getOrElse(1) { "" },
-            systemShortName = getOrElse(2) { "" },
-            systemFullName = getOrElse(3) { "" },
+            gameName = getOrElse(GAME_ARG_GAME_NAME_INDEX) { "" },
+            systemShortName = getOrElse(GAME_ARG_SYSTEM_SHORT_NAME_INDEX) { "" },
+            systemFullName = getOrElse(GAME_ARG_SYSTEM_FULL_NAME_INDEX) { "" },
         )
     }
 
@@ -105,6 +105,11 @@ class EsdeEventParser {
         const val FIRE_EVENT_MARKER = "Scripting::fireEvent():"
         const val WINDOW_RELOAD_MARKER = "Window size has changed from"
         const val GAME_SYSTEMS_RELOAD_MARKER = "Populating game systems"
+
+        const val GAME_ARG_ROM_PATH_INDEX = 0
+        const val GAME_ARG_GAME_NAME_INDEX = 1
+        const val GAME_ARG_SYSTEM_SHORT_NAME_INDEX = 2
+        const val GAME_ARG_SYSTEM_FULL_NAME_INDEX = 3
 
         // Splitting on this exact 3-char sequence (rather than matching independent
         // "..." groups) is what lets a field's own content safely contain unescaped

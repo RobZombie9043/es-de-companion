@@ -171,6 +171,9 @@ private val LONG_PRESS_MENU_BLUR_RADIUS = 4.dp
 // apps list, not a hardcoded constant) - this is the one call site that needs it.
 private const val ESDE_PACKAGE_NAME = "org.es_de.frontend"
 
+/** How long the music controls panel stays revealed before auto-hiding. */
+private const val MUSIC_CONTROLS_AUTO_HIDE_DELAY_MS = 4_000L
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -563,7 +566,7 @@ class MainActivity : ComponentActivity() {
                             // doesn't change filePath, so it still doesn't reset the timer.
                             LaunchedEffect(musicControlsRevealed, musicTrack?.filePath) {
                                 if (musicControlsRevealed) {
-                                    delay(4_000)
+                                    delay(MUSIC_CONTROLS_AUTO_HIDE_DELAY_MS)
                                     musicControlsRevealed = false
                                 }
                             }

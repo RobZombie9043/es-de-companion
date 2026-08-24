@@ -54,6 +54,12 @@ private const val GLINT_PEAK_ALPHA = 0.35f
  * a specular highlight has in real materials, rather than relying on brightness alone. */
 private const val GLINT_FRINGE_ALPHA = 0.2f
 
+/** Gradient stop positions for the glint streak's fringe-peak-fringe shape - symmetric
+ * around the 0.5 midpoint, see the colorStops in the glint drawWithContent block. */
+private const val GLINT_FRINGE_START_STOP = 0.35f
+private const val GLINT_PEAK_STOP = 0.5f
+private const val GLINT_FRINGE_END_STOP = 0.65f
+
 /** Thickness of the visible glint streak (the gradient's transparent-peak-transparent
  * span), fixed and independent of the widget's own size - see [glintBandOffsets]'s kdoc
  * for why this must be decoupled from [GLINT_TILT_DEGREES]/height, not derived from them. */
@@ -241,9 +247,12 @@ fun AnimatedLogoImage(
                                                 colorStops =
                                                     arrayOf(
                                                         0f to Color.Transparent,
-                                                        0.35f to Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
-                                                        0.5f to Color.White.copy(alpha = GLINT_PEAK_ALPHA),
-                                                        0.65f to Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
+                                                        GLINT_FRINGE_START_STOP to
+                                                            Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
+                                                        GLINT_PEAK_STOP to
+                                                            Color.White.copy(alpha = GLINT_PEAK_ALPHA),
+                                                        GLINT_FRINGE_END_STOP to
+                                                            Color.Black.copy(alpha = GLINT_FRINGE_ALPHA),
                                                         1f to Color.Transparent,
                                                     ),
                                                 start = start,

@@ -73,18 +73,23 @@ private val SLOT_SPACING = 16.dp
  * collisions (e.g. a bright icon over bright widget art) - see DockPreview's kdoc. */
 private const val DOCK_PREVIEW_ALPHA = 0.65f
 
+/** Below this luminance, the surface reads as dark mode - same threshold
+ * MusicControlsOverlay/CornerButtonMetrics/AppDrawer use for their own theme detection. */
+private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
+
 /** Dock background base color: black in dark mode, white in light mode - same
  * theme-detection approach as MusicControlsOverlay's content/background colors. */
 @Composable
 private fun dockBackgroundColor(): Color {
-    return if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    return if (isDark) Color.Black else Color.White
 }
 
 /** Empty-slot border/icon color: the inverse of [dockBackgroundColor], so the "add app"
  * placeholder stays visible against the dock's background in either theme. */
 @Composable
 private fun dockContentColor(): Color =
-    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) {
+    if (MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD) {
         Color.White.copy(
             alpha = 0.3f,
         )
@@ -99,7 +104,8 @@ private fun dockContentColor(): Color =
  * ambient content color happens to be. */
 @Composable
 private fun appDrawerShortcutIconTint(): Color {
-    return if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    return if (isDark) Color.White else Color.Black
 }
 
 private fun DockSize.iconDp(): Dp =

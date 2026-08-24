@@ -36,6 +36,10 @@ private val ICON_BUTTON_SIZE = 48.dp
 private val ROW_HORIZONTAL_PADDING = 12.dp
 private val TITLE_END_PADDING = 8.dp
 
+/** Below this luminance, the surface reads as dark mode - same threshold
+ * CornerButtonMetrics/AppDock/AppDrawer use for their own theme detection. */
+private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
+
 /**
  * Small track title + play/pause + next card, revealed by MainActivity's music FAB.
  * Renders nothing while [MusicPlaybackState.Stopped] (no track loaded yet).
@@ -82,7 +86,7 @@ fun MusicControlsOverlay(
     if (track == null) return
 
     val isPlaying = playbackState is MusicPlaybackState.Playing
-    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
     val backgroundColor = if (isDarkTheme) Color.Black else Color.White
     val contentColor = if (isDarkTheme) Color.White else Color.Black
 

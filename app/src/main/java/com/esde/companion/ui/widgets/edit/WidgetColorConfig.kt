@@ -31,27 +31,28 @@ import com.esde.companion.domain.model.WidgetType
 import java.util.Locale
 import kotlin.math.roundToInt
 
+private const val PRESET_BLACK = 0xFF000000L
+private const val PRESET_WHITE = 0xFFFFFFFFL
+private const val PRESET_GRAY = 0xFF9E9E9EL
+private const val PRESET_RED = 0xFFF44336L
+private const val PRESET_BLUE = 0xFF2196F3L
+private const val PRESET_GREEN = 0xFF4CAF50L
+private const val PRESET_YELLOW = 0xFFFFEB3BL
+private const val PRESET_PURPLE = 0xFF9C27B0L
+
 /** Fixed preset palette - a full custom color picker (hue/saturation wheel) is more
  * than this widget type needs for a first pass; these presets cover the common cases
  * (tint/darken behind other widgets) with a much simpler UI. */
 internal val COLOR_PRESETS =
     listOf(
-        // black
-        0xFF000000L,
-        // white
-        0xFFFFFFFFL,
-        // gray
-        0xFF9E9E9EL,
-        // red
-        0xFFF44336L,
-        // blue
-        0xFF2196F3L,
-        // green
-        0xFF4CAF50L,
-        // yellow
-        0xFFFFEB3BL,
-        // purple
-        0xFF9C27B0L,
+        PRESET_BLACK,
+        PRESET_WHITE,
+        PRESET_GRAY,
+        PRESET_RED,
+        PRESET_BLUE,
+        PRESET_GREEN,
+        PRESET_YELLOW,
+        PRESET_PURPLE,
     )
 
 @Composable
@@ -175,12 +176,17 @@ internal fun HexColorInput(
     )
 }
 
-internal fun Long.toHexRgbString(): String = String.format(Locale.ROOT, "%06X", this and 0xFFFFFF)
+private const val HEX_RGB_LENGTH = 6
+private const val HEX_RADIX = 16
+private const val RGB_MASK = 0xFFFFFFL
+private const val OPAQUE_ALPHA_MASK = 0xFF000000L
+
+internal fun Long.toHexRgbString(): String = String.format(Locale.ROOT, "%06X", this and RGB_MASK)
 
 internal fun parseHexColor(text: String): Long? {
     val cleaned = text.removePrefix("#").trim()
-    if (cleaned.length != 6 || cleaned.any { it !in HEX_CHARS }) return null
-    return cleaned.toLongOrNull(16)?.let { 0xFF000000L or it }
+    if (cleaned.length != HEX_RGB_LENGTH || cleaned.any { it !in HEX_CHARS }) return null
+    return cleaned.toLongOrNull(HEX_RADIX)?.let { OPAQUE_ALPHA_MASK or it }
 }
 
 private val HEX_CHARS = "0123456789abcdefABCDEF".toSet()

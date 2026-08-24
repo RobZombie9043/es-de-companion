@@ -48,6 +48,10 @@ import java.util.UUID
  * for the person to then drag and resize into place. */
 private const val DEFAULT_NEW_WIDGET_SPAN = 4
 
+/** Shown only until the real Settings-backed value's first emission arrives. */
+private const val DEFAULT_DOCK_OPACITY_PERCENT = 80
+private const val DEFAULT_DOCK_MAX_APPS = 5
+
 /**
  * Drives the edit-mode overlay. Unlike the live WidgetsViewModel, [widgets] here is a
  * local, mutable snapshot rather than a continuous subscription to the repository -
@@ -106,11 +110,15 @@ class EditWidgetsViewModel(
 
     val dockOpacityPercent: StateFlow<Int> =
         observeOverlayOpacity()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 80)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                DEFAULT_DOCK_OPACITY_PERCENT,
+            )
 
     val dockMaxApps: StateFlow<Int> =
         observeDockMaxApps()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 5)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), DEFAULT_DOCK_MAX_APPS)
 
     /** Same resolution as AppDockViewModel.dockItems (pinned package names -> InstalledApp,
      * capped to maxApps, with APP_DRAWER_SHORTCUT_PACKAGE_NAME resolving to the synthetic
