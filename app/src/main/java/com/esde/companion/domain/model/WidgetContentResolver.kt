@@ -9,6 +9,7 @@ object WidgetContentResolver {
         systemMediaLookup: (MediaType) -> String?,
         gameMediaLookup: (MediaType) -> String?,
         gameDescriptionLookup: () -> String?,
+        gameRatingLookup: () -> Float? = { null },
         fallbackBackgroundAssetPath: String?,
         systemNameLookup: () -> String? = { null },
         gameNameLookup: () -> String? = { null },
@@ -87,7 +88,34 @@ object WidgetContentResolver {
                         )
                     }
                     ?: WidgetContent.Empty
+
+            is WidgetType.Rating -> {
+                val starCount = gameRatingLookup()?.let { (it * MAX_STARS).coerceIn(0f, MAX_STARS) }
+                if (starCount != null) {
+                    WidgetContent.Rating(
+                        starCount = starCount,
+                        filledColorArgb = widgetType.filledColorArgb,
+                        outlineColorArgb = widgetType.outlineColorArgb,
+                        backgroundColorArgb = widgetType.backgroundColorArgb,
+                        backgroundAlpha = widgetType.backgroundAlpha,
+                    )
+                } else if (widgetType.noRatingBehavior == NoRatingBehavior.ShowEmptyStars) {
+                    WidgetContent.Rating(
+                        starCount = 0f,
+                        filledColorArgb = widgetType.filledColorArgb,
+                        outlineColorArgb = widgetType.outlineColorArgb,
+                        backgroundColorArgb = widgetType.backgroundColorArgb,
+                        backgroundAlpha = widgetType.backgroundAlpha,
+                    )
+                } else {
+                    WidgetContent.Empty
+                }
+            }
         }
+
+    /** A gamelist.xml <rating> is a 0f..1f score - the widget always renders on a 5-star
+     * scale. */
+    private const val MAX_STARS = 5f
 
     /** Marquees have no generic-background fallback (see [BACKGROUND_FALLBACK_ELIGIBLE]),
      * so a missing marquee resolves all the way to [WidgetContent.Empty] - this catches

@@ -8,9 +8,11 @@ import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.gamelist.FileGameDescriptionRepository
+import com.esde.companion.data.gamelist.FileGameRatingRepository
 import com.esde.companion.data.gamelist.FileGameRomHashRepository
 import com.esde.companion.data.gamelist.GamelistFileReader
 import com.esde.companion.data.gamelist.LoggingGameDescriptionRepository
+import com.esde.companion.data.gamelist.LoggingGameRatingRepository
 import com.esde.companion.data.gamelist.LoggingGameRomHashRepository
 import com.esde.companion.data.log.EsdeLogFileRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
@@ -76,6 +78,7 @@ import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRatingRepository
 import com.esde.companion.domain.repository.GameRomHashRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
@@ -167,6 +170,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
@@ -348,9 +352,9 @@ class AppContainer(context: Context) {
         )
 
     // gamelists/ lives alongside logs/ under the ES-DE root, so this reacts to the log
-    // folder path, not the media folder path - see GamelistFileReader. Shared by both the
-    // description and ROM-hash repositories below so there's one cached copy of each
-    // gamelist.xml's text, not one per consumer.
+    // folder path, not the media folder path - see GamelistFileReader. Shared by the
+    // description, ROM-hash, and rating repositories below so there's one cached copy of
+    // each gamelist.xml's text, not one per consumer.
     private val gamelistFileReader = GamelistFileReader(esdeRootPath = onboardingRepository.observeLogFolderPath())
 
     private val gameDescriptionRepository: GameDescriptionRepository =
@@ -364,6 +368,12 @@ class AppContainer(context: Context) {
     private val gameRomHashRepository: GameRomHashRepository =
         LoggingGameRomHashRepository(
             inner = FileGameRomHashRepository(gamelistFileReader),
+            debugFileLogger = debugFileLogger,
+        )
+
+    private val gameRatingRepository: GameRatingRepository =
+        LoggingGameRatingRepository(
+            inner = FileGameRatingRepository(gamelistFileReader),
             debugFileLogger = debugFileLogger,
         )
 
@@ -518,6 +528,7 @@ class AppContainer(context: Context) {
     val observeEsdeQuitEventUseCase = ObserveEsdeQuitEventUseCase(logRepository)
     val resolveGameMediaUseCase = ResolveGameMediaUseCase(gameMediaRepository)
     val resolveGameDescriptionUseCase = ResolveGameDescriptionUseCase(gameDescriptionRepository)
+    val resolveGameRatingUseCase = ResolveGameRatingUseCase(gameRatingRepository)
     val resolveRandomSystemMediaUseCase = ResolveRandomSystemMediaUseCase(systemMediaRepository)
 
     val validateEsdeLogFolderUseCase = ValidateEsdeLogFolderUseCase(onboardingRepository)

@@ -132,4 +132,27 @@ sealed class WidgetType {
         val backgroundColorArgb: Long = 0xFF000000,
         val backgroundAlpha: Float = 0.5f,
     ) : WidgetType()
+
+    /**
+     * A game's <rating> (ES-DE's own 0.0..1.0 scraped score) rendered as five filled/
+     * unfilled stars - see WidgetContentResolver's Rating branch for the 0..1 -> 0..5
+     * conversion. [noRatingBehavior] decides what to show when a game has no rating at
+     * all (as opposed to a rating of exactly 0, which is a real value and always renders
+     * as five unfilled stars regardless of this setting). No scaleMode/ImageEffects - not
+     * image-backed, same reasoning as ColorBackground/GameDescription.
+     */
+    data class Rating(
+        val noRatingBehavior: NoRatingBehavior = NoRatingBehavior.Hide,
+        val filledColorArgb: Long = 0xFFFFC107,
+        val outlineColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+    ) : WidgetType()
+}
+
+/** What a Rating widget shows for a game with no <rating> in gamelist.xml at all. See
+ * [WidgetType.Rating.noRatingBehavior]. */
+enum class NoRatingBehavior {
+    Hide,
+    ShowEmptyStars,
 }

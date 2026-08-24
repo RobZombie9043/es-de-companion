@@ -7,10 +7,10 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Parses ES-DE's gamelist.xml content to find per-game fields for one specific game -
- * currently the <desc> text ([findDescription]) and, in preparation for ES-DE's upcoming
- * ROM-hash support, a ROM-hash field ([findRomHash]). Both share the same
- * document-locate-and-match core ([findGameField]), so the XML-quirk handling below only
- * has to be gotten right once.
+ * the <desc> text ([findDescription]), the <rating> value ([findRating]), and, in
+ * preparation for ES-DE's upcoming ROM-hash support, a ROM-hash field ([findRomHash]). All
+ * three share the same document-locate-and-match core ([findGameField]), so the XML-quirk
+ * handling below only has to be gotten right once.
  *
  * ES-DE stores each game's <path> as "./<relative path>" relative to that system's ROM
  * folder - e.g. "./Cosmic Smash (Japan).chd", or "./subfolder/Name.zip" for games in
@@ -38,6 +38,15 @@ object GameListParser {
         content: String,
         romPath: String,
     ): String? = findGameField(content, romPath, ROM_HASH_TAG)
+
+    /** ES-DE stores <rating> as a decimal string from 0.0 to 1.0 (e.g. "0.800000") - unlike
+     * [findDescription]/[findRomHash]'s opaque strings, this converts to the numeric value
+     * callers actually need, clamping into range rather than trusting a well-formed
+     * gamelist.xml blindly. */
+    fun findRating(
+        content: String,
+        romPath: String,
+    ): Float? = findGameField(content, romPath, RATING_TAG)?.toFloatOrNull()?.coerceIn(0f, 1f)
 
     private fun findGameField(
         content: String,
@@ -101,6 +110,7 @@ object GameListParser {
     }
 
     private const val DESCRIPTION_TAG = "desc"
+    private const val RATING_TAG = "rating"
 
     @Suppress("ForbiddenComment")
     // TODO: ES-DE has not shipped ROM-hash output in gamelist.xml yet, so this tag name is a

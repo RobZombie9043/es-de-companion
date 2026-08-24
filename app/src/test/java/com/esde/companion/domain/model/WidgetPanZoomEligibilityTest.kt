@@ -23,10 +23,11 @@ class WidgetPanZoomEligibilityTest {
     }
 
     @Test
-    fun `SystemLogo, ColorBackground, and GameDescription never support pan-zoom`() {
+    fun `SystemLogo, ColorBackground, GameDescription, and Rating never support pan-zoom`() {
         assertFalse(WidgetType.SystemLogo(ScaleMode.Fill).supportsPanZoom)
         assertFalse(WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 1f).supportsPanZoom)
         assertFalse(WidgetType.GameDescription().supportsPanZoom)
+        assertFalse(WidgetType.Rating().supportsPanZoom)
     }
 
     // --- supportsPanZoom: SystemMedia/GameMedia across every MediaType, both ScaleModes --

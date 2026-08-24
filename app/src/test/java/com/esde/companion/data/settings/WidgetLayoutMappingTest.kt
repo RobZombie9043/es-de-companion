@@ -3,6 +3,7 @@ package com.esde.companion.data.settings
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.NoRatingBehavior
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
@@ -287,6 +288,34 @@ class WidgetLayoutMappingTest {
             WidgetTypeDto.GameDescription(
                 fontSizeSp = 16f,
                 textColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            decoded,
+        )
+    }
+
+    @Test
+    fun `Rating round-trips noRatingBehavior and colors`() {
+        val widget =
+            WidgetType.Rating(
+                noRatingBehavior = NoRatingBehavior.ShowEmptyStars,
+                filledColorArgb = 0xFFAABBCC,
+                outlineColorArgb = 0xFF112233,
+                backgroundColorArgb = 0xFF445566,
+                backgroundAlpha = 0.25f,
+            )
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON for Rating with no keys decodes to its defaults`() {
+        val decoded = Json.decodeFromString(WidgetTypeDto.Rating.serializer(), "{}")
+        assertEquals(
+            WidgetTypeDto.Rating(
+                noRatingBehavior = "Hide",
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
                 backgroundColorArgb = 0xFF000000,
                 backgroundAlpha = 0.5f,
             ),

@@ -50,6 +50,17 @@ sealed class WidgetContent {
      * fallback styling.
      */
     data class NameFallback(val text: String) : WidgetContent()
+
+    /** [starCount] is 0f..5f, already converted from the game's raw 0f..1f gamelist.xml
+     * rating - see WidgetContentResolver's Rating branch. Star fill is whole-star only
+     * (no half-star rendering), decided by rounding - see RatingStars. */
+    data class Rating(
+        val starCount: Float,
+        val filledColorArgb: Long,
+        val outlineColorArgb: Long,
+        val backgroundColorArgb: Long,
+        val backgroundAlpha: Float,
+    ) : WidgetContent()
 }
 
 /** Media types that are transparent overlay-style content rather than an opaque
@@ -76,6 +87,7 @@ val WidgetType.isLogoStyle: Boolean
             is WidgetType.CustomImage,
             is WidgetType.ColorBackground,
             is WidgetType.GameDescription,
+            is WidgetType.Rating,
             -> false
         }
 
@@ -160,7 +172,11 @@ val WidgetType.supportsImageTransition: Boolean
             is WidgetType.SystemImage, is WidgetType.CustomImage -> true
             is WidgetType.SystemMedia -> !isLogoStyle
             is WidgetType.GameMedia -> !isLogoStyle && !forcesInstantImageTransition
-            is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+            is WidgetType.SystemLogo,
+            is WidgetType.ColorBackground,
+            is WidgetType.GameDescription,
+            is WidgetType.Rating,
+            -> false
         }
 
 /**
@@ -214,7 +230,11 @@ val WidgetType.supportsPanZoom: Boolean
             is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
             is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
             is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
-            is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+            is WidgetType.SystemLogo,
+            is WidgetType.ColorBackground,
+            is WidgetType.GameDescription,
+            is WidgetType.Rating,
+            -> false
         }
 
 /**

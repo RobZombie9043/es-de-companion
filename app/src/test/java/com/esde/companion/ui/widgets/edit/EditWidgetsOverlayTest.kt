@@ -18,6 +18,14 @@ class EditWidgetsOverlayTest {
 
         assertTrue(catalog.none { it is WidgetType.GameMedia })
         assertTrue(catalog.none { it is WidgetType.GameDescription })
+        assertTrue(catalog.none { it is WidgetType.Rating })
+    }
+
+    @Test
+    fun `widgetCatalogFor(Playing) includes Rating`() {
+        val catalog = widgetCatalogFor(StateGroup.Playing)
+
+        assertTrue(catalog.any { it is WidgetType.Rating })
     }
 
     @Test
