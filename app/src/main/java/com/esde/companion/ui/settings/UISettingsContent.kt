@@ -72,6 +72,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
+import com.esde.companion.data.retroachievements.retroAchievementsEnabled
 import com.esde.companion.data.systemstatus.BluetoothConnectPermission
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
@@ -140,7 +141,9 @@ internal fun UISettingsContent(
 
 // Bottom corners never offer Music - it can only occupy one of the two top corners (see
 // FabAssignments.with) - so the picker itself simply never presents the option there
-// rather than needing runtime validation to reject an invalid selection.
+// rather than needing runtime validation to reject an invalid selection. RetroAchievements
+// is filtered out entirely while retroAchievementsEnabled() is false - see that function's
+// kdoc.
 private val TOP_FAB_OPTIONS =
     listOf(
         FabType.Music,
@@ -153,7 +156,7 @@ private val TOP_FAB_OPTIONS =
         FabType.SystemStatus,
         FabType.ClockAndSystemStatus,
         FabType.None,
-    )
+    ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
 private val BOTTOM_FAB_OPTIONS =
     listOf(
         FabType.Settings,
@@ -162,7 +165,7 @@ private val BOTTOM_FAB_OPTIONS =
         FabType.CustomApp,
         FabType.RetroAchievements,
         FabType.None,
-    )
+    ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
 
 /**
  * Master background opacity for every translucent overlay surface - the App Drawer, the

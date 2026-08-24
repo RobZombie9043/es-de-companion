@@ -54,6 +54,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.esde.companion.BuildConfig
+import com.esde.companion.data.retroachievements.retroAchievementsEnabled
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.thor.ThorAccessibilityPermission
 import com.esde.companion.data.thor.isAynThorDevice
@@ -530,8 +531,14 @@ private fun SettingsMenuHome(
     ) {
         // Thor Settings is only meaningful on an actual Ayn Thor device - the `when` branch
         // that routes to it above still exists unconditionally regardless (see
-        // ThorSettingsContent's kdoc), this is purely a list-visibility filter.
-        val visibleCategories = SettingsCategory.entries.filter { it != SettingsCategory.Thor || isAynThorDevice() }
+        // ThorSettingsContent's kdoc), this is purely a list-visibility filter. Same idea for
+        // RetroAchievements while it's gated behind retroAchievementsEnabled() - see that
+        // function's kdoc.
+        val visibleCategories =
+            SettingsCategory.entries.filter {
+                (it != SettingsCategory.Thor || isAynThorDevice()) &&
+                    (it != SettingsCategory.RetroAchievements || retroAchievementsEnabled())
+            }
         visibleCategories.forEach { category ->
             SettingsCategoryRow(
                 category = category,
