@@ -266,7 +266,11 @@ class MusicPlaybackCoordinatorTest {
         onPlaybackError: (MusicTrack?, String) -> Unit = { _, _ -> },
     ): MusicPlaybackCoordinator {
         val logRepository = FakeEsdeLogRepository(events)
-        val observeConnectionState = ObserveConnectionStateUseCase(logRepository, ObserveAppStateUseCase(logRepository, scope))
+        val observeConnectionState =
+            ObserveConnectionStateUseCase(
+                logRepository,
+                ObserveAppStateUseCase(logRepository, scope),
+            )
         return MusicPlaybackCoordinator(
             observeConnectionState = observeConnectionState,
             observeMusicEnabled = ObserveMusicEnabledUseCase(onboardingRepository),
@@ -475,7 +479,10 @@ class MusicPlaybackCoordinatorTest {
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
             val library =
                 FakeMusicLibraryRepository(
-                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    poolsByRequestedSystem =
+                        mapOf(
+                            "a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)),
+                        ),
                     generalPool = MusicPoolContents(MusicPool.General, emptyList()),
                 )
             val controller = FakeMusicPlayerController()
@@ -505,7 +512,10 @@ class MusicPlaybackCoordinatorTest {
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
             val library =
                 FakeMusicLibraryRepository(
-                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    poolsByRequestedSystem =
+                        mapOf(
+                            "a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)),
+                        ),
                     generalPool = MusicPoolContents(MusicPool.General, emptyList()),
                 )
             val controller = FakeMusicPlayerController()
@@ -535,7 +545,10 @@ class MusicPlaybackCoordinatorTest {
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
             val library =
                 FakeMusicLibraryRepository(
-                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    poolsByRequestedSystem =
+                        mapOf(
+                            "a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)),
+                        ),
                     generalPool = MusicPoolContents(MusicPool.General, emptyList()),
                 )
             val controller = FakeMusicPlayerController()

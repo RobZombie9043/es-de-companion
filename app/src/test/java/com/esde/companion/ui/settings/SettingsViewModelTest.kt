@@ -515,15 +515,27 @@ class SettingsViewModelTest {
                 setDockSizeUseCase = SetDockSizeUseCase(dockSettingsRepository),
                 observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository),
                 setMusicEnabledUseCase = SetMusicEnabledUseCase(onboardingRepository),
-                observeMusicPlayWhileBrowsingSystemsUseCase = ObserveMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository),
+                observeMusicPlayWhileBrowsingSystemsUseCase =
+                    ObserveMusicPlayWhileBrowsingSystemsUseCase(
+                        onboardingRepository,
+                    ),
                 setMusicPlayWhileBrowsingSystemsUseCase = SetMusicPlayWhileBrowsingSystemsUseCase(onboardingRepository),
-                observeMusicPlayWhileBrowsingGamesUseCase = ObserveMusicPlayWhileBrowsingGamesUseCase(onboardingRepository),
+                observeMusicPlayWhileBrowsingGamesUseCase =
+                    ObserveMusicPlayWhileBrowsingGamesUseCase(
+                        onboardingRepository,
+                    ),
                 setMusicPlayWhileBrowsingGamesUseCase = SetMusicPlayWhileBrowsingGamesUseCase(onboardingRepository),
-                observeMusicPlayDuringScreensaverUseCase = ObserveMusicPlayDuringScreensaverUseCase(onboardingRepository),
+                observeMusicPlayDuringScreensaverUseCase =
+                    ObserveMusicPlayDuringScreensaverUseCase(
+                        onboardingRepository,
+                    ),
                 setMusicPlayDuringScreensaverUseCase = SetMusicPlayDuringScreensaverUseCase(onboardingRepository),
                 observeMusicDuckingModeUseCase = ObserveMusicDuckingModeUseCase(onboardingRepository),
                 setMusicDuckingModeUseCase = SetMusicDuckingModeUseCase(onboardingRepository),
-                observeCloseCompanionOnQuitEnabledUseCase = ObserveCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
+                observeCloseCompanionOnQuitEnabledUseCase =
+                    ObserveCloseCompanionOnQuitEnabledUseCase(
+                        onboardingRepository,
+                    ),
                 setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository),
                 observeFabAssignmentsUseCase = ObserveFabAssignmentsUseCase(onboardingRepository),
                 setFabAssignmentUseCase = SetFabAssignmentUseCase(onboardingRepository),

@@ -45,7 +45,13 @@ private fun String?.toFallbackMediaType(primaryMediaType: MediaType): MediaType?
 private fun WidgetType.toDto(): WidgetTypeDto =
     when (this) {
         is WidgetType.SystemLogo ->
-            WidgetTypeDto.SystemLogo(scaleMode.toDto(), effects.blurAmount, effects.darkenAmount, logoTransitionMode.toDto(), glintEnabled)
+            WidgetTypeDto.SystemLogo(
+                scaleMode.toDto(),
+                effects.blurAmount,
+                effects.darkenAmount,
+                logoTransitionMode.toDto(),
+                glintEnabled,
+            )
         is WidgetType.SystemImage ->
             WidgetTypeDto.SystemImage(
                 scaleMode.toDto(),
@@ -88,7 +94,13 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 imageTransitionMode.toDto(),
             )
         is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha)
-        is WidgetType.GameDescription -> WidgetTypeDto.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
+        is WidgetType.GameDescription ->
+            WidgetTypeDto.GameDescription(
+                fontSizeSp,
+                textColorArgb,
+                backgroundColorArgb,
+                backgroundAlpha,
+            )
         is WidgetType.Rating ->
             WidgetTypeDto.Rating(
                 noRatingBehavior.toDto(),
@@ -164,9 +176,27 @@ private fun WidgetTypeDto.Rating.toDomainRating(): WidgetType.Rating =
         backgroundAlpha,
     )
 
-private fun PlacedWidget.toDto() = PlacedWidgetDto(id, widgetType.toDto(), gridColumn, gridRow, columnSpan, rowSpan, zIndex)
+private fun PlacedWidget.toDto() =
+    PlacedWidgetDto(
+        id,
+        widgetType.toDto(),
+        gridColumn,
+        gridRow,
+        columnSpan,
+        rowSpan,
+        zIndex,
+    )
 
-private fun PlacedWidgetDto.toDomain() = PlacedWidget(id, widgetType.toDomain(), gridColumn, gridRow, columnSpan, rowSpan, zIndex)
+private fun PlacedWidgetDto.toDomain() =
+    PlacedWidget(
+        id,
+        widgetType.toDomain(),
+        gridColumn,
+        gridRow,
+        columnSpan,
+        rowSpan,
+        zIndex,
+    )
 
 internal fun List<PlacedWidget>.toDtoList() = map { it.toDto() }
 

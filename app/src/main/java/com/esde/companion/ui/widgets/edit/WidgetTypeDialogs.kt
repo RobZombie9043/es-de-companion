@@ -139,7 +139,9 @@ internal fun ConfigureWidgetDialog(
                 when (widgetType) {
                     is WidgetType.SystemLogo -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
-                        LogoTransitionPicker(current = widgetType.logoTransitionMode) { onChange(widgetType.copy(logoTransitionMode = it)) }
+                        LogoTransitionPicker(
+                            current = widgetType.logoTransitionMode,
+                        ) { onChange(widgetType.copy(logoTransitionMode = it)) }
                         GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
@@ -152,7 +154,9 @@ internal fun ConfigureWidgetDialog(
                             ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
-                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                            PanZoomConfig(
+                                enabled = widgetType.panZoomEnabled,
+                            ) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }
@@ -163,14 +167,18 @@ internal fun ConfigureWidgetDialog(
                             LogoTransitionPicker(
                                 current = widgetType.logoTransitionMode,
                             ) { onChange(widgetType.copy(logoTransitionMode = it)) }
-                            GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
+                            GlintConfig(
+                                enabled = widgetType.glintEnabled,
+                            ) { onChange(widgetType.copy(glintEnabled = it)) }
                         } else if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
                             ImageTransitionPicker(
                                 current = widgetType.imageTransitionMode,
                             ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
-                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                            PanZoomConfig(
+                                enabled = widgetType.panZoomEnabled,
+                            ) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         if (widgetType.supportsFallbackArtwork) {
                             FallbackArtworkConfig(
@@ -187,14 +195,18 @@ internal fun ConfigureWidgetDialog(
                             LogoTransitionPicker(
                                 current = widgetType.logoTransitionMode,
                             ) { onChange(widgetType.copy(logoTransitionMode = it)) }
-                            GlintConfig(enabled = widgetType.glintEnabled) { onChange(widgetType.copy(glintEnabled = it)) }
+                            GlintConfig(
+                                enabled = widgetType.glintEnabled,
+                            ) { onChange(widgetType.copy(glintEnabled = it)) }
                         } else if (widgetType.supportsImageTransition && widgetType.allowsFadeTransition) {
                             ImageTransitionPicker(
                                 current = widgetType.imageTransitionMode,
                             ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
-                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                            PanZoomConfig(
+                                enabled = widgetType.panZoomEnabled,
+                            ) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         if (widgetType.supportsFallbackArtwork) {
                             FallbackArtworkConfig(
@@ -214,7 +226,9 @@ internal fun ConfigureWidgetDialog(
                             ) { onChange(widgetType.copy(imageTransitionMode = it)) }
                         }
                         if (widgetType.supportsPanZoom) {
-                            PanZoomConfig(enabled = widgetType.panZoomEnabled) { onChange(widgetType.copy(panZoomEnabled = it)) }
+                            PanZoomConfig(
+                                enabled = widgetType.panZoomEnabled,
+                            ) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
                     }

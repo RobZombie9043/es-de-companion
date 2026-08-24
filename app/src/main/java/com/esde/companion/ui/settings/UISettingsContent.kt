@@ -116,7 +116,13 @@ internal fun UISettingsContent(
         ScreenBehaviorPicker(
             title = "Game Playing Screen Behavior",
             icon = Icons.Filled.SportsEsports,
-            options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black, ScreenBehavior.GameManual),
+            options =
+                listOf(
+                    ScreenBehavior.Nothing,
+                    ScreenBehavior.Dim,
+                    ScreenBehavior.Black,
+                    ScreenBehavior.GameManual,
+                ),
             selected = gamePlayingBehavior,
             onSelected = onGamePlayingBehaviorChanged,
             dimAmount = DimAmountControl(gamePlayingDimPercent, onGamePlayingDimPercentChanged),

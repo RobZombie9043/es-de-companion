@@ -109,12 +109,16 @@ private val FOLDER_MOSAIC_SPACING = 2.dp
 /** Drawer background base color: black in dark mode, white in light mode - matches
  * AppDock's [dockBackgroundColor] so the drawer and dock read as one consistent surface. */
 @Composable
-internal fun drawerBackgroundColor(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+internal fun drawerBackgroundColor(): Color {
+    return if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+}
 
 /** App label text color: the inverse of [drawerBackgroundColor], so labels stay readable
  * against the drawer's background in either theme. */
 @Composable
-internal fun drawerContentColor(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+internal fun drawerContentColor(): Color {
+    return if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+}
 
 /** Two-step "add to folder" flow state, hoisted here (mirrors how AppDock hoists its own
  * add-app dialog state) rather than inside AppDrawerItem, since it drives a dialog that

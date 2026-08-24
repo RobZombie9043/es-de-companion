@@ -464,7 +464,10 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "existing-a", zIndex = 0), placedWidget(id = "existing-b", zIndex = 3)),
+                        listOf(
+                            placedWidget(id = "existing-a", zIndex = 0),
+                            placedWidget(id = "existing-b", zIndex = 3),
+                        ),
                     )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
@@ -566,7 +569,10 @@ class EditWidgetsViewModelTest {
         runTest(testDispatcher) {
             val repository =
                 FakeWidgetLayoutRepository().apply {
-                    seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)))
+                    seed(
+                        StateGroup.System,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)),
+                    )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
             viewModel.setGridDimensions(grid)
@@ -585,7 +591,10 @@ class EditWidgetsViewModelTest {
         runTest(testDispatcher) {
             val repository =
                 FakeWidgetLayoutRepository().apply {
-                    seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)))
+                    seed(
+                        StateGroup.System,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)),
+                    )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
             viewModel.setGridDimensions(grid)
@@ -650,7 +659,16 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0)),
+                        listOf(
+                            placedWidget(
+                                id = "widget-a",
+                                gridColumn = 5,
+                                gridRow = 0,
+                                columnSpan = 5,
+                                rowSpan = 10,
+                                zIndex = 0,
+                            ),
+                        ),
                         grid = GridDimensions(columns = 10, rows = 10),
                     )
                 }
@@ -676,7 +694,16 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0)),
+                        listOf(
+                            placedWidget(
+                                id = "widget-a",
+                                gridColumn = 5,
+                                gridRow = 0,
+                                columnSpan = 5,
+                                rowSpan = 10,
+                                zIndex = 0,
+                            ),
+                        ),
                         // grid omitted - defaults to null, same as data persisted before this feature existed.
                     )
                 }
@@ -734,7 +761,10 @@ class EditWidgetsViewModelTest {
         runTest(testDispatcher) {
             val repository =
                 FakeWidgetLayoutRepository().apply {
-                    seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)))
+                    seed(
+                        StateGroup.System,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)),
+                    )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
             viewModel.setGridDimensions(grid)
@@ -763,7 +793,13 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.SystemLogo(ScaleMode.Fit))),
+                        listOf(
+                            placedWidget(
+                                id = "widget-a",
+                                zIndex = 0,
+                                widgetType = WidgetType.SystemLogo(ScaleMode.Fit),
+                            ),
+                        ),
                     )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)

@@ -79,13 +79,23 @@ class WidgetImageTransitionEligibilityTest {
 
     @Test
     fun `imageTransitionActive forces None for box-art GameMedia even when Fill-scaled and Fade stored`() {
-        val widget = WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)
+        val widget =
+            WidgetType.GameMedia(
+                MediaType.Covers,
+                ScaleMode.Fill,
+                imageTransitionMode = ImageTransitionMode.Fade,
+            )
         assertEquals(ImageTransitionMode.None, widget.imageTransitionActive)
     }
 
     @Test
     fun `imageTransitionActive is the stored mode for eligible GameMedia`() {
-        val widget = WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade)
+        val widget =
+            WidgetType.GameMedia(
+                MediaType.Screenshots,
+                ScaleMode.Fill,
+                imageTransitionMode = ImageTransitionMode.Fade,
+            )
         assertEquals(ImageTransitionMode.Fade, widget.imageTransitionActive)
     }
 
@@ -99,15 +109,27 @@ class WidgetImageTransitionEligibilityTest {
         )
         assertEquals(
             ImageTransitionMode.Fade,
-            WidgetType.CustomImage("p", ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode,
+            WidgetType.CustomImage(
+                "p",
+                ScaleMode.Fill,
+                imageTransitionMode = ImageTransitionMode.Fade,
+            ).imageTransitionMode,
         )
         assertEquals(
             ImageTransitionMode.Fade,
-            WidgetType.SystemMedia(MediaType.FanArt, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode,
+            WidgetType.SystemMedia(
+                MediaType.FanArt,
+                ScaleMode.Fill,
+                imageTransitionMode = ImageTransitionMode.Fade,
+            ).imageTransitionMode,
         )
         assertEquals(
             ImageTransitionMode.Fade,
-            WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill, imageTransitionMode = ImageTransitionMode.Fade).imageTransitionMode,
+            WidgetType.GameMedia(
+                MediaType.Screenshots,
+                ScaleMode.Fill,
+                imageTransitionMode = ImageTransitionMode.Fade,
+            ).imageTransitionMode,
         )
         assertEquals(ImageTransitionMode.None, WidgetType.SystemLogo(ScaleMode.Fill).imageTransitionMode)
         assertEquals(ImageTransitionMode.None, WidgetType.ColorBackground(0xFF000000, 1f).imageTransitionMode)
@@ -115,7 +137,12 @@ class WidgetImageTransitionEligibilityTest {
 
     @Test
     fun `logoTransitionMode and glintEnabled read through for every logo-style variant`() {
-        val logo = WidgetType.SystemLogo(ScaleMode.Fill, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)
+        val logo =
+            WidgetType.SystemLogo(
+                ScaleMode.Fill,
+                logoTransitionMode = LogoTransitionMode.Slide,
+                glintEnabled = true,
+            )
         assertEquals(LogoTransitionMode.Slide, logo.logoTransitionMode)
         assertTrue(logo.glintEnabled)
 

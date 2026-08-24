@@ -500,7 +500,8 @@ class SettingsViewModel(
     private suspend fun validateCustomMusicFolder(path: String) {
         _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = true)
         val result = validateMediaFolderUseCase(path)
-        _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = false, customMusicFolderValidation = result)
+        _uiState.value =
+            _uiState.value.copy(isValidatingCustomMusicFolder = false, customMusicFolderValidation = result)
     }
 
     fun onThemePreferenceChanged(preference: ThemePreference) {
@@ -598,7 +599,8 @@ class SettingsViewModel(
     private suspend fun validateCustomLogosFolder(path: String) {
         _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = true)
         val result = validateMediaFolderUseCase(path)
-        _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = false, customLogosFolderValidation = result)
+        _uiState.value =
+            _uiState.value.copy(isValidatingCustomLogosFolder = false, customLogosFolderValidation = result)
     }
 
     fun onRetroAchievementsUsernameInputChanged(username: String) {

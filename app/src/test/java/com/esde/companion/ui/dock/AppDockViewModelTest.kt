@@ -338,7 +338,8 @@ class AppDockViewModelTest {
     @Test
     fun `removeFromDock filters the package and closes the gap`() =
         runTest(testDispatcher) {
-            val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
+            val repository =
+                FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
             val viewModel = buildViewModel(dockSettingsRepository = repository)
 
             viewModel.removeFromDock("com.example.b")
@@ -350,7 +351,8 @@ class AppDockViewModelTest {
     @Test
     fun `moveLeft swaps with the previous entry and no-ops at the start`() =
         runTest(testDispatcher) {
-            val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
+            val repository =
+                FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
             val viewModel = buildViewModel(dockSettingsRepository = repository)
 
             viewModel.moveLeft("com.example.b")
@@ -365,7 +367,8 @@ class AppDockViewModelTest {
     @Test
     fun `moveRight swaps with the next entry and no-ops at the end`() =
         runTest(testDispatcher) {
-            val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
+            val repository =
+                FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
             val viewModel = buildViewModel(dockSettingsRepository = repository)
 
             viewModel.moveRight("com.example.b")

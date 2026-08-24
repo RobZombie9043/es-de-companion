@@ -362,11 +362,21 @@ fun EditWidgetsOverlay(
 
                     for (column in 1 until grid.columns) {
                         val x = cellWidthPx * column
-                        drawLine(color = gridLineColor, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = 2f)
+                        drawLine(
+                            color = gridLineColor,
+                            start = Offset(x, 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = 2f,
+                        )
                     }
                     for (row in 1 until grid.rows) {
                         val y = cellHeightPx * row
-                        drawLine(color = gridLineColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 2f)
+                        drawLine(
+                            color = gridLineColor,
+                            start = Offset(0f, y),
+                            end = Offset(size.width, y),
+                            strokeWidth = 2f,
+                        )
                     }
                 }
             }
@@ -575,7 +585,10 @@ private fun PlaceholderWidgetBox(
                 .padding(WIDGET_BORDER_INSET)
                 .then(
                     if (isPlaceholder) {
-                        Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                        Modifier.background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            RoundedCornerShape(8.dp),
+                        )
                     } else {
                         Modifier
                     },

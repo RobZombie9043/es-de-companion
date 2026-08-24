@@ -279,7 +279,9 @@ fun LongPressSettingsMenu(
                         val slideDistance = { width: Int -> width / 3 }
                         if (enteringDeeper) {
                             (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                                .togetherWith(
+                                    slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)),
+                                )
                         } else {
                             (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
                                 .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
@@ -311,8 +313,10 @@ fun LongPressSettingsMenu(
                                         uiState = uiState,
                                         onLogFolderPicked = settingsViewModel::onLogFolderPicked,
                                         onMediaFolderPicked = settingsViewModel::onMediaFolderPicked,
-                                        onCustomSystemImagesFolderPicked = settingsViewModel::onCustomSystemImagesFolderPicked,
-                                        onCustomSystemImagesFolderCleared = settingsViewModel::onCustomSystemImagesFolderCleared,
+                                        onCustomSystemImagesFolderPicked =
+                                            settingsViewModel::onCustomSystemImagesFolderPicked,
+                                        onCustomSystemImagesFolderCleared =
+                                            settingsViewModel::onCustomSystemImagesFolderCleared,
                                         onCustomLogosFolderPicked = settingsViewModel::onCustomLogosFolderPicked,
                                         onCustomLogosFolderCleared = settingsViewModel::onCustomLogosFolderCleared,
                                         onCustomMusicFolderPicked = settingsViewModel::onCustomMusicFolderPicked,
@@ -330,11 +334,13 @@ fun LongPressSettingsMenu(
                                         gamePlayingBehavior = uiState.gamePlayingBehavior,
                                         onGamePlayingBehaviorChanged = settingsViewModel::onGamePlayingBehaviorChanged,
                                         gamePlayingDimPercent = uiState.gamePlayingDimPercent,
-                                        onGamePlayingDimPercentChanged = settingsViewModel::onGamePlayingDimPercentChanged,
+                                        onGamePlayingDimPercentChanged =
+                                            settingsViewModel::onGamePlayingDimPercentChanged,
                                         screensaverBehavior = uiState.screensaverBehavior,
                                         onScreensaverBehaviorChanged = settingsViewModel::onScreensaverBehaviorChanged,
                                         screensaverDimPercent = uiState.screensaverDimPercent,
-                                        onScreensaverDimPercentChanged = settingsViewModel::onScreensaverDimPercentChanged,
+                                        onScreensaverDimPercentChanged =
+                                            settingsViewModel::onScreensaverDimPercentChanged,
                                         fabAssignments = uiState.fabAssignments,
                                         installedApps = uiState.installedApps,
                                         onFabTypeChanged = settingsViewModel::onFabTypeChanged,
@@ -344,7 +350,8 @@ fun LongPressSettingsMenu(
                                 SettingsCategory.VideoPlayback ->
                                     VideoPlaybackSettingsContent(
                                         videoPlaybackEnabled = uiState.videoPlaybackEnabled,
-                                        onVideoPlaybackEnabledChanged = settingsViewModel::onVideoPlaybackEnabledChanged,
+                                        onVideoPlaybackEnabledChanged =
+                                            settingsViewModel::onVideoPlaybackEnabledChanged,
                                         videoDelaySeconds = uiState.videoDelaySeconds,
                                         onVideoDelaySecondsChanged = settingsViewModel::onVideoDelaySecondsChanged,
                                         videoAudioEnabled = uiState.videoAudioEnabled,
@@ -358,7 +365,9 @@ fun LongPressSettingsMenu(
                                         onSortFoldersOnTopChanged = settingsViewModel::onSortFoldersOnTopChanged,
                                         showSearchBar = uiState.showSearchBar,
                                         onShowSearchBarChanged = settingsViewModel::onShowSearchBarChanged,
-                                        onManageAppsClick = { page = MenuPage.ManageApps(fromCategory = targetPage.category) },
+                                        onManageAppsClick = {
+                                            page = MenuPage.ManageApps(fromCategory = targetPage.category)
+                                        },
                                         dockEnabled = uiState.dockEnabled,
                                         onDockEnabledChanged = settingsViewModel::onDockEnabledChanged,
                                         dockMaxApps = uiState.dockMaxApps,
@@ -371,11 +380,14 @@ fun LongPressSettingsMenu(
                                         musicEnabled = uiState.musicEnabled,
                                         onMusicEnabledChanged = settingsViewModel::onMusicEnabledChanged,
                                         musicPlayWhileBrowsingSystems = uiState.musicPlayWhileBrowsingSystems,
-                                        onMusicPlayWhileBrowsingSystemsChanged = settingsViewModel::onMusicPlayWhileBrowsingSystemsChanged,
+                                        onMusicPlayWhileBrowsingSystemsChanged =
+                                            settingsViewModel::onMusicPlayWhileBrowsingSystemsChanged,
                                         musicPlayWhileBrowsingGames = uiState.musicPlayWhileBrowsingGames,
-                                        onMusicPlayWhileBrowsingGamesChanged = settingsViewModel::onMusicPlayWhileBrowsingGamesChanged,
+                                        onMusicPlayWhileBrowsingGamesChanged =
+                                            settingsViewModel::onMusicPlayWhileBrowsingGamesChanged,
                                         musicPlayDuringScreensaver = uiState.musicPlayDuringScreensaver,
-                                        onMusicPlayDuringScreensaverChanged = settingsViewModel::onMusicPlayDuringScreensaverChanged,
+                                        onMusicPlayDuringScreensaverChanged =
+                                            settingsViewModel::onMusicPlayDuringScreensaverChanged,
                                         musicDuckingMode = uiState.musicDuckingMode,
                                         onMusicDuckingModeChanged = settingsViewModel::onMusicDuckingModeChanged,
                                     )
@@ -385,13 +397,17 @@ fun LongPressSettingsMenu(
                                         isCheckingForUpdate = updateUiState.isCheckingForUpdate,
                                         onCheckForUpdatesClicked = updateViewModel::checkForUpdatesManually,
                                         closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
-                                        onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
+                                        onCloseCompanionOnQuitEnabledChanged =
+                                            settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
                                         launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
                                         onLaunchEsdeOnStartEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
                                         debugLoggingEnabled = uiState.debugLoggingEnabled,
                                         onDebugLoggingEnabledChanged = settingsViewModel::onDebugLoggingEnabledChanged,
                                     )
-                                SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
+                                SettingsCategory.Widgets ->
+                                    WidgetsSettingsContent(
+                                        onEditWidgetsClick = onEditWidgetsClick,
+                                    )
                                 SettingsCategory.RetroAchievements ->
                                     RetroAchievementsSettingsContent(
                                         credentials = uiState.retroAchievementsCredentials,
