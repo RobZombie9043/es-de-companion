@@ -13,6 +13,18 @@ package com.esde.companion.domain.model
  * [RetroAchievementsConsole] - RetroAchievements does not distinguish regions or
  * sub-hardware revisions at the console level, only at the game level.
  *
+ * The same "same console" reasoning extends to ROM-hack collections and hardware
+ * peripherals/enhancements: `rcheevos`' `rc_consoles.h` (see [RetroAchievementsConsole]'s doc
+ * comment) has no separate console ID for hacks, MSU-1-enhanced ROMs, or peripherals like the
+ * SNES's Satellaview/Sufami Turbo or the N64DD - a hack is tracked under its base console's
+ * normal ID exactly like a retail game (`snesh` is still console 3, same as `snes`), so
+ * `snesh`/`gbh`/`gbch`/`gbah`/`genh`/`nesh`/`msu-md`/`snes-msu1`/`satellaview`/`sufami`/`n64dd`
+ * all map to their base console below. Note that the six `*h` hack short names and the two
+ * `msu-*`/`*-msu1` short names are **not** in ES-DE's stock `es_systems.xml` - they come from
+ * the community "custom_systems" convention for ES-DE Android (see
+ * github.com/GlazedBelmont/es-de-android-custom-systems), so don't "fix" them as typos by
+ * cross-checking only against the stock reference file.
+ *
  * Deliberately excludes ES-DE's various MAME/arcade-board systems (`arcade`, `mame`,
  * `fba`/`fbneo`, `cps`/`cps1`/`cps2`/`cps3`, `neogeo`, `model2`/`model3`, `naomi`/`naomi2`,
  * `atomiswave`, `stv`, `mugen`, `openbor`, `type-x`) even though RetroAchievements does
@@ -30,16 +42,27 @@ object EsdeSystemToRaConsoleMapping {
             "genesis" to RetroAchievementsConsole.MegaDrive,
             "megadrive" to RetroAchievementsConsole.MegaDrive,
             "megadrivejp" to RetroAchievementsConsole.MegaDrive,
+            "genh" to RetroAchievementsConsole.MegaDrive,
+            "msu-md" to RetroAchievementsConsole.MegaDrive,
             "n64" to RetroAchievementsConsole.Nintendo64,
+            "n64dd" to RetroAchievementsConsole.Nintendo64,
             "snes" to RetroAchievementsConsole.Snes,
             "sfc" to RetroAchievementsConsole.Snes,
             "snesna" to RetroAchievementsConsole.Snes,
+            "snesh" to RetroAchievementsConsole.Snes,
+            "snes-msu1" to RetroAchievementsConsole.Snes,
+            "satellaview" to RetroAchievementsConsole.Snes,
+            "sufami" to RetroAchievementsConsole.Snes,
             "gb" to RetroAchievementsConsole.GameBoy,
             "sgb" to RetroAchievementsConsole.GameBoy,
+            "gbh" to RetroAchievementsConsole.GameBoy,
             "gba" to RetroAchievementsConsole.GameBoyAdvance,
+            "gbah" to RetroAchievementsConsole.GameBoyAdvance,
             "gbc" to RetroAchievementsConsole.GameBoyColor,
+            "gbch" to RetroAchievementsConsole.GameBoyColor,
             "nes" to RetroAchievementsConsole.Nes,
             "famicom" to RetroAchievementsConsole.Nes,
+            "nesh" to RetroAchievementsConsole.Nes,
             "fds" to RetroAchievementsConsole.FamicomDiskSystem,
             "pcengine" to RetroAchievementsConsole.PcEngine,
             "tg16" to RetroAchievementsConsole.PcEngine,

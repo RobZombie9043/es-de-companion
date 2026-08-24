@@ -52,4 +52,23 @@ class EsdeSystemToRaConsoleMappingTest {
         assertNull(EsdeSystemToRaConsoleMapping.consoleFor("neogeo"))
         assertNull(EsdeSystemToRaConsoleMapping.consoleFor("fbneo"))
     }
+
+    @Test
+    fun `ROM-hack and MSU-1-enhanced custom systems map to their base RetroAchievements console`() {
+        assertEquals(RetroAchievementsConsole.GameBoy, EsdeSystemToRaConsoleMapping.consoleFor("gbh"))
+        assertEquals(RetroAchievementsConsole.GameBoyColor, EsdeSystemToRaConsoleMapping.consoleFor("gbch"))
+        assertEquals(RetroAchievementsConsole.GameBoyAdvance, EsdeSystemToRaConsoleMapping.consoleFor("gbah"))
+        assertEquals(RetroAchievementsConsole.MegaDrive, EsdeSystemToRaConsoleMapping.consoleFor("genh"))
+        assertEquals(RetroAchievementsConsole.Nes, EsdeSystemToRaConsoleMapping.consoleFor("nesh"))
+        assertEquals(RetroAchievementsConsole.Snes, EsdeSystemToRaConsoleMapping.consoleFor("snesh"))
+        assertEquals(RetroAchievementsConsole.MegaDrive, EsdeSystemToRaConsoleMapping.consoleFor("msu-md"))
+        assertEquals(RetroAchievementsConsole.Snes, EsdeSystemToRaConsoleMapping.consoleFor("snes-msu1"))
+    }
+
+    @Test
+    fun `SNES and N64 hardware peripherals map to their base RetroAchievements console`() {
+        assertEquals(RetroAchievementsConsole.Nintendo64, EsdeSystemToRaConsoleMapping.consoleFor("n64dd"))
+        assertEquals(RetroAchievementsConsole.Snes, EsdeSystemToRaConsoleMapping.consoleFor("satellaview"))
+        assertEquals(RetroAchievementsConsole.Snes, EsdeSystemToRaConsoleMapping.consoleFor("sufami"))
+    }
 }
