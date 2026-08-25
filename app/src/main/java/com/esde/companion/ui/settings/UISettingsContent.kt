@@ -227,31 +227,75 @@ private fun ScreenBehaviorPicker(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SettingsLabel(icon = icon, text = title)
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                options.forEachIndexed { index, behavior ->
-                    SegmentedButton(
-                        selected = behavior == selected,
-                        onClick = { onSelected(behavior) },
-                        shape =
-                            SegmentedButtonDefaults.itemShape(
-                                index = index,
-                                count = options.size,
-                            ),
-                        icon = {
-                            SegmentedButtonDefaults.Icon(active = behavior == selected) {
-                                Icon(
-                                    imageVector = behavior.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                                )
-                            }
-                        },
-                        label = { SegmentedButtonLabel(behavior.label) },
-                    )
+            if (options.size >= SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD) {
+                ScreenBehaviorDropdown(options = options, selected = selected, onSelected = onSelected)
+            } else {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    options.forEachIndexed { index, behavior ->
+                        SegmentedButton(
+                            selected = behavior == selected,
+                            onClick = { onSelected(behavior) },
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = options.size,
+                                ),
+                            icon = {
+                                SegmentedButtonDefaults.Icon(active = behavior == selected) {
+                                    Icon(
+                                        imageVector = behavior.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                                    )
+                                }
+                            },
+                            label = { SegmentedButtonLabel(behavior.label) },
+                        )
+                    }
                 }
             }
             if (selected == ScreenBehavior.Dim) {
                 DimAmountSlider(percent = dimAmount.percent, onPercentChanged = dimAmount.onPercentChanged)
+            }
+        }
+    }
+}
+
+// A segmented row of icon+label buttons stops fitting comfortably past this many options -
+// same reasoning as FabTypeDropdown's own switch away from a segmented row, and confirmed by
+// "Manual" truncating in the 4-option Game Playing Screen Behavior picker even at the
+// device's regular font scale. Screensaver Screen Behavior (3 options) stays a segmented row.
+private const val SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD = 4
+
+/** Dropdown variant of [ScreenBehaviorPicker]'s selector, used once [options] crosses
+ * [SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD] - same shape as [FabTypeDropdown], parameterized on
+ * [ScreenBehavior] instead of [FabType]. */
+@Composable
+private fun ScreenBehaviorDropdown(
+    options: List<ScreenBehavior>,
+    selected: ScreenBehavior,
+    onSelected: (ScreenBehavior) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        FabRowSurface(onClick = { expanded = true }) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = selected.icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(text = selected.label, style = MaterialTheme.typography.bodyMedium)
+            }
+            Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    leadingIcon = { Icon(imageVector = option.icon, contentDescription = null) },
+                    onClick = {
+                        expanded = false
+                        onSelected(option)
+                    },
+                )
             }
         }
     }
