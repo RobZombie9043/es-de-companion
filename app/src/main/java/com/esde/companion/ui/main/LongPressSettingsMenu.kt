@@ -54,6 +54,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.esde.companion.BuildConfig
+import com.esde.companion.data.retroachievements.retroAchievementsEnabled
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.data.thor.ThorAccessibilityPermission
 import com.esde.companion.data.thor.isAynThorDevice
@@ -63,6 +64,10 @@ import com.esde.companion.ui.settings.LidWakeGuardSettingsState
 import com.esde.companion.ui.settings.ManageAppsScreen
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.OtherSettingsContent
+import com.esde.companion.ui.settings.RetroAchievementsConnectStatus
+import com.esde.companion.ui.settings.RetroAchievementsCredentialsInput
+import com.esde.companion.ui.settings.RetroAchievementsScreensaverToggle
+import com.esde.companion.ui.settings.RetroAchievementsSettingsContent
 import com.esde.companion.ui.settings.SettingsCategory
 import com.esde.companion.ui.settings.SettingsCategoryRow
 import com.esde.companion.ui.settings.SettingsQuitRow
@@ -72,7 +77,6 @@ import com.esde.companion.ui.settings.SoundSettingsContent
 import com.esde.companion.ui.settings.TaskKillerSettingsState
 import com.esde.companion.ui.settings.ThorSettingsContent
 import com.esde.companion.ui.settings.UISettingsContent
-import com.esde.companion.ui.settings.VideoPlaybackSettingsContent
 import com.esde.companion.ui.settings.VolumeSyncSettingsState
 import com.esde.companion.ui.settings.WidgetsSettingsContent
 import com.esde.companion.ui.theme.LocalIsDarkTheme
@@ -88,6 +92,10 @@ import kotlinx.coroutines.launch
  * trigger the Easter egg below - not exposed anywhere, deliberately undiscoverable short
  * of trying it. */
 private const val EASTER_EGG_TAP_THRESHOLD = 7
+
+/** Slide/fade durations for the Home -> Category -> ManageApps drill-down transition. */
+private const val PAGE_SLIDE_DURATION_MS = 220
+private const val PAGE_FADE_OUT_DURATION_MS = 150
 
 private val EasterEggMessages =
     listOf(
@@ -184,6 +192,7 @@ fun LongPressSettingsMenu(
     val onTaskKillerEnabledChanged = settingsViewModel::onTaskKillerEnabledChanged
     val onVolumeSyncEnabledChanged = settingsViewModel::onVolumeSyncEnabledChanged
     val onVolumeSyncModeChanged = settingsViewModel::onVolumeSyncModeChanged
+    val onBluetoothPermissionRequested = settingsViewModel::onBluetoothPermissionRequested
 
     val currentOnRefresh = rememberUpdatedState(settingsViewModel::refreshPermissionState)
     val currentOnRefreshThorAccessibility = rememberUpdatedState(settingsViewModel::refreshThorAccessibilityGranted)
@@ -272,11 +281,21 @@ fun LongPressSettingsMenu(
                         val enteringDeeper = targetState.depth > initialState.depth
                         val slideDistance = { width: Int -> width / 3 }
                         if (enteringDeeper) {
-                            (slideInHorizontally(tween(220), slideDistance) + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220)) { -slideDistance(it) } + fadeOut(tween(150)))
+                            (
+                                slideInHorizontally(tween(PAGE_SLIDE_DURATION_MS), slideDistance) +
+                                    fadeIn(tween(PAGE_SLIDE_DURATION_MS))
+                            ).togetherWith(
+                                slideOutHorizontally(tween(PAGE_SLIDE_DURATION_MS)) { -slideDistance(it) } +
+                                    fadeOut(tween(PAGE_FADE_OUT_DURATION_MS)),
+                            )
                         } else {
-                            (slideInHorizontally(tween(220)) { -slideDistance(it) } + fadeIn(tween(220)))
-                                .togetherWith(slideOutHorizontally(tween(220), slideDistance) + fadeOut(tween(150)))
+                            (
+                                slideInHorizontally(tween(PAGE_SLIDE_DURATION_MS)) { -slideDistance(it) } +
+                                    fadeIn(tween(PAGE_SLIDE_DURATION_MS))
+                            ).togetherWith(
+                                slideOutHorizontally(tween(PAGE_SLIDE_DURATION_MS), slideDistance) +
+                                    fadeOut(tween(PAGE_FADE_OUT_DURATION_MS)),
+                            )
                         }
                     },
                     label = "longPressSettingsContent",
@@ -305,8 +324,10 @@ fun LongPressSettingsMenu(
                                         uiState = uiState,
                                         onLogFolderPicked = settingsViewModel::onLogFolderPicked,
                                         onMediaFolderPicked = settingsViewModel::onMediaFolderPicked,
-                                        onCustomSystemImagesFolderPicked = settingsViewModel::onCustomSystemImagesFolderPicked,
-                                        onCustomSystemImagesFolderCleared = settingsViewModel::onCustomSystemImagesFolderCleared,
+                                        onCustomSystemImagesFolderPicked =
+                                            settingsViewModel::onCustomSystemImagesFolderPicked,
+                                        onCustomSystemImagesFolderCleared =
+                                            settingsViewModel::onCustomSystemImagesFolderCleared,
                                         onCustomLogosFolderPicked = settingsViewModel::onCustomLogosFolderPicked,
                                         onCustomLogosFolderCleared = settingsViewModel::onCustomLogosFolderCleared,
                                         onCustomMusicFolderPicked = settingsViewModel::onCustomMusicFolderPicked,
@@ -324,24 +345,18 @@ fun LongPressSettingsMenu(
                                         gamePlayingBehavior = uiState.gamePlayingBehavior,
                                         onGamePlayingBehaviorChanged = settingsViewModel::onGamePlayingBehaviorChanged,
                                         gamePlayingDimPercent = uiState.gamePlayingDimPercent,
-                                        onGamePlayingDimPercentChanged = settingsViewModel::onGamePlayingDimPercentChanged,
+                                        onGamePlayingDimPercentChanged =
+                                            settingsViewModel::onGamePlayingDimPercentChanged,
                                         screensaverBehavior = uiState.screensaverBehavior,
                                         onScreensaverBehaviorChanged = settingsViewModel::onScreensaverBehaviorChanged,
                                         screensaverDimPercent = uiState.screensaverDimPercent,
-                                        onScreensaverDimPercentChanged = settingsViewModel::onScreensaverDimPercentChanged,
+                                        onScreensaverDimPercentChanged =
+                                            settingsViewModel::onScreensaverDimPercentChanged,
                                         fabAssignments = uiState.fabAssignments,
                                         installedApps = uiState.installedApps,
                                         onFabTypeChanged = settingsViewModel::onFabTypeChanged,
                                         onFabCustomAppChanged = settingsViewModel::onFabCustomAppChanged,
-                                    )
-                                SettingsCategory.VideoPlayback ->
-                                    VideoPlaybackSettingsContent(
-                                        videoPlaybackEnabled = uiState.videoPlaybackEnabled,
-                                        onVideoPlaybackEnabledChanged = settingsViewModel::onVideoPlaybackEnabledChanged,
-                                        videoDelaySeconds = uiState.videoDelaySeconds,
-                                        onVideoDelaySecondsChanged = settingsViewModel::onVideoDelaySecondsChanged,
-                                        videoAudioEnabled = uiState.videoAudioEnabled,
-                                        onVideoAudioEnabledChanged = settingsViewModel::onVideoAudioEnabledChanged,
+                                        onBluetoothPermissionRequested = onBluetoothPermissionRequested,
                                     )
                                 SettingsCategory.AppDrawer ->
                                     AppDrawerSettingsContent(
@@ -351,7 +366,9 @@ fun LongPressSettingsMenu(
                                         onSortFoldersOnTopChanged = settingsViewModel::onSortFoldersOnTopChanged,
                                         showSearchBar = uiState.showSearchBar,
                                         onShowSearchBarChanged = settingsViewModel::onShowSearchBarChanged,
-                                        onManageAppsClick = { page = MenuPage.ManageApps(fromCategory = targetPage.category) },
+                                        onManageAppsClick = {
+                                            page = MenuPage.ManageApps(fromCategory = targetPage.category)
+                                        },
                                         dockEnabled = uiState.dockEnabled,
                                         onDockEnabledChanged = settingsViewModel::onDockEnabledChanged,
                                         dockMaxApps = uiState.dockMaxApps,
@@ -364,11 +381,14 @@ fun LongPressSettingsMenu(
                                         musicEnabled = uiState.musicEnabled,
                                         onMusicEnabledChanged = settingsViewModel::onMusicEnabledChanged,
                                         musicPlayWhileBrowsingSystems = uiState.musicPlayWhileBrowsingSystems,
-                                        onMusicPlayWhileBrowsingSystemsChanged = settingsViewModel::onMusicPlayWhileBrowsingSystemsChanged,
+                                        onMusicPlayWhileBrowsingSystemsChanged =
+                                            settingsViewModel::onMusicPlayWhileBrowsingSystemsChanged,
                                         musicPlayWhileBrowsingGames = uiState.musicPlayWhileBrowsingGames,
-                                        onMusicPlayWhileBrowsingGamesChanged = settingsViewModel::onMusicPlayWhileBrowsingGamesChanged,
+                                        onMusicPlayWhileBrowsingGamesChanged =
+                                            settingsViewModel::onMusicPlayWhileBrowsingGamesChanged,
                                         musicPlayDuringScreensaver = uiState.musicPlayDuringScreensaver,
-                                        onMusicPlayDuringScreensaverChanged = settingsViewModel::onMusicPlayDuringScreensaverChanged,
+                                        onMusicPlayDuringScreensaverChanged =
+                                            settingsViewModel::onMusicPlayDuringScreensaverChanged,
                                         musicDuckingMode = uiState.musicDuckingMode,
                                         onMusicDuckingModeChanged = settingsViewModel::onMusicDuckingModeChanged,
                                     )
@@ -378,13 +398,44 @@ fun LongPressSettingsMenu(
                                         isCheckingForUpdate = updateUiState.isCheckingForUpdate,
                                         onCheckForUpdatesClicked = updateViewModel::checkForUpdatesManually,
                                         closeCompanionOnQuitEnabled = uiState.closeCompanionOnQuitEnabled,
-                                        onCloseCompanionOnQuitEnabledChanged = settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
+                                        onCloseCompanionOnQuitEnabledChanged =
+                                            settingsViewModel::onCloseCompanionOnQuitEnabledChanged,
                                         launchEsdeOnStartEnabled = uiState.launchEsdeOnStartEnabled,
                                         onLaunchEsdeOnStartEnabledChanged = onLaunchEsdeOnStartEnabledChanged,
                                         debugLoggingEnabled = uiState.debugLoggingEnabled,
                                         onDebugLoggingEnabledChanged = settingsViewModel::onDebugLoggingEnabledChanged,
                                     )
-                                SettingsCategory.Widgets -> WidgetsSettingsContent(onEditWidgetsClick = onEditWidgetsClick)
+                                SettingsCategory.Widgets ->
+                                    WidgetsSettingsContent(
+                                        onEditWidgetsClick = onEditWidgetsClick,
+                                    )
+                                SettingsCategory.RetroAchievements ->
+                                    RetroAchievementsSettingsContent(
+                                        credentials = uiState.retroAchievementsCredentials,
+                                        input =
+                                            RetroAchievementsCredentialsInput(
+                                                username = uiState.retroAchievementsUsernameInput,
+                                                onUsernameChanged =
+                                                    settingsViewModel::onRetroAchievementsUsernameInputChanged,
+                                                webApiKey = uiState.retroAchievementsWebApiKeyInput,
+                                                onWebApiKeyChanged =
+                                                    settingsViewModel::onRetroAchievementsWebApiKeyInputChanged,
+                                            ),
+                                        connectStatus =
+                                            RetroAchievementsConnectStatus(
+                                                isConnecting = uiState.isConnectingToRetroAchievements,
+                                                connectError = uiState.retroAchievementsConnectError,
+                                                onConnectClicked =
+                                                    settingsViewModel::onConnectToRetroAchievementsClicked,
+                                            ),
+                                        onSignOutClicked = settingsViewModel::onSignOutOfRetroAchievementsClicked,
+                                        screensaverToggle =
+                                            RetroAchievementsScreensaverToggle(
+                                                enabled = uiState.updateAchievementsOnScreensaverEnabled,
+                                                onEnabledChanged =
+                                                    settingsViewModel::onUpdateAchievementsOnScreensaverEnabledChanged,
+                                            ),
+                                    )
                                 SettingsCategory.Thor ->
                                     ThorSettingsContent(
                                         lidWakeGuard =
@@ -497,8 +548,14 @@ private fun SettingsMenuHome(
     ) {
         // Thor Settings is only meaningful on an actual Ayn Thor device - the `when` branch
         // that routes to it above still exists unconditionally regardless (see
-        // ThorSettingsContent's kdoc), this is purely a list-visibility filter.
-        val visibleCategories = SettingsCategory.entries.filter { it != SettingsCategory.Thor || isAynThorDevice() }
+        // ThorSettingsContent's kdoc), this is purely a list-visibility filter. Same idea for
+        // RetroAchievements while it's gated behind retroAchievementsEnabled() - see that
+        // function's kdoc.
+        val visibleCategories =
+            SettingsCategory.entries.filter {
+                (it != SettingsCategory.Thor || isAynThorDevice()) &&
+                    (it != SettingsCategory.RetroAchievements || retroAchievementsEnabled())
+            }
         visibleCategories.forEach { category ->
             SettingsCategoryRow(
                 category = category,

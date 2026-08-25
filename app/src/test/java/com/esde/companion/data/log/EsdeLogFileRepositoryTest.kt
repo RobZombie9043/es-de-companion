@@ -17,6 +17,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
+
+/**
+ * [EsdeLogFileRepository.observeEvents]/[EsdeLogFileRepository.observeLogFileExists] both
+ * `flowOn(Dispatchers.IO)` deliberately (see that class's kdoc) - real disk I/O on a real
+ * thread, not virtual-time work `runTest`'s scheduler can fast-forward. Turbine's
+ * `awaitItem()` timeout is therefore a genuine wall-clock budget for that real thread to
+ * get scheduled and do real file I/O, which the default 3s occasionally missed under
+ * heavy parallel Gradle test-worker contention (confirmed as the actual cause of an
+ * intermittent "No value produced in 3s" failure, not a real bug in the repository) - a
+ * generous fixed budget here, not a shorter one tuned to this machine's usual speed.
+ */
+private val FLAKE_RESISTANT_TIMEOUT = 10.seconds
 
 class EsdeLogFileRepositoryTest {
     @get:Rule
@@ -99,7 +112,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 val events = mutableListOf<EsdeEvent>()
                 repeat(4) { events += awaitItem() }
                 cancelAndIgnoreRemainingEvents()
@@ -120,7 +133,8 @@ class EsdeLogFileRepositoryTest {
         runTest {
             val logFile = tempFolder.newFile("es_log.txt")
             logFile.writeText(
-                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" " +
+                    "\"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
             )
 
             // Simulates a reboot: the file's real mtime is "now" (test-run time), but boot
@@ -128,7 +142,7 @@ class EsdeLogFileRepositoryTest {
             // since boot, so its anchor must be a leftover from before the reboot.
             val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() + 60_000L })
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 expectNoEvents()
                 cancelAndIgnoreRemainingEvents()
             }
@@ -139,14 +153,15 @@ class EsdeLogFileRepositoryTest {
         runTest {
             val logFile = tempFolder.newFile("es_log.txt")
             logFile.writeText(
-                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" \"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
+                "Jul 28 15:16:07 Debug:  Scripting::fireEvent(): system-select \"psx\" \"Sony PlayStation\" " +
+                    "\"/storage/E2AB-E84A/ROMs/psx\" \"\"\n",
             )
 
             // Boot reported as happening well before the file's real (test-run time) mtime -
             // i.e. the file was written after boot, so its anchor is trustworthy.
             val repository = repositoryFor(logFile, bootTimeMillis = { System.currentTimeMillis() - 60_000L })
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(
                     EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
                     awaitItem(),
@@ -165,7 +180,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 expectNoEvents()
                 cancelAndIgnoreRemainingEvents()
             }
@@ -185,7 +200,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(EsdeEvent.Quit, awaitItem())
                 cancelAndIgnoreRemainingEvents()
             }
@@ -204,7 +219,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(EsdeEvent.Startup, awaitItem())
                 cancelAndIgnoreRemainingEvents()
             }
@@ -224,7 +239,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(
                     EsdeEvent.GameSelect(
                         romPath = "/storage/E2AB-E84A/ROMs/mastersystem/Dragon Crystal (Europe, Brazil) (En).zip",
@@ -256,7 +271,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(
                     EsdeEvent.SystemSelect(
                         systemShortName = "mastersystem",
@@ -282,7 +297,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(
                     EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast"),
                     awaitItem(),
@@ -302,7 +317,7 @@ class EsdeLogFileRepositoryTest {
 
             val repository = repositoryFor(logFile)
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(
                     EsdeEvent.GameSelect(
                         romPath = "/storage/E2AB-E84A/ROMs/steam/NieR_Automata™.steam",
@@ -342,7 +357,7 @@ class EsdeLogFileRepositoryTest {
                     fallbackTicker = fallbackTicker,
                 )
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(
                     EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
                     awaitItem(),
@@ -398,7 +413,7 @@ class EsdeLogFileRepositoryTest {
                     selfHeal = SelfHealConfig(onFallbackPollCaughtUpdate = { fallbackCatchCount++ }),
                 )
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(
                     EsdeEvent.SystemSelect("psx", "Sony PlayStation", "/storage/E2AB-E84A/ROMs/psx"),
                     awaitItem(),
@@ -438,7 +453,7 @@ class EsdeLogFileRepositoryTest {
                     fallbackTicker = fallbackTicker,
                 )
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 // Not asserted here: capturedWatcher is assigned by the producer coroutine
                 // (running on Dispatchers.IO, a real thread) after this first emission, so
                 // there's no guarantee it has run yet the instant awaitItem() returns -
@@ -484,7 +499,7 @@ class EsdeLogFileRepositoryTest {
                     selfHeal = SelfHealConfig(storageEvents = storageEvents),
                 )
 
-            repository.observeEvents().test {
+            repository.observeEvents().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 awaitItem()
 
                 // The storage-events collector subscribes from the producer coroutine on
@@ -524,7 +539,7 @@ class EsdeLogFileRepositoryTest {
                     fallbackTicker = fallbackTicker,
                 )
 
-            repository.observeLogFileExists().test {
+            repository.observeLogFileExists().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 // Not asserted here: capturedWatcher is assigned by the producer coroutine
                 // (running on Dispatchers.IO, a real thread) after this first emission, so
                 // there's no guarantee it has run yet the instant awaitItem() returns -
@@ -558,7 +573,7 @@ class EsdeLogFileRepositoryTest {
                     selfHeal = SelfHealConfig(storageEvents = storageEvents),
                 )
 
-            repository.observeLogFileExists().test {
+            repository.observeLogFileExists().test(timeout = FLAKE_RESISTANT_TIMEOUT) {
                 assertEquals(false, awaitItem())
 
                 // See the matching comment in the observeEvents() storage-changed test

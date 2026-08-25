@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
  * single `.first()` off its repository's observe `Flow` - a one-shot snapshot, not a live
  * subscription, matching what "export the current state" means.
  */
+@Suppress("LongParameterList")
 class ExportConfigBackupUseCase(
     private val repositories: BackupRepositories,
     private val configBackupRepository: ConfigBackupRepository,
@@ -21,6 +22,8 @@ class ExportConfigBackupUseCase(
             StateGroup.entries.associateWith { stateGroup ->
                 repositories.widgetLayoutRepository.observeCanvas(stateGroup).first()
             }
+        val updateAchievementsOnScreensaverEnabled =
+            repositories.onboardingRepository.observeUpdateAchievementsOnScreensaverEnabled().first()
         val snapshot =
             with(repositories) {
                 AppConfigBackup(
@@ -36,9 +39,6 @@ class ExportConfigBackupUseCase(
                     screensaverDimPercent = onboardingRepository.observeScreensaverDimPercent().first(),
                     overlayOpacityPercent = onboardingRepository.observeOverlayOpacityPercent().first(),
                     fabAssignments = onboardingRepository.observeFabAssignments().first(),
-                    videoPlaybackEnabled = onboardingRepository.observeVideoPlaybackEnabled().first(),
-                    videoDelaySeconds = onboardingRepository.observeVideoDelaySeconds().first(),
-                    videoAudioEnabled = onboardingRepository.observeVideoAudioEnabled().first(),
                     musicEnabled = onboardingRepository.observeMusicEnabled().first(),
                     musicPlayWhileBrowsingSystems = onboardingRepository.observeMusicPlayWhileBrowsingSystems().first(),
                     musicPlayWhileBrowsingGames = onboardingRepository.observeMusicPlayWhileBrowsingGames().first(),
@@ -58,6 +58,8 @@ class ExportConfigBackupUseCase(
                     dockSize = dockSettingsRepository.observeDockSize().first(),
                     dockApps = dockSettingsRepository.observeDockApps().first(),
                     widgetCanvases = widgetCanvases,
+                    gameMatchOverrides = gameMatchOverrideRepository.observeAllOverrides().first(),
+                    updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
                     lidWakeGuardEnabled = thorSettingsRepository.observeLidWakeGuardEnabled().first(),
                     hallSensorCalibration = thorSettingsRepository.observeHallSensorCalibration().first(),
                     autoFpsEnabled = thorSettingsRepository.observeAutoFpsEnabled().first(),

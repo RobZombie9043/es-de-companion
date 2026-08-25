@@ -35,6 +35,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.ui.SegmentedButtonLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -159,7 +160,7 @@ private fun MusicDuckingModeSetting(
                                 )
                             }
                         },
-                        label = { Text(mode.label) },
+                        label = { SegmentedButtonLabel(mode.label) },
                     )
                 }
             }

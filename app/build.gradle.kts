@@ -104,8 +104,11 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.svg)
     implementation(libs.coil.gif)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.retroachievements.api.kotlin)
     debugImplementation(libs.androidx.ui.tooling)
 
     // Local unit tests: app/src/test/

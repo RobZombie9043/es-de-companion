@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.SavedWidgetCanvas
@@ -39,9 +40,6 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         fabBottomStartCustomApp = fabAssignments.bottomStart.customAppPackageName,
         fabBottomEndType = fabAssignments.bottomEnd.type.name,
         fabBottomEndCustomApp = fabAssignments.bottomEnd.customAppPackageName,
-        videoPlaybackEnabled = videoPlaybackEnabled,
-        videoDelaySeconds = videoDelaySeconds,
-        videoAudioEnabled = videoAudioEnabled,
         musicEnabled = musicEnabled,
         musicPlayWhileBrowsingSystems = musicPlayWhileBrowsingSystems,
         musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
@@ -61,6 +59,8 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         dockSize = dockSize.name,
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDtoMap(),
+        gameMatchOverrides = gameMatchOverrides.map { it.toDto() },
+        updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
         lidWakeGuardEnabled = lidWakeGuardEnabled,
         hallSensorType = hallSensorCalibration.sensorType,
         hallSensorName = hallSensorCalibration.sensorName,
@@ -107,9 +107,6 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         screensaverDimPercent = screensaverDimPercent,
         overlayOpacityPercent = overlayOpacityPercent,
         fabAssignments = fabAssignments,
-        videoPlaybackEnabled = videoPlaybackEnabled,
-        videoDelaySeconds = videoDelaySeconds,
-        videoAudioEnabled = videoAudioEnabled,
         musicEnabled = musicEnabled,
         musicPlayWhileBrowsingSystems = musicPlayWhileBrowsingSystems,
         musicPlayWhileBrowsingGames = musicPlayWhileBrowsingGames,
@@ -129,6 +126,8 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         dockSize = dockSize.toEnumOrDefault(DockSize.Medium),
         dockApps = dockApps,
         widgetCanvases = widgetCanvases.toDomainMap(),
+        gameMatchOverrides = gameMatchOverrides.map { it.toDomain() },
+        updateAchievementsOnScreensaverEnabled = updateAchievementsOnScreensaverEnabled,
         lidWakeGuardEnabled = lidWakeGuardEnabled,
         hallSensorCalibration = hallSensorCalibration,
         autoFpsEnabled = autoFpsEnabled,
@@ -170,3 +169,11 @@ private inline fun <reified T : Enum<T>> String.toEnumOrDefault(default: T): T {
 private fun AppFolder.toDto() = AppFolderDto(id = id, name = name, memberPackageNames = memberPackageNames)
 
 private fun AppFolderDto.toDomain() = AppFolder(id = id, name = name, memberPackageNames = memberPackageNames)
+
+private fun GameMatchOverride.toDto(): GameMatchOverrideDto {
+    return GameMatchOverrideDto(systemShortName = systemShortName, romPath = romPath, raGameId = raGameId)
+}
+
+private fun GameMatchOverrideDto.toDomain(): GameMatchOverride {
+    return GameMatchOverride(systemShortName = systemShortName, romPath = romPath, raGameId = raGameId)
+}

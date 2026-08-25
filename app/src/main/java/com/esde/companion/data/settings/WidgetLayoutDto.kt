@@ -46,6 +46,9 @@ internal data class PlacedWidgetDto(
  * for why: `null` (the key absent entirely, e.g. JSON from before this feature existed)
  * means "apply MediaType.defaultFallbackMediaType()", the literal string "None" means the
  * fallback was explicitly turned off, and anything else is a MediaType enum name.
+ *
+ * cornerRadius defaults to "None" for the same no-migration reasoning, mirroring
+ * WidgetType.CornerRadius.None's own default.
  */
 @Serializable
 internal sealed class WidgetTypeDto {
@@ -65,6 +68,7 @@ internal sealed class WidgetTypeDto {
         val darkenAmount: Float = 0f,
         val panZoomEnabled: Boolean = false,
         val imageTransitionMode: String = "None",
+        val cornerRadius: String = "None",
     ) : WidgetTypeDto()
 
     @Serializable
@@ -78,6 +82,7 @@ internal sealed class WidgetTypeDto {
         val logoTransitionMode: String = "None",
         val glintEnabled: Boolean = false,
         val fallbackMediaType: String? = null,
+        val cornerRadius: String = "None",
     ) : WidgetTypeDto()
 
     @Serializable
@@ -91,6 +96,7 @@ internal sealed class WidgetTypeDto {
         val logoTransitionMode: String = "None",
         val glintEnabled: Boolean = false,
         val fallbackMediaType: String? = null,
+        val cornerRadius: String = "None",
     ) : WidgetTypeDto()
 
     @Serializable
@@ -101,10 +107,15 @@ internal sealed class WidgetTypeDto {
         val darkenAmount: Float = 0f,
         val panZoomEnabled: Boolean = false,
         val imageTransitionMode: String = "None",
+        val cornerRadius: String = "None",
     ) : WidgetTypeDto()
 
     @Serializable
-    data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetTypeDto()
+    data class ColorBackground(
+        val colorArgb: Long,
+        val alpha: Float,
+        val cornerRadius: String = "None",
+    ) : WidgetTypeDto()
 
     @Serializable
     data class GameDescription(
@@ -112,5 +123,27 @@ internal sealed class WidgetTypeDto {
         val textColorArgb: Long = 0xFFFFFFFF,
         val backgroundColorArgb: Long = 0xFF000000,
         val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: String = "None",
+    ) : WidgetTypeDto()
+
+    @Serializable
+    data class Rating(
+        val noRatingBehavior: String = "Hide",
+        val filledColorArgb: Long = 0xFFFFC107,
+        val outlineColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: String = "None",
+    ) : WidgetTypeDto()
+
+    @Serializable
+    data class Video(
+        val scaleMode: String,
+        val audioEnabled: Boolean = true,
+        val delaySeconds: Int = 0,
+        val pillarboxMode: String = "Black",
+        val renderAboveUi: Boolean = false,
+        val loopEnabled: Boolean = true,
+        val cornerRadius: String = "None",
     ) : WidgetTypeDto()
 }

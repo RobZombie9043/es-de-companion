@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -39,9 +40,6 @@ private class ExportFixture {
             screensaverDimPercent = 20,
             overlayOpacityPercent = 42,
             fabAssignments = fabAssignments,
-            videoPlaybackEnabled = true,
-            videoDelaySeconds = 7,
-            videoAudioEnabled = false,
             musicEnabled = false,
             musicPlayWhileBrowsingSystems = false,
             musicPlayWhileBrowsingGames = false,
@@ -50,6 +48,7 @@ private class ExportFixture {
             closeCompanionOnQuitEnabled = true,
             launchEsdeOnStartEnabled = true,
             debugLoggingEnabled = true,
+            updateAchievementsOnScreensaverEnabled = false,
         )
     val appDrawer =
         FakeAppDrawerSettingsRepository(
@@ -79,7 +78,10 @@ private class ExportFixture {
             autoFpsEnabled = true,
             autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
         )
-    val repositories = BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings)
+    val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
+    val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
+    val repositories =
+        BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings, gameMatchOverrides)
 
     private fun samplePlacedWidget() =
         PlacedWidget(
@@ -111,7 +113,6 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(42, snapshot.overlayOpacityPercent)
             assertEquals(FabType.CustomApp, snapshot.fabAssignments.bottomStart.type)
             assertEquals("com.example.app", snapshot.fabAssignments.bottomStart.customAppPackageName)
-            assertTrue(snapshot.videoPlaybackEnabled)
             assertEquals(MusicDuckingMode.Pause, snapshot.musicDuckingMode)
             assertEquals(setOf("com.hidden.app"), snapshot.hiddenApps)
             assertEquals(6, snapshot.gridColumns)
@@ -120,6 +121,8 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(listOf("com.dock.app"), snapshot.dockApps)
             assertEquals(fixture.canvas, snapshot.widgetCanvases[StateGroup.System])
             assertEquals(emptyCanvas, snapshot.widgetCanvases[StateGroup.Playing])
+            assertEquals(listOf(fixture.override), snapshot.gameMatchOverrides)
+            assertEquals(false, snapshot.updateAchievementsOnScreensaverEnabled)
             assertTrue(snapshot.lidWakeGuardEnabled)
             assertEquals(fixture.calibration, snapshot.hallSensorCalibration)
             assertTrue(snapshot.autoFpsEnabled)

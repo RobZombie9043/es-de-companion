@@ -28,6 +28,7 @@ import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.model.cornerRadius
 import com.esde.companion.domain.model.glintEnabled
 import com.esde.companion.domain.model.imageTransitionActive
 import com.esde.companion.domain.model.isLogoStyle
@@ -35,6 +36,7 @@ import com.esde.companion.domain.model.logoTransitionMode
 import com.esde.companion.domain.model.panZoomActive
 import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.LocalIsDarkTheme
+import com.esde.companion.ui.video.VideoPlaybackEvent
 import java.io.File
 
 /**
@@ -51,6 +53,7 @@ fun WidgetCanvas(
     widgets: List<PlacedWidget>,
     contentByWidgetId: Map<String, WidgetContent>,
     navigationDirection: NavigationDirection? = null,
+    onVideoPlaybackEvent: (VideoPlaybackEvent) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -65,6 +68,7 @@ fun WidgetCanvas(
                     content = content,
                     widgetType = widget.widgetType,
                     navigationDirection = navigationDirection,
+                    displayOptions = WidgetContentDisplayOptions(onVideoPlaybackEvent = onVideoPlaybackEvent),
                     modifier =
                         Modifier
                             .offset(x = cellWidth * widget.gridColumn, y = cellHeight * widget.gridRow)
@@ -75,6 +79,18 @@ fun WidgetCanvas(
         }
     }
 }
+
+/**
+ * [textUserScrollEnabled]/[onVideoPlaybackEvent] bundled into one type purely to keep
+ * [WidgetContentView]'s own parameter count under this project's [LongParameterList]
+ * limit, same reasoning as e.g. `SelfHealConfig` - both are optional auxiliary knobs a
+ * caller only needs to override for one specific widget-content branch ([WidgetContent.Text]
+ * and [WidgetContent.Video] respectively), not a single logically-related pair otherwise.
+ */
+data class WidgetContentDisplayOptions(
+    val textUserScrollEnabled: Boolean = true,
+    val onVideoPlaybackEvent: (VideoPlaybackEvent) -> Unit = {},
+)
 
 /** Internal, not private - reused as-is by EditWidgetsOverlay's edit-mode preview
  * rendering (see EditWidgetsViewModel.previewContent's kdoc), so both the live screen
@@ -142,7 +158,7 @@ internal fun WidgetContentView(
     widgetType: WidgetType,
     navigationDirection: NavigationDirection? = null,
     modifier: Modifier = Modifier,
-    textUserScrollEnabled: Boolean = true,
+    displayOptions: WidgetContentDisplayOptions = WidgetContentDisplayOptions(),
 ) {
     if (widgetType.isLogoStyle) {
         val model: Any? =
@@ -193,10 +209,15 @@ internal fun WidgetContentView(
         WidgetContent.Empty -> Unit
 
         is WidgetContent.Color ->
-            Box(modifier = modifier.background(Color(content.colorArgb).copy(alpha = content.alpha)))
+            Box(
+                modifier =
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(Color(content.colorArgb).copy(alpha = content.alpha)),
+            )
 
         is WidgetContent.Image ->
-            Box(modifier = modifier) {
+            Box(modifier = modifier.applyCornerRadius(widgetType.cornerRadius)) {
                 val isDarkTheme = LocalIsDarkTheme.current
                 val model = if (content.isAsset) fallbackBackgroundAssetPath(isDarkTheme) else File(content.path)
                 CrossfadeAsyncImage(
@@ -212,23 +233,58 @@ internal fun WidgetContentView(
                 DarkenOverlay(effects = content.effects)
             }
 
-        is WidgetContent.SystemLogoAsset -> Unit // unreachable: SystemLogoAsset only occurs for SystemLogo widgetType, which isLogoStyle handles above
+        // unreachable: SystemLogoAsset only occurs for SystemLogo widgetType, which isLogoStyle handles above
+        is WidgetContent.SystemLogoAsset -> Unit
 
-        is WidgetContent.NameFallback -> Unit // unreachable: only ever produced for isLogoStyle widget types, handled above
+        // unreachable: only ever produced for isLogoStyle widget types, handled above
+        is WidgetContent.NameFallback -> Unit
 
         is WidgetContent.Text ->
             Box(
                 modifier =
-                    modifier.background(
-                        Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
-                    ),
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(
+                            Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                        ),
             ) {
                 ScrollingText(
                     text = content.text,
                     fontSizeSp = content.fontSizeSp,
                     textColorArgb = content.textColorArgb,
                     modifier = Modifier.fillMaxSize(),
-                    userScrollEnabled = textUserScrollEnabled,
+                    userScrollEnabled = displayOptions.textUserScrollEnabled,
+                )
+            }
+
+        is WidgetContent.Rating ->
+            Box(
+                modifier =
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(
+                            Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                RatingStars(
+                    starCount = content.starCount,
+                    filledColorArgb = content.filledColorArgb,
+                    outlineColorArgb = content.outlineColorArgb,
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
+                )
+            }
+
+        is WidgetContent.Video ->
+            // renderAboveUi widgets are rendered instead by WidgetOverlay's
+            // TopLayerVideoWidgets, above FABs/App Dock/App Drawer - see
+            // WidgetType.Video.renderAboveUi's kdoc. Skipped here entirely (not just
+            // moved) so this widget only ever owns one ExoPlayer pool/composable.
+            if (!content.renderAboveUi) {
+                WidgetVideoContent(
+                    content = content,
+                    onPlaybackEvent = displayOptions.onVideoPlaybackEvent,
+                    modifier = modifier,
                 )
             }
     }

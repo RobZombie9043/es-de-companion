@@ -60,12 +60,17 @@ class NavigationDirectionTrackerTest {
     @Test
     fun `b-triggered system-select carries no direction, reproducing the real log excerpt`() {
         tracker.observeLine("Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=1")
-        tracker.observeLine("Scripting::fireEvent(): game-select \"/roms/game.zip\" \"Buggy Run\" \"mastersystem\" \"Sega Master System\"")
+        tracker.observeLine(
+            "Scripting::fireEvent(): game-select \"/roms/game.zip\" \"Buggy Run\" \"mastersystem\" " +
+                "\"Sega Master System\"",
+        )
         tracker.observeLine("Window::logInput(Xbox Wireless Controller): Button 11, isMappedTo=up, value=0")
         tracker.observeLine("Window::logInput(Xbox Wireless Controller): Button 1, isMappedTo=b, value=1")
         // At this point, the direction for the following system-select must be null.
         assertNull(tracker.direction)
-        tracker.observeLine("Scripting::fireEvent(): system-select \"mastersystem\" \"Sega Master System\" \"/roms/mastersystem\" \"\"")
+        tracker.observeLine(
+            "Scripting::fireEvent(): system-select \"mastersystem\" \"Sega Master System\" \"/roms/mastersystem\" \"\"",
+        )
         assertNull(tracker.direction)
     }
 

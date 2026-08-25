@@ -50,6 +50,31 @@ sealed class WidgetContent {
      * fallback styling.
      */
     data class NameFallback(val text: String) : WidgetContent()
+
+    /** [starCount] is 0f..5f, already converted from the game's raw 0f..1f gamelist.xml
+     * rating - see WidgetContentResolver's Rating branch. Star fill is whole-star only
+     * (no half-star rendering), decided by rounding - see RatingStars. */
+    data class Rating(
+        val starCount: Float,
+        val filledColorArgb: Long,
+        val outlineColorArgb: Long,
+        val backgroundColorArgb: Long,
+        val backgroundAlpha: Float,
+    ) : WidgetContent()
+
+    /** A resolved game video path, ready to play - see WidgetContentResolver's Video
+     * branch. Fields mirror [WidgetType.Video] exactly (this is a snapshot of that config
+     * plus the resolved [path]), threaded straight through to WidgetVideoContent. */
+    data class Video(
+        val path: String,
+        val scaleMode: ScaleMode,
+        val audioEnabled: Boolean,
+        val delaySeconds: Int,
+        val pillarboxMode: PillarboxMode,
+        val renderAboveUi: Boolean,
+        val loopEnabled: Boolean,
+        val cornerRadius: CornerRadius,
+    ) : WidgetContent()
 }
 
 /** Media types that are transparent overlay-style content rather than an opaque
@@ -76,7 +101,41 @@ val WidgetType.isLogoStyle: Boolean
             is WidgetType.CustomImage,
             is WidgetType.ColorBackground,
             is WidgetType.GameDescription,
+            is WidgetType.Rating,
+            is WidgetType.Video,
             -> false
+        }
+
+/**
+ * Whether this widget type's Configure dialog should offer the Rounded Corners picker at
+ * all - every widget type except [WidgetType.SystemLogo], and except [WidgetType.SystemMedia]/
+ * [WidgetType.GameMedia] instances that are logo-style (Marquees) - see [isLogoStyle].
+ * Purely structural, mirroring [supportsPanZoom]'s pattern: a transparent cutout logo/
+ * marquee has nothing opaque behind it for rounding to visibly affect, so it's hidden
+ * entirely rather than shown-but-inert.
+ */
+val WidgetType.supportsCornerRadius: Boolean
+    get() = this !is WidgetType.SystemLogo && !isLogoStyle
+
+/**
+ * This widget instance's own per-widget [CornerRadius] (Configure Widget dialog) - see
+ * [supportsCornerRadius] for which variants/configurations actually offer this. Re-checked
+ * at render time (not just trusting the stored value) as defense-in-depth against stale
+ * persisted data, e.g. a SystemMedia widget's mediaType switched to Marquees after being
+ * configured with rounded corners - same reasoning as [panZoomActive].
+ */
+val WidgetType.cornerRadius: CornerRadius
+    get() =
+        when (this) {
+            is WidgetType.SystemLogo -> CornerRadius.None
+            is WidgetType.SystemImage -> cornerRadius
+            is WidgetType.SystemMedia -> if (isLogoStyle) CornerRadius.None else cornerRadius
+            is WidgetType.GameMedia -> if (isLogoStyle) CornerRadius.None else cornerRadius
+            is WidgetType.CustomImage -> cornerRadius
+            is WidgetType.ColorBackground -> cornerRadius
+            is WidgetType.GameDescription -> cornerRadius
+            is WidgetType.Rating -> cornerRadius
+            is WidgetType.Video -> cornerRadius
         }
 
 /** Game-view box-art-style media where each new game's art should snap in instantly
@@ -160,7 +219,12 @@ val WidgetType.supportsImageTransition: Boolean
             is WidgetType.SystemImage, is WidgetType.CustomImage -> true
             is WidgetType.SystemMedia -> !isLogoStyle
             is WidgetType.GameMedia -> !isLogoStyle && !forcesInstantImageTransition
-            is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+            is WidgetType.SystemLogo,
+            is WidgetType.ColorBackground,
+            is WidgetType.GameDescription,
+            is WidgetType.Rating,
+            is WidgetType.Video,
+            -> false
         }
 
 /**
@@ -214,7 +278,12 @@ val WidgetType.supportsPanZoom: Boolean
             is WidgetType.CustomImage -> scaleMode == ScaleMode.Fill
             is WidgetType.SystemMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
             is WidgetType.GameMedia -> scaleMode == ScaleMode.Fill && mediaType in PAN_ZOOM_ELIGIBLE_MEDIA_TYPES
-            is WidgetType.SystemLogo, is WidgetType.ColorBackground, is WidgetType.GameDescription -> false
+            is WidgetType.SystemLogo,
+            is WidgetType.ColorBackground,
+            is WidgetType.GameDescription,
+            is WidgetType.Rating,
+            is WidgetType.Video,
+            -> false
         }
 
 /**

@@ -7,8 +7,13 @@ import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
+import com.esde.companion.data.gamelist.FileGameDescriptionRepository
+import com.esde.companion.data.gamelist.FileGameRatingRepository
+import com.esde.companion.data.gamelist.FileGameRomHashRepository
+import com.esde.companion.data.gamelist.GamelistFileReader
 import com.esde.companion.data.gamelist.LoggingGameDescriptionRepository
-import com.esde.companion.data.gamelist.ReactiveGameDescriptionRepository
+import com.esde.companion.data.gamelist.LoggingGameRatingRepository
+import com.esde.companion.data.gamelist.LoggingGameRomHashRepository
 import com.esde.companion.data.log.EsdeLogFileRepository
 import com.esde.companion.data.log.ReactiveEsdeLogRepository
 import com.esde.companion.data.log.SharedEsdeLogRepository
@@ -20,6 +25,19 @@ import com.esde.companion.data.media.ReactiveGameMediaRepository
 import com.esde.companion.data.media.ReactiveSystemMediaRepository
 import com.esde.companion.data.music.ExoMusicPlayerController
 import com.esde.companion.data.music.ReactiveMusicLibraryRepository
+import com.esde.companion.data.retroachievements.AchievementCommentsCache
+import com.esde.companion.data.retroachievements.AchievementSummaryCache
+import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
+import com.esde.companion.data.retroachievements.DataStoreGameMatchOverrideRepository
+import com.esde.companion.data.retroachievements.DataStoreUserProgressCacheStore
+import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
+import com.esde.companion.data.retroachievements.GameLeaderboardsCache
+import com.esde.companion.data.retroachievements.GameListCache
+import com.esde.companion.data.retroachievements.LeaderboardEntriesCache
+import com.esde.companion.data.retroachievements.RetroAchievementsCaches
+import com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImpl
+import com.esde.companion.data.retroachievements.RetroClientRetroAchievementsApi
+import com.esde.companion.data.retroachievements.UserProgressCache
 import com.esde.companion.data.settings.FileAppDrawerSettingsRepository
 import com.esde.companion.data.settings.FileAppFolderRepository
 import com.esde.companion.data.settings.FileDockSettingsRepository
@@ -30,6 +48,9 @@ import com.esde.companion.data.storage.SelfHealConfig
 import com.esde.companion.data.storage.StorageMountEvents
 import com.esde.companion.data.systems.LoggingSystemPathRepository
 import com.esde.companion.data.systems.ReactiveSystemPathRepository
+import com.esde.companion.data.systemstatus.AndroidSystemStatusRepository
+import com.esde.companion.data.systemstatus.BluetoothPermissionRecheckSignal
+import com.esde.companion.data.systemstatus.SharedSystemStatusRepository
 import com.esde.companion.data.thor.AutoFpsCoordinator
 import com.esde.companion.data.thor.FileThorSettingsRepository
 import com.esde.companion.data.thor.LidWakeGuardCoordinator
@@ -55,14 +76,20 @@ import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.EsdeInstallationRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRatingRepository
+import com.esde.companion.domain.repository.GameRomHashRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.MusicLibraryRepository
 import com.esde.companion.domain.repository.MusicPlayerController
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
+import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.SystemPathRepository
+import com.esde.companion.domain.repository.SystemStatusRepository
 import com.esde.companion.domain.repository.ThorSettingsRepository
 import com.esde.companion.domain.repository.UpdateRepository
 import com.esde.companion.domain.repository.UpdateStateRepository
@@ -70,16 +97,25 @@ import com.esde.companion.domain.repository.VideoPlaybackStateRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.state.AppStateReducer
 import com.esde.companion.domain.usecase.CheckForUpdateUseCase
+import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.DownloadApkUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FetchReleaseNotesForVersionUseCase
 import com.esde.companion.domain.usecase.FindLegacyScriptFilesUseCase
+import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
+import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
+import com.esde.companion.domain.usecase.GetGameHashSupportUseCase
+import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
+import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
+import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
+import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsTriggerPackagesUseCase
+import com.esde.companion.domain.usecase.ObserveBluetoothPermissionRequestedUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
@@ -110,16 +146,17 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUse
 import com.esde.companion.domain.usecase.ObserveOnboardingCompleteUseCase
 import com.esde.companion.domain.usecase.ObserveOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObservePlaytimeStatsHardcoreModeEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
+import com.esde.companion.domain.usecase.ObserveSystemStatusUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
@@ -130,12 +167,16 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsTriggerPackagesUseCase
+import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
@@ -143,6 +184,7 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
+import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
@@ -160,6 +202,7 @@ import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.SetOtherScreenLaunchAppsUseCase
 import com.esde.companion.domain.usecase.SetOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.SetPlaytimeStatsHardcoreModeEnabledUseCase
 import com.esde.companion.domain.usecase.SetScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
@@ -167,13 +210,12 @@ import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
-import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
+import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -202,6 +244,24 @@ class AppContainer(context: Context) {
     // (application as CompanionApplication).appContainer.storageMountEvents.
     val storageMountEvents = StorageMountEvents()
 
+    // Fed by SystemStatusFabContent's ON_RESUME check - there's no OS broadcast for "a
+    // runtime permission changed while the app was backgrounded", so this lets
+    // systemStatusRepository below re-evaluate its Bluetooth half after the user
+    // grants/revokes BLUETOOTH_CONNECT via system Settings. Same shape as storageMountEvents.
+    val bluetoothPermissionRecheckSignal = BluetoothPermissionRecheckSignal()
+
+    private val androidSystemStatusRepository =
+        AndroidSystemStatusRepository(
+            context = appContext,
+            bluetoothPermissionRecheck = bluetoothPermissionRecheckSignal.events,
+        )
+
+    // Shared (not rebuilt per subscriber) since both top FAB corners could reference this at
+    // once (e.g. ClockAndSystemStatus in one, SystemStatus in the other) - same reasoning as
+    // logRepository below.
+    private val systemStatusRepository: SystemStatusRepository =
+        SharedSystemStatusRepository(inner = androidSystemStatusRepository, scope = applicationScope)
+
     val esdeInstallationRepository: EsdeInstallationRepository =
         FileEsdeInstallationRepository(storageEvents = storageMountEvents.events)
 
@@ -221,11 +281,11 @@ class AppContainer(context: Context) {
             clock = Clock.systemDefaultZone(),
         )
 
-    // Video-overlay playback events (VideoOverlayScreen) are reported from a Compose/
+    // Video widget playback events (WidgetVideoContent) are reported from a Compose/
     // ExoPlayer callback, not through a use case - exposed as plain function references
     // (rather than the DebugFileLogger type itself) so MainActivity, which already wires
     // other domain-typed callbacks like videoPlaybackStateRepository::setIsPlaying down
-    // into VideoOverlayScreen, can do the same here without reaching into the data layer.
+    // into the widget canvas, can do the same here without reaching into the data layer.
     val logVideoPlaybackStarted: (String) -> Unit = { path -> debugFileLogger.logPlaybackStarted("Video", path) }
     val logVideoPlaybackError: (String, String) -> Unit =
         { path, message -> debugFileLogger.logPlaybackError("Video", path, message) }
@@ -286,10 +346,28 @@ class AppContainer(context: Context) {
         )
 
     // gamelists/ lives alongside logs/ under the ES-DE root, so this reacts to the log
-    // folder path, not the media folder path - see ReactiveGameDescriptionRepository.
+    // folder path, not the media folder path - see GamelistFileReader. Shared by the
+    // description, ROM-hash, and rating repositories below so there's one cached copy of
+    // each gamelist.xml's text, not one per consumer.
+    private val gamelistFileReader = GamelistFileReader(esdeRootPath = onboardingRepository.observeLogFolderPath())
+
     private val gameDescriptionRepository: GameDescriptionRepository =
         LoggingGameDescriptionRepository(
-            inner = ReactiveGameDescriptionRepository(esdeRootPath = onboardingRepository.observeLogFolderPath()),
+            inner = FileGameDescriptionRepository(gamelistFileReader),
+            debugFileLogger = debugFileLogger,
+        )
+
+    // Ready ahead of ES-DE's own upcoming ROM-hash support - see CLAUDE.md's
+    // RetroAchievements section and GameListParser's ROM_HASH_TAG TODO.
+    private val gameRomHashRepository: GameRomHashRepository =
+        LoggingGameRomHashRepository(
+            inner = FileGameRomHashRepository(gamelistFileReader),
+            debugFileLogger = debugFileLogger,
+        )
+
+    private val gameRatingRepository: GameRatingRepository =
+        LoggingGameRatingRepository(
+            inner = FileGameRatingRepository(gamelistFileReader),
             debugFileLogger = debugFileLogger,
         )
 
@@ -375,6 +453,11 @@ class AppContainer(context: Context) {
     val observeDockAppsUseCase = ObserveDockAppsUseCase(dockSettingsRepository)
     val setDockAppsUseCase = SetDockAppsUseCase(dockSettingsRepository)
 
+    // Not a secret - plain DataStore, included in Backup & Restore below (unlike
+    // RetroAchievements' credentials repository, further down this file).
+    private val gameMatchOverrideRepository: GameMatchOverrideRepository =
+        DataStoreGameMatchOverrideRepository(appContext)
+
     // Thor Settings (Ayn Thor-only: Lid Wake Guard + Auto FPS Mode) - its own repository/
     // DataStore, not onboardingRepository's, since these settings are meaningless on any
     // non-Thor device. Declared ahead of Backup & Restore below, which needs it at
@@ -419,6 +502,7 @@ class AppContainer(context: Context) {
             dockSettingsRepository = dockSettingsRepository,
             widgetLayoutRepository = widgetLayoutRepository,
             thorSettingsRepository = thorSettingsRepository,
+            gameMatchOverrideRepository = gameMatchOverrideRepository,
         )
     val exportConfigBackupUseCase = ExportConfigBackupUseCase(backupRepositories, configBackupRepository)
     val restoreConfigBackupUseCase = RestoreConfigBackupUseCase(backupRepositories, configBackupRepository)
@@ -438,6 +522,7 @@ class AppContainer(context: Context) {
     val observeEsdeQuitEventUseCase = ObserveEsdeQuitEventUseCase(logRepository)
     val resolveGameMediaUseCase = ResolveGameMediaUseCase(gameMediaRepository)
     val resolveGameDescriptionUseCase = ResolveGameDescriptionUseCase(gameDescriptionRepository)
+    val resolveGameRatingUseCase = ResolveGameRatingUseCase(gameRatingRepository)
     val resolveRandomSystemMediaUseCase = ResolveRandomSystemMediaUseCase(systemMediaRepository)
 
     val validateEsdeLogFolderUseCase = ValidateEsdeLogFolderUseCase(onboardingRepository)
@@ -460,12 +545,6 @@ class AppContainer(context: Context) {
     val setScreensaverDimPercentUseCase = SetScreensaverDimPercentUseCase(onboardingRepository)
     val observeThemePreferenceUseCase = ObserveThemePreferenceUseCase(onboardingRepository)
     val setThemePreferenceUseCase = SetThemePreferenceUseCase(onboardingRepository)
-    val observeVideoPlaybackEnabledUseCase = ObserveVideoPlaybackEnabledUseCase(onboardingRepository)
-    val setVideoPlaybackEnabledUseCase = SetVideoPlaybackEnabledUseCase(onboardingRepository)
-    val observeVideoDelaySecondsUseCase = ObserveVideoDelaySecondsUseCase(onboardingRepository)
-    val setVideoDelaySecondsUseCase = SetVideoDelaySecondsUseCase(onboardingRepository)
-    val observeVideoAudioEnabledUseCase = ObserveVideoAudioEnabledUseCase(onboardingRepository)
-    val setVideoAudioEnabledUseCase = SetVideoAudioEnabledUseCase(onboardingRepository)
 
     val observeMusicEnabledUseCase = ObserveMusicEnabledUseCase(onboardingRepository)
     val setMusicEnabledUseCase = SetMusicEnabledUseCase(onboardingRepository)
@@ -488,10 +567,97 @@ class AppContainer(context: Context) {
     val setCloseCompanionOnQuitEnabledUseCase = SetCloseCompanionOnQuitEnabledUseCase(onboardingRepository)
     val observeFabAssignmentsUseCase = ObserveFabAssignmentsUseCase(onboardingRepository)
     val setFabAssignmentUseCase = SetFabAssignmentUseCase(onboardingRepository)
+    val observeSystemStatusUseCase = ObserveSystemStatusUseCase(systemStatusRepository)
+    val observeBluetoothPermissionRequestedUseCase = ObserveBluetoothPermissionRequestedUseCase(onboardingRepository)
+    val setBluetoothPermissionRequestedUseCase = SetBluetoothPermissionRequestedUseCase(onboardingRepository)
     val observeLaunchEsdeOnStartEnabledUseCase = ObserveLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val setLaunchEsdeOnStartEnabledUseCase = SetLaunchEsdeOnStartEnabledUseCase(onboardingRepository)
     val observeDebugLoggingEnabledUseCase = ObserveDebugLoggingEnabledUseCase(onboardingRepository)
     val setDebugLoggingEnabledUseCase = SetDebugLoggingEnabledUseCase(onboardingRepository)
+
+    // Settings > RetroAchievements: whether the achievement pages follow ES-DE's screensaver
+    // to whatever game it's showing, or freeze on the pre-screensaver game/system instead.
+    val observeUpdateAchievementsOnScreensaverEnabledUseCase =
+        ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+    val setUpdateAchievementsOnScreensaverEnabledUseCase =
+        SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+
+    // The achievement screens' Playtime Stats line's Casual/Hardcore toggle - global, not
+    // per-game, see OnboardingRepository.observePlaytimeStatsHardcoreModeEnabled's kdoc.
+    val observePlaytimeStatsHardcoreModeEnabledUseCase =
+        ObservePlaytimeStatsHardcoreModeEnabledUseCase(onboardingRepository)
+    val setPlaytimeStatsHardcoreModeEnabledUseCase =
+        SetPlaytimeStatsHardcoreModeEnabledUseCase(onboardingRepository)
+
+    // RetroAchievements sign-in (Settings > RetroAchievements). Credentials get their own
+    // EncryptedSharedPreferences-backed repository rather than DataStore - see CLAUDE.md and
+    // EncryptedRetroAchievementsCredentialsRepository's kdoc - and are deliberately never
+    // passed into exportConfigBackupUseCase/restoreConfigBackupUseCase above, a structural
+    // guarantee against a plaintext credential leak (the same mechanism lastKnownContextRepository
+    // relies on). The game list is cached (disk + memory, 24h TTL) since api-kotlin flags
+    // GetGameList as rate-limited/response-heavy - see GameListCache's kdoc. The signed-in
+    // user's cross-console completion progress (system browser's Progress sort/filter) is a
+    // separate cache with its own 1h TTL and its own DataStore file - see UserProgressCache's
+    // and DataStoreUserProgressCacheStore's kdocs for why it can't share GameListCache's TTL
+    // or file. A third cache, AchievementSummaryCache, covers the per-game achievement summary
+    // (the achievement screen's data) - in-memory only, keyed by (username, gameId), 15-minute
+    // TTL, with a manual forceRefresh bypass wired to that screen's kebab "Refresh" entry - see
+    // its kdoc for why it isn't disk-backed like the other two. A fourth, AchievementCommentsCache,
+    // covers per-achievement wall comments (fetched on-demand when a row is expanded) - in-memory
+    // only, keyed by achievementId alone (public data, not per-user), 30-minute TTL. A fifth,
+    // GameLeaderboardsCache, covers the per-game leaderboard list (the same screen's Leaderboards
+    // tab) - in-memory only, keyed by (username, gameId) same as AchievementSummaryCache since
+    // each row's myEntry is per-user, 15-minute TTL, refreshed alongside the achievement summary
+    // by the same kebab "Refresh" entry. A sixth, LeaderboardEntriesCache, covers one leaderboard's
+    // entries (fetched on-demand when a row is expanded) - in-memory only, keyed by leaderboardId
+    // alone (public data), 15-minute TTL. None of the six caches are covered by Backup & Restore,
+    // same as the credentials.
+    private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
+        EncryptedRetroAchievementsCredentialsRepository(appContext)
+    private val gameListCache = GameListCache(store = DataStoreGameListCacheStore(appContext))
+    private val userProgressCache = UserProgressCache(store = DataStoreUserProgressCacheStore(appContext))
+    private val achievementSummaryCache = AchievementSummaryCache()
+    private val achievementCommentsCache = AchievementCommentsCache()
+    private val gameLeaderboardsCache = GameLeaderboardsCache()
+    private val leaderboardEntriesCache = LeaderboardEntriesCache()
+    private val retroAchievementsCaches =
+        RetroAchievementsCaches(
+            gameList = gameListCache,
+            userProgress = userProgressCache,
+            achievementSummary = achievementSummaryCache,
+            achievementComments = achievementCommentsCache,
+            gameLeaderboards = gameLeaderboardsCache,
+            leaderboardEntries = leaderboardEntriesCache,
+        )
+    private val retroAchievementsRepository: RetroAchievementsRepository =
+        RetroAchievementsRepositoryImpl(
+            credentialsRepository = retroAchievementsCredentialsRepository,
+            caches = retroAchievementsCaches,
+            apiFactory = { credentials -> RetroClientRetroAchievementsApi(credentials) },
+        )
+
+    val observeRetroAchievementsCredentialsUseCase =
+        ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+    val clearRetroAchievementsCredentialsUseCase =
+        ClearRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository)
+    val validateRetroAchievementsCredentialsUseCase =
+        ValidateRetroAchievementsCredentialsUseCase(retroAchievementsRepository, retroAchievementsCredentialsRepository)
+    val resolveRetroAchievementsGameUseCase =
+        ResolveRetroAchievementsGameUseCase(
+            gameMatchOverrideRepository = gameMatchOverrideRepository,
+            retroAchievementsRepository = retroAchievementsRepository,
+            gameRomHashRepository = gameRomHashRepository,
+            onResolved = { message -> debugFileLogger.logInfo("Cheevo", message) },
+        )
+    val getGameAchievementSummaryUseCase = GetGameAchievementSummaryUseCase(retroAchievementsRepository)
+    val getGameHashSupportUseCase = GetGameHashSupportUseCase(gameRomHashRepository, retroAchievementsRepository)
+    val setGameMatchOverrideUseCase = SetGameMatchOverrideUseCase(gameMatchOverrideRepository)
+    val searchRetroAchievementsGamesUseCase = SearchRetroAchievementsGamesUseCase(retroAchievementsRepository)
+    val getRetroAchievementsSystemGamesUseCase = GetRetroAchievementsSystemGamesUseCase(retroAchievementsRepository)
+    val getUserGameProgressUseCase = GetUserGameProgressUseCase(retroAchievementsRepository)
+    val getAchievementCommentsUseCase = GetAchievementCommentsUseCase(retroAchievementsRepository)
+    val getGameLeaderboardsUseCase = GetGameLeaderboardsUseCase(retroAchievementsRepository)
+    val getLeaderboardEntriesUseCase = GetLeaderboardEntriesUseCase(retroAchievementsRepository)
 
     // Constructed unconditionally (cheap - same as the self-healing directory watchers above),
     // but each coordinator's *internal* listeners/receivers stay gated behind its own

@@ -1,74 +1,33 @@
 package com.esde.companion.data.gamelist
 
 import com.esde.companion.domain.model.GameDescription
-import com.esde.companion.domain.parser.GameListDescriptionParser
-import com.esde.companion.domain.parser.LegacyGamelistPathResolver
+import com.esde.companion.domain.parser.GameListParser
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Reads and parses gamelist.xml to find a game's <desc>, checking the standard ES-DE
- * location first - "<ES-DE root>/gamelists/<systemShortName>/gamelist.xml" - then falling
- * back to the legacy, ROMs-adjacent location ES-DE uses when its own
- * "LegacyGamelistFileLocation" setting is enabled (see LegacyGamelistPathResolver).
- * [esdeRootPath] is the ES-DE root folder (the same one es_log.txt lives under - see
- * ReactiveEsdeLogRepository), not the gamelists folder directly, so callers deal with the
- * one folder the user actually picked during onboarding.
+ * Parses a game's <desc> out of whatever gamelist.xml content [reader] hands back - see
+ * [GamelistFileReader] for how the file is located, cached, and kept reactive to the
+ * configured ES-DE root.
  *
- * Caches each resolved gamelist file's raw content in memory, keyed by its absolute path
- * and lastModified() timestamp - gamelist.xml files can run to several MB for large
- * collections, and re-parsing the whole document on every game switch (which happens far
- * more often than the file itself changes, i.e. only when ES-DE's scraper runs) would be
- * wasteful. Keyed by path rather than systemShortName since which file applies (standard
- * vs legacy) is resolved fresh each call. A stale entry is corrected automatically the
- * next time the timestamp is checked, no manual invalidation needed.
- *
- * ReactiveGameDescriptionRepository keeps one instance of this class alive across calls,
- * shared by every caller app-wide - resolveDescription() runs on Dispatchers.IO (a
- * multi-threaded pool), so two calls in flight at once (e.g. fast browsing outpacing IO, or
- * the main widgets screen and an edit-mode preview both resolving around the same time) can
- * genuinely land on different threads. [cache] is a ConcurrentHashMap rather than a plain
- * map for exactly that reason - each entry is independent (no cross-key invariant to
- * protect), so a concurrent map is a complete fix with no Mutex/single-writer needed.
+ * [GameListParser.findDescription] does a full DOM parse of the *entire* gamelist.xml plus
+ * a linear scan for the matching `<game>` - O(number of games in that system), confirmed
+ * on-device to take long enough on large gamelists to visibly stutter a concurrently-
+ * running widget-canvas animation. [reader]'s own `withContext(Dispatchers.IO)` only covers
+ * the file read; without this repository's own `withContext(Dispatchers.Default)` around
+ * the CPU-bound parse itself, execution resumes on whatever dispatcher called
+ * [resolveDescription] (in practice, the main thread) the moment the read completes.
  */
 class FileGameDescriptionRepository(
-    private val esdeRootPath: String,
+    private val reader: GamelistFileReader,
 ) : GameDescriptionRepository {
-    private val cache = ConcurrentHashMap<String, CacheEntry>()
-
     override suspend fun resolveDescription(
         systemShortName: String,
         romPath: String,
-    ): GameDescription =
-        withContext(Dispatchers.IO) {
-            val file = resolveGamelistFile(systemShortName, romPath) ?: return@withContext GameDescription(text = null)
-
-            val lastModified = file.lastModified()
-            val cached = cache[file.path]
-            val content =
-                if (cached != null && cached.lastModified == lastModified) {
-                    cached.content
-                } else {
-                    file.readText().also { cache[file.path] = CacheEntry(lastModified, it) }
-                }
-
-            val text = GameListDescriptionParser.findDescription(content, romPath)
-            GameDescription(text = text, gamelistPath = file.path)
-        }
-
-    private fun resolveGamelistFile(
-        systemShortName: String,
-        romPath: String,
-    ): File? {
-        val standard = File(esdeRootPath, "gamelists/$systemShortName/gamelist.xml")
-        if (standard.isFile) return standard
-
-        val legacyPath = LegacyGamelistPathResolver.resolvePath(systemShortName, romPath) ?: return null
-        return File(legacyPath).takeIf { it.isFile }
+    ): GameDescription {
+        val file = reader.read(systemShortName, romPath) ?: return GameDescription(text = null)
+        val text = withContext(Dispatchers.Default) { GameListParser.findDescription(file.content, romPath) }
+        return GameDescription(text = text, gamelistPath = file.path)
     }
-
-    private data class CacheEntry(val lastModified: Long, val content: String)
 }

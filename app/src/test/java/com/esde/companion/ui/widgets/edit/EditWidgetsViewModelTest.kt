@@ -4,6 +4,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
+import com.esde.companion.domain.model.GameRating
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.InstalledApp
@@ -25,6 +26,7 @@ import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRatingRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.OnboardingRepository
@@ -44,6 +46,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import kotlinx.coroutines.Dispatchers
@@ -135,6 +138,15 @@ class EditWidgetsViewModelTest {
             systemShortName: String,
             romPath: String,
         ): GameDescription = description
+    }
+
+    private class FakeGameRatingRepository(
+        private val rating: GameRating = GameRating(value = null),
+    ) : GameRatingRepository {
+        override suspend fun resolveRating(
+            systemShortName: String,
+            romPath: String,
+        ): GameRating = rating
     }
 
     private class FakeSystemMediaRepository(
@@ -254,18 +266,6 @@ class EditWidgetsViewModelTest {
 
         override fun observeScreensaverDimPercent(): Flow<Int> = flowOf(50)
 
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {}
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-
         override suspend fun setMusicEnabled(enabled: Boolean) {}
 
         override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)
@@ -307,6 +307,18 @@ class EditWidgetsViewModelTest {
         override suspend fun setDebugLoggingEnabled(enabled: Boolean) {}
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
 
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
@@ -404,6 +416,7 @@ class EditWidgetsViewModelTest {
         saveWidgetCanvas = SaveWidgetCanvasUseCase(widgetLayoutRepository),
         resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
         resolveGameDescription = ResolveGameDescriptionUseCase(FakeGameDescriptionRepository()),
+        resolveGameRating = ResolveGameRatingUseCase(FakeGameRatingRepository()),
         resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
         resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
         resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),
@@ -439,7 +452,10 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "existing-a", zIndex = 0), placedWidget(id = "existing-b", zIndex = 3)),
+                        listOf(
+                            placedWidget(id = "existing-a", zIndex = 0),
+                            placedWidget(id = "existing-b", zIndex = 3),
+                        ),
                     )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
@@ -541,7 +557,10 @@ class EditWidgetsViewModelTest {
         runTest(testDispatcher) {
             val repository =
                 FakeWidgetLayoutRepository().apply {
-                    seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)))
+                    seed(
+                        StateGroup.System,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)),
+                    )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
             viewModel.setGridDimensions(grid)
@@ -560,7 +579,10 @@ class EditWidgetsViewModelTest {
         runTest(testDispatcher) {
             val repository =
                 FakeWidgetLayoutRepository().apply {
-                    seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)))
+                    seed(
+                        StateGroup.System,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0), placedWidget(id = "widget-b", zIndex = 1)),
+                    )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
             viewModel.setGridDimensions(grid)
@@ -625,7 +647,16 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0)),
+                        listOf(
+                            placedWidget(
+                                id = "widget-a",
+                                gridColumn = 5,
+                                gridRow = 0,
+                                columnSpan = 5,
+                                rowSpan = 10,
+                                zIndex = 0,
+                            ),
+                        ),
                         grid = GridDimensions(columns = 10, rows = 10),
                     )
                 }
@@ -651,7 +682,16 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "widget-a", gridColumn = 5, gridRow = 0, columnSpan = 5, rowSpan = 10, zIndex = 0)),
+                        listOf(
+                            placedWidget(
+                                id = "widget-a",
+                                gridColumn = 5,
+                                gridRow = 0,
+                                columnSpan = 5,
+                                rowSpan = 10,
+                                zIndex = 0,
+                            ),
+                        ),
                         // grid omitted - defaults to null, same as data persisted before this feature existed.
                     )
                 }
@@ -709,7 +749,10 @@ class EditWidgetsViewModelTest {
         runTest(testDispatcher) {
             val repository =
                 FakeWidgetLayoutRepository().apply {
-                    seed(StateGroup.System, listOf(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)))
+                    seed(
+                        StateGroup.System,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0, gridColumn = 1, gridRow = 1)),
+                    )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)
             viewModel.setGridDimensions(grid)
@@ -738,7 +781,13 @@ class EditWidgetsViewModelTest {
                 FakeWidgetLayoutRepository().apply {
                     seed(
                         StateGroup.System,
-                        listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.SystemLogo(ScaleMode.Fit))),
+                        listOf(
+                            placedWidget(
+                                id = "widget-a",
+                                zIndex = 0,
+                                widgetType = WidgetType.SystemLogo(ScaleMode.Fit),
+                            ),
+                        ),
                     )
                 }
             val viewModel = buildViewModel(widgetLayoutRepository = repository)

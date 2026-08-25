@@ -1,11 +1,14 @@
 package com.esde.companion.ui.widgets
 
+import com.esde.companion.domain.model.CornerRadius
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
+import com.esde.companion.domain.model.GameRating
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
@@ -18,6 +21,7 @@ import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GameRatingRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
@@ -28,6 +32,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -120,6 +125,21 @@ class WidgetsViewModelTest {
         }
     }
 
+    private class RecordingGameRatingRepository(
+        private val rating: GameRating = GameRating(value = null),
+    ) : GameRatingRepository {
+        var callCount = 0
+            private set
+
+        override suspend fun resolveRating(
+            systemShortName: String,
+            romPath: String,
+        ): GameRating {
+            callCount++
+            return rating
+        }
+    }
+
     /** Returns a distinct value every call - used to prove the ViewModel's own
      * per-system cache (not the repository's) is what keeps repeated resolutions for the
      * same system stable, per WidgetsViewModel's documented "A -> B -> A" rule. */
@@ -197,6 +217,7 @@ class WidgetsViewModelTest {
         widgetLayoutRepository: FakeWidgetLayoutRepository = FakeWidgetLayoutRepository(),
         gameMediaRepository: GameMediaRepository = RecordingGameMediaRepository(),
         gameDescriptionRepository: GameDescriptionRepository = RecordingGameDescriptionRepository(),
+        gameRatingRepository: GameRatingRepository = RecordingGameRatingRepository(),
         systemMediaRepository: SystemMediaRepository = CountingSystemMediaRepository(),
         customSystemImageRepository: CustomSystemImageRepository = RecordingCustomSystemImageRepository(),
         customSystemLogoRepository: CustomSystemLogoRepository = RecordingCustomSystemLogoRepository(),
@@ -211,6 +232,7 @@ class WidgetsViewModelTest {
                 resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
                 resolveRandomSystemMedia = ResolveRandomSystemMediaUseCase(systemMediaRepository),
                 resolveGameDescription = ResolveGameDescriptionUseCase(gameDescriptionRepository),
+                resolveGameRating = ResolveGameRatingUseCase(gameRatingRepository),
                 resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
                 resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),
                 resolveBundledSystemLogo = ResolveBundledSystemLogoUseCase(bundledSystemLogoRepository),
@@ -547,6 +569,79 @@ class WidgetsViewModelTest {
             advanceUntilIdle()
 
             assertTrue(customSystemImageRepository.callCount > 0)
+        }
+
+    // --- Video widget: BrowsingGame-only eligibility ---------------------------------------
+
+    @Test
+    fun `a Video widget resolves WidgetContent Video while BrowsingGame`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("video", WidgetType.Video())))
+            val videoMedia =
+                GameMedia(baseRelativePath = null, filesByType = mapOf(MediaType.Videos to "/media/game.mp4"))
+            val gameMediaRepository = RecordingGameMediaRepository(media = videoMedia)
+            val viewModel =
+                buildViewModel(esdeLogRepository, widgetLayoutRepository, gameMediaRepository = gameMediaRepository)
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            val state = viewModel.canvasState.value
+            check(state is WidgetCanvasState.Showing)
+            assertEquals(
+                WidgetContent.Video(
+                    path = "/media/game.mp4",
+                    scaleMode = ScaleMode.Fit,
+                    audioEnabled = true,
+                    delaySeconds = 0,
+                    pillarboxMode = PillarboxMode.Black,
+                    renderAboveUi = false,
+                    loopEnabled = true,
+                    cornerRadius = CornerRadius.None,
+                ),
+                state.contentByWidgetId["video"],
+            )
+        }
+
+    @Test
+    fun `a Video widget resolves Empty once the game is actually being played, not just browsed`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("video", WidgetType.Video())))
+            val videoMedia =
+                GameMedia(baseRelativePath = null, filesByType = mapOf(MediaType.Videos to "/media/game.mp4"))
+            val gameMediaRepository = RecordingGameMediaRepository(media = videoMedia)
+            val viewModel =
+                buildViewModel(esdeLogRepository, widgetLayoutRepository, gameMediaRepository = gameMediaRepository)
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            val state = viewModel.canvasState.value
+            check(state is WidgetCanvasState.Showing)
+            assertEquals(WidgetContent.Empty, state.contentByWidgetId["video"])
+        }
+
+    @Test
+    fun `a Video widget on the canvas requests MediaType Videos`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("video", WidgetType.Video())))
+            val gameMediaRepository = RecordingGameMediaRepository()
+            val viewModel =
+                buildViewModel(esdeLogRepository, widgetLayoutRepository, gameMediaRepository = gameMediaRepository)
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            assertEquals(setOf(MediaType.Videos), gameMediaRepository.lastRequestedTypes)
         }
 
     // --- setGridDimensions re-threading ------------------------------------------------

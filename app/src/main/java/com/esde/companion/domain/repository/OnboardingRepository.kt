@@ -89,25 +89,6 @@ interface OnboardingRepository {
 
     fun observeScreensaverDimPercent(): Flow<Int>
 
-    /**
-     * Settings > Video Playback: whether game videos auto-play while AppState is
-     * BrowsingGame. Defaults to false - opt-in, same as other non-default display
-     * behaviors.
-     */
-    suspend fun setVideoPlaybackEnabled(enabled: Boolean)
-
-    fun observeVideoPlaybackEnabled(): Flow<Boolean>
-
-    /** Delay in seconds before playback starts once a video becomes eligible to play. */
-    suspend fun setVideoDelaySeconds(seconds: Int)
-
-    fun observeVideoDelaySeconds(): Flow<Int>
-
-    /** Whether video audio is audible; false mutes playback entirely. Defaults to true. */
-    suspend fun setVideoAudioEnabled(enabled: Boolean)
-
-    fun observeVideoAudioEnabled(): Flow<Boolean>
-
     /** Master toggle for background music. Defaults to true. */
     suspend fun setMusicEnabled(enabled: Boolean)
 
@@ -191,4 +172,36 @@ interface OnboardingRepository {
     suspend fun setDebugLoggingEnabled(enabled: Boolean)
 
     fun observeDebugLoggingEnabled(): Flow<Boolean>
+
+    /**
+     * Settings > RetroAchievements: whether the achievement pages (per-game and the system
+     * games browser) switch to whatever ES-DE's screensaver is showing while it's active.
+     * Defaults to true - matches the pre-existing behavior of always following the live
+     * [com.esde.companion.domain.model.AppState]. Turning it off freezes both screens on
+     * whatever they were showing immediately before the screensaver started.
+     */
+    suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean)
+
+    fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean>
+
+    /**
+     * Whether the achievement screens' "Playtime Stats" line (see `GamePlaytimeStatsRow`) is
+     * currently showing the hardcore medians (`true`) or the softcore/"Casual" ones (`false`).
+     * Global, not per-game - toggling it while looking at one game affects every other game's
+     * Playtime Stats line too, the same way RA's own website widget remembers the last toggle
+     * state across games. Defaults to false (Casual).
+     */
+    suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean)
+
+    fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean>
+
+    /**
+     * Whether the SystemStatus/ClockAndSystemStatus FABs have already shown their one-shot
+     * BLUETOOTH_CONNECT rationale prompt (see BluetoothConnectPermission). Defaults to false.
+     * Never reset - once shown, it's never shown again automatically; a user who denied it
+     * can still grant it later via system Settings, picked up on the next ON_RESUME.
+     */
+    suspend fun setBluetoothPermissionRequested(requested: Boolean)
+
+    fun observeBluetoothPermissionRequested(): Flow<Boolean>
 }

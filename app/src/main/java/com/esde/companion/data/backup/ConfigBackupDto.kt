@@ -41,9 +41,6 @@ internal data class ConfigBackupDto(
     val fabBottomStartCustomApp: String? = null,
     val fabBottomEndType: String,
     val fabBottomEndCustomApp: String? = null,
-    val videoPlaybackEnabled: Boolean,
-    val videoDelaySeconds: Int,
-    val videoAudioEnabled: Boolean,
     val musicEnabled: Boolean,
     val musicPlayWhileBrowsingSystems: Boolean,
     val musicPlayWhileBrowsingGames: Boolean,
@@ -63,6 +60,8 @@ internal data class ConfigBackupDto(
     val dockSize: String,
     val dockApps: List<String>,
     val widgetCanvases: Map<String, CanvasDto>,
+    val gameMatchOverrides: List<GameMatchOverrideDto> = emptyList(),
+    val updateAchievementsOnScreensaverEnabled: Boolean = true,
     val lidWakeGuardEnabled: Boolean = false,
     val hallSensorType: Int? = null,
     val hallSensorName: String = "",
@@ -81,6 +80,13 @@ internal data class AppFolderDto(
     val id: String,
     val name: String,
     val memberPackageNames: Set<String>,
+)
+
+@Serializable
+internal data class GameMatchOverrideDto(
+    val systemShortName: String,
+    val romPath: String,
+    val raGameId: Long,
 )
 
 /** Matches [com.esde.companion.data.settings.FileOnboardingRepository]'s own default,

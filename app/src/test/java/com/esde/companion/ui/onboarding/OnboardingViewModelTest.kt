@@ -122,18 +122,6 @@ class OnboardingViewModelTest {
 
         override fun observeScreensaverDimPercent(): Flow<Int> = flowOf(50)
 
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {}
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-
         override suspend fun setMusicEnabled(enabled: Boolean) {}
 
         override fun observeMusicEnabled(): Flow<Boolean> = flowOf(true)
@@ -176,6 +164,18 @@ class OnboardingViewModelTest {
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
 
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
         override fun observeFabAssignments(): Flow<FabAssignments> = flowOf(FabAssignments.Default)
@@ -205,7 +205,9 @@ class OnboardingViewModelTest {
 
         override suspend fun readMediaDirectory(esdeRootPath: String): String? = mediaDirectory
 
-        override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? = eventScriptSettings
+        override suspend fun readEventScriptSettings(esdeRootPath: String): EsdeEventScriptSettings? {
+            return eventScriptSettings
+        }
 
         override fun observeEventScriptSettings(esdeRootPath: String): Flow<EsdeEventScriptSettings?> =
             flow {
@@ -277,7 +279,10 @@ class OnboardingViewModelTest {
             // Valid and ready to go, but the user hasn't actually confirmed anything yet -
             // this is just the default guess, never explicitly chosen.
             assertEquals(OnboardingStep.EsdeFolder, viewModel.uiState.value.step)
-            assertEquals(LogFolderValidation.FolderFound(settingsFileFound = true), viewModel.uiState.value.logFolderValidation)
+            assertEquals(
+                LogFolderValidation.FolderFound(settingsFileFound = true),
+                viewModel.uiState.value.logFolderValidation,
+            )
             assertTrue(onboardingRepo.savedLogPaths.isEmpty())
 
             viewModel.onEsdeFolderConfirmed()
@@ -330,7 +335,8 @@ class OnboardingViewModelTest {
                 FakeEsdeInstallationRepository().apply {
                     mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
                 }
-            val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+            val viewModel =
+                buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
             advanceUntilIdle()
             viewModel.onEsdeFolderConfirmed()
             advanceUntilIdle()
@@ -351,7 +357,8 @@ class OnboardingViewModelTest {
                 FakeEsdeInstallationRepository().apply {
                     mediaDirectory = "/storage/emulated/0/ES-DE/downloaded_media"
                 }
-            val viewModel = buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
+            val viewModel =
+                buildViewModel(onboardingRepository = onboardingRepo, installationRepository = installationRepo)
             advanceUntilIdle()
             viewModel.onEsdeFolderConfirmed()
             advanceUntilIdle()

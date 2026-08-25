@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -38,10 +39,9 @@ private class SourceFixture {
             screensaverDimPercent = 25,
             overlayOpacityPercent = 33,
             fabAssignments = fabAssignments,
-            videoPlaybackEnabled = true,
-            videoDelaySeconds = 9,
             musicDuckingMode = MusicDuckingMode.Pause,
             debugLoggingEnabled = true,
+            updateAchievementsOnScreensaverEnabled = false,
         )
     val appDrawer =
         FakeAppDrawerSettingsRepository(hiddenApps = setOf("com.hidden.app"), gridColumns = 6, showSearchBar = false)
@@ -51,6 +51,8 @@ private class SourceFixture {
         FakeDockSettingsRepository(dockEnabled = true, dockSize = DockSize.Large, dockApps = listOf("com.dock.app"))
     val canvas = SavedWidgetCanvas(grid = GridDimensions(columns = 8, rows = 5), widgets = listOf(samplePlacedWidget()))
     val widgets = FakeWidgetLayoutRepository(initial = mapOf(StateGroup.System to canvas))
+    val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
+    val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
     val calibration =
         HallSensorCalibration(sensorType = 5, sensorName = "Hall Sensor", closedValue = 1f, openValue = 0f)
     val thorSettings =
@@ -60,7 +62,8 @@ private class SourceFixture {
             autoFpsEnabled = true,
             autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
         )
-    val repositories = BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings)
+    val repositories =
+        BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings, gameMatchOverrides)
 
     private fun samplePlacedWidget() =
         PlacedWidget(
@@ -88,6 +91,7 @@ class RestoreConfigBackupUseCaseTest {
             val targetDock = FakeDockSettingsRepository()
             val targetWidgets = FakeWidgetLayoutRepository()
             val targetThorSettings = FakeThorSettingsRepository()
+            val targetGameMatchOverrides = FakeGameMatchOverrideRepository()
             val targetRepositories =
                 BackupRepositories(
                     targetOnboarding,
@@ -96,6 +100,7 @@ class RestoreConfigBackupUseCaseTest {
                     targetDock,
                     targetWidgets,
                     targetThorSettings,
+                    targetGameMatchOverrides,
                 )
             val restoreUseCase = RestoreConfigBackupUseCase(targetRepositories, configBackupRepository)
 
@@ -111,6 +116,7 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(FabType.CustomApp, targetOnboarding.observeFabAssignments().first().bottomEnd.type)
             assertEquals(MusicDuckingMode.Pause, targetOnboarding.observeMusicDuckingMode().first())
             assertTrue(targetOnboarding.observeDebugLoggingEnabled().first())
+            assertFalse(targetOnboarding.observeUpdateAchievementsOnScreensaverEnabled().first())
             assertEquals(setOf("com.hidden.app"), targetAppDrawer.observeHiddenApps().first())
             assertEquals(6, targetAppDrawer.observeGridColumns().first())
             assertFalse(targetAppDrawer.observeShowSearchBar().first())
@@ -119,6 +125,7 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(DockSize.Large, targetDock.observeDockSize().first())
             assertEquals(listOf("com.dock.app"), targetDock.observeDockApps().first())
             assertEquals(source.canvas, targetWidgets.observeCanvas(StateGroup.System).first())
+            assertEquals(listOf(source.override), targetGameMatchOverrides.observeAllOverrides().first())
             assertTrue(targetThorSettings.observeLidWakeGuardEnabled().first())
             assertEquals(source.calibration, targetThorSettings.observeHallSensorCalibration().first())
             assertTrue(targetThorSettings.observeAutoFpsEnabled().first())
@@ -138,6 +145,7 @@ class RestoreConfigBackupUseCaseTest {
                     FakeDockSettingsRepository(),
                     FakeWidgetLayoutRepository(),
                     FakeThorSettingsRepository(),
+                    FakeGameMatchOverrideRepository(),
                 )
             val useCase = RestoreConfigBackupUseCase(repositories, JsonConfigBackupRepository())
 
@@ -159,6 +167,7 @@ class RestoreConfigBackupUseCaseTest {
                     FakeDockSettingsRepository(),
                     FakeWidgetLayoutRepository(),
                     FakeThorSettingsRepository(),
+                    FakeGameMatchOverrideRepository(),
                 )
             val configBackupRepository = JsonConfigBackupRepository()
             val useCase = RestoreConfigBackupUseCase(repositories, configBackupRepository)

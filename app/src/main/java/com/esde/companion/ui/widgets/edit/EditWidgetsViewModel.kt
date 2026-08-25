@@ -28,6 +28,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
@@ -46,6 +47,10 @@ import java.util.UUID
  * very small/coarse grids), centered on the canvas - a reasonable starting size/position
  * for the person to then drag and resize into place. */
 private const val DEFAULT_NEW_WIDGET_SPAN = 4
+
+/** Shown only until the real Settings-backed value's first emission arrives. */
+private const val DEFAULT_DOCK_OPACITY_PERCENT = 80
+private const val DEFAULT_DOCK_MAX_APPS = 5
 
 /**
  * Drives the edit-mode overlay. Unlike the live WidgetsViewModel, [widgets] here is a
@@ -82,6 +87,7 @@ class EditWidgetsViewModel(
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
+    private val resolveGameRating: ResolveGameRatingUseCase,
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
@@ -104,11 +110,15 @@ class EditWidgetsViewModel(
 
     val dockOpacityPercent: StateFlow<Int> =
         observeOverlayOpacity()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 80)
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                DEFAULT_DOCK_OPACITY_PERCENT,
+            )
 
     val dockMaxApps: StateFlow<Int> =
         observeDockMaxApps()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), 5)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000), DEFAULT_DOCK_MAX_APPS)
 
     /** Same resolution as AppDockViewModel.dockItems (pinned package names -> InstalledApp,
      * capped to maxApps, with APP_DRAWER_SHORTCUT_PACKAGE_NAME resolving to the synthetic
@@ -367,6 +377,7 @@ class EditWidgetsViewModel(
                 .toSet()
         val gameMedia = lastGameReference?.let { resolveGameMediaFor(it, neededGameMediaTypes) }
         val gameDescription = lastGameReference?.let { resolveGameDescription(it.systemShortName, it.romPath) }
+        val gameRating = lastGameReference?.let { resolveGameRating(it.systemShortName, it.romPath) }
 
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
         val neededSystemMediaTypes =
@@ -378,7 +389,9 @@ class EditWidgetsViewModel(
         val systemMediaByType: Map<MediaType, String?> =
             lastSystemShortName?.let { shortName ->
                 neededSystemMediaTypes.associateWith { mediaType ->
-                    randomSystemMediaCache.getOrPut(shortName to mediaType) { resolveRandomSystemMedia(shortName, mediaType) }
+                    randomSystemMediaCache.getOrPut(shortName to mediaType) {
+                        resolveRandomSystemMedia(shortName, mediaType)
+                    }
                 }
             } ?: emptyMap()
 
@@ -387,22 +400,10 @@ class EditWidgetsViewModel(
         val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
         val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
         val customSystemLogoPath =
-            if (needsCustomLogo) {
-                lastSystemShortName?.let {
-                    resolveCustomSystemLogo(
-                        systemLogoAssetName(it),
-                    )
-                }
-            } else {
-                null
-            }
+            if (needsCustomLogo) lastSystemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null
         val customSystemImagePath =
             if (needsCustomImage) {
-                lastSystemShortName?.let {
-                    resolveCustomSystemImage(
-                        systemLogoAssetName(it),
-                    )
-                }
+                lastSystemShortName?.let { resolveCustomSystemImage(systemLogoAssetName(it)) }
             } else {
                 null
             }
@@ -417,6 +418,7 @@ class EditWidgetsViewModel(
                     systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
                     gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
                     gameDescriptionLookup = { gameDescription?.text },
+                    gameRatingLookup = { gameRating?.value },
                     fallbackBackgroundAssetPath = null,
                 )
         }

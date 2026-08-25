@@ -105,18 +105,6 @@ class MusicPlaybackCoordinatorTest {
 
         override fun observeScreensaverDimPercent(): Flow<Int> = flowOf(50)
 
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {}
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-
         override suspend fun setMusicEnabled(enabled: Boolean) {
             musicEnabled.value = enabled
         }
@@ -168,6 +156,18 @@ class MusicPlaybackCoordinatorTest {
         override suspend fun setDebugLoggingEnabled(enabled: Boolean) {}
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
 
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
@@ -254,7 +254,11 @@ class MusicPlaybackCoordinatorTest {
         onPlaybackError: (MusicTrack?, String) -> Unit = { _, _ -> },
     ): MusicPlaybackCoordinator {
         val logRepository = FakeEsdeLogRepository(events)
-        val observeConnectionState = ObserveConnectionStateUseCase(logRepository, ObserveAppStateUseCase(logRepository, scope))
+        val observeConnectionState =
+            ObserveConnectionStateUseCase(
+                logRepository,
+                ObserveAppStateUseCase(logRepository, scope),
+            )
         return MusicPlaybackCoordinator(
             observeConnectionState = observeConnectionState,
             observeMusicEnabled = ObserveMusicEnabledUseCase(onboardingRepository),
@@ -463,7 +467,10 @@ class MusicPlaybackCoordinatorTest {
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
             val library =
                 FakeMusicLibraryRepository(
-                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    poolsByRequestedSystem =
+                        mapOf(
+                            "a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)),
+                        ),
                     generalPool = MusicPoolContents(MusicPool.General, emptyList()),
                 )
             val controller = FakeMusicPlayerController()
@@ -493,7 +500,10 @@ class MusicPlaybackCoordinatorTest {
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
             val library =
                 FakeMusicLibraryRepository(
-                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    poolsByRequestedSystem =
+                        mapOf(
+                            "a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)),
+                        ),
                     generalPool = MusicPoolContents(MusicPool.General, emptyList()),
                 )
             val controller = FakeMusicPlayerController()
@@ -523,7 +533,10 @@ class MusicPlaybackCoordinatorTest {
             val trackA2 = MusicTrack("/music/systems/a/2.mp3", "2")
             val library =
                 FakeMusicLibraryRepository(
-                    poolsByRequestedSystem = mapOf("a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2))),
+                    poolsByRequestedSystem =
+                        mapOf(
+                            "a" to MusicPoolContents(MusicPool.PerSystem("a"), listOf(trackA1, trackA2)),
+                        ),
                     generalPool = MusicPoolContents(MusicPool.General, emptyList()),
                 )
             val controller = FakeMusicPlayerController()

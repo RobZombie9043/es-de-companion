@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -118,6 +119,7 @@ fun MainScreen(
     onDrawerOpenChanged: (Boolean) -> Unit,
     onLongPressMenuOpenChanged: (Boolean) -> Unit = {},
     onFolderOpenChanged: (Boolean) -> Unit = {},
+    openSettingsMenuRequest: Int = 0,
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
     topEndOverlay: @Composable BoxScope.() -> Unit = {},
     bottomStartOverlay: @Composable BoxScope.() -> Unit = {},
@@ -139,6 +141,7 @@ fun MainScreen(
         onDrawerOpenChanged = onDrawerOpenChanged,
         onLongPressMenuOpenChanged = onLongPressMenuOpenChanged,
         onFolderOpenChanged = onFolderOpenChanged,
+        openSettingsMenuRequest = openSettingsMenuRequest,
         topStartOverlay = topStartOverlay,
         topEndOverlay = topEndOverlay,
         bottomStartOverlay = bottomStartOverlay,
@@ -172,6 +175,7 @@ private fun MainScreenContent(
     onDrawerOpenChanged: (Boolean) -> Unit,
     onLongPressMenuOpenChanged: (Boolean) -> Unit,
     onFolderOpenChanged: (Boolean) -> Unit,
+    openSettingsMenuRequest: Int,
     topStartOverlay: @Composable BoxScope.() -> Unit,
     topEndOverlay: @Composable BoxScope.() -> Unit,
     bottomStartOverlay: @Composable BoxScope.() -> Unit,
@@ -210,6 +214,22 @@ private fun MainScreenContent(
         fun setLongPressMenuOpen(open: Boolean) {
             longPressMenuOpen = open
             onLongPressMenuOpenChanged(open)
+        }
+
+        // Clock/SystemStatus/ClockAndSystemStatus FABs live in MainActivity (see
+        // fabSlotContent there), outside this composable, so they can't reach the local
+        // setLongPressMenuOpen closure the way the Settings FAB above does - this counter is
+        // how a tap on one of them asks this composable to open the same menu.
+        // lastHandledOpenRequest starts at whatever openSettingsMenuRequest already is, so a
+        // fresh mount of this composable (e.g. returning from Edit Widgets) with a stale
+        // nonzero counter doesn't spuriously reopen the menu - only a genuinely new increment
+        // does.
+        var lastHandledOpenRequest by remember { mutableIntStateOf(openSettingsMenuRequest) }
+        LaunchedEffect(openSettingsMenuRequest) {
+            if (openSettingsMenuRequest != lastHandledOpenRequest) {
+                lastHandledOpenRequest = openSettingsMenuRequest
+                setLongPressMenuOpen(true)
+            }
         }
 
         // 0f = fully closed, 1f = fully open. Tracked as a fraction rather than raw
@@ -386,7 +406,9 @@ private fun MainScreenContent(
                         ) {
                             Icon(imageVector = Icons.Filled.Apps, contentDescription = "App Drawer")
                         }
-                    FabType.Music, FabType.GameManual, FabType.CustomApp, FabType.None -> {}
+                    FabType.Music, FabType.GameManual, FabType.CustomApp, FabType.RetroAchievements,
+                    FabType.Clock, FabType.SystemStatus, FabType.ClockAndSystemStatus, FabType.None,
+                    -> {}
                 }
             }
 

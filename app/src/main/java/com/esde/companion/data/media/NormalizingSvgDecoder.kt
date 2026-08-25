@@ -28,6 +28,13 @@ internal const val NORMALIZED_LONG_EDGE = 3000.0
  * needed never requires reading a whole (possibly huge) document. */
 private const val OPEN_TAG_PEEK_BYTES = 16_384L
 
+/** A viewBox is exactly "minX minY width height". */
+private const val VIEW_BOX_PART_COUNT = 4
+private const val VIEW_BOX_HEIGHT_INDEX = 3
+
+/** In `(\bname\s*=\s*")([^"]*)(")`, group 3 is the closing quote. */
+private const val CLOSING_QUOTE_GROUP_INDEX = 3
+
 /**
  * Wraps [SvgDecoder] to work around a real rendering-quality issue in the androidsvg
  * library it delegates to: curve-flattening tolerance is computed in the SVG's own
@@ -182,8 +189,8 @@ private fun scaleFor(
 
 private fun parseViewBox(value: String): ViewBox? {
     val parts = value.trim().split(Regex("""[\s,]+""")).mapNotNull { it.toDoubleOrNull() }
-    if (parts.size != 4) return null
-    return ViewBox(minX = parts[0], minY = parts[1], width = parts[2], height = parts[3])
+    if (parts.size != VIEW_BOX_PART_COUNT) return null
+    return ViewBox(minX = parts[0], minY = parts[1], width = parts[2], height = parts[VIEW_BOX_HEIGHT_INDEX])
 }
 
 private fun parseUnitless(value: String): Double? = value.removeSuffix("px").toDoubleOrNull()
@@ -201,7 +208,7 @@ private fun setAttr(
 ): String {
     val attrRegex = Regex("""(\b$name\s*=\s*")([^"]*)(")""", RegexOption.IGNORE_CASE)
     return if (attrRegex.containsMatchIn(tag)) {
-        attrRegex.replace(tag) { "${it.groupValues[1]}$value${it.groupValues[3]}" }
+        attrRegex.replace(tag) { "${it.groupValues[1]}$value${it.groupValues[CLOSING_QUOTE_GROUP_INDEX]}" }
     } else {
         tag.replaceFirst("<svg", "<svg $name=\"$value\"")
     }

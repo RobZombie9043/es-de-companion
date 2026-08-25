@@ -63,7 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -83,6 +82,7 @@ import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DrawerItem
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.ui.theme.isDarkSurface
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
 
@@ -109,12 +109,18 @@ private val FOLDER_MOSAIC_SPACING = 2.dp
 /** Drawer background base color: black in dark mode, white in light mode - matches
  * AppDock's [dockBackgroundColor] so the drawer and dock read as one consistent surface. */
 @Composable
-internal fun drawerBackgroundColor(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.Black else Color.White
+internal fun drawerBackgroundColor(): Color {
+    val isDark = isDarkSurface()
+    return if (isDark) Color.Black else Color.White
+}
 
 /** App label text color: the inverse of [drawerBackgroundColor], so labels stay readable
  * against the drawer's background in either theme. */
 @Composable
-internal fun drawerContentColor(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) Color.White else Color.Black
+internal fun drawerContentColor(): Color {
+    val isDark = isDarkSurface()
+    return if (isDark) Color.White else Color.Black
+}
 
 /** Two-step "add to folder" flow state, hoisted here (mirrors how AppDock hoists its own
  * add-app dialog state) rather than inside AppDrawerItem, since it drives a dialog that

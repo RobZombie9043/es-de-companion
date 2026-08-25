@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 
+private const val MIN_PERCENT = 0
+private const val MAX_PERCENT = 100
+
 /**
  * DataStore-backed [OnboardingRepository]. Folder existence/log-file checks are plain
  * File I/O (this app isn't Play-Store distributed, so MANAGE_EXTERNAL_STORAGE is granted
@@ -67,9 +70,14 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[MEDIA_FOLDER_PATH_KEY] = path }
     }
 
-    override fun observeLogFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[LOG_FOLDER_PATH_KEY] }
+    override fun observeLogFolderPath(): Flow<String?> {
+        return context.onboardingDataStore.data.map { it[LOG_FOLDER_PATH_KEY] }
+    }
 
-    override fun observeMediaFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[MEDIA_FOLDER_PATH_KEY] }
+    override fun observeMediaFolderPath(): Flow<String?> =
+        context.onboardingDataStore.data.map {
+            it[MEDIA_FOLDER_PATH_KEY]
+        }
 
     override suspend fun saveCustomSystemImagesFolderPath(path: String) {
         context.onboardingDataStore.edit { it[CUSTOM_SYSTEM_IMAGES_FOLDER_PATH_KEY] = path }
@@ -86,7 +94,10 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[CUSTOM_LOGOS_FOLDER_PATH_KEY] = path }
     }
 
-    override fun observeCustomLogosFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[CUSTOM_LOGOS_FOLDER_PATH_KEY] }
+    override fun observeCustomLogosFolderPath(): Flow<String?> =
+        context.onboardingDataStore.data.map {
+            it[CUSTOM_LOGOS_FOLDER_PATH_KEY]
+        }
 
     override suspend fun clearCustomLogosFolderPath() {
         context.onboardingDataStore.edit { it.remove(CUSTOM_LOGOS_FOLDER_PATH_KEY) }
@@ -96,7 +107,10 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[ONBOARDING_COMPLETE_KEY] = true }
     }
 
-    override fun observeOnboardingComplete(): Flow<Boolean> = context.onboardingDataStore.data.map { it[ONBOARDING_COMPLETE_KEY] ?: false }
+    override fun observeOnboardingComplete(): Flow<Boolean> =
+        context.onboardingDataStore.data.map {
+            it[ONBOARDING_COMPLETE_KEY] ?: false
+        }
 
     override suspend fun setThemePreference(preference: ThemePreference) {
         context.onboardingDataStore.edit { it[THEME_PREFERENCE_KEY] = preference.name }
@@ -126,7 +140,9 @@ class FileOnboardingRepository(
         }
 
     override suspend fun setGamePlayingDimPercent(percent: Int) {
-        context.onboardingDataStore.edit { it[GAME_PLAYING_DIM_PERCENT_KEY] = percent.coerceIn(0, 100) }
+        context.onboardingDataStore.edit {
+            it[GAME_PLAYING_DIM_PERCENT_KEY] = percent.coerceIn(MIN_PERCENT, MAX_PERCENT)
+        }
     }
 
     override fun observeGamePlayingDimPercent(): Flow<Int> =
@@ -144,37 +160,22 @@ class FileOnboardingRepository(
         }
 
     override suspend fun setScreensaverDimPercent(percent: Int) {
-        context.onboardingDataStore.edit { it[SCREENSAVER_DIM_PERCENT_KEY] = percent.coerceIn(0, 100) }
+        context.onboardingDataStore.edit {
+            it[SCREENSAVER_DIM_PERCENT_KEY] = percent.coerceIn(MIN_PERCENT, MAX_PERCENT)
+        }
     }
 
     override fun observeScreensaverDimPercent(): Flow<Int> =
         context.onboardingDataStore.data.map { it[SCREENSAVER_DIM_PERCENT_KEY] ?: DEFAULT_DIM_PERCENT }
 
-    override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {
-        context.onboardingDataStore.edit { it[VIDEO_PLAYBACK_ENABLED_KEY] = enabled }
-    }
-
-    override fun observeVideoPlaybackEnabled(): Flow<Boolean> =
-        context.onboardingDataStore.data.map { it[VIDEO_PLAYBACK_ENABLED_KEY] ?: false }
-
-    override suspend fun setVideoDelaySeconds(seconds: Int) {
-        context.onboardingDataStore.edit { it[VIDEO_DELAY_SECONDS_KEY] = seconds.coerceIn(0, MAX_VIDEO_DELAY_SECONDS) }
-    }
-
-    override fun observeVideoDelaySeconds(): Flow<Int> =
-        context.onboardingDataStore.data.map { it[VIDEO_DELAY_SECONDS_KEY] ?: DEFAULT_VIDEO_DELAY_SECONDS }
-
-    override suspend fun setVideoAudioEnabled(enabled: Boolean) {
-        context.onboardingDataStore.edit { it[VIDEO_AUDIO_ENABLED_KEY] = enabled }
-    }
-
-    override fun observeVideoAudioEnabled(): Flow<Boolean> = context.onboardingDataStore.data.map { it[VIDEO_AUDIO_ENABLED_KEY] ?: true }
-
     override suspend fun setMusicEnabled(enabled: Boolean) {
         context.onboardingDataStore.edit { it[MUSIC_ENABLED_KEY] = enabled }
     }
 
-    override fun observeMusicEnabled(): Flow<Boolean> = context.onboardingDataStore.data.map { it[MUSIC_ENABLED_KEY] ?: false }
+    override fun observeMusicEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map {
+            it[MUSIC_ENABLED_KEY] ?: false
+        }
 
     override suspend fun setMusicPlayWhileBrowsingSystems(enabled: Boolean) {
         context.onboardingDataStore.edit { it[MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY] = enabled }
@@ -211,7 +212,7 @@ class FileOnboardingRepository(
         }
 
     override suspend fun setOverlayOpacityPercent(percent: Int) {
-        context.onboardingDataStore.edit { it[OVERLAY_OPACITY_KEY] = percent.coerceIn(0, 100) }
+        context.onboardingDataStore.edit { it[OVERLAY_OPACITY_KEY] = percent.coerceIn(MIN_PERCENT, MAX_PERCENT) }
     }
 
     override fun observeOverlayOpacityPercent(): Flow<Int> =
@@ -221,7 +222,10 @@ class FileOnboardingRepository(
         context.onboardingDataStore.edit { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] = path }
     }
 
-    override fun observeCustomMusicFolderPath(): Flow<String?> = context.onboardingDataStore.data.map { it[CUSTOM_MUSIC_FOLDER_PATH_KEY] }
+    override fun observeCustomMusicFolderPath(): Flow<String?> =
+        context.onboardingDataStore.data.map {
+            it[CUSTOM_MUSIC_FOLDER_PATH_KEY]
+        }
 
     override suspend fun clearCustomMusicFolderPath() {
         context.onboardingDataStore.edit { it.remove(CUSTOM_MUSIC_FOLDER_PATH_KEY) }
@@ -292,10 +296,29 @@ class FileOnboardingRepository(
     override fun observeDebugLoggingEnabled(): Flow<Boolean> =
         context.onboardingDataStore.data.map { it[DEBUG_LOGGING_ENABLED_KEY] ?: false }
 
+    override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY] = enabled }
+    }
+
+    override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY] ?: true }
+
+    override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {
+        context.onboardingDataStore.edit { it[PLAYTIME_STATS_HARDCORE_MODE_ENABLED_KEY] = enabled }
+    }
+
+    override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[PLAYTIME_STATS_HARDCORE_MODE_ENABLED_KEY] ?: false }
+
+    override suspend fun setBluetoothPermissionRequested(requested: Boolean) {
+        context.onboardingDataStore.edit { it[BLUETOOTH_PERMISSION_REQUESTED_KEY] = requested }
+    }
+
+    override fun observeBluetoothPermissionRequested(): Flow<Boolean> =
+        context.onboardingDataStore.data.map { it[BLUETOOTH_PERMISSION_REQUESTED_KEY] ?: false }
+
     private companion object {
         const val DEFAULT_ESDE_ROOT = "/storage/emulated/0/ES-DE"
-        const val MAX_VIDEO_DELAY_SECONDS = 10
-        const val DEFAULT_VIDEO_DELAY_SECONDS = 3
         const val DEFAULT_OVERLAY_OPACITY_PERCENT = 80
         const val DEFAULT_DIM_PERCENT = 50
 
@@ -309,9 +332,6 @@ class FileOnboardingRepository(
         val GAME_PLAYING_DIM_PERCENT_KEY = intPreferencesKey("game_playing_dim_percent")
         val SCREENSAVER_BEHAVIOR_KEY = stringPreferencesKey("screensaver_behavior")
         val SCREENSAVER_DIM_PERCENT_KEY = intPreferencesKey("screensaver_dim_percent")
-        val VIDEO_PLAYBACK_ENABLED_KEY = booleanPreferencesKey("video_playback_enabled")
-        val VIDEO_DELAY_SECONDS_KEY = intPreferencesKey("video_delay_seconds")
-        val VIDEO_AUDIO_ENABLED_KEY = booleanPreferencesKey("video_audio_enabled")
         val MUSIC_ENABLED_KEY = booleanPreferencesKey("music_enabled")
         val MUSIC_PLAY_WHILE_BROWSING_SYSTEMS_KEY = booleanPreferencesKey("music_play_while_browsing_systems")
         val MUSIC_PLAY_WHILE_BROWSING_GAMES_KEY = booleanPreferencesKey("music_play_while_browsing_games")
@@ -330,5 +350,9 @@ class FileOnboardingRepository(
         val FAB_BOTTOM_END_CUSTOM_APP_KEY = stringPreferencesKey("fab_bottom_end_custom_app")
         val LAUNCH_ESDE_ON_START_ENABLED_KEY = booleanPreferencesKey("launch_esde_on_start_enabled")
         val DEBUG_LOGGING_ENABLED_KEY = booleanPreferencesKey("debug_logging_enabled")
+        val UPDATE_ACHIEVEMENTS_ON_SCREENSAVER_ENABLED_KEY =
+            booleanPreferencesKey("update_achievements_on_screensaver_enabled")
+        val PLAYTIME_STATS_HARDCORE_MODE_ENABLED_KEY = booleanPreferencesKey("playtime_stats_hardcore_mode_enabled")
+        val BLUETOOTH_PERMISSION_REQUESTED_KEY = booleanPreferencesKey("bluetooth_permission_requested")
     }
 }

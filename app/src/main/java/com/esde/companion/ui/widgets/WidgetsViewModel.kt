@@ -23,6 +23,7 @@ import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
+import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,6 +52,7 @@ class WidgetsViewModel(
     private val resolveGameMedia: ResolveGameMediaUseCase,
     private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase,
     private val resolveGameDescription: ResolveGameDescriptionUseCase,
+    private val resolveGameRating: ResolveGameRatingUseCase,
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
@@ -99,6 +101,7 @@ class WidgetsViewModel(
                 ContentIdentity(
                     stateGroup = group,
                     gameRef = appState.currentGameReference(),
+                    isBrowsingGame = appState is AppState.BrowsingGame,
                     systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
                     systemFullName = (appState as? AppState.BrowsingSystem)?.systemFullName,
                     gameName =
@@ -121,7 +124,11 @@ class WidgetsViewModel(
                     flowOf(WidgetCanvasState.Disconnected)
                 } else {
                     observeWidgetCanvas(identity.stateGroup, grid).map { widgets ->
-                        WidgetCanvasState.Showing(widgets, resolveContent(widgets, identity), identity.navigationDirection)
+                        WidgetCanvasState.Showing(
+                            widgets,
+                            resolveContent(widgets, identity),
+                            identity.navigationDirection,
+                        )
                     }
                 }
             }
@@ -145,10 +152,11 @@ class WidgetsViewModel(
         // otherwise a lone FanArt widget's Screenshots fallback would only ever resolve
         // by coincidence, when some other widget on the same canvas also happens to need
         // Screenshots. See WidgetContentResolver/resolveMediaWidgetContent's kdoc.
+        val hasVideoWidget = widgets.any { it.widgetType is WidgetType.Video }
         val neededGameMediaTypes =
             widgets.mapNotNull { it.widgetType as? WidgetType.GameMedia }
                 .flatMap { listOfNotNull(it.mediaType, it.fallbackMediaType) }
-                .toSet()
+                .toSet() + if (hasVideoWidget) setOf(MediaType.Videos) else emptySet()
         val gameMedia =
             identity.gameRef?.let {
                 resolveGameMedia(
@@ -159,6 +167,7 @@ class WidgetsViewModel(
                 )
             }
         val gameDescription = identity.gameRef?.let { resolveGameDescription(it.systemShortName, it.romPath) }
+        val gameRating = identity.gameRef?.let { resolveGameRating(it.systemShortName, it.romPath) }
         val systemShortName = identity.systemShortName
 
         val hasSystemImageWidget = widgets.any { it.widgetType is WidgetType.SystemImage }
@@ -170,14 +179,25 @@ class WidgetsViewModel(
             ).distinct()
         val systemMediaByType: Map<MediaType, String?> =
             systemShortName?.let { shortName ->
-                neededSystemMediaTypes.associateWith { mediaType -> resolveRandomSystemMediaCached(shortName, mediaType) }
+                neededSystemMediaTypes.associateWith { mediaType ->
+                    resolveRandomSystemMediaCached(shortName, mediaType)
+                }
             } ?: emptyMap()
 
         val systemLogoAssetPath = systemShortName?.let { resolveBundledSystemLogo(systemLogoAssetName(it)) }
 
         val needsCustomLogo = widgets.any { it.widgetType is WidgetType.SystemLogo }
         val needsCustomImage = widgets.any { it.widgetType is WidgetType.SystemImage }
-        val customSystemLogoPath = if (needsCustomLogo) systemShortName?.let { resolveCustomSystemLogo(systemLogoAssetName(it)) } else null
+        val customSystemLogoPath =
+            if (needsCustomLogo) {
+                systemShortName?.let {
+                    resolveCustomSystemLogo(
+                        systemLogoAssetName(it),
+                    )
+                }
+            } else {
+                null
+            }
         val customSystemImagePath =
             if (needsCustomImage) {
                 systemShortName?.let {
@@ -199,9 +219,12 @@ class WidgetsViewModel(
                     systemMediaLookup = { mediaType -> systemMediaByType[mediaType] },
                     gameMediaLookup = { mediaType -> gameMedia?.path(mediaType) },
                     gameDescriptionLookup = { gameDescription?.text },
-                    fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET, // null in EditWidgetsViewModel, as today
+                    gameRatingLookup = { gameRating?.value },
+                    // null in EditWidgetsViewModel, as today
+                    fallbackBackgroundAssetPath = FALLBACK_BACKGROUND_ASSET,
                     systemNameLookup = { identity.systemFullName },
                     gameNameLookup = { identity.gameName },
+                    videoLookup = { gameMedia?.path(MediaType.Videos).takeIf { identity.isBrowsingGame } },
                 )
         }
     }
@@ -209,6 +232,7 @@ class WidgetsViewModel(
     private data class ContentIdentity(
         val stateGroup: StateGroup,
         val gameRef: GameReference?,
+        val isBrowsingGame: Boolean,
         val systemShortName: String?,
         val systemFullName: String?,
         val gameName: String?,

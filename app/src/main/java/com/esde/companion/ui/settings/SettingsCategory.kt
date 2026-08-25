@@ -3,11 +3,11 @@ package com.esde.companion.ui.settings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -35,11 +35,6 @@ enum class SettingsCategory(val title: String, val description: String, val icon
         description = "Visible apps, grid columns, dock",
         icon = Icons.Filled.Apps,
     ),
-    VideoPlayback(
-        title = "Video Playback",
-        description = "Game video playback while browsing",
-        icon = Icons.Filled.Videocam,
-    ),
     Sound(
         title = "Background Music",
         description = "Background music and video-playback ducking",
@@ -55,9 +50,14 @@ enum class SettingsCategory(val title: String, val description: String, val icon
         description = "ES-DE and media folder locations",
         icon = Icons.Filled.Folder,
     ),
+    RetroAchievements(
+        title = "RetroAchievements",
+        description = "Sign in and manage the RetroAchievements connection",
+        icon = Icons.Filled.EmojiEvents,
+    ),
     Thor(
         title = "Thor Settings",
-        description = "Lid Wake Guard and Auto FPS Mode",
+        description = "Miscellaneous Thor utilities",
         icon = Icons.Filled.Devices,
     ),
 }

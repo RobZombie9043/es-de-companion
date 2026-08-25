@@ -35,24 +35,48 @@ class AppStateReducerTest {
 
     @Test
     fun `system-select carries the event's navigation direction into BrowsingSystem`() {
-        val event = EsdeEvent.SystemSelect("dreamcast", "Sega Dreamcast", "/roms/dreamcast", direction = NavigationDirection.Right)
+        val event =
+            EsdeEvent.SystemSelect(
+                "dreamcast",
+                "Sega Dreamcast",
+                "/roms/dreamcast",
+                direction = NavigationDirection.Right,
+            )
 
         val result = AppStateReducer.reduce(AppState.Idle, event)
 
         assertEquals(
-            AppState.BrowsingSystem("dreamcast", "Sega Dreamcast", "/roms/dreamcast", navigationDirection = NavigationDirection.Right),
+            AppState.BrowsingSystem(
+                "dreamcast",
+                "Sega Dreamcast",
+                "/roms/dreamcast",
+                navigationDirection = NavigationDirection.Right,
+            ),
             result,
         )
     }
 
     @Test
     fun `game-select carries the event's navigation direction into BrowsingGame`() {
-        val event = EsdeEvent.GameSelect("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", direction = NavigationDirection.Up)
+        val event =
+            EsdeEvent.GameSelect(
+                "/roms/dc/game.chd",
+                "Game",
+                "dreamcast",
+                "Sega Dreamcast",
+                direction = NavigationDirection.Up,
+            )
 
         val result = AppStateReducer.reduce(AppState.Idle, event)
 
         assertEquals(
-            AppState.BrowsingGame("/roms/dc/game.chd", "Game", "dreamcast", "Sega Dreamcast", navigationDirection = NavigationDirection.Up),
+            AppState.BrowsingGame(
+                "/roms/dc/game.chd",
+                "Game",
+                "dreamcast",
+                "Sega Dreamcast",
+                navigationDirection = NavigationDirection.Up,
+            ),
             result,
         )
     }
@@ -156,7 +180,7 @@ class AppStateReducerTest {
     }
 
     @Test
-    fun `screensaver-game-select without a prior screensaver-start falls back to unknown mode and Idle previousState`() {
+    fun `screensaver-game-select without prior screensaver-start falls back to unknown mode, Idle previousState`() {
         val event = EsdeEvent.ScreensaverGameSelect("/roms/arcade/tapper.zip", "Tapper", "arcade", "Arcade")
 
         val result = AppStateReducer.reduce(AppState.Idle, event)

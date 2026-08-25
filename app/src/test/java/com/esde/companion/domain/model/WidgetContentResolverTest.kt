@@ -12,9 +12,11 @@ class WidgetContentResolverTest {
         systemMediaLookup: (MediaType) -> String? = { null },
         gameMediaLookup: (MediaType) -> String? = { null },
         gameDescriptionLookup: () -> String? = { null },
+        gameRatingLookup: () -> Float? = { null },
         fallbackBackgroundAssetPath: String? = "fallback.webp",
         systemNameLookup: () -> String? = { null },
         gameNameLookup: () -> String? = { null },
+        videoLookup: () -> String? = { null },
     ): WidgetContent =
         WidgetContentResolver.resolve(
             widgetType = widgetType,
@@ -24,9 +26,11 @@ class WidgetContentResolverTest {
             systemMediaLookup = systemMediaLookup,
             gameMediaLookup = gameMediaLookup,
             gameDescriptionLookup = gameDescriptionLookup,
+            gameRatingLookup = gameRatingLookup,
             fallbackBackgroundAssetPath = fallbackBackgroundAssetPath,
             systemNameLookup = systemNameLookup,
             gameNameLookup = gameNameLookup,
+            videoLookup = videoLookup,
         )
 
     // --- SystemImage: generic background fallback ---------------------------------------
@@ -39,7 +43,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)
+        assertEquals(
+            WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true),
+            content,
+        )
     }
 
     @Test
@@ -62,7 +69,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false), content)
+        assertEquals(
+            WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
     }
 
     // --- SystemMedia/GameMedia: unaffected background-fallback behavior ------------------
@@ -75,7 +85,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)
+        assertEquals(
+            WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true),
+            content,
+        )
     }
 
     @Test
@@ -86,7 +99,10 @@ class WidgetContentResolverTest {
                 fallbackBackgroundAssetPath = "fallback.webp",
             )
 
-        assertEquals(WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true), content)
+        assertEquals(
+            WidgetContent.Image("fallback.webp", ScaleMode.Fill, isTransparentOverlay = false, isAsset = true),
+            content,
+        )
     }
 
     @Test
@@ -181,7 +197,10 @@ class WidgetContentResolverTest {
                 },
             )
 
-        assertEquals(WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false), content)
+        assertEquals(
+            WidgetContent.Image("/media/fanart.png", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            content,
+        )
     }
 
     // --- SystemLogo: name-text fallback ---------------------------------------------------
@@ -213,7 +232,10 @@ class WidgetContentResolverTest {
                 systemNameLookup = { "Sega Dreamcast" },
             )
 
-        assertEquals(WidgetContent.SystemLogoAsset("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit), content)
+        assertEquals(
+            WidgetContent.SystemLogoAsset("file:///android_asset/system_logos/dreamcast.svg", ScaleMode.Fit),
+            content,
+        )
     }
 
     // --- CustomImage: fixed user-picked path, independent of any lookup -------------------
@@ -222,11 +244,20 @@ class WidgetContentResolverTest {
     fun `CustomImage resolves to the widget's own fixed path`() {
         val content =
             resolve(
-                widgetType = WidgetType.CustomImage(path = "/storage/emulated/0/Pictures/cover.jpg", scaleMode = ScaleMode.Fill),
+                widgetType =
+                    WidgetType.CustomImage(
+                        path = "/storage/emulated/0/Pictures/cover.jpg",
+                        scaleMode = ScaleMode.Fill,
+                    ),
             )
 
         assertEquals(
-            WidgetContent.Image("/storage/emulated/0/Pictures/cover.jpg", ScaleMode.Fill, isTransparentOverlay = false, isAsset = false),
+            WidgetContent.Image(
+                "/storage/emulated/0/Pictures/cover.jpg",
+                ScaleMode.Fill,
+                isTransparentOverlay = false,
+                isAsset = false,
+            ),
             content,
         )
     }
@@ -278,6 +309,151 @@ class WidgetContentResolverTest {
                 gameNameLookup = { "Crazy Taxi" },
             )
 
-        assertEquals(WidgetContent.Image("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false), content)
+        assertEquals(
+            WidgetContent.Image("/media/marquee.png", ScaleMode.Fit, isTransparentOverlay = true, isAsset = false),
+            content,
+        )
+    }
+
+    // --- Rating: 0f..1f -> 0f..5f star conversion and no-rating behavior ------------------
+
+    @Test
+    fun `Rating converts a 0f to 1f gamelist value onto a 0f to 5f star scale`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(),
+                gameRatingLookup = { 0.8f },
+            )
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 4f,
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Rating with Hide behavior resolves to Empty when the game has no rating`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(noRatingBehavior = NoRatingBehavior.Hide),
+                gameRatingLookup = { null },
+            )
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    @Test
+    fun `Rating with ShowEmptyStars behavior resolves to zero filled stars when the game has no rating`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(noRatingBehavior = NoRatingBehavior.ShowEmptyStars),
+                gameRatingLookup = { null },
+            )
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 0f,
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Rating of exactly 0 always renders as zero filled stars regardless of noRatingBehavior`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.Rating(noRatingBehavior = NoRatingBehavior.Hide),
+                gameRatingLookup = { 0f },
+            )
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 0f,
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Rating threads through the widget's own configured colors`() {
+        val widgetType =
+            WidgetType.Rating(
+                filledColorArgb = 0xFFAABBCC,
+                outlineColorArgb = 0xFF112233,
+                backgroundColorArgb = 0xFF445566,
+                backgroundAlpha = 0.25f,
+            )
+        val content = resolve(widgetType = widgetType, gameRatingLookup = { 1f })
+
+        assertEquals(
+            WidgetContent.Rating(
+                starCount = 5f,
+                filledColorArgb = 0xFFAABBCC,
+                outlineColorArgb = 0xFF112233,
+                backgroundColorArgb = 0xFF445566,
+                backgroundAlpha = 0.25f,
+            ),
+            content,
+        )
+    }
+
+    // --- Video: resolves only when the caller supplies a path (eligibility gate lives
+    // entirely in the caller's videoLookup, not in the resolver itself) ------------------
+
+    @Test
+    fun `Video resolves to WidgetContent Video when videoLookup returns a path`() {
+        val widgetType =
+            WidgetType.Video(
+                scaleMode = ScaleMode.Fit,
+                audioEnabled = false,
+                delaySeconds = 5,
+                pillarboxMode = PillarboxMode.Transparent,
+                renderAboveUi = true,
+                loopEnabled = false,
+                cornerRadius = CornerRadius.Medium,
+            )
+        val content = resolve(widgetType = widgetType, videoLookup = { "/media/video.mp4" })
+
+        assertEquals(
+            WidgetContent.Video(
+                path = "/media/video.mp4",
+                scaleMode = ScaleMode.Fit,
+                audioEnabled = false,
+                delaySeconds = 5,
+                pillarboxMode = PillarboxMode.Transparent,
+                renderAboveUi = true,
+                loopEnabled = false,
+                cornerRadius = CornerRadius.Medium,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `Video resolves to Empty when videoLookup returns null (not eligible or no video found)`() {
+        val content = resolve(widgetType = WidgetType.Video(), videoLookup = { null })
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    @Test
+    fun `Video resolves to Empty by default when the caller supplies no videoLookup at all`() {
+        val content = resolve(widgetType = WidgetType.Video())
+
+        assertEquals(WidgetContent.Empty, content)
     }
 }

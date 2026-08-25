@@ -10,10 +10,13 @@ import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
+import com.esde.companion.domain.model.RetroAchievementsAuthState
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
@@ -35,19 +38,19 @@ import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCas
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingGamesUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayWhileBrowsingSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
-import com.esde.companion.domain.usecase.ObserveVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.ObserveVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.ObserveVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
+import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -72,13 +75,12 @@ import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
-import com.esde.companion.domain.usecase.SetVideoAudioEnabledUseCase
-import com.esde.companion.domain.usecase.SetVideoDelaySecondsUseCase
-import com.esde.companion.domain.usecase.SetVideoPlaybackEnabledUseCase
+import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeMediaFolderUseCase
+import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -113,12 +115,6 @@ class SettingsViewModel(
     private val setDockMaxAppsUseCase: SetDockMaxAppsUseCase,
     private val observeDockSizeUseCase: ObserveDockSizeUseCase,
     private val setDockSizeUseCase: SetDockSizeUseCase,
-    private val observeVideoPlaybackEnabledUseCase: ObserveVideoPlaybackEnabledUseCase,
-    private val setVideoPlaybackEnabledUseCase: SetVideoPlaybackEnabledUseCase,
-    private val observeVideoDelaySecondsUseCase: ObserveVideoDelaySecondsUseCase,
-    private val setVideoDelaySecondsUseCase: SetVideoDelaySecondsUseCase,
-    private val observeVideoAudioEnabledUseCase: ObserveVideoAudioEnabledUseCase,
-    private val setVideoAudioEnabledUseCase: SetVideoAudioEnabledUseCase,
     private val observeMusicEnabledUseCase: ObserveMusicEnabledUseCase,
     private val setMusicEnabledUseCase: SetMusicEnabledUseCase,
     private val observeMusicPlayWhileBrowsingSystemsUseCase: ObserveMusicPlayWhileBrowsingSystemsUseCase,
@@ -133,6 +129,8 @@ class SettingsViewModel(
     private val setCloseCompanionOnQuitEnabledUseCase: SetCloseCompanionOnQuitEnabledUseCase,
     private val observeFabAssignmentsUseCase: ObserveFabAssignmentsUseCase,
     private val setFabAssignmentUseCase: SetFabAssignmentUseCase,
+    private val setBluetoothPermissionRequestedUseCase: SetBluetoothPermissionRequestedUseCase,
+    private val notifyBluetoothPermissionRecheck: () -> Unit,
     private val observeInstalledAppsUseCase: ObserveInstalledAppsUseCase,
     private val observeLaunchEsdeOnStartEnabledUseCase: ObserveLaunchEsdeOnStartEnabledUseCase,
     private val setLaunchEsdeOnStartEnabledUseCase: SetLaunchEsdeOnStartEnabledUseCase,
@@ -140,6 +138,11 @@ class SettingsViewModel(
     private val setDebugLoggingEnabledUseCase: SetDebugLoggingEnabledUseCase,
     private val exportConfigBackupUseCase: ExportConfigBackupUseCase,
     private val restoreConfigBackupUseCase: RestoreConfigBackupUseCase,
+    private val observeRetroAchievementsCredentialsUseCase: ObserveRetroAchievementsCredentialsUseCase,
+    private val validateRetroAchievementsCredentialsUseCase: ValidateRetroAchievementsCredentialsUseCase,
+    private val clearRetroAchievementsCredentialsUseCase: ClearRetroAchievementsCredentialsUseCase,
+    private val observeUpdateOnScreensaverUseCase: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
+    private val setUpdateOnScreensaverUseCase: SetUpdateAchievementsOnScreensaverEnabledUseCase,
     private val observeLidWakeGuardEnabledUseCase: ObserveLidWakeGuardEnabledUseCase,
     private val setLidWakeGuardEnabledUseCase: SetLidWakeGuardEnabledUseCase,
     private val observeHallSensorCalibrationUseCase: ObserveHallSensorCalibrationUseCase,
@@ -222,6 +225,13 @@ class SettingsViewModel(
         loaded.customSystemImagesFolderPath?.let { validateCustomSystemImagesFolder(it) }
         loaded.customLogosFolderPath?.let { validateCustomLogosFolder(it) }
         loaded.customMusicFolderPath?.let { validateCustomMusicFolder(it) }
+        loaded.retroAchievementsCredentials?.let { credentials ->
+            _uiState.value =
+                _uiState.value.copy(
+                    retroAchievementsUsernameInput = credentials.username,
+                    retroAchievementsWebApiKeyInput = credentials.webApiKey,
+                )
+        }
     }
 
     /** The read half of [reloadSettingsState] - split out purely to stay under detekt's
@@ -251,9 +261,6 @@ class SettingsViewModel(
             dockEnabled = observeDockEnabledUseCase().first(),
             dockMaxApps = observeDockMaxAppsUseCase().first(),
             dockSize = observeDockSizeUseCase().first(),
-            videoPlaybackEnabled = observeVideoPlaybackEnabledUseCase().first(),
-            videoDelaySeconds = observeVideoDelaySecondsUseCase().first(),
-            videoAudioEnabled = observeVideoAudioEnabledUseCase().first(),
             musicEnabled = observeMusicEnabledUseCase().first(),
             musicPlayWhileBrowsingSystems = observeMusicPlayWhileBrowsingSystemsUseCase().first(),
             musicPlayWhileBrowsingGames = observeMusicPlayWhileBrowsingGamesUseCase().first(),
@@ -263,6 +270,8 @@ class SettingsViewModel(
             fabAssignments = observeFabAssignmentsUseCase().first(),
             launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first(),
             debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first(),
+            retroAchievementsCredentials = observeRetroAchievementsCredentialsUseCase().first(),
+            updateAchievementsOnScreensaverEnabled = observeUpdateOnScreensaverUseCase().first(),
             // lidWakeGuardEnabled/autoFpsEnabled/taskKillerEnabled/volumeSyncEnabled are NOT
             // loaded here - they're continuously collected in init instead, same reasoning as
             // installedApps above (a coordinator can flip any of them back off on its own; a
@@ -338,21 +347,6 @@ class SettingsViewModel(
         viewModelScope.launch { setScreensaverDimPercentUseCase(percent) }
     }
 
-    fun onVideoPlaybackEnabledChanged(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(videoPlaybackEnabled = enabled)
-        viewModelScope.launch { setVideoPlaybackEnabledUseCase(enabled) }
-    }
-
-    fun onVideoDelaySecondsChanged(seconds: Int) {
-        _uiState.value = _uiState.value.copy(videoDelaySeconds = seconds)
-        viewModelScope.launch { setVideoDelaySecondsUseCase(seconds) }
-    }
-
-    fun onVideoAudioEnabledChanged(enabled: Boolean) {
-        _uiState.value = _uiState.value.copy(videoAudioEnabled = enabled)
-        viewModelScope.launch { setVideoAudioEnabledUseCase(enabled) }
-    }
-
     fun onMusicEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(musicEnabled = enabled)
         viewModelScope.launch { setMusicEnabledUseCase(enabled) }
@@ -405,6 +399,16 @@ class SettingsViewModel(
         }
     }
 
+    // Called when the user taps "Grant Permission" in the SystemStatus/ClockAndSystemStatus
+    // FAB Control row - marks the one-shot auto-prompt (see SystemStatusFabContent) as
+    // already handled, and immediately nudges the shared SystemStatusRepository to
+    // re-evaluate Bluetooth (there's no real Activity onResume when just closing this
+    // in-app Settings popup, so its own recheck-on-ON_RESUME wouldn't otherwise fire here).
+    fun onBluetoothPermissionRequested() {
+        viewModelScope.launch { setBluetoothPermissionRequestedUseCase(true) }
+        notifyBluetoothPermissionRecheck()
+    }
+
     fun onLaunchEsdeOnStartEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(launchEsdeOnStartEnabled = enabled)
         viewModelScope.launch { setLaunchEsdeOnStartEnabledUseCase(enabled) }
@@ -413,6 +417,11 @@ class SettingsViewModel(
     fun onDebugLoggingEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(debugLoggingEnabled = enabled)
         viewModelScope.launch { setDebugLoggingEnabledUseCase(enabled) }
+    }
+
+    fun onUpdateAchievementsOnScreensaverEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(updateAchievementsOnScreensaverEnabled = enabled)
+        viewModelScope.launch { setUpdateOnScreensaverUseCase(enabled) }
     }
 
     fun onLidWakeGuardEnabledChanged(enabled: Boolean) {
@@ -461,7 +470,8 @@ class SettingsViewModel(
     private suspend fun validateCustomMusicFolder(path: String) {
         _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = true)
         val result = validateMediaFolderUseCase(path)
-        _uiState.value = _uiState.value.copy(isValidatingCustomMusicFolder = false, customMusicFolderValidation = result)
+        _uiState.value =
+            _uiState.value.copy(isValidatingCustomMusicFolder = false, customMusicFolderValidation = result)
     }
 
     fun onThemePreferenceChanged(preference: ThemePreference) {
@@ -559,6 +569,60 @@ class SettingsViewModel(
     private suspend fun validateCustomLogosFolder(path: String) {
         _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = true)
         val result = validateMediaFolderUseCase(path)
-        _uiState.value = _uiState.value.copy(isValidatingCustomLogosFolder = false, customLogosFolderValidation = result)
+        _uiState.value =
+            _uiState.value.copy(isValidatingCustomLogosFolder = false, customLogosFolderValidation = result)
+    }
+
+    fun onRetroAchievementsUsernameInputChanged(username: String) {
+        _uiState.value = _uiState.value.copy(retroAchievementsUsernameInput = username)
+    }
+
+    fun onRetroAchievementsWebApiKeyInputChanged(webApiKey: String) {
+        _uiState.value = _uiState.value.copy(retroAchievementsWebApiKeyInput = webApiKey)
+    }
+
+    /**
+     * Settings > RetroAchievements' "Connect" action - validates first and only persists on
+     * success, per [ValidateRetroAchievementsCredentialsUseCase]'s contract. A failed attempt
+     * surfaces [SettingsUiState.retroAchievementsConnectError] and leaves any previously
+     * stored (valid) credentials untouched.
+     */
+    fun onConnectToRetroAchievementsClicked() {
+        val credentials =
+            RetroAchievementsCredentials(
+                username = _uiState.value.retroAchievementsUsernameInput.trim(),
+                webApiKey = _uiState.value.retroAchievementsWebApiKeyInput.trim(),
+            )
+        _uiState.value =
+            _uiState.value.copy(isConnectingToRetroAchievements = true, retroAchievementsConnectError = null)
+        viewModelScope.launch {
+            val result = validateRetroAchievementsCredentialsUseCase(credentials)
+            val notConnecting = _uiState.value.copy(isConnectingToRetroAchievements = false)
+            _uiState.value = notConnecting.withConnectResult(credentials, result)
+        }
+    }
+
+    private fun SettingsUiState.withConnectResult(
+        credentials: RetroAchievementsCredentials,
+        result: RetroAchievementsAuthState,
+    ): SettingsUiState =
+        when (result) {
+            is RetroAchievementsAuthState.SignedIn ->
+                copy(retroAchievementsCredentials = credentials, retroAchievementsConnectError = null)
+            is RetroAchievementsAuthState.Error -> copy(retroAchievementsConnectError = result.message)
+            RetroAchievementsAuthState.SignedOut -> this
+        }
+
+    fun onSignOutOfRetroAchievementsClicked() {
+        viewModelScope.launch {
+            clearRetroAchievementsCredentialsUseCase()
+            _uiState.value =
+                _uiState.value.copy(
+                    retroAchievementsCredentials = null,
+                    retroAchievementsUsernameInput = "",
+                    retroAchievementsWebApiKeyInput = "",
+                    retroAchievementsConnectError = null,
+                )
+        }
     }
 }

@@ -134,18 +134,6 @@ class AppDrawerViewModelTest {
 
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(true)
 
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {}
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
 
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
@@ -209,6 +197,18 @@ class AppDrawerViewModelTest {
         override suspend fun setDebugLoggingEnabled(enabled: Boolean) {}
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
 
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
@@ -364,7 +364,11 @@ class AppDrawerViewModelTest {
             // sortFoldersOnTop defaults to true, so the folder comes first regardless of
             // where "Group" would otherwise fall alphabetically among "App B"/"App C".
             assertEquals(
-                listOf(DrawerItem.Folder(folder, listOf(allApps[0])), DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2])),
+                listOf(
+                    DrawerItem.Folder(folder, listOf(allApps[0])),
+                    DrawerItem.App(allApps[1]),
+                    DrawerItem.App(allApps[2]),
+                ),
                 viewModel.drawerItems.value,
             )
             collectJob.cancel()
@@ -383,7 +387,11 @@ class AppDrawerViewModelTest {
 
             // "App B"/"App C" sort before "Group" (the folder's name) alphabetically.
             assertEquals(
-                listOf(DrawerItem.App(allApps[1]), DrawerItem.App(allApps[2]), DrawerItem.Folder(folder, listOf(allApps[0]))),
+                listOf(
+                    DrawerItem.App(allApps[1]),
+                    DrawerItem.App(allApps[2]),
+                    DrawerItem.Folder(folder, listOf(allApps[0])),
+                ),
                 viewModel.drawerItems.value,
             )
             collectJob.cancel()
@@ -422,7 +430,12 @@ class AppDrawerViewModelTest {
     @Test
     fun `removeAppFromFolder shrinks a multi-member folder without deleting it`() =
         runTest(testDispatcher) {
-            val folder = AppFolder(id = "folder-1", name = "Group", memberPackageNames = setOf("com.example.a", "com.example.b"))
+            val folder =
+                AppFolder(
+                    id = "folder-1",
+                    name = "Group",
+                    memberPackageNames = setOf("com.example.a", "com.example.b"),
+                )
             val folderRepository = FakeAppFolderRepository(initialFolders = listOf(folder))
             val viewModel = buildViewModel(folderRepository = folderRepository)
 
@@ -493,7 +506,10 @@ class AppDrawerViewModelTest {
     @Test
     fun `otherScreenLaunchApps reflects the repository value`() =
         runTest(testDispatcher) {
-            val settingsRepository = FakeAppDrawerSettingsRepository(initialOtherScreenLaunchApps = setOf("com.example.a"))
+            val settingsRepository =
+                FakeAppDrawerSettingsRepository(
+                    initialOtherScreenLaunchApps = setOf("com.example.a"),
+                )
             val viewModel = buildViewModel(settingsRepository = settingsRepository)
 
             val collectJob = launch { viewModel.otherScreenLaunchApps.collect {} }

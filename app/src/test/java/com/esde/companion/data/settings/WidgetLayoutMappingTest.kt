@@ -1,8 +1,11 @@
 package com.esde.companion.data.settings
 
+import com.esde.companion.domain.model.CornerRadius
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
+import com.esde.companion.domain.model.NoRatingBehavior
+import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
@@ -78,7 +81,12 @@ class WidgetLayoutMappingTest {
 
     @Test
     fun `SystemLogo round-trips logoTransitionMode and glintEnabled`() {
-        val widget = WidgetType.SystemLogo(ScaleMode.Fit, logoTransitionMode = LogoTransitionMode.Slide, glintEnabled = true)
+        val widget =
+            WidgetType.SystemLogo(
+                ScaleMode.Fit,
+                logoTransitionMode = LogoTransitionMode.Slide,
+                glintEnabled = true,
+            )
         assertEquals(widget, roundTrip(widget))
     }
 
@@ -292,5 +300,104 @@ class WidgetLayoutMappingTest {
             ),
             decoded,
         )
+    }
+
+    @Test
+    fun `Rating round-trips noRatingBehavior and colors`() {
+        val widget =
+            WidgetType.Rating(
+                noRatingBehavior = NoRatingBehavior.ShowEmptyStars,
+                filledColorArgb = 0xFFAABBCC,
+                outlineColorArgb = 0xFF112233,
+                backgroundColorArgb = 0xFF445566,
+                backgroundAlpha = 0.25f,
+            )
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON for Rating with no keys decodes to its defaults`() {
+        val decoded = Json.decodeFromString(WidgetTypeDto.Rating.serializer(), "{}")
+        assertEquals(
+            WidgetTypeDto.Rating(
+                noRatingBehavior = "Hide",
+                filledColorArgb = 0xFFFFC107,
+                outlineColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            decoded,
+        )
+    }
+
+    @Test
+    fun `Video round-trips scaleMode, audioEnabled, delaySeconds, pillarboxMode, renderAboveUi, and loopEnabled`() {
+        val widget =
+            WidgetType.Video(
+                scaleMode = ScaleMode.Fit,
+                audioEnabled = false,
+                delaySeconds = 5,
+                pillarboxMode = PillarboxMode.Transparent,
+                renderAboveUi = true,
+                loopEnabled = false,
+            )
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON for Video without optional keys decodes to their defaults`() {
+        val json = """{"scaleMode":"Fill"}"""
+        val decoded = Json.decodeFromString(WidgetTypeDto.Video.serializer(), json)
+        assertEquals(
+            WidgetTypeDto.Video(
+                scaleMode = "Fill",
+                audioEnabled = true,
+                delaySeconds = 0,
+                pillarboxMode = "Black",
+                renderAboveUi = false,
+                loopEnabled = true,
+            ),
+            decoded,
+        )
+    }
+
+    // --- cornerRadius: round-trip and old-data migration ----------------------------------
+
+    @Test
+    fun `SystemImage round-trips cornerRadius`() {
+        val widget = WidgetType.SystemImage(ScaleMode.Fill, cornerRadius = CornerRadius.Large)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `ColorBackground round-trips cornerRadius`() {
+        val widget = WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f, cornerRadius = CornerRadius.Small)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `Video round-trips cornerRadius`() {
+        val widget = WidgetType.Video(scaleMode = ScaleMode.Fit, cornerRadius = CornerRadius.Medium)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON persisted before cornerRadius existed decodes to None`() {
+        val json = """{"scaleMode":"Fill"}"""
+        val dto = Json.decodeFromString(WidgetTypeDto.SystemImage.serializer(), json)
+        assertEquals("None", dto.cornerRadius)
+
+        val placed =
+            PlacedWidgetDto(
+                id = "widget-1",
+                widgetType = dto,
+                gridColumn = 0,
+                gridRow = 0,
+                columnSpan = 1,
+                rowSpan = 1,
+                zIndex = 0,
+            )
+        val domain = listOf(placed).toDomainList().single().widgetType as WidgetType.SystemImage
+        assertEquals(CornerRadius.None, domain.cornerRadius)
     }
 }

@@ -139,18 +139,6 @@ class AppDockViewModelTest {
 
         override fun observeOnboardingComplete(): Flow<Boolean> = flowOf(true)
 
-        override suspend fun setVideoPlaybackEnabled(enabled: Boolean) {}
-
-        override fun observeVideoPlaybackEnabled(): Flow<Boolean> = flowOf(false)
-
-        override suspend fun setVideoDelaySeconds(seconds: Int) {}
-
-        override fun observeVideoDelaySeconds(): Flow<Int> = flowOf(0)
-
-        override suspend fun setVideoAudioEnabled(enabled: Boolean) {}
-
-        override fun observeVideoAudioEnabled(): Flow<Boolean> = flowOf(true)
-
         override suspend fun setGamePlayingBehavior(behavior: ScreenBehavior) {}
 
         override fun observeGamePlayingBehavior(): Flow<ScreenBehavior> = flowOf(ScreenBehavior.Nothing)
@@ -212,6 +200,18 @@ class AppDockViewModelTest {
         override suspend fun setDebugLoggingEnabled(enabled: Boolean) {}
 
         override fun observeDebugLoggingEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setUpdateAchievementsOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
+
+        override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
+
+        override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
+
+        override suspend fun setBluetoothPermissionRequested(requested: Boolean) {}
+
+        override fun observeBluetoothPermissionRequested(): Flow<Boolean> = flowOf(false)
 
         override suspend fun setFabAssignments(assignments: FabAssignments) {}
 
@@ -326,7 +326,8 @@ class AppDockViewModelTest {
     @Test
     fun `removeFromDock filters the package and closes the gap`() =
         runTest(testDispatcher) {
-            val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
+            val repository =
+                FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
             val viewModel = buildViewModel(dockSettingsRepository = repository)
 
             viewModel.removeFromDock("com.example.b")
@@ -338,7 +339,8 @@ class AppDockViewModelTest {
     @Test
     fun `moveLeft swaps with the previous entry and no-ops at the start`() =
         runTest(testDispatcher) {
-            val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
+            val repository =
+                FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
             val viewModel = buildViewModel(dockSettingsRepository = repository)
 
             viewModel.moveLeft("com.example.b")
@@ -353,7 +355,8 @@ class AppDockViewModelTest {
     @Test
     fun `moveRight swaps with the next entry and no-ops at the end`() =
         runTest(testDispatcher) {
-            val repository = FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
+            val repository =
+                FakeDockSettingsRepository(initialDockApps = listOf("com.example.a", "com.example.b", "com.example.c"))
             val viewModel = buildViewModel(dockSettingsRepository = repository)
 
             viewModel.moveRight("com.example.b")
