@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
+import com.esde.companion.ui.SegmentedButtonLabel
 
 @Composable
 internal fun ImageTransitionPicker(
@@ -47,7 +48,7 @@ internal fun ImageTransitionPicker(
                             )
                         }
                     },
-                    label = { Text(mode.displayLabel()) },
+                    label = { SegmentedButtonLabel(mode.displayLabel()) },
                 )
             }
         }
@@ -93,7 +94,7 @@ internal fun LogoTransitionPicker(
                             )
                         }
                     },
-                    label = { Text(mode.displayLabel()) },
+                    label = { SegmentedButtonLabel(mode.displayLabel()) },
                 )
             }
         }

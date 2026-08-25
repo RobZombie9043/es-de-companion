@@ -51,6 +51,7 @@ import com.esde.companion.data.thor.sensor.HallSensorReader
 import com.esde.companion.data.thor.sensor.autoPickHallSensor
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.VolumeSyncMode
+import com.esde.companion.ui.SegmentedButtonLabel
 
 /** Bundles Lid Wake Guard's settings-panel state into one [ThorSettingsContent] parameter,
  * keeping that function's parameter count under detekt's LongParameterList threshold - same
@@ -421,7 +422,7 @@ private fun VolumeControlModePicker(
                             )
                         }
                     },
-                    label = { Text(option.label) },
+                    label = { SegmentedButtonLabel(option.label) },
                 )
             }
         }

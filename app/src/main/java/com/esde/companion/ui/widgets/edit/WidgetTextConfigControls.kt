@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.NoRatingBehavior
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.ui.SegmentedButtonLabel
 import kotlin.math.roundToInt
 
 @Composable
@@ -135,7 +136,7 @@ internal fun RatingConfig(
                         selected = behavior == current.noRatingBehavior,
                         onClick = { onChange(current.copy(noRatingBehavior = behavior)) },
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = NoRatingBehavior.entries.size),
-                        label = { Text(behavior.displayLabel()) },
+                        label = { SegmentedButtonLabel(behavior.displayLabel()) },
                     )
                 }
             }

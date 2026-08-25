@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.PillarboxMode
+import com.esde.companion.ui.SegmentedButtonLabel
 import kotlin.math.roundToInt
 
 private const val MAX_VIDEO_DELAY_SECONDS = 10f
@@ -78,7 +79,7 @@ internal fun PillarboxConfig(
                     selected = mode == current,
                     onClick = { onSelect(mode) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = PillarboxMode.entries.size),
-                    label = { Text(mode.displayLabel()) },
+                    label = { SegmentedButtonLabel(mode.displayLabel()) },
                 )
             }
         }

@@ -33,6 +33,7 @@ import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.model.fallbackMediaTypeOptions
+import com.esde.companion.ui.SegmentedButtonLabel
 import kotlin.math.roundToInt
 
 /** Shows the currently-picked file's name (or a prompt if none picked yet, e.g. this
@@ -97,7 +98,7 @@ internal fun ScaleModeConfig(
                             )
                         }
                     },
-                    label = { Text(mode.displayLabel()) },
+                    label = { SegmentedButtonLabel(mode.displayLabel()) },
                 )
             }
         }
@@ -191,7 +192,7 @@ internal fun FallbackArtworkConfig(
                     selected = option == current,
                     onClick = { onSelected(option) },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                    label = { Text(option.fallbackArtworkDisplayLabel()) },
+                    label = { SegmentedButtonLabel(option.fallbackArtworkDisplayLabel()) },
                 )
             }
         }

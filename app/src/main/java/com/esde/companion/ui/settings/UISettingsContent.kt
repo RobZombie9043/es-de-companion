@@ -81,6 +81,7 @@ import com.esde.companion.domain.model.FabType
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
+import com.esde.companion.ui.SegmentedButtonLabel
 import kotlin.math.roundToInt
 
 @Composable
@@ -245,7 +246,7 @@ private fun ScreenBehaviorPicker(
                                 )
                             }
                         },
-                        label = { Text(behavior.label) },
+                        label = { SegmentedButtonLabel(behavior.label) },
                     )
                 }
             }
@@ -627,7 +628,7 @@ private fun ThemePicker(
                                 )
                             }
                         },
-                        label = { Text(theme.label) },
+                        label = { SegmentedButtonLabel(theme.label) },
                     )
                 }
             }
