@@ -63,7 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -83,6 +82,7 @@ import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DrawerItem
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.ui.theme.isDarkSurface
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
 
@@ -106,15 +106,11 @@ private const val MAX_MOSAIC_ICONS = 4
 private val FOLDER_MOSAIC_CELL_SIZE = 24.dp
 private val FOLDER_MOSAIC_SPACING = 2.dp
 
-/** Below this luminance, the surface reads as dark mode - same threshold
- * MusicControlsOverlay/CornerButtonMetrics/AppDock use for their own theme detection. */
-private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
-
 /** Drawer background base color: black in dark mode, white in light mode - matches
  * AppDock's [dockBackgroundColor] so the drawer and dock read as one consistent surface. */
 @Composable
 internal fun drawerBackgroundColor(): Color {
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    val isDark = isDarkSurface()
     return if (isDark) Color.Black else Color.White
 }
 
@@ -122,7 +118,7 @@ internal fun drawerBackgroundColor(): Color {
  * against the drawer's background in either theme. */
 @Composable
 internal fun drawerContentColor(): Color {
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    val isDark = isDarkSurface()
     return if (isDark) Color.White else Color.Black
 }
 

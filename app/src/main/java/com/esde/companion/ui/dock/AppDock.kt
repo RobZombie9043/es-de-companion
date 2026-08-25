@@ -45,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -61,6 +60,7 @@ import com.esde.companion.domain.model.APP_DRAWER_SHORTCUT_PACKAGE_NAME
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.ui.theme.isDarkSurface
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
 private val DOCK_SHAPE = RoundedCornerShape(24.dp)
@@ -73,15 +73,11 @@ private val SLOT_SPACING = 16.dp
  * collisions (e.g. a bright icon over bright widget art) - see DockPreview's kdoc. */
 private const val DOCK_PREVIEW_ALPHA = 0.65f
 
-/** Below this luminance, the surface reads as dark mode - same threshold
- * MusicControlsOverlay/CornerButtonMetrics/AppDrawer use for their own theme detection. */
-private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
-
 /** Dock background base color: black in dark mode, white in light mode - same
  * theme-detection approach as MusicControlsOverlay's content/background colors. */
 @Composable
 private fun dockBackgroundColor(): Color {
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    val isDark = isDarkSurface()
     return if (isDark) Color.Black else Color.White
 }
 
@@ -89,7 +85,7 @@ private fun dockBackgroundColor(): Color {
  * placeholder stays visible against the dock's background in either theme. */
 @Composable
 private fun dockContentColor(): Color =
-    if (MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD) {
+    if (isDarkSurface()) {
         Color.White.copy(
             alpha = 0.3f,
         )
@@ -104,7 +100,7 @@ private fun dockContentColor(): Color =
  * ambient content color happens to be. */
 @Composable
 private fun appDrawerShortcutIconTint(): Color {
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    val isDark = isDarkSurface()
     return if (isDark) Color.White else Color.Black
 }
 

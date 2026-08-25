@@ -1,12 +1,11 @@
 package com.esde.companion.ui.retroachievements
 
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
+import com.esde.companion.ui.theme.isDarkSurface
 
 /**
  * Both RetroAchievements screens (achievement summary, system games browser) render
@@ -18,7 +17,7 @@ import androidx.compose.ui.input.pointer.pointerInput
  * [themedTileColor] is the opposite - the translucent "button" tiles' own background.
  */
 @Composable
-internal fun themedIsDarkTheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() < LUMINANCE_THRESHOLD
+internal fun themedIsDarkTheme(): Boolean = isDarkSurface()
 
 @Composable
 internal fun themedContentColor(): Color = if (themedIsDarkTheme()) Color.White else Color.Black
@@ -27,8 +26,6 @@ internal fun themedContentColor(): Color = if (themedIsDarkTheme()) Color.White 
 internal fun themedTileColor(): Color = if (themedIsDarkTheme()) Color.Black else Color.White
 
 internal const val OVERLAY_PERCENT_DIVISOR = 100f
-
-private const val LUMINANCE_THRESHOLD = 0.5f
 
 /**
  * Both RetroAchievements screens are siblings composed after (drawn on top of) MainScreen,

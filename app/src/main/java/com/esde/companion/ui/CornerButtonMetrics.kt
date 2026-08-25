@@ -14,16 +14,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.FabPosition
+import com.esde.companion.ui.theme.isDarkSurface
 
 /**
  * Shared sizing for the small always-on-top corner controls that float over MainScreen
@@ -40,15 +39,11 @@ val CORNER_BUTTON_EDGE_PADDING = 16.dp
  * translucent overlay surface in the app reads as one consistent family of shapes. */
 private val CORNER_BUTTON_SHAPE = RoundedCornerShape(16.dp)
 
-/** Below this luminance, the surface reads as dark mode - same threshold
- * MusicControlsOverlay/AppDock/AppDrawer use for their own theme detection. */
-private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
-
 /** Black-on-dark/white-on-light background+content color pair shared by [CornerFab] and
  * [WideCornerFab], factored out so both pick up the same theme-aware styling by construction. */
 @Composable
 private fun cornerButtonColors(): Pair<Color, Color> {
-    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    val isDarkTheme = isDarkSurface()
     return if (isDarkTheme) Color.Black to Color.White else Color.White to Color.Black
 }
 

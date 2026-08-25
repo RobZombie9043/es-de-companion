@@ -20,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,6 +27,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.domain.model.MusicPlaybackState
+import com.esde.companion.ui.theme.isDarkSurface
 
 /** Material3 IconButton's default minimum touch target size - the two of these in the Row
  * below never carry an explicit size modifier, so this is their real reserved width. */
@@ -35,10 +35,6 @@ private val ICON_BUTTON_SIZE = 48.dp
 
 private val ROW_HORIZONTAL_PADDING = 12.dp
 private val TITLE_END_PADDING = 8.dp
-
-/** Below this luminance, the surface reads as dark mode - same threshold
- * CornerButtonMetrics/AppDock/AppDrawer use for their own theme detection. */
-private const val DARK_THEME_LUMINANCE_THRESHOLD = 0.5f
 
 /**
  * Small track title + play/pause + next card, revealed by MainActivity's music FAB.
@@ -86,7 +82,7 @@ fun MusicControlsOverlay(
     if (track == null) return
 
     val isPlaying = playbackState is MusicPlaybackState.Playing
-    val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < DARK_THEME_LUMINANCE_THRESHOLD
+    val isDarkTheme = isDarkSurface()
     val backgroundColor = if (isDarkTheme) Color.Black else Color.White
     val contentColor = if (isDarkTheme) Color.White else Color.Black
 
