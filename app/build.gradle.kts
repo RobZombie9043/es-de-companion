@@ -26,8 +26,8 @@ android {
         applicationId = "com.esde.companion"
         minSdk = 29
         targetSdk = 35
-        versionCode = 31
-        versionName = "1.0.5-RC1"
+        versionCode = 32
+        versionName = "1.0.5-RC2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
