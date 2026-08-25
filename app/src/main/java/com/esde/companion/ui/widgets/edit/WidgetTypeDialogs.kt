@@ -26,6 +26,7 @@ import com.esde.companion.domain.model.glintEnabled
 import com.esde.companion.domain.model.imageTransitionMode
 import com.esde.companion.domain.model.isLogoStyle
 import com.esde.companion.domain.model.logoTransitionMode
+import com.esde.companion.domain.model.supportsCornerRadius
 import com.esde.companion.domain.model.supportsFallbackArtwork
 import com.esde.companion.domain.model.supportsImageTransition
 import com.esde.companion.domain.model.supportsPanZoom
@@ -161,6 +162,11 @@ internal fun ConfigureWidgetDialog(
                             ) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        if (widgetType.supportsCornerRadius) {
+                            CornerRadiusConfig(
+                                current = widgetType.cornerRadius,
+                            ) { onChange(widgetType.copy(cornerRadius = it)) }
+                        }
                     }
 
                     is WidgetType.SystemMedia -> {
@@ -189,6 +195,11 @@ internal fun ConfigureWidgetDialog(
                             ) { onChange(widgetType.copy(fallbackMediaType = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        if (widgetType.supportsCornerRadius) {
+                            CornerRadiusConfig(
+                                current = widgetType.cornerRadius,
+                            ) { onChange(widgetType.copy(cornerRadius = it)) }
+                        }
                     }
 
                     is WidgetType.GameMedia -> {
@@ -217,6 +228,11 @@ internal fun ConfigureWidgetDialog(
                             ) { onChange(widgetType.copy(fallbackMediaType = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        if (widgetType.supportsCornerRadius) {
+                            CornerRadiusConfig(
+                                current = widgetType.cornerRadius,
+                            ) { onChange(widgetType.copy(cornerRadius = it)) }
+                        }
                     }
 
                     is WidgetType.CustomImage -> {
@@ -233,16 +249,31 @@ internal fun ConfigureWidgetDialog(
                             ) { onChange(widgetType.copy(panZoomEnabled = it)) }
                         }
                         ImageEffectsConfig(current = widgetType.effects) { onChange(widgetType.copy(effects = it)) }
+                        CornerRadiusConfig(
+                            current = widgetType.cornerRadius,
+                        ) { onChange(widgetType.copy(cornerRadius = it)) }
                     }
 
-                    is WidgetType.ColorBackground ->
+                    is WidgetType.ColorBackground -> {
                         ColorBackgroundConfig(current = widgetType, onChange = onChange)
+                        CornerRadiusConfig(
+                            current = widgetType.cornerRadius,
+                        ) { onChange(widgetType.copy(cornerRadius = it)) }
+                    }
 
-                    is WidgetType.GameDescription ->
+                    is WidgetType.GameDescription -> {
                         GameDescriptionConfig(current = widgetType, onChange = onChange)
+                        CornerRadiusConfig(
+                            current = widgetType.cornerRadius,
+                        ) { onChange(widgetType.copy(cornerRadius = it)) }
+                    }
 
-                    is WidgetType.Rating ->
+                    is WidgetType.Rating -> {
                         RatingConfig(current = widgetType, onChange = onChange)
+                        CornerRadiusConfig(
+                            current = widgetType.cornerRadius,
+                        ) { onChange(widgetType.copy(cornerRadius = it)) }
+                    }
 
                     is WidgetType.Video -> {
                         ScaleModeConfig(current = widgetType.scaleMode) { onChange(widgetType.copy(scaleMode = it)) }
@@ -263,6 +294,9 @@ internal fun ConfigureWidgetDialog(
                         RenderAboveUiConfig(
                             enabled = widgetType.renderAboveUi,
                         ) { onChange(widgetType.copy(renderAboveUi = it)) }
+                        CornerRadiusConfig(
+                            current = widgetType.cornerRadius,
+                        ) { onChange(widgetType.copy(cornerRadius = it)) }
                     }
                 }
             }

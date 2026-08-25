@@ -139,6 +139,7 @@ object WidgetContentResolver {
                         pillarboxMode = widgetType.pillarboxMode,
                         renderAboveUi = widgetType.renderAboveUi,
                         loopEnabled = widgetType.loopEnabled,
+                        cornerRadius = widgetType.cornerRadius,
                     )
                 } ?: WidgetContent.Empty
         }

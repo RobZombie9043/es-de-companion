@@ -63,7 +63,7 @@ import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
-private val DOCK_SHAPE = RoundedCornerShape(28.dp)
+private val DOCK_SHAPE = RoundedCornerShape(24.dp)
 private val VERTICAL_PADDING = 16.dp
 private val HORIZONTAL_PADDING = 20.dp
 private val SLOT_SPACING = 16.dp

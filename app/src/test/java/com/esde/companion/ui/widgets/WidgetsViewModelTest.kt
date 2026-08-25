@@ -1,5 +1,6 @@
 package com.esde.companion.ui.widgets
 
+import com.esde.companion.domain.model.CornerRadius
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMedia
@@ -599,6 +600,7 @@ class WidgetsViewModelTest {
                     pillarboxMode = PillarboxMode.Black,
                     renderAboveUi = false,
                     loopEnabled = true,
+                    cornerRadius = CornerRadius.None,
                 ),
                 state.contentByWidgetId["video"],
             )

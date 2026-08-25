@@ -1,5 +1,6 @@
 package com.esde.companion.data.settings
 
+import com.esde.companion.domain.model.CornerRadius
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.LogoTransitionMode
 import com.esde.companion.domain.model.MediaType
@@ -358,5 +359,45 @@ class WidgetLayoutMappingTest {
             ),
             decoded,
         )
+    }
+
+    // --- cornerRadius: round-trip and old-data migration ----------------------------------
+
+    @Test
+    fun `SystemImage round-trips cornerRadius`() {
+        val widget = WidgetType.SystemImage(ScaleMode.Fill, cornerRadius = CornerRadius.Large)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `ColorBackground round-trips cornerRadius`() {
+        val widget = WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f, cornerRadius = CornerRadius.Small)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `Video round-trips cornerRadius`() {
+        val widget = WidgetType.Video(scaleMode = ScaleMode.Fit, cornerRadius = CornerRadius.Medium)
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON persisted before cornerRadius existed decodes to None`() {
+        val json = """{"scaleMode":"Fill"}"""
+        val dto = Json.decodeFromString(WidgetTypeDto.SystemImage.serializer(), json)
+        assertEquals("None", dto.cornerRadius)
+
+        val placed =
+            PlacedWidgetDto(
+                id = "widget-1",
+                widgetType = dto,
+                gridColumn = 0,
+                gridRow = 0,
+                columnSpan = 1,
+                rowSpan = 1,
+                zIndex = 0,
+            )
+        val domain = listOf(placed).toDomainList().single().widgetType as WidgetType.SystemImage
+        assertEquals(CornerRadius.None, domain.cornerRadius)
     }
 }

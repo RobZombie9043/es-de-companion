@@ -1,5 +1,6 @@
 package com.esde.companion.data.settings
 
+import com.esde.companion.domain.model.CornerRadius
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
@@ -33,6 +34,10 @@ private fun PillarboxMode.toDto() = name
 
 private fun String.toPillarboxMode() = PillarboxMode.valueOf(this)
 
+private fun CornerRadius.toDto() = name
+
+private fun String.toCornerRadius() = CornerRadius.valueOf(this)
+
 // See WidgetTypeDto's kdoc for the tri-state reasoning: null means "not present in the
 // JSON at all" (old data, or a widget never explicitly reconfigured), the literal string
 // "None" means the fallback was explicitly turned off, anything else is a MediaType name.
@@ -64,6 +69,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 effects.darkenAmount,
                 panZoomEnabled,
                 imageTransitionMode.toDto(),
+                cornerRadius.toDto(),
             )
         is WidgetType.SystemMedia ->
             WidgetTypeDto.SystemMedia(
@@ -76,6 +82,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 logoTransitionMode.toDto(),
                 glintEnabled,
                 fallbackMediaType.toFallbackDto(),
+                cornerRadius.toDto(),
             )
         is WidgetType.GameMedia ->
             WidgetTypeDto.GameMedia(
@@ -88,6 +95,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 logoTransitionMode.toDto(),
                 glintEnabled,
                 fallbackMediaType.toFallbackDto(),
+                cornerRadius.toDto(),
             )
         is WidgetType.CustomImage ->
             WidgetTypeDto.CustomImage(
@@ -97,14 +105,16 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 effects.darkenAmount,
                 panZoomEnabled,
                 imageTransitionMode.toDto(),
+                cornerRadius.toDto(),
             )
-        is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha)
+        is WidgetType.ColorBackground -> WidgetTypeDto.ColorBackground(colorArgb, alpha, cornerRadius.toDto())
         is WidgetType.GameDescription ->
             WidgetTypeDto.GameDescription(
                 fontSizeSp,
                 textColorArgb,
                 backgroundColorArgb,
                 backgroundAlpha,
+                cornerRadius.toDto(),
             )
         is WidgetType.Rating ->
             WidgetTypeDto.Rating(
@@ -113,6 +123,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 outlineColorArgb,
                 backgroundColorArgb,
                 backgroundAlpha,
+                cornerRadius.toDto(),
             )
         is WidgetType.Video ->
             WidgetTypeDto.Video(
@@ -122,6 +133,7 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 pillarboxMode.toDto(),
                 renderAboveUi,
                 loopEnabled,
+                cornerRadius.toDto(),
             )
     }
 
@@ -140,33 +152,10 @@ private fun WidgetTypeDto.toDomain(): WidgetType =
                 ImageEffects(blurAmount, darkenAmount),
                 panZoomEnabled,
                 imageTransitionMode.toImageTransitionMode(),
+                cornerRadius.toCornerRadius(),
             )
-        is WidgetTypeDto.SystemMedia -> {
-            val resolvedMediaType = MediaType.valueOf(mediaType)
-            WidgetType.SystemMedia(
-                resolvedMediaType,
-                scaleMode.toScaleMode(),
-                ImageEffects(blurAmount, darkenAmount),
-                panZoomEnabled,
-                imageTransitionMode.toImageTransitionMode(),
-                logoTransitionMode.toLogoTransitionMode(),
-                glintEnabled,
-                fallbackMediaType.toFallbackMediaType(resolvedMediaType),
-            )
-        }
-        is WidgetTypeDto.GameMedia -> {
-            val resolvedMediaType = MediaType.valueOf(mediaType)
-            WidgetType.GameMedia(
-                resolvedMediaType,
-                scaleMode.toScaleMode(),
-                ImageEffects(blurAmount, darkenAmount),
-                panZoomEnabled,
-                imageTransitionMode.toImageTransitionMode(),
-                logoTransitionMode.toLogoTransitionMode(),
-                glintEnabled,
-                fallbackMediaType.toFallbackMediaType(resolvedMediaType),
-            )
-        }
+        is WidgetTypeDto.SystemMedia -> toDomainSystemMedia()
+        is WidgetTypeDto.GameMedia -> toDomainGameMedia()
         is WidgetTypeDto.CustomImage ->
             WidgetType.CustomImage(
                 path,
@@ -174,13 +163,50 @@ private fun WidgetTypeDto.toDomain(): WidgetType =
                 ImageEffects(blurAmount, darkenAmount),
                 panZoomEnabled,
                 imageTransitionMode.toImageTransitionMode(),
+                cornerRadius.toCornerRadius(),
             )
-        is WidgetTypeDto.ColorBackground -> WidgetType.ColorBackground(colorArgb, alpha)
+        is WidgetTypeDto.ColorBackground -> WidgetType.ColorBackground(colorArgb, alpha, cornerRadius.toCornerRadius())
         is WidgetTypeDto.GameDescription ->
-            WidgetType.GameDescription(fontSizeSp, textColorArgb, backgroundColorArgb, backgroundAlpha)
+            WidgetType.GameDescription(
+                fontSizeSp,
+                textColorArgb,
+                backgroundColorArgb,
+                backgroundAlpha,
+                cornerRadius.toCornerRadius(),
+            )
         is WidgetTypeDto.Rating -> toDomainRating()
         is WidgetTypeDto.Video -> toDomainVideo()
     }
+
+private fun WidgetTypeDto.SystemMedia.toDomainSystemMedia(): WidgetType.SystemMedia {
+    val resolvedMediaType = MediaType.valueOf(mediaType)
+    return WidgetType.SystemMedia(
+        resolvedMediaType,
+        scaleMode.toScaleMode(),
+        ImageEffects(blurAmount, darkenAmount),
+        panZoomEnabled,
+        imageTransitionMode.toImageTransitionMode(),
+        logoTransitionMode.toLogoTransitionMode(),
+        glintEnabled,
+        fallbackMediaType.toFallbackMediaType(resolvedMediaType),
+        cornerRadius.toCornerRadius(),
+    )
+}
+
+private fun WidgetTypeDto.GameMedia.toDomainGameMedia(): WidgetType.GameMedia {
+    val resolvedMediaType = MediaType.valueOf(mediaType)
+    return WidgetType.GameMedia(
+        resolvedMediaType,
+        scaleMode.toScaleMode(),
+        ImageEffects(blurAmount, darkenAmount),
+        panZoomEnabled,
+        imageTransitionMode.toImageTransitionMode(),
+        logoTransitionMode.toLogoTransitionMode(),
+        glintEnabled,
+        fallbackMediaType.toFallbackMediaType(resolvedMediaType),
+        cornerRadius.toCornerRadius(),
+    )
+}
 
 private fun WidgetTypeDto.Rating.toDomainRating(): WidgetType.Rating =
     WidgetType.Rating(
@@ -189,6 +215,7 @@ private fun WidgetTypeDto.Rating.toDomainRating(): WidgetType.Rating =
         outlineColorArgb,
         backgroundColorArgb,
         backgroundAlpha,
+        cornerRadius.toCornerRadius(),
     )
 
 private fun WidgetTypeDto.Video.toDomainVideo(): WidgetType.Video =
@@ -199,6 +226,7 @@ private fun WidgetTypeDto.Video.toDomainVideo(): WidgetType.Video =
         pillarboxMode.toPillarboxMode(),
         renderAboveUi,
         loopEnabled,
+        cornerRadius.toCornerRadius(),
     )
 
 private fun PlacedWidget.toDto() =

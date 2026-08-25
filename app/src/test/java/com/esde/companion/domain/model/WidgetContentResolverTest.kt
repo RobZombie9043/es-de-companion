@@ -424,6 +424,7 @@ class WidgetContentResolverTest {
                 pillarboxMode = PillarboxMode.Transparent,
                 renderAboveUi = true,
                 loopEnabled = false,
+                cornerRadius = CornerRadius.Medium,
             )
         val content = resolve(widgetType = widgetType, videoLookup = { "/media/video.mp4" })
 
@@ -436,6 +437,7 @@ class WidgetContentResolverTest {
                 pillarboxMode = PillarboxMode.Transparent,
                 renderAboveUi = true,
                 loopEnabled = false,
+                cornerRadius = CornerRadius.Medium,
             ),
             content,
         )

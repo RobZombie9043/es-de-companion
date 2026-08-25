@@ -133,7 +133,7 @@ internal fun WidgetVideoContent(
 
     val player = displayedPlayer
     val backgroundColor = if (player != null) content.pillarboxMode.toBackgroundColor() else Color.Transparent
-    Box(modifier = modifier.background(backgroundColor)) {
+    Box(modifier = modifier.applyCornerRadius(content.cornerRadius).background(backgroundColor)) {
         // One PlayerView per pooled player, each permanently bound to that exact player in
         // `factory` and never reassigned - see the class kdoc for why `playerView.player = x`
         // reassignment was itself the remaining stutter source, not merely which View/Player

@@ -28,6 +28,7 @@ import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetType
+import com.esde.companion.domain.model.cornerRadius
 import com.esde.companion.domain.model.glintEnabled
 import com.esde.companion.domain.model.imageTransitionActive
 import com.esde.companion.domain.model.isLogoStyle
@@ -208,10 +209,15 @@ internal fun WidgetContentView(
         WidgetContent.Empty -> Unit
 
         is WidgetContent.Color ->
-            Box(modifier = modifier.background(Color(content.colorArgb).copy(alpha = content.alpha)))
+            Box(
+                modifier =
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(Color(content.colorArgb).copy(alpha = content.alpha)),
+            )
 
         is WidgetContent.Image ->
-            Box(modifier = modifier) {
+            Box(modifier = modifier.applyCornerRadius(widgetType.cornerRadius)) {
                 val isDarkTheme = LocalIsDarkTheme.current
                 val model = if (content.isAsset) fallbackBackgroundAssetPath(isDarkTheme) else File(content.path)
                 CrossfadeAsyncImage(
@@ -236,9 +242,11 @@ internal fun WidgetContentView(
         is WidgetContent.Text ->
             Box(
                 modifier =
-                    modifier.background(
-                        Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
-                    ),
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(
+                            Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                        ),
             ) {
                 ScrollingText(
                     text = content.text,
@@ -252,9 +260,11 @@ internal fun WidgetContentView(
         is WidgetContent.Rating ->
             Box(
                 modifier =
-                    modifier.background(
-                        Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
-                    ),
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(
+                            Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                        ),
                 contentAlignment = Alignment.Center,
             ) {
                 RatingStars(

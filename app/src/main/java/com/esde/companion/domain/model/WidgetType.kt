@@ -21,6 +21,22 @@ data class ImageEffects(
 )
 
 /**
+ * How much a widget's opaque content is corner-rounded (Configure Widget dialog) - see
+ * WidgetType.supportsCornerRadius for which variants offer this at all (transparent
+ * cutout content - SystemLogo, Marquee-style media - has nothing opaque behind it for
+ * rounding to visibly affect, so it's excluded rather than shown-but-inert). The actual
+ * dp values these map to live in the ui layer (see ui/widgets/WidgetCornerRadius.kt),
+ * matching this project's small, reused set of corner-radius constants elsewhere in the
+ * app rather than a free-form dp value.
+ */
+enum class CornerRadius {
+    None,
+    Small,
+    Medium,
+    Large,
+}
+
+/**
  * The catalog of widgets available to place on a canvas. Placement (grid position, size,
  * z-index) deliberately lives on PlacedWidget, not here - a widget's kind/config is
  * independent of where it happens to be put.
@@ -34,6 +50,9 @@ sealed class WidgetType {
      * glint config (Configure Widget dialog) - see WidgetContent.kt's WidgetType.logoTransitionMode/
      * glintEnabled extension properties for how these are read uniformly across every
      * logo-style variant, and AnimatedLogoImage for what they drive.
+     *
+     * No [CornerRadius] field - always transparent cutout content, see
+     * WidgetType.supportsCornerRadius.
      */
     data class SystemLogo(
         val scaleMode: ScaleMode,
@@ -61,6 +80,7 @@ sealed class WidgetType {
         val effects: ImageEffects = ImageEffects(),
         val panZoomEnabled: Boolean = false,
         val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+        val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
 
     /**
@@ -86,6 +106,7 @@ sealed class WidgetType {
         val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
         val glintEnabled: Boolean = false,
         val fallbackMediaType: MediaType? = mediaType.defaultFallbackMediaType(),
+        val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
 
     /** See [SystemMedia]'s kdoc - same logo-style-vs-opaque field split (and the same
@@ -100,6 +121,7 @@ sealed class WidgetType {
         val logoTransitionMode: LogoTransitionMode = LogoTransitionMode.None,
         val glintEnabled: Boolean = false,
         val fallbackMediaType: MediaType? = mediaType.defaultFallbackMediaType(),
+        val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
 
     /**
@@ -118,9 +140,14 @@ sealed class WidgetType {
         val effects: ImageEffects = ImageEffects(),
         val panZoomEnabled: Boolean = false,
         val imageTransitionMode: ImageTransitionMode = ImageTransitionMode.None,
+        val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
 
-    data class ColorBackground(val colorArgb: Long, val alpha: Float) : WidgetType()
+    data class ColorBackground(
+        val colorArgb: Long,
+        val alpha: Float,
+        val cornerRadius: CornerRadius = CornerRadius.None,
+    ) : WidgetType()
 
     /**
      * A game's description, scrolled if it doesn't fit the widget's placed bounds. No
@@ -131,6 +158,7 @@ sealed class WidgetType {
         val textColorArgb: Long = 0xFFFFFFFF,
         val backgroundColorArgb: Long = 0xFF000000,
         val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
 
     /**
@@ -147,6 +175,7 @@ sealed class WidgetType {
         val outlineColorArgb: Long = 0xFFFFFFFF,
         val backgroundColorArgb: Long = 0xFF000000,
         val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
 
     /**
@@ -178,6 +207,7 @@ sealed class WidgetType {
         val pillarboxMode: PillarboxMode = PillarboxMode.Black,
         val renderAboveUi: Boolean = false,
         val loopEnabled: Boolean = true,
+        val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
 }
 

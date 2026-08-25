@@ -73,6 +73,7 @@ sealed class WidgetContent {
         val pillarboxMode: PillarboxMode,
         val renderAboveUi: Boolean,
         val loopEnabled: Boolean,
+        val cornerRadius: CornerRadius,
     ) : WidgetContent()
 }
 
@@ -103,6 +104,38 @@ val WidgetType.isLogoStyle: Boolean
             is WidgetType.Rating,
             is WidgetType.Video,
             -> false
+        }
+
+/**
+ * Whether this widget type's Configure dialog should offer the Rounded Corners picker at
+ * all - every widget type except [WidgetType.SystemLogo], and except [WidgetType.SystemMedia]/
+ * [WidgetType.GameMedia] instances that are logo-style (Marquees) - see [isLogoStyle].
+ * Purely structural, mirroring [supportsPanZoom]'s pattern: a transparent cutout logo/
+ * marquee has nothing opaque behind it for rounding to visibly affect, so it's hidden
+ * entirely rather than shown-but-inert.
+ */
+val WidgetType.supportsCornerRadius: Boolean
+    get() = this !is WidgetType.SystemLogo && !isLogoStyle
+
+/**
+ * This widget instance's own per-widget [CornerRadius] (Configure Widget dialog) - see
+ * [supportsCornerRadius] for which variants/configurations actually offer this. Re-checked
+ * at render time (not just trusting the stored value) as defense-in-depth against stale
+ * persisted data, e.g. a SystemMedia widget's mediaType switched to Marquees after being
+ * configured with rounded corners - same reasoning as [panZoomActive].
+ */
+val WidgetType.cornerRadius: CornerRadius
+    get() =
+        when (this) {
+            is WidgetType.SystemLogo -> CornerRadius.None
+            is WidgetType.SystemImage -> cornerRadius
+            is WidgetType.SystemMedia -> if (isLogoStyle) CornerRadius.None else cornerRadius
+            is WidgetType.GameMedia -> if (isLogoStyle) CornerRadius.None else cornerRadius
+            is WidgetType.CustomImage -> cornerRadius
+            is WidgetType.ColorBackground -> cornerRadius
+            is WidgetType.GameDescription -> cornerRadius
+            is WidgetType.Rating -> cornerRadius
+            is WidgetType.Video -> cornerRadius
         }
 
 /** Game-view box-art-style media where each new game's art should snap in instantly
