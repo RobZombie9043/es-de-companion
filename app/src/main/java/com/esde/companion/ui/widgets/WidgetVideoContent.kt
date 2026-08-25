@@ -108,7 +108,7 @@ internal fun WidgetVideoContent(
         transitionToVideo(
             playerPool = playerPool,
             videoPath = content.path,
-            settings = VideoTransitionSettings(content.delaySeconds, content.audioEnabled),
+            settings = VideoTransitionSettings(content.delaySeconds, content.audioEnabled, content.loopEnabled),
             displayedSlot = displayedSlot,
             onPlaybackEvent = onPlaybackEvent,
         )
@@ -186,6 +186,14 @@ private class DisplayedVideoSlot(
 private class VideoTransitionSettings(
     val delaySeconds: Int,
     val audioEnabled: Boolean,
+    val loopEnabled: Boolean,
+)
+
+/** Bundled for the same [LongParameterList] reason as [DisplayedVideoSlot] - keeps
+ * [prepareIncomingPlayer] at 5 parameters instead of 6. */
+private class IncomingVideoRequest(
+    val path: String,
+    val loopEnabled: Boolean,
 )
 
 /**
@@ -212,7 +220,8 @@ private suspend fun transitionToVideo(
     if (settings.delaySeconds > 0) dropDisplayedVideoForDelay(playerPool, displayedSlot, onPlaybackEvent)
 
     val ready = CompletableDeferred<Unit>()
-    val incoming = prepareIncomingPlayer(playerPool, videoPath, displayedSlot.current, ready, onPlaybackEvent)
+    val request = IncomingVideoRequest(videoPath, settings.loopEnabled)
+    val incoming = prepareIncomingPlayer(playerPool, request, displayedSlot, ready, onPlaybackEvent)
 
     try {
         delay(settings.delaySeconds * MILLIS_PER_SECOND)
@@ -256,35 +265,48 @@ private fun dropDisplayedVideoForDelay(
 
 /**
  * Borrows a muted, prepared-but-not-yet-playing [ExoPlayer] from [playerPool] for
- * [videoPath], wired so that [ready] completes once it actually starts rendering frames
+ * [request], wired so that [ready] completes once it actually starts rendering frames
  * (or completes exceptionally on a player error) - the readiness signal the caller awaits
- * before promoting it to the displayed player. [displayedPlayerProvider] is polled on
- * every `isPlaying` change (not captured once) so the listener only forwards to
+ * before promoting it to the displayed player. [displayedSlot] is polled on every
+ * `isPlaying` change (not captured once) so the listener only forwards to
  * [onPlaybackEvent] once this exact player instance has actually been promoted - see
  * [WidgetVideoContent]'s kdoc.
+ *
+ * A [request] with [IncomingVideoRequest.loopEnabled] false reaching [Player.STATE_ENDED]
+ * is treated as "done displaying," not "hold on the last frame": [displayedSlot] is cleared
+ * (dropping the widget back to a transparent view of whatever's behind it, since
+ * [WidgetVideoContent]'s background only ever renders while something is displayed) and the
+ * player is returned to [playerPool], the same cleanup [dropDisplayedVideoForDelay] does for
+ * a Start Delay wait - a persistent frozen frame (or an opaque pillarbox color sitting over
+ * the canvas indefinitely) reads as a broken widget, not a finished one.
  */
 private fun prepareIncomingPlayer(
     playerPool: VideoPlayerPool,
-    videoPath: String,
-    displayedPlayerProvider: () -> ExoPlayer?,
+    request: IncomingVideoRequest,
+    displayedSlot: DisplayedVideoSlot,
     ready: CompletableDeferred<Unit>,
     onPlaybackEvent: (VideoPlaybackEvent) -> Unit,
 ): ExoPlayer =
-    playerPool.borrow(exclude = displayedPlayerProvider()) { incoming ->
+    playerPool.borrow(exclude = displayedSlot.current(), loopEnabled = request.loopEnabled) { incoming ->
         incoming.volume = 0f
-        incoming.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(videoPath))))
+        incoming.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(request.path))))
         incoming.prepare()
         object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
-                if (incoming === displayedPlayerProvider()) {
+                if (incoming === displayedSlot.current()) {
                     onPlaybackEvent(VideoPlaybackEvent.PlayingChanged(playing))
-                    if (playing) onPlaybackEvent(VideoPlaybackEvent.Started(videoPath))
+                    if (playing) {
+                        onPlaybackEvent(VideoPlaybackEvent.Started(request.path))
+                    } else if (!request.loopEnabled && incoming.playbackState == Player.STATE_ENDED) {
+                        displayedSlot.clear()
+                        playerPool.returnToPool(incoming)
+                    }
                 }
                 if (playing) ready.complete(Unit)
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                onPlaybackEvent(VideoPlaybackEvent.Error(videoPath, error.message ?: error.toString()))
+                onPlaybackEvent(VideoPlaybackEvent.Error(request.path, error.message ?: error.toString()))
                 ready.completeExceptionally(error)
             }
         }
@@ -321,6 +343,7 @@ private class VideoPlayerPool(context: Context) {
      */
     fun borrow(
         exclude: ExoPlayer?,
+        loopEnabled: Boolean,
         configure: (ExoPlayer) -> Player.Listener,
     ): ExoPlayer {
         val player = players.first { it !== exclude }
@@ -330,7 +353,7 @@ private class VideoPlayerPool(context: Context) {
         val listener = configure(player)
         attachedListeners[player] = listener
         player.addListener(listener)
-        player.repeatMode = Player.REPEAT_MODE_ONE
+        player.repeatMode = if (loopEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         return player
     }
 

@@ -72,6 +72,7 @@ sealed class WidgetContent {
         val delaySeconds: Int,
         val pillarboxMode: PillarboxMode,
         val renderAboveUi: Boolean,
+        val loopEnabled: Boolean,
     ) : WidgetContent()
 }
 

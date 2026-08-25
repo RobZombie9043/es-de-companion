@@ -40,6 +40,24 @@ internal fun VideoAudioConfig(
     }
 }
 
+/** Per-widget "loop" toggle for a [com.esde.companion.domain.model.WidgetType.Video]
+ * widget - on, playback repeats continuously; off, it plays once and holds on its final
+ * frame. See [com.esde.companion.domain.model.WidgetType.Video.loopEnabled]'s kdoc. */
+@Composable
+internal fun VideoLoopConfig(
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = "Loop", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Switch(checked = enabled, onCheckedChange = onChange)
+    }
+}
+
 /** Per-widget start delay (seconds before playback begins, to avoid flickering videos past
  * while quickly scrolling a game list) - ported from the retired global Settings > Video
  * Playback slider, same 0..10s range. */

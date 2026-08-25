@@ -257,6 +257,9 @@ internal fun ConfigureWidgetDialog(
                         VideoAudioConfig(
                             enabled = widgetType.audioEnabled,
                         ) { onChange(widgetType.copy(audioEnabled = it)) }
+                        VideoLoopConfig(
+                            enabled = widgetType.loopEnabled,
+                        ) { onChange(widgetType.copy(loopEnabled = it)) }
                         RenderAboveUiConfig(
                             enabled = widgetType.renderAboveUi,
                         ) { onChange(widgetType.copy(renderAboveUi = it)) }

@@ -138,6 +138,7 @@ object WidgetContentResolver {
                         delaySeconds = widgetType.delaySeconds,
                         pillarboxMode = widgetType.pillarboxMode,
                         renderAboveUi = widgetType.renderAboveUi,
+                        loopEnabled = widgetType.loopEnabled,
                     )
                 } ?: WidgetContent.Empty
         }

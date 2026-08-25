@@ -130,5 +130,6 @@ internal sealed class WidgetTypeDto {
         val delaySeconds: Int = 0,
         val pillarboxMode: String = "Black",
         val renderAboveUi: Boolean = false,
+        val loopEnabled: Boolean = true,
     ) : WidgetTypeDto()
 }

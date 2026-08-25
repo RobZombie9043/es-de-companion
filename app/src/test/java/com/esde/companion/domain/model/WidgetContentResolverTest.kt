@@ -423,6 +423,7 @@ class WidgetContentResolverTest {
                 delaySeconds = 5,
                 pillarboxMode = PillarboxMode.Transparent,
                 renderAboveUi = true,
+                loopEnabled = false,
             )
         val content = resolve(widgetType = widgetType, videoLookup = { "/media/video.mp4" })
 
@@ -434,6 +435,7 @@ class WidgetContentResolverTest {
                 delaySeconds = 5,
                 pillarboxMode = PillarboxMode.Transparent,
                 renderAboveUi = true,
+                loopEnabled = false,
             ),
             content,
         )

@@ -598,6 +598,7 @@ class WidgetsViewModelTest {
                     delaySeconds = 0,
                     pillarboxMode = PillarboxMode.Black,
                     renderAboveUi = false,
+                    loopEnabled = true,
                 ),
                 state.contentByWidgetId["video"],
             )

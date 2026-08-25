@@ -165,6 +165,11 @@ sealed class WidgetType {
      * `WidgetContentView`'s Video branch for why the ordinary canvas layer renders nothing
      * for a widget with this on (avoiding two ExoPlayer instances/composables for the same
      * widget).
+     *
+     * [loopEnabled] controls whether playback repeats (`Player.REPEAT_MODE_ONE`) or plays
+     * once and holds on its final frame (`Player.REPEAT_MODE_OFF`) - see VideoPlayerPool's
+     * `borrow` in WidgetVideoContent.kt. Defaults to true, matching this widget's original
+     * always-loop behavior before this setting existed.
      */
     data class Video(
         val scaleMode: ScaleMode = ScaleMode.Fit,
@@ -172,6 +177,7 @@ sealed class WidgetType {
         val delaySeconds: Int = 0,
         val pillarboxMode: PillarboxMode = PillarboxMode.Black,
         val renderAboveUi: Boolean = false,
+        val loopEnabled: Boolean = true,
     ) : WidgetType()
 }
 
