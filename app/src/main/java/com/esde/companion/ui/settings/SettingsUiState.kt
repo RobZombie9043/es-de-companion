@@ -2,6 +2,7 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
@@ -66,4 +67,5 @@ data class SettingsUiState(
     val volumeSyncEnabled: Boolean = false,
     val volumeSyncMode: VolumeSyncMode = VolumeSyncMode.Linked,
     val volumeSyncSecondarySettingPresent: Boolean = false,
+    val gameLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
 )

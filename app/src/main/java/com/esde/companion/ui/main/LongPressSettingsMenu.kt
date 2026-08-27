@@ -60,6 +60,9 @@ import com.esde.companion.data.thor.ThorAccessibilityPermission
 import com.esde.companion.data.thor.isAynThorDevice
 import com.esde.companion.ui.settings.AppDrawerSettingsContent
 import com.esde.companion.ui.settings.AutoFpsSettingsState
+import com.esde.companion.ui.settings.GameLaunchOverrideGamesScreen
+import com.esde.companion.ui.settings.GameLaunchOverrideSystemsScreen
+import com.esde.companion.ui.settings.GameLaunchOverrideViewModel
 import com.esde.companion.ui.settings.LidWakeGuardSettingsState
 import com.esde.companion.ui.settings.ManageAppsScreen
 import com.esde.companion.ui.settings.ManageAppsViewModel
@@ -96,6 +99,11 @@ private const val EASTER_EGG_TAP_THRESHOLD = 7
 /** Slide/fade durations for the Home -> Category -> ManageApps drill-down transition. */
 private const val PAGE_SLIDE_DURATION_MS = 220
 private const val PAGE_FADE_OUT_DURATION_MS = 150
+
+/** [MenuPage.GameLaunchOverrideGames] is one level deeper than every other leaf page, since it's
+ * reached by drilling into [MenuPage.GameLaunchOverrideSystems] rather than directly from a
+ * [MenuPage.Category] - see [MenuPage.depth]. */
+private const val GAME_LAUNCH_OVERRIDE_GAMES_DEPTH = 3
 
 private val EasterEggMessages =
     listOf(
@@ -143,6 +151,16 @@ private sealed interface MenuPage {
     /** Reachable only from [SettingsCategory.Thor]'s Task Killer panel - same shape as
      * [AutoFpsTriggerApps]. */
     data class TaskKillerExcludedApps(val fromCategory: SettingsCategory) : MenuPage
+
+    /** Reachable only from [SettingsCategory.UI]'s Game Launch Override entry - the systems
+     * list. Drilling into one goes one level deeper still, to [GameLaunchOverrideGames]. */
+    data class GameLaunchOverrideSystems(val fromCategory: SettingsCategory) : MenuPage
+
+    /** One system's games, reachable only from [GameLaunchOverrideSystems] - carries both
+     * [fromCategory] (for [onBack]'s final step) and [systemShortName] (which system this is),
+     * unlike every other page here which only ever needs one "where did this come from"
+     * value. */
+    data class GameLaunchOverrideGames(val fromCategory: SettingsCategory, val systemShortName: String) : MenuPage
 }
 
 /** Home = 0, a Category subpage = 1, ManageApps/AutoFpsTriggerApps/TaskKillerExcludedApps = 2 -
@@ -157,6 +175,8 @@ private val MenuPage.depth: Int
             is MenuPage.ManageApps -> 2
             is MenuPage.AutoFpsTriggerApps -> 2
             is MenuPage.TaskKillerExcludedApps -> 2
+            is MenuPage.GameLaunchOverrideSystems -> 2
+            is MenuPage.GameLaunchOverrideGames -> GAME_LAUNCH_OVERRIDE_GAMES_DEPTH
         }
 
 /**
@@ -175,6 +195,7 @@ fun LongPressSettingsMenu(
     manageAppsViewModel: ManageAppsViewModel,
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
     taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
+    gameLaunchOverrideViewModel: GameLaunchOverrideViewModel,
     updateViewModel: UpdateViewModel,
     onEditWidgetsClick: () -> Unit,
     onQuitClick: () -> Unit,
@@ -232,6 +253,8 @@ fun LongPressSettingsMenu(
             is MenuPage.ManageApps -> page = MenuPage.Category(current.fromCategory)
             is MenuPage.AutoFpsTriggerApps -> page = MenuPage.Category(current.fromCategory)
             is MenuPage.TaskKillerExcludedApps -> page = MenuPage.Category(current.fromCategory)
+            is MenuPage.GameLaunchOverrideGames -> page = MenuPage.GameLaunchOverrideSystems(current.fromCategory)
+            is MenuPage.GameLaunchOverrideSystems -> page = MenuPage.Category(current.fromCategory)
             is MenuPage.Category -> page = MenuPage.Home
             MenuPage.Home -> onDismiss()
         }
@@ -253,6 +276,8 @@ fun LongPressSettingsMenu(
             is MenuPage.ManageApps -> "Manage Apps"
             is MenuPage.AutoFpsTriggerApps -> "Trigger Apps"
             is MenuPage.TaskKillerExcludedApps -> "Excluded Apps"
+            is MenuPage.GameLaunchOverrideSystems -> "Launch App on Game Start"
+            is MenuPage.GameLaunchOverrideGames -> current.systemShortName
         }
 
     Box(modifier = modifier) {
@@ -317,6 +342,20 @@ fun LongPressSettingsMenu(
                         is MenuPage.TaskKillerExcludedApps ->
                             TaskKillerExcludedAppsScreen(viewModel = taskKillerExcludedAppsViewModel)
 
+                        is MenuPage.GameLaunchOverrideSystems ->
+                            GameLaunchOverrideSystemsScreen(
+                                viewModel = gameLaunchOverrideViewModel,
+                                onSystemSelected = { systemShortName ->
+                                    page = MenuPage.GameLaunchOverrideGames(targetPage.fromCategory, systemShortName)
+                                },
+                            )
+
+                        is MenuPage.GameLaunchOverrideGames ->
+                            GameLaunchOverrideGamesScreen(
+                                viewModel = gameLaunchOverrideViewModel,
+                                systemShortName = targetPage.systemShortName,
+                            )
+
                         is MenuPage.Category ->
                             when (targetPage.category) {
                                 SettingsCategory.Setup ->
@@ -357,6 +396,13 @@ fun LongPressSettingsMenu(
                                         onFabTypeChanged = settingsViewModel::onFabTypeChanged,
                                         onFabCustomAppChanged = settingsViewModel::onFabCustomAppChanged,
                                         onBluetoothPermissionRequested = onBluetoothPermissionRequested,
+                                        onManageGameLaunchOverridesClick = {
+                                            val category = targetPage.category
+                                            page = MenuPage.GameLaunchOverrideSystems(fromCategory = category)
+                                        },
+                                        gameLaunchDisplayTarget = uiState.gameLaunchDisplayTarget,
+                                        onGameLaunchDisplayTargetChanged =
+                                            settingsViewModel::onGameLaunchDisplayTargetChanged,
                                     )
                                 SettingsCategory.AppDrawer ->
                                     AppDrawerSettingsContent(

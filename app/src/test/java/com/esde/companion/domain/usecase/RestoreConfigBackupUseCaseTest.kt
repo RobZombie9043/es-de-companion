@@ -6,6 +6,8 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameLaunchDisplayTarget
+import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.HallSensorCalibration
@@ -53,6 +55,13 @@ private class SourceFixture {
     val widgets = FakeWidgetLayoutRepository(initial = mapOf(StateGroup.System to canvas))
     val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
     val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
+    val launchOverride = GameLaunchOverride(systemShortName = "n64", relativeRomPath = "./Game.z64", packageName = null)
+    val gameLaunchApp =
+        FakeGameLaunchAppRepository(
+            initialSystemDefaults = mapOf("n64" to "com.example.launcher"),
+            initialGameOverrides = listOf(launchOverride),
+            initialLaunchDisplayTarget = GameLaunchDisplayTarget.OtherScreen,
+        )
     val calibration =
         HallSensorCalibration(sensorType = 5, sensorName = "Hall Sensor", closedValue = 1f, openValue = 0f)
     val thorSettings =
@@ -63,7 +72,16 @@ private class SourceFixture {
             autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
         )
     val repositories =
-        BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings, gameMatchOverrides)
+        BackupRepositories(
+            onboarding,
+            appDrawer,
+            appFolders,
+            dock,
+            widgets,
+            thorSettings,
+            gameMatchOverrides,
+            gameLaunchApp,
+        )
 
     private fun samplePlacedWidget() =
         PlacedWidget(
@@ -92,6 +110,7 @@ class RestoreConfigBackupUseCaseTest {
             val targetWidgets = FakeWidgetLayoutRepository()
             val targetThorSettings = FakeThorSettingsRepository()
             val targetGameMatchOverrides = FakeGameMatchOverrideRepository()
+            val targetGameLaunchApp = FakeGameLaunchAppRepository()
             val targetRepositories =
                 BackupRepositories(
                     targetOnboarding,
@@ -101,6 +120,7 @@ class RestoreConfigBackupUseCaseTest {
                     targetWidgets,
                     targetThorSettings,
                     targetGameMatchOverrides,
+                    targetGameLaunchApp,
                 )
             val restoreUseCase = RestoreConfigBackupUseCase(targetRepositories, configBackupRepository)
 
@@ -130,6 +150,9 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(source.calibration, targetThorSettings.observeHallSensorCalibration().first())
             assertTrue(targetThorSettings.observeAutoFpsEnabled().first())
             assertEquals(setOf("org.libretro.retroarch"), targetThorSettings.observeAutoFpsTriggerPackages().first())
+            assertEquals(mapOf("n64" to "com.example.launcher"), targetGameLaunchApp.observeSystemDefaults().first())
+            assertEquals(listOf(source.launchOverride), targetGameLaunchApp.observeGameOverrides().first())
+            assertEquals(GameLaunchDisplayTarget.OtherScreen, targetGameLaunchApp.observeLaunchDisplayTarget().first())
         }
 
     @Test
@@ -146,6 +169,7 @@ class RestoreConfigBackupUseCaseTest {
                     FakeWidgetLayoutRepository(),
                     FakeThorSettingsRepository(),
                     FakeGameMatchOverrideRepository(),
+                    FakeGameLaunchAppRepository(),
                 )
             val useCase = RestoreConfigBackupUseCase(repositories, JsonConfigBackupRepository())
 
@@ -168,6 +192,7 @@ class RestoreConfigBackupUseCaseTest {
                     FakeWidgetLayoutRepository(),
                     FakeThorSettingsRepository(),
                     FakeGameMatchOverrideRepository(),
+                    FakeGameLaunchAppRepository(),
                 )
             val configBackupRepository = JsonConfigBackupRepository()
             val useCase = RestoreConfigBackupUseCase(repositories, configBackupRepository)

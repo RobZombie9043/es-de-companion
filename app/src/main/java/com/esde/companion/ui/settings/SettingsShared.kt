@@ -1,31 +1,43 @@
 package com.esde.companion.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.esde.companion.data.apps.AppIconLoader
+import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 
 /**
@@ -205,5 +217,92 @@ internal fun ToggleSettingRow(
                 },
             )
         }
+    }
+}
+
+/** A non-app, pinned choice shown above the installed-apps list in [SelectAppDialog] - e.g.
+ * Game Launch Override's "Use System Default"/"None" entries. Not used by every call site
+ * (see [FabControlSetting][com.esde.companion.ui.settings.UISettingsContent]'s picker, which
+ * always needs a specific app and passes none). */
+internal data class PinnedAppEntry(
+    val label: String,
+    val onSelected: () -> Unit,
+)
+
+/**
+ * Shared "pick an installed app" dialog - used by the FAB Control CustomApp picker and Game
+ * Launch Override's system-default/per-game pickers. [pinnedEntries] renders above the
+ * installed-apps list for non-app choices those callers need (Game Launch Override's "Use
+ * System Default"/"None"); empty by default for callers (like FAB Control) that always need a
+ * specific app.
+ */
+@Composable
+internal fun SelectAppDialog(
+    installedApps: List<InstalledApp>,
+    onAppPicked: (String) -> Unit,
+    onDismiss: () -> Unit,
+    pinnedEntries: List<PinnedAppEntry> = emptyList(),
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select app") },
+        text = {
+            // Same fillMaxWidth-on-every-row reasoning as AppDock's AddAppDialog - without
+            // it, varying label widths make the dialog visibly wobble side to side while
+            // scrolling.
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 8.dp),
+            ) {
+                items(pinnedEntries) { entry -> PinnedAppRow(entry = entry) }
+                items(installedApps, key = { it.packageName }) { app ->
+                    SelectAppRow(app = app, onClick = { onAppPicked(app.packageName) })
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun PinnedAppRow(entry: PinnedAppEntry) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = entry.onSelected)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = entry.label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun SelectAppRow(
+    app: InstalledApp,
+    onClick: () -> Unit,
+) {
+    val context = LocalContext.current
+    val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
+        value = AppIconLoader.loadIcon(context, app.packageName)
+    }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(40.dp))
+        Text(text = app.label, style = MaterialTheme.typography.bodyLarge)
     }
 }

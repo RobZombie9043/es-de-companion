@@ -100,6 +100,8 @@ import com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesViewM
 import com.esde.companion.ui.retroachievements.RetroAchievementsViewModel
 import com.esde.companion.ui.retroachievements.RetroAchievementsViewModelFactory
 import com.esde.companion.ui.retroachievements.SystemGamesUiState
+import com.esde.companion.ui.settings.GameLaunchOverrideViewModel
+import com.esde.companion.ui.settings.GameLaunchOverrideViewModelFactory
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModelFactory
 import com.esde.companion.ui.settings.SettingsViewModel
@@ -248,6 +250,8 @@ class MainActivity : ComponentActivity() {
                                 viewModel(factory = AutoFpsTriggerAppsViewModelFactory(appContainer))
                             val taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel =
                                 viewModel(factory = TaskKillerExcludedAppsViewModelFactory(appContainer))
+                            val gameLaunchOverrideViewModel: GameLaunchOverrideViewModel =
+                                viewModel(factory = GameLaunchOverrideViewModelFactory(appContainer))
                             val updateViewModel: UpdateViewModel =
                                 viewModel(factory = UpdateViewModelFactory(appContainer))
                             val updateUiState by updateViewModel.uiState.collectAsStateWithLifecycle()
@@ -775,6 +779,7 @@ class MainActivity : ComponentActivity() {
                                             manageAppsViewModel = manageAppsViewModel,
                                             autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
                                             taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
+                                            gameLaunchOverrideViewModel = gameLaunchOverrideViewModel,
                                             updateViewModel = updateViewModel,
                                             fabAssignments = fabAssignments,
                                             overlayOpacityPercent = overlayOpacityPercent,
@@ -989,7 +994,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        (application as CompanionApplication).appContainer.activityVisibilityRepository.setVisible(true)
+        val appContainer = (application as CompanionApplication).appContainer
+        appContainer.activityVisibilityRepository.setVisible(true)
+        appContainer.companionDisplayHolder.displayId = SecondaryDisplayResolver.currentDisplayId(this)
     }
 
     override fun onStop() {

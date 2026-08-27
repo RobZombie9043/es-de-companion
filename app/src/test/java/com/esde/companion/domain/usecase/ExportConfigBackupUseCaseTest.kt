@@ -6,6 +6,8 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameLaunchDisplayTarget
+import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.HallSensorCalibration
@@ -80,8 +82,24 @@ private class ExportFixture {
         )
     val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 42L)
     val gameMatchOverrides = FakeGameMatchOverrideRepository(initial = listOf(override))
+    val launchOverride = GameLaunchOverride(systemShortName = "n64", relativeRomPath = "./Game.z64", packageName = null)
+    val gameLaunchApp =
+        FakeGameLaunchAppRepository(
+            initialSystemDefaults = mapOf("n64" to "com.example.launcher"),
+            initialGameOverrides = listOf(launchOverride),
+            initialLaunchDisplayTarget = GameLaunchDisplayTarget.OtherScreen,
+        )
     val repositories =
-        BackupRepositories(onboarding, appDrawer, appFolders, dock, widgets, thorSettings, gameMatchOverrides)
+        BackupRepositories(
+            onboarding,
+            appDrawer,
+            appFolders,
+            dock,
+            widgets,
+            thorSettings,
+            gameMatchOverrides,
+            gameLaunchApp,
+        )
 
     private fun samplePlacedWidget() =
         PlacedWidget(
@@ -127,5 +145,8 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(fixture.calibration, snapshot.hallSensorCalibration)
             assertTrue(snapshot.autoFpsEnabled)
             assertEquals(setOf("org.libretro.retroarch"), snapshot.autoFpsTriggerPackages)
+            assertEquals(mapOf("n64" to "com.example.launcher"), snapshot.gameLaunchSystemDefaults)
+            assertEquals(listOf(fixture.launchOverride), snapshot.gameLaunchOverrides)
+            assertEquals(GameLaunchDisplayTarget.OtherScreen, snapshot.gameLaunchDisplayTarget)
         }
 }

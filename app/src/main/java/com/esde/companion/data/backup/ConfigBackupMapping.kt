@@ -9,6 +9,8 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameLaunchDisplayTarget
+import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
@@ -72,6 +74,9 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         taskKillerExcludedPackages = taskKillerExcludedPackages,
         volumeSyncEnabled = volumeSyncEnabled,
         volumeSyncMode = volumeSyncMode.name,
+        gameLaunchSystemDefaults = gameLaunchSystemDefaults,
+        gameLaunchOverrides = gameLaunchOverrides.map { it.toDto() },
+        gameLaunchDisplayTarget = gameLaunchDisplayTarget.name,
     )
 
 private fun ConfigBackupDto.toFabAssignments() =
@@ -140,6 +145,9 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         taskKillerExcludedPackages = taskKillerExcludedPackages ?: DEFAULT_TASK_KILLER_EXCLUDED_PACKAGES,
         volumeSyncEnabled = volumeSyncEnabled,
         volumeSyncMode = volumeSyncMode.toEnumOrDefault(VolumeSyncMode.Linked),
+        gameLaunchSystemDefaults = gameLaunchSystemDefaults,
+        gameLaunchOverrides = gameLaunchOverrides.map { it.toDomain() },
+        gameLaunchDisplayTarget = gameLaunchDisplayTarget.toEnumOrDefault(GameLaunchDisplayTarget.ThisScreen),
     )
 }
 
@@ -176,4 +184,20 @@ private fun GameMatchOverride.toDto(): GameMatchOverrideDto {
 
 private fun GameMatchOverrideDto.toDomain(): GameMatchOverride {
     return GameMatchOverride(systemShortName = systemShortName, romPath = romPath, raGameId = raGameId)
+}
+
+private fun GameLaunchOverride.toDto(): GameLaunchOverrideDto {
+    return GameLaunchOverrideDto(
+        systemShortName = systemShortName,
+        relativeRomPath = relativeRomPath,
+        packageName = packageName,
+    )
+}
+
+private fun GameLaunchOverrideDto.toDomain(): GameLaunchOverride {
+    return GameLaunchOverride(
+        systemShortName = systemShortName,
+        relativeRomPath = relativeRomPath,
+        packageName = packageName,
+    )
 }

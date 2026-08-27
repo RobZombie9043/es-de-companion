@@ -3,6 +3,8 @@ package com.esde.companion.domain.usecase
 import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.GameLaunchDisplayTarget
+import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GridDimensions
@@ -19,6 +21,7 @@ import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameLaunchAppRepository
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.ThorSettingsRepository
@@ -27,7 +30,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * In-memory fakes for the six settings repositories [ExportConfigBackupUseCase]/
+ * In-memory fakes for the settings repositories [ExportConfigBackupUseCase]/
  * [RestoreConfigBackupUseCase] read and write, shared by both use cases' tests plus the
  * export-then-restore round trip. Every field is independently settable/observable via a
  * backing [MutableStateFlow], same shape as [SetFabAssignmentUseCaseTest]'s
@@ -450,4 +453,58 @@ internal class FakeGameMatchOverrideRepository(
 
     private fun GameMatchOverride.matchesReference(reference: GameReference) =
         systemShortName == reference.systemShortName && romPath == reference.romPath
+}
+
+internal class FakeGameLaunchAppRepository(
+    initialSystemDefaults: Map<String, String> = emptyMap(),
+    initialGameOverrides: List<GameLaunchOverride> = emptyList(),
+    initialLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
+) : GameLaunchAppRepository {
+    private val systemDefaultsFlow = MutableStateFlow(initialSystemDefaults)
+    private val gameOverridesFlow = MutableStateFlow(initialGameOverrides)
+    private val launchDisplayTargetFlow = MutableStateFlow(initialLaunchDisplayTarget)
+
+    override fun observeSystemDefaults(): Flow<Map<String, String>> = systemDefaultsFlow
+
+    override suspend fun setSystemDefault(
+        systemShortName: String,
+        packageName: String?,
+    ) {
+        systemDefaultsFlow.value =
+            if (packageName == null) {
+                systemDefaultsFlow.value - systemShortName
+            } else {
+                systemDefaultsFlow.value + (systemShortName to packageName)
+            }
+    }
+
+    override fun observeGameOverrides(): Flow<List<GameLaunchOverride>> = gameOverridesFlow
+
+    override suspend fun setGameOverride(
+        systemShortName: String,
+        relativeRomPath: String,
+        packageName: String?,
+    ) {
+        val newOverride = GameLaunchOverride(systemShortName, relativeRomPath, packageName)
+        gameOverridesFlow.value =
+            gameOverridesFlow.value.filterNot { it.matches(systemShortName, relativeRomPath) } + newOverride
+    }
+
+    override suspend fun clearGameOverride(
+        systemShortName: String,
+        relativeRomPath: String,
+    ) {
+        gameOverridesFlow.value = gameOverridesFlow.value.filterNot { it.matches(systemShortName, relativeRomPath) }
+    }
+
+    override fun observeLaunchDisplayTarget(): Flow<GameLaunchDisplayTarget> = launchDisplayTargetFlow
+
+    override suspend fun setLaunchDisplayTarget(target: GameLaunchDisplayTarget) {
+        launchDisplayTargetFlow.value = target
+    }
+
+    private fun GameLaunchOverride.matches(
+        systemShortName: String,
+        relativeRomPath: String,
+    ) = this.systemShortName == systemShortName && this.relativeRomPath == relativeRomPath
 }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -89,6 +90,61 @@ class GamelistFileReaderTest {
             val reader = GamelistFileReader(flowOf(rootA.absolutePath))
 
             val result = reader.read("a", "/roms/a/Missing.chd")
+
+            assertNull(result)
+        }
+
+    @Test
+    fun `listSystemShortNames returns every system with a standard-location gamelist file, sorted`() =
+        runTest {
+            writeStandardGamelist(rootA, "n64", sampleGamelistXml("N64 game."))
+            writeStandardGamelist(rootA, "gc", sampleGamelistXml("GC game."))
+            // A gamelists subdirectory with no gamelist.xml inside it must not be listed.
+            File(rootA, "gamelists/psx").mkdirs()
+            val reader = GamelistFileReader(flowOf(rootA.absolutePath))
+
+            val result = reader.listSystemShortNames()
+
+            assertEquals(listOf("gc", "n64"), result)
+        }
+
+    @Test
+    fun `listSystemShortNames returns an empty list when no root is configured yet`() =
+        runTest {
+            val reader = GamelistFileReader(flowOf(null))
+
+            val result = reader.listSystemShortNames()
+
+            assertTrue(result.isEmpty())
+        }
+
+    @Test
+    fun `listSystemShortNames returns an empty list when the gamelists folder does not exist`() =
+        runTest {
+            val reader = GamelistFileReader(flowOf(rootA.absolutePath))
+
+            val result = reader.listSystemShortNames()
+
+            assertTrue(result.isEmpty())
+        }
+
+    @Test
+    fun `readSystem reads a system's gamelist without needing a known romPath`() =
+        runTest {
+            writeStandardGamelist(rootA, "a", sampleGamelistXml("From readSystem."))
+            val reader = GamelistFileReader(flowOf(rootA.absolutePath))
+
+            val result = reader.readSystem("a")
+
+            assertEquals("From readSystem.", descriptionOf(result))
+        }
+
+    @Test
+    fun `readSystem returns null when the system has no gamelist file`() =
+        runTest {
+            val reader = GamelistFileReader(flowOf(rootA.absolutePath))
+
+            val result = reader.readSystem("missing")
 
             assertNull(result)
         }

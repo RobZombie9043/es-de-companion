@@ -12,7 +12,15 @@ object AppLauncher {
         packageName: String,
         displayId: Int? = null,
     ) {
-        val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return
+        // FLAG_ACTIVITY_NEW_TASK is required when this is called from a non-Activity context
+        // (GameLaunchOverrideCoordinator calls this from application scope) - Android throws
+        // otherwise. Harmless to add unconditionally: every other caller here is already an
+        // Activity context (LocalContext.current in Compose), and starting a new task from an
+        // Activity context is a supported, unremarkable case too.
+        val intent =
+            context.packageManager.getLaunchIntentForPackage(packageName)
+                ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                ?: return
         val options =
             displayId?.let {
                 ActivityOptions.makeBasic().apply { setLaunchDisplayId(it) }

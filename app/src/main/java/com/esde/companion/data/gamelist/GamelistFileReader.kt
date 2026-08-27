@@ -55,24 +55,65 @@ class GamelistFileReader(
         romPath: String,
     ): GamelistFile? =
         withContext(Dispatchers.IO) {
-            val root = esdeRootPath.first() ?: return@withContext null
-            if (root != lastRoot) {
-                cache.clear()
-                lastRoot = root
-            }
-
+            val root = refreshRootAndClearCacheIfChanged() ?: return@withContext null
             val file = resolveGamelistFile(root, systemShortName, romPath) ?: return@withContext null
-            val lastModified = file.lastModified()
-            val cached = cache[file.path]
-            val content =
-                if (cached != null && cached.lastModified == lastModified) {
-                    cached.content
-                } else {
-                    file.readText().also { cache[file.path] = CacheEntry(lastModified, it) }
-                }
-
-            GamelistFile(path = file.path, content = content)
+            readAndCache(file)
         }
+
+    /**
+     * Reads a system's gamelist.xml without an already-known ROM path, for whole-library
+     * enumeration (see [com.esde.companion.domain.repository.GamelistLibraryRepository]).
+     * Standard location only - see [listSystemShortNames]'s kdoc for why the legacy,
+     * ROMs-adjacent location can't be resolved from a cold enumeration.
+     */
+    suspend fun readSystem(systemShortName: String): GamelistFile? =
+        withContext(Dispatchers.IO) {
+            val root = refreshRootAndClearCacheIfChanged() ?: return@withContext null
+            val candidate = File(root, "gamelists/$systemShortName/gamelist.xml")
+            val file = candidate.takeIf { it.isFile } ?: return@withContext null
+            readAndCache(file)
+        }
+
+    /**
+     * Every system short name with a gamelist.xml at the standard location - i.e. every
+     * subdirectory of "<ES-DE root>/gamelists/" that directly contains one. Deliberately does
+     * not also look for the legacy, ROMs-adjacent location: unlike [read]'s fallback (which
+     * always has a concrete romPath from [com.esde.companion.domain.model.AppState] to anchor
+     * [LegacyGamelistPathResolver] on), a cold "list every system" enumeration has no ROM path
+     * for any system yet - and this app has no separately configured ROMs root to search
+     * instead (see [LegacyGamelistPathResolver]'s own kdoc). A system whose gamelist.xml only
+     * exists at the legacy location is simply not discoverable by this method.
+     */
+    suspend fun listSystemShortNames(): List<String> =
+        withContext(Dispatchers.IO) {
+            val root = esdeRootPath.first() ?: return@withContext emptyList()
+            File(root, "gamelists")
+                .listFiles { candidate -> candidate.isDirectory && File(candidate, "gamelist.xml").isFile }
+                ?.map { it.name }
+                ?.sorted()
+                ?: emptyList()
+        }
+
+    private suspend fun refreshRootAndClearCacheIfChanged(): String? {
+        val root = esdeRootPath.first() ?: return null
+        if (root != lastRoot) {
+            cache.clear()
+            lastRoot = root
+        }
+        return root
+    }
+
+    private fun readAndCache(file: File): GamelistFile {
+        val lastModified = file.lastModified()
+        val cached = cache[file.path]
+        val content =
+            if (cached != null && cached.lastModified == lastModified) {
+                cached.content
+            } else {
+                file.readText().also { cache[file.path] = CacheEntry(lastModified, it) }
+            }
+        return GamelistFile(path = file.path, content = content)
+    }
 
     private fun resolveGamelistFile(
         root: String,

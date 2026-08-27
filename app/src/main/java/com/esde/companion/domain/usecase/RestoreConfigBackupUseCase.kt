@@ -57,6 +57,16 @@ class RestoreConfigBackupUseCase(
         // this snapshot doesn't mention is harmless leftover corrective data, unlike a
         // stale toggle/path the settings above would silently keep if not overwritten.
         snapshot.gameMatchOverrides.forEach { repositories.gameMatchOverrideRepository.setOverride(it) }
+        // Same re-apply-without-clearing reasoning as gameMatchOverrides above.
+        with(repositories.gameLaunchAppRepository) {
+            snapshot.gameLaunchSystemDefaults.forEach { (systemShortName, packageName) ->
+                setSystemDefault(systemShortName, packageName)
+            }
+            snapshot.gameLaunchOverrides.forEach {
+                setGameOverride(it.systemShortName, it.relativeRomPath, it.packageName)
+            }
+            setLaunchDisplayTarget(snapshot.gameLaunchDisplayTarget)
+        }
     }
 
     private suspend fun applyOnboardingSettings(snapshot: AppConfigBackup) {

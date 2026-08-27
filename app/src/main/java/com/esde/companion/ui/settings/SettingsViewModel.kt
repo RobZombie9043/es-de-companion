@@ -8,6 +8,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.HallSensorCalibration
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.RetroAchievementsAuthState
@@ -25,6 +26,7 @@ import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -57,6 +59,7 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchDisplayTargetUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
@@ -155,6 +158,8 @@ class SettingsViewModel(
     private val setVolumeSyncEnabledUseCase: SetVolumeSyncEnabledUseCase,
     private val observeVolumeSyncModeUseCase: ObserveVolumeSyncModeUseCase,
     private val setVolumeSyncModeUseCase: SetVolumeSyncModeUseCase,
+    private val observeGameLaunchDisplayTargetUseCase: ObserveGameLaunchDisplayTargetUseCase,
+    private val setGameLaunchDisplayTargetUseCase: SetGameLaunchDisplayTargetUseCase,
     private val volumeSyncSecondarySettingPresent: Boolean,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -280,6 +285,7 @@ class SettingsViewModel(
             // screen's own onVolumeSyncModeChanged ever changes it - so a one-shot load is fine.
             hallSensorCalibration = observeHallSensorCalibrationUseCase().first(),
             volumeSyncMode = observeVolumeSyncModeUseCase().first(),
+            gameLaunchDisplayTarget = observeGameLaunchDisplayTargetUseCase().first(),
         )
     }
 
@@ -452,6 +458,11 @@ class SettingsViewModel(
     fun onVolumeSyncModeChanged(mode: VolumeSyncMode) {
         _uiState.value = _uiState.value.copy(volumeSyncMode = mode)
         viewModelScope.launch { setVolumeSyncModeUseCase(mode) }
+    }
+
+    fun onGameLaunchDisplayTargetChanged(target: GameLaunchDisplayTarget) {
+        _uiState.value = _uiState.value.copy(gameLaunchDisplayTarget = target)
+        viewModelScope.launch { setGameLaunchDisplayTargetUseCase(target) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

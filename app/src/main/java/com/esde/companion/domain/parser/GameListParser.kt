@@ -1,9 +1,8 @@
 package com.esde.companion.domain.parser
 
+import com.esde.companion.domain.parser.GamelistXml.firstTextOf
+import com.esde.companion.domain.parser.GamelistXml.matchesGamelistPath
 import org.w3c.dom.Element
-import org.xml.sax.InputSource
-import java.io.StringReader
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Parses ES-DE's gamelist.xml content to find per-game fields for one specific game -
@@ -53,22 +52,7 @@ object GameListParser {
         romPath: String,
         tagName: String,
     ): String? {
-        val gameListXml = content.extractGameListElement() ?: return null
-
-        val document =
-            try {
-                DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                    .parse(InputSource(StringReader(gameListXml)))
-            } catch (
-                @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
-            ) {
-                // Deliberately broad: this parses external, scraper-generated XML we don't
-                // control. Malformed content (e.g. an unescaped "&" in a <desc>) can surface
-                // as checked exceptions (SAXException) or unchecked ones (DOMException, seen
-                // in practice on-device) depending on the platform XML implementation - any
-                // parse failure here should degrade to "not found," never crash the app.
-                return null
-            }
+        val document = GamelistXml.parseGameListDocument(content) ?: return null
 
         val gameNodes = document.getElementsByTagName("game")
         for (index in 0 until gameNodes.length) {
@@ -78,35 +62,6 @@ object GameListParser {
             return gameElement.firstTextOf(tagName)?.takeIf { it.isNotBlank() }
         }
         return null
-    }
-
-    /**
-     * ES-DE sometimes writes a sibling <alternativeEmulator> element before <gameList> at
-     * the document root - e.g. when a system has a per-game emulator override configured.
-     * That makes the file invalid XML (two root elements), which a strict parser refuses
-     * to parse at all. Since <gameList> is the only element this parser cares about,
-     * slicing out just that element's text - and ignoring whatever ES-DE prepends or
-     * appends outside it - sidesteps the problem entirely rather than needing to parse
-     * (or tolerate parse failures on) content we'd discard anyway.
-     */
-    private fun String.extractGameListElement(): String? {
-        val start = indexOf("<gameList")
-        if (start == -1) return null
-        val endTag = "</gameList>"
-        val end = indexOf(endTag, start)
-        if (end == -1) return null
-        return substring(start, end + endTag.length)
-    }
-
-    private fun String.matchesGamelistPath(gamelistPath: String): Boolean {
-        val relative = gamelistPath.removePrefix("./")
-        return this == relative || this.endsWith("/$relative")
-    }
-
-    private fun Element.firstTextOf(tagName: String): String? {
-        val nodes = getElementsByTagName(tagName)
-        if (nodes.length == 0) return null
-        return nodes.item(0).textContent?.trim()
     }
 
     private const val DESCRIPTION_TAG = "desc"

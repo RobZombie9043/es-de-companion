@@ -26,6 +26,7 @@ import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FakeAppFolderRepository
+import com.esde.companion.domain.usecase.FakeGameLaunchAppRepository
 import com.esde.companion.domain.usecase.FakeGameMatchOverrideRepository
 import com.esde.companion.domain.usecase.FakeThorSettingsRepository
 import com.esde.companion.domain.usecase.FakeWidgetLayoutRepository
@@ -36,6 +37,7 @@ import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -68,6 +70,7 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchDisplayTargetUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
@@ -407,6 +410,7 @@ class SettingsViewModelTest {
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository,
         dockSettingsRepository: FakeDockSettingsRepository,
         thorSettingsRepository: FakeThorSettingsRepository,
+        gameLaunchAppRepository: FakeGameLaunchAppRepository,
     ): Pair<ExportConfigBackupUseCase, RestoreConfigBackupUseCase> {
         val configBackupRepository = JsonConfigBackupRepository()
         val repositories =
@@ -418,18 +422,21 @@ class SettingsViewModelTest {
                 FakeWidgetLayoutRepository(),
                 thorSettingsRepository,
                 FakeGameMatchOverrideRepository(),
+                gameLaunchAppRepository,
             )
         val export = ExportConfigBackupUseCase(repositories, configBackupRepository)
         val restore = RestoreConfigBackupUseCase(repositories, configBackupRepository)
         return export to restore
     }
 
+    @Suppress("LongParameterList")
     private fun buildViewModel(
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         appDrawerSettingsRepository: FakeAppDrawerSettingsRepository = FakeAppDrawerSettingsRepository(),
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
         installedAppsRepository: FakeInstalledAppsRepository = FakeInstalledAppsRepository(),
         thorSettingsRepository: FakeThorSettingsRepository = FakeThorSettingsRepository(),
+        gameLaunchAppRepository: FakeGameLaunchAppRepository = FakeGameLaunchAppRepository(),
     ): Pair<SettingsViewModel, FakeAppDrawerSettingsRepository> {
         val (exportConfigBackupUseCase, restoreConfigBackupUseCase) =
             configBackupUseCases(
@@ -437,6 +444,7 @@ class SettingsViewModelTest {
                 appDrawerSettingsRepository,
                 dockSettingsRepository,
                 thorSettingsRepository,
+                gameLaunchAppRepository,
             )
         val retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository()
         val observeRetroAchievementsCredentialsUseCase =
@@ -532,6 +540,8 @@ class SettingsViewModelTest {
                 setVolumeSyncEnabledUseCase = SetVolumeSyncEnabledUseCase(thorSettingsRepository),
                 observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository),
                 setVolumeSyncModeUseCase = SetVolumeSyncModeUseCase(thorSettingsRepository),
+                observeGameLaunchDisplayTargetUseCase = ObserveGameLaunchDisplayTargetUseCase(gameLaunchAppRepository),
+                setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository),
                 volumeSyncSecondarySettingPresent = false,
             )
         return viewModel to appDrawerSettingsRepository
