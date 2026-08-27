@@ -90,7 +90,11 @@ private val MENU_SHAPE = RoundedCornerShape(16.dp)
 
 /**
  * The widget types available to add, filtered to what actually makes sense per canvas -
- * System has no per-game media to show, Playing has no system-level media. Each entry
+ * System has no per-game media to show, Playing has no per-game-list media (it's the
+ * game/system currently browsed, not the list). System Logo/System Image are offered on
+ * both, since the system a game belongs to is meaningful context on either canvas - see
+ * WidgetsViewModel's ContentIdentity for how systemShortName/systemFullName are resolved
+ * for BrowsingGame/PlayingGame/Screensaver too, not just BrowsingSystem. Each entry
  * carries sensible default config (scale mode, starting color/alpha) - these are exactly
  * what gets placed on add; per-widget reconfiguration is a later slice.
  */
@@ -109,6 +113,8 @@ internal fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
         StateGroup.Playing ->
             listOf(
                 WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
+                WidgetType.SystemLogo(ScaleMode.Fit),
+                WidgetType.SystemImage(ScaleMode.Fill),
                 WidgetType.GameDescription(),
                 WidgetType.Rating(),
                 WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit),
