@@ -1,5 +1,6 @@
 package com.esde.companion.data.debug
 
+import android.util.Log
 import com.esde.companion.BuildConfig
 import com.esde.companion.data.storage.AllFilesAccessPermission
 import com.esde.companion.domain.model.AppState
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.io.IOException
 import java.time.Clock
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -183,11 +185,21 @@ class DebugFileLogger(
         applicationScope.launch(ioDispatcher) {
             if (!enabled || !AllFilesAccessPermission.isGranted()) return@launch
             writeMutex.withLock {
-                if (!hasResetThisProcess || logFile.length() >= maxLogFileSizeBytes) {
-                    resetFileAndWriteHeader()
-                    hasResetThisProcess = true
+                try {
+                    if (!hasResetThisProcess || logFile.length() >= maxLogFileSizeBytes) {
+                        resetFileAndWriteHeader()
+                        hasResetThisProcess = true
+                    }
+                    build().forEach { (event, details) -> appendLine(event, details) }
+                } catch (e: IOException) {
+                    // This is an opt-in diagnostic feature - a write failure here (e.g. the
+                    // external storage volume this path lives under isn't actually mounted yet,
+                    // observed as Environment.getExternalStorageDirectory() resolving to
+                    // "/dev/null" when this app auto-launches via its HOME intent filter before
+                    // boot-time storage mounting has finished) must never crash the app. Leave
+                    // hasResetThisProcess false on a failed reset so the next log call retries.
+                    Log.w("DebugFileLogger", "Failed to write debug log", e)
                 }
-                build().forEach { (event, details) -> appendLine(event, details) }
             }
         }
     }
