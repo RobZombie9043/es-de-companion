@@ -102,8 +102,27 @@ class WidgetsViewModel(
                     stateGroup = group,
                     gameRef = appState.currentGameReference(),
                     isBrowsingGame = appState is AppState.BrowsingGame,
-                    systemShortName = (appState as? AppState.BrowsingSystem)?.systemShortName,
-                    systemFullName = (appState as? AppState.BrowsingSystem)?.systemFullName,
+                    // System Logo/System Image widgets are offered on both canvases (see
+                    // EditWidgetsOverlay's widgetCatalogFor), so this must resolve the
+                    // system currently in play/browse-game context too, not just
+                    // BrowsingSystem - otherwise those widgets would silently never
+                    // render on the Playing canvas.
+                    systemShortName =
+                        when (appState) {
+                            is AppState.BrowsingSystem -> appState.systemShortName
+                            is AppState.BrowsingGame -> appState.systemShortName
+                            is AppState.PlayingGame -> appState.systemShortName
+                            is AppState.Screensaver -> appState.currentGame?.systemShortName
+                            is AppState.Idle -> null
+                        },
+                    systemFullName =
+                        when (appState) {
+                            is AppState.BrowsingSystem -> appState.systemFullName
+                            is AppState.BrowsingGame -> appState.systemFullName
+                            is AppState.PlayingGame -> appState.systemFullName
+                            is AppState.Screensaver -> appState.currentGame?.systemFullName
+                            is AppState.Idle -> null
+                        },
                     gameName =
                         when (appState) {
                             is AppState.BrowsingGame -> appState.gameName

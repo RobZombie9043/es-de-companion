@@ -571,6 +571,44 @@ class WidgetsViewModelTest {
             assertTrue(customSystemImageRepository.callCount > 0)
         }
 
+    // --- SystemLogo/SystemImage on the Playing canvas ---------------------------------------
+
+    @Test
+    fun `a SystemImage widget on the Playing canvas resolves system media for the currently playing game's system`() =
+        runTest(testDispatcher) {
+            // Regression: SystemImage/SystemLogo are offered on the Playing canvas (see
+            // widgetCatalogFor), but ContentIdentity used to only populate
+            // systemShortName/systemFullName for BrowsingSystem - leaving these widgets
+            // permanently unresolved on Playing.
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            val widget =
+                placedWidget(
+                    "image",
+                    WidgetType.SystemImage(ScaleMode.Fill, ImageEffects(), panZoomEnabled = false),
+                )
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(widget))
+            val systemMediaRepository = CountingSystemMediaRepository()
+            val viewModel =
+                buildViewModel(
+                    esdeLogRepository,
+                    widgetLayoutRepository,
+                    systemMediaRepository = systemMediaRepository,
+                )
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/game.sfc", "Game", "snes", "SNES"))
+            advanceUntilIdle()
+
+            assertEquals(
+                setOf(MediaType.FanArt, MediaType.Screenshots),
+                systemMediaRepository.lastRequestedTypes.toSet(),
+            )
+            val state = viewModel.canvasState.value
+            check(state is WidgetCanvasState.Showing)
+            assertTrue(state.contentByWidgetId["image"] is WidgetContent.Image)
+        }
+
     // --- Video widget: BrowsingGame-only eligibility ---------------------------------------
 
     @Test

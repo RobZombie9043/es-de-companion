@@ -37,11 +37,18 @@ class EditWidgetsOverlayTest {
     }
 
     @Test
-    fun `widgetCatalogFor(Playing) excludes system-only widget types`() {
+    fun `widgetCatalogFor(Playing) excludes SystemMedia`() {
         val catalog = widgetCatalogFor(StateGroup.Playing)
 
-        assertTrue(catalog.none { it is WidgetType.SystemImage })
         assertTrue(catalog.none { it is WidgetType.SystemMedia })
+    }
+
+    @Test
+    fun `widgetCatalogFor(Playing) includes SystemLogo and SystemImage`() {
+        val catalog = widgetCatalogFor(StateGroup.Playing)
+
+        assertTrue(catalog.any { it is WidgetType.SystemLogo })
+        assertTrue(catalog.any { it is WidgetType.SystemImage })
     }
 
     @Test
