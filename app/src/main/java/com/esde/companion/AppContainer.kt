@@ -7,9 +7,12 @@ import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
+import com.esde.companion.data.gamelist.DataStoreGameLaunchAppRepository
 import com.esde.companion.data.gamelist.FileGameDescriptionRepository
 import com.esde.companion.data.gamelist.FileGameRatingRepository
 import com.esde.companion.data.gamelist.FileGameRomHashRepository
+import com.esde.companion.data.gamelist.FileGamelistLibraryRepository
+import com.esde.companion.data.gamelist.GameLaunchOverrideCoordinator
 import com.esde.companion.data.gamelist.GamelistFileReader
 import com.esde.companion.data.gamelist.LoggingGameDescriptionRepository
 import com.esde.companion.data.gamelist.LoggingGameRatingRepository
@@ -76,10 +79,12 @@ import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.EsdeInstallationRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
+import com.esde.companion.domain.repository.GameLaunchAppRepository
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.GameRatingRepository
 import com.esde.companion.domain.repository.GameRomHashRepository
+import com.esde.companion.domain.repository.GamelistLibraryRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.MusicLibraryRepository
@@ -97,6 +102,7 @@ import com.esde.companion.domain.repository.VideoPlaybackStateRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.state.AppStateReducer
 import com.esde.companion.domain.usecase.CheckForUpdateUseCase
+import com.esde.companion.domain.usecase.ClearGameLaunchOverrideUseCase
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
@@ -111,6 +117,8 @@ import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
 import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
+import com.esde.companion.domain.usecase.ListGamelistGamesUseCase
+import com.esde.companion.domain.usecase.ListGamelistSystemsUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
@@ -127,6 +135,9 @@ import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeQuitEventUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchOverridesUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchSystemDefaultsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -184,6 +195,9 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchOverrideUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchSystemDefaultUseCase
 import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
@@ -371,6 +385,22 @@ class AppContainer(context: Context) {
             debugFileLogger = debugFileLogger,
         )
 
+    // Whole-library enumeration for Game Launch Override's browse UI - see
+    // GamelistLibraryRepository's kdoc for why this only supports the standard gamelist
+    // location, unlike the single-game lookups above.
+    private val gamelistLibraryRepository: GamelistLibraryRepository = FileGamelistLibraryRepository(gamelistFileReader)
+    val listGamelistSystemsUseCase = ListGamelistSystemsUseCase(gamelistLibraryRepository)
+    val listGamelistGamesUseCase = ListGamelistGamesUseCase(gamelistLibraryRepository)
+
+    private val gameLaunchAppRepository: GameLaunchAppRepository = DataStoreGameLaunchAppRepository(appContext)
+    val observeGameLaunchSystemDefaultsUseCase = ObserveGameLaunchSystemDefaultsUseCase(gameLaunchAppRepository)
+    val setGameLaunchSystemDefaultUseCase = SetGameLaunchSystemDefaultUseCase(gameLaunchAppRepository)
+    val observeGameLaunchOverridesUseCase = ObserveGameLaunchOverridesUseCase(gameLaunchAppRepository)
+    val setGameLaunchOverrideUseCase = SetGameLaunchOverrideUseCase(gameLaunchAppRepository)
+    val clearGameLaunchOverrideUseCase = ClearGameLaunchOverrideUseCase(gameLaunchAppRepository)
+    val observeGameLaunchDisplayTargetUseCase = ObserveGameLaunchDisplayTargetUseCase(gameLaunchAppRepository)
+    val setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository)
+
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
 
@@ -503,6 +533,7 @@ class AppContainer(context: Context) {
             widgetLayoutRepository = widgetLayoutRepository,
             thorSettingsRepository = thorSettingsRepository,
             gameMatchOverrideRepository = gameMatchOverrideRepository,
+            gameLaunchAppRepository = gameLaunchAppRepository,
         )
     val exportConfigBackupUseCase = ExportConfigBackupUseCase(backupRepositories, configBackupRepository)
     val restoreConfigBackupUseCase = RestoreConfigBackupUseCase(backupRepositories, configBackupRepository)
@@ -695,6 +726,17 @@ class AppContainer(context: Context) {
             observeVolumeSyncMode = observeVolumeSyncModeUseCase,
         )
 
+    // No enable/disable gate, unlike the coordinators above - see GameLaunchOverrideCoordinator's
+    // kdoc for why an unconfigured system/game already resolves to "launch nothing."
+    private val gameLaunchOverrideCoordinator =
+        GameLaunchOverrideCoordinator(
+            observeAppState = observeAppStateUseCase,
+            observeGameLaunchSystemDefaults = observeGameLaunchSystemDefaultsUseCase,
+            observeGameLaunchOverrides = observeGameLaunchOverridesUseCase,
+            observeGameLaunchDisplayTarget = observeGameLaunchDisplayTargetUseCase,
+            debugFileLogger = debugFileLogger,
+        )
+
     // Update checker (GitHub Releases). The one sanctioned network use case in this app -
     // see CLAUDE.md's "What NOT to Do" entry on network layers.
     private val updateRepository: UpdateRepository = GitHubUpdateRepository(appContext)
@@ -728,6 +770,7 @@ class AppContainer(context: Context) {
         autoFpsCoordinator.start(appContext, applicationScope)
         taskKillerCoordinator.start(appContext, applicationScope)
         volumeSyncCoordinator.start(appContext, applicationScope)
+        gameLaunchOverrideCoordinator.start(appContext, applicationScope)
 
         // Always-running, independent of whether edit mode is even open - records
         // whatever's actually been browsed so edit-mode preview has something real to

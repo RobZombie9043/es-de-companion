@@ -56,6 +56,7 @@ import com.esde.companion.ui.dock.dockBarHeight
 import com.esde.companion.ui.drawer.AppDrawer
 import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
+import com.esde.companion.ui.settings.GameLaunchOverrideViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.SettingsViewModel
 import com.esde.companion.ui.thor.AutoFpsTriggerAppsViewModel
@@ -110,6 +111,7 @@ fun MainScreen(
     manageAppsViewModel: ManageAppsViewModel,
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
     taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
+    gameLaunchOverrideViewModel: GameLaunchOverrideViewModel,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -132,6 +134,7 @@ fun MainScreen(
         manageAppsViewModel = manageAppsViewModel,
         autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
         taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
+        gameLaunchOverrideViewModel = gameLaunchOverrideViewModel,
         updateViewModel = updateViewModel,
         fabAssignments = fabAssignments,
         overlayOpacityPercent = overlayOpacityPercent,
@@ -166,6 +169,7 @@ private fun MainScreenContent(
     manageAppsViewModel: ManageAppsViewModel,
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
     taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
+    gameLaunchOverrideViewModel: GameLaunchOverrideViewModel,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -474,6 +478,7 @@ private fun MainScreenContent(
                             manageAppsViewModel = manageAppsViewModel,
                             autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
                             taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
+                            gameLaunchOverrideViewModel = gameLaunchOverrideViewModel,
                             updateViewModel = updateViewModel,
                             onEditWidgetsClick = {
                                 setLongPressMenuOpen(false)

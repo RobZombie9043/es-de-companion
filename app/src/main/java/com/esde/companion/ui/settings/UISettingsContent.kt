@@ -6,15 +6,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +28,7 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
@@ -38,9 +36,9 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,7 +55,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,14 +67,13 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import coil3.compose.AsyncImage
-import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.retroachievements.retroAchievementsEnabled
 import com.esde.companion.data.systemstatus.BluetoothConnectPermission
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.ThemePreference
@@ -103,6 +99,9 @@ internal fun UISettingsContent(
     onFabTypeChanged: (FabPosition, FabType) -> Unit,
     onFabCustomAppChanged: (FabPosition, String) -> Unit,
     onBluetoothPermissionRequested: () -> Unit,
+    onManageGameLaunchOverridesClick: () -> Unit,
+    gameLaunchDisplayTarget: GameLaunchDisplayTarget,
+    onGameLaunchDisplayTargetChanged: (GameLaunchDisplayTarget) -> Unit,
 ) {
     Column(
         modifier =
@@ -143,8 +142,93 @@ internal fun UISettingsContent(
             onFabCustomAppChanged = onFabCustomAppChanged,
             onBluetoothPermissionRequested = onBluetoothPermissionRequested,
         )
+        GameLaunchOverrideSetting(
+            launchDisplayTarget = gameLaunchDisplayTarget,
+            onLaunchDisplayTargetChanged = onGameLaunchDisplayTargetChanged,
+            onManageClick = onManageGameLaunchOverridesClick,
+        )
     }
 }
+
+/**
+ * Settings > UI Settings > Game Launch Override - the entry point into the system/game browser
+ * (see [com.esde.companion.ui.main.LongPressSettingsMenu]'s `GameLaunchOverrideSystems`/
+ * `GameLaunchOverrideGames` pages) plus the one setting that isn't per-system/per-game: a global
+ * choice of which display a launched app opens on (see [GameLaunchDisplayTarget]). Segmented row,
+ * not a dropdown - only two options, same threshold reasoning as the Screensaver Screen Behavior
+ * picker above.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameLaunchOverrideSetting(
+    launchDisplayTarget: GameLaunchDisplayTarget,
+    onLaunchDisplayTargetChanged: (GameLaunchDisplayTarget) -> Unit,
+    onManageClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SettingsItemShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SettingsLabel(icon = Icons.AutoMirrored.Filled.Launch, text = "Launch App on Game Start")
+                Text(
+                    text = "Launch an app automatically when a game starts",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            FabRowSurface(onClick = onManageClick) {
+                Text(text = "Manage Systems & Games", style = MaterialTheme.typography.bodyMedium)
+                Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Launch App On", style = MaterialTheme.typography.labelLarge)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    GameLaunchDisplayTarget.entries.forEachIndexed { index, target ->
+                        SegmentedButton(
+                            selected = target == launchDisplayTarget,
+                            onClick = { onLaunchDisplayTargetChanged(target) },
+                            shape =
+                                SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = GameLaunchDisplayTarget.entries.size,
+                                ),
+                            icon = {
+                                SegmentedButtonDefaults.Icon(active = target == launchDisplayTarget) {
+                                    Icon(
+                                        imageVector = target.icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                                    )
+                                }
+                            },
+                            label = { SegmentedButtonLabel(target.label) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Presentation-only icon/label, same reasoning as ThemePreference.icon/label above.
+private val GameLaunchDisplayTarget.icon: ImageVector
+    get() =
+        when (this) {
+            GameLaunchDisplayTarget.ThisScreen -> Icons.Filled.PhoneAndroid
+            GameLaunchDisplayTarget.OtherScreen -> Icons.Filled.Devices
+        }
+
+private val GameLaunchDisplayTarget.label: String
+    get() =
+        when (this) {
+            GameLaunchDisplayTarget.ThisScreen -> "This Screen"
+            GameLaunchDisplayTarget.OtherScreen -> "Other Screen"
+        }
 
 // Bottom corners never offer Music - it can only occupy one of the two top corners (see
 // FabAssignments.with) - so the picker itself simply never presents the option there
@@ -552,57 +636,6 @@ private fun FabRowSurface(
             verticalAlignment = Alignment.CenterVertically,
             content = content,
         )
-    }
-}
-
-@Composable
-private fun SelectAppDialog(
-    installedApps: List<InstalledApp>,
-    onAppPicked: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select app") },
-        text = {
-            // Same fillMaxWidth-on-every-row reasoning as AppDock's AddAppDialog - without
-            // it, varying label widths make the dialog visibly wobble side to side while
-            // scrolling.
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 8.dp),
-            ) {
-                items(installedApps, key = { it.packageName }) { app ->
-                    SelectAppRow(app = app, onClick = { onAppPicked(app.packageName) })
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
-}
-
-@Composable
-private fun SelectAppRow(
-    app: InstalledApp,
-    onClick: () -> Unit,
-) {
-    val context = LocalContext.current
-    val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
-        value = AppIconLoader.loadIcon(context, app.packageName)
-    }
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(40.dp))
-        Text(text = app.label, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

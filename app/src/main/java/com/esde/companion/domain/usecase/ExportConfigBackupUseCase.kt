@@ -68,6 +68,9 @@ class ExportConfigBackupUseCase(
                     taskKillerExcludedPackages = thorSettingsRepository.observeTaskKillerExcludedPackages().first(),
                     volumeSyncEnabled = thorSettingsRepository.observeVolumeSyncEnabled().first(),
                     volumeSyncMode = thorSettingsRepository.observeVolumeSyncMode().first(),
+                    gameLaunchSystemDefaults = gameLaunchAppRepository.observeSystemDefaults().first(),
+                    gameLaunchOverrides = gameLaunchAppRepository.observeGameOverrides().first(),
+                    gameLaunchDisplayTarget = gameLaunchAppRepository.observeLaunchDisplayTarget().first(),
                 )
             }
         return configBackupRepository.serialize(snapshot)

@@ -73,6 +73,9 @@ internal data class ConfigBackupDto(
     val taskKillerExcludedPackages: Set<String>? = null,
     val volumeSyncEnabled: Boolean = false,
     val volumeSyncMode: String = "Linked",
+    val gameLaunchSystemDefaults: Map<String, String> = emptyMap(),
+    val gameLaunchOverrides: List<GameLaunchOverrideDto> = emptyList(),
+    val gameLaunchDisplayTarget: String = "ThisScreen",
 )
 
 @Serializable
@@ -87,6 +90,13 @@ internal data class GameMatchOverrideDto(
     val systemShortName: String,
     val romPath: String,
     val raGameId: Long,
+)
+
+@Serializable
+internal data class GameLaunchOverrideDto(
+    val systemShortName: String,
+    val relativeRomPath: String,
+    val packageName: String?,
 )
 
 /** Matches [com.esde.companion.data.settings.FileOnboardingRepository]'s own default,
