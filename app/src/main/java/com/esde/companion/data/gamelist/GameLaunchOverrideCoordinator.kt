@@ -2,6 +2,7 @@ package com.esde.companion.data.gamelist
 
 import android.content.Context
 import com.esde.companion.data.apps.AppLauncher
+import com.esde.companion.data.apps.CompanionDisplayHolder
 import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.domain.model.AppState
@@ -37,6 +38,7 @@ class GameLaunchOverrideCoordinator(
     private val observeGameLaunchSystemDefaults: ObserveGameLaunchSystemDefaultsUseCase,
     private val observeGameLaunchOverrides: ObserveGameLaunchOverridesUseCase,
     private val observeGameLaunchDisplayTarget: ObserveGameLaunchDisplayTargetUseCase,
+    private val companionDisplayHolder: CompanionDisplayHolder,
     private val debugFileLogger: DebugFileLogger,
 ) {
     @Volatile
@@ -85,7 +87,8 @@ class GameLaunchOverrideCoordinator(
         val displayId =
             when (displayTarget) {
                 GameLaunchDisplayTarget.ThisScreen -> null
-                GameLaunchDisplayTarget.OtherScreen -> SecondaryDisplayResolver.secondaryDisplayId(context)
+                GameLaunchDisplayTarget.OtherScreen ->
+                    SecondaryDisplayResolver.secondaryDisplayId(context, companionDisplayHolder.displayId)
             }
         AppLauncher.launch(context, packageName, displayId)
         debugFileLogger.logInfo(LOG_TAG, "Launched $packageName for ${state.gameName} (${state.systemShortName})")

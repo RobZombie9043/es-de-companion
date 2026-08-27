@@ -994,7 +994,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        (application as CompanionApplication).appContainer.activityVisibilityRepository.setVisible(true)
+        val appContainer = (application as CompanionApplication).appContainer
+        appContainer.activityVisibilityRepository.setVisible(true)
+        appContainer.companionDisplayHolder.displayId = SecondaryDisplayResolver.currentDisplayId(this)
     }
 
     override fun onStop() {

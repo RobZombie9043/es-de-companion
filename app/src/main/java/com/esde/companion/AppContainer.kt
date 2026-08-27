@@ -3,6 +3,7 @@ package com.esde.companion
 import android.content.Context
 import android.os.Environment
 import com.esde.companion.data.activity.ProcessActivityVisibilityRepository
+import com.esde.companion.data.apps.CompanionDisplayHolder
 import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
@@ -280,6 +281,10 @@ class AppContainer(context: Context) {
         FileEsdeInstallationRepository(storageEvents = storageMountEvents.events)
 
     val activityVisibilityRepository: ActivityVisibilityRepository = ProcessActivityVisibilityRepository()
+
+    // Populated by MainActivity's own (visual) Context - see CompanionDisplayHolder's kdoc for
+    // why GameLaunchOverrideCoordinator can't safely derive this itself.
+    val companionDisplayHolder = CompanionDisplayHolder()
 
     val videoPlaybackStateRepository: VideoPlaybackStateRepository = ProcessVideoPlaybackStateRepository()
 
@@ -734,6 +739,7 @@ class AppContainer(context: Context) {
             observeGameLaunchSystemDefaults = observeGameLaunchSystemDefaultsUseCase,
             observeGameLaunchOverrides = observeGameLaunchOverridesUseCase,
             observeGameLaunchDisplayTarget = observeGameLaunchDisplayTargetUseCase,
+            companionDisplayHolder = companionDisplayHolder,
             debugFileLogger = debugFileLogger,
         )
 
