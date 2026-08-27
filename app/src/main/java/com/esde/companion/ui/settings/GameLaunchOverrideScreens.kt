@@ -37,7 +37,9 @@ import com.esde.companion.domain.parser.GamelistGameEntry
 /**
  * Settings > UI Settings > Game Launch Override > systems list - every system with a
  * gamelist.xml at the standard location (see `GamelistLibraryRepository`). Tapping a system
- * drills into [GameLaunchOverrideGamesScreen].
+ * drills into [GameLaunchOverrideGamesScreen]. [SourceNote] sits below the shared page header
+ * (see `LongPressSettingsMenu`'s `SettingsMenuHeader`) so users don't mistake this for a full
+ * ES-DE system/library browser.
  */
 @Composable
 fun GameLaunchOverrideSystemsScreen(
@@ -49,20 +51,34 @@ fun GameLaunchOverrideSystemsScreen(
 
     LaunchedEffect(Unit) { viewModel.onSystemsScreenShown() }
 
-    when {
-        uiState.isLoadingSystems -> LoadingIndicator(modifier)
-        uiState.systems.isEmpty() -> EmptyMessage("No systems with a gamelist.xml were found.", modifier)
-        else ->
-            LazyColumn(
-                modifier = modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(uiState.systems, key = { it.shortName }) { system ->
-                    SystemRow(system = system, onClick = { onSystemSelected(system.shortName) })
+    Column(modifier = modifier.fillMaxSize()) {
+        SourceNote()
+        when {
+            uiState.isLoadingSystems -> LoadingIndicator(Modifier.weight(1f))
+            uiState.systems.isEmpty() ->
+                EmptyMessage("No systems with a gamelist.xml were found.", Modifier.weight(1f))
+            else ->
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(uiState.systems, key = { it.shortName }) { system ->
+                        SystemRow(system = system, onClick = { onSystemSelected(system.shortName) })
+                    }
                 }
-            }
+        }
     }
+}
+
+@Composable
+private fun SourceNote() {
+    Text(
+        text = "Systems and games are populated from gamelist.xml files.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

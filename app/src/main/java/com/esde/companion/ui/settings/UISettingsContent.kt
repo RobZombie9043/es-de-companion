@@ -113,6 +113,22 @@ internal fun UISettingsContent(
     ) {
         ThemePicker(selected = themePreference, onSelected = onThemePreferenceChanged)
         OverlayOpacitySetting(percent = overlayOpacityPercent, onPercentChanged = onOverlayOpacityChanged)
+        FabControlSetting(
+            fabAssignments = fabAssignments,
+            installedApps = installedApps,
+            onFabTypeChanged = onFabTypeChanged,
+            onFabCustomAppChanged = onFabCustomAppChanged,
+            onBluetoothPermissionRequested = onBluetoothPermissionRequested,
+        )
+        ScreenBehaviorPicker(
+            title = "Screensaver Screen Behavior",
+            icon = Icons.Filled.Nightlight,
+            options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black),
+            selected = screensaverBehavior,
+            onSelected = onScreensaverBehaviorChanged,
+            dimAmount = DimAmountControl(screensaverDimPercent, onScreensaverDimPercentChanged),
+            forceDropdown = true,
+        )
         ScreenBehaviorPicker(
             title = "Game Playing Screen Behavior",
             icon = Icons.Filled.SportsEsports,
@@ -127,21 +143,6 @@ internal fun UISettingsContent(
             onSelected = onGamePlayingBehaviorChanged,
             dimAmount = DimAmountControl(gamePlayingDimPercent, onGamePlayingDimPercentChanged),
         )
-        ScreenBehaviorPicker(
-            title = "Screensaver Screen Behavior",
-            icon = Icons.Filled.Nightlight,
-            options = listOf(ScreenBehavior.Nothing, ScreenBehavior.Dim, ScreenBehavior.Black),
-            selected = screensaverBehavior,
-            onSelected = onScreensaverBehaviorChanged,
-            dimAmount = DimAmountControl(screensaverDimPercent, onScreensaverDimPercentChanged),
-        )
-        FabControlSetting(
-            fabAssignments = fabAssignments,
-            installedApps = installedApps,
-            onFabTypeChanged = onFabTypeChanged,
-            onFabCustomAppChanged = onFabCustomAppChanged,
-            onBluetoothPermissionRequested = onBluetoothPermissionRequested,
-        )
         GameLaunchOverrideSetting(
             launchDisplayTarget = gameLaunchDisplayTarget,
             onLaunchDisplayTargetChanged = onGameLaunchDisplayTargetChanged,
@@ -154,9 +155,9 @@ internal fun UISettingsContent(
  * Settings > UI Settings > Game Launch Override - the entry point into the system/game browser
  * (see [com.esde.companion.ui.main.LongPressSettingsMenu]'s `GameLaunchOverrideSystems`/
  * `GameLaunchOverrideGames` pages) plus the one setting that isn't per-system/per-game: a global
- * choice of which display a launched app opens on (see [GameLaunchDisplayTarget]). Segmented row,
- * not a dropdown - only two options, same threshold reasoning as the Screensaver Screen Behavior
- * picker above.
+ * choice of which display a launched app opens on (see [GameLaunchDisplayTarget]). A segmented
+ * row rather than a dropdown - only two options, well under
+ * [SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -300,6 +301,7 @@ private fun ScreenBehaviorPicker(
     selected: ScreenBehavior,
     onSelected: (ScreenBehavior) -> Unit,
     dimAmount: DimAmountControl,
+    forceDropdown: Boolean = false,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -311,7 +313,7 @@ private fun ScreenBehaviorPicker(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SettingsLabel(icon = icon, text = title)
-            if (options.size >= SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD) {
+            if (forceDropdown || options.size >= SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD) {
                 ScreenBehaviorDropdown(options = options, selected = selected, onSelected = onSelected)
             } else {
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -348,7 +350,9 @@ private fun ScreenBehaviorPicker(
 // A segmented row of icon+label buttons stops fitting comfortably past this many options -
 // same reasoning as FabTypeDropdown's own switch away from a segmented row, and confirmed by
 // "Manual" truncating in the 4-option Game Playing Screen Behavior picker even at the
-// device's regular font scale. Screensaver Screen Behavior (3 options) stays a segmented row.
+// device's regular font scale. Screensaver Screen Behavior (3 options) is under this threshold
+// but forced to a dropdown anyway (see ScreenBehaviorPicker's forceDropdown) to match Game
+// Playing Screen Behavior's look, per user request.
 private const val SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD = 4
 
 /** Dropdown variant of [ScreenBehaviorPicker]'s selector, used once [options] crosses
