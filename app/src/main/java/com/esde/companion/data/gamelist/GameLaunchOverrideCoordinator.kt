@@ -7,7 +7,7 @@ import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.thor.TaskKillerShell
 import com.esde.companion.data.thor.awaitDisplayFocus
-import com.esde.companion.data.thor.focusDisplay
+import com.esde.companion.data.thor.reclaimDisplayFocus
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
  * defaults off.
  *
  * [onGameStarted] also hands hardware-key focus back once the launched app appears, via
- * [focusDisplay] - starting an activity on a display necessarily steals focus there, and
+ * [reclaimDisplayFocus] - starting an activity on a display necessarily steals focus there, and
  * nothing else does this today. The rule is deterministic, not "restore whatever was focused
  * before": focus always goes to whichever of the two known displays *wasn't* the launch target
  * (`ThisScreen` launches -> focus the other display; `OtherScreen` launches -> focus Companion's
@@ -55,8 +55,11 @@ import kotlinx.coroutines.launch
  * setting has the game itself landing on Companion's own screen instead of its usual one, which
  * is exactly why "the other screen" can't be assumed to always mean "the game's screen." Same
  * Thor-only/best-effort/no-toggle reasoning as above; no public API exists for this either.
- * [onGameStarted] first waits ([awaitDisplayFocus]) for the launched app to actually take focus
- * before reclaiming it - see that function's kdoc for the race this avoids.
+ * [onGameStarted] first waits ([awaitDisplayFocus]) for the launched app to actually take focus,
+ * then reclaims it via [reclaimDisplayFocus], which retries and verifies the reclaim within a
+ * fixed time window rather than a single unverified tap - see both functions' kdocs for the
+ * races this avoids. Both are strictly time-boxed to the launch period: neither keeps watching
+ * or correcting focus for the rest of the game session once their window elapses.
  */
 class GameLaunchOverrideCoordinator(
     private val observeAppState: ObserveAppStateUseCase,
@@ -140,11 +143,22 @@ class GameLaunchOverrideCoordinator(
             // firing immediately races the app's own (slower) focus-steal as it finishes
             // loading, and loses: the later steal simply overwrites an early restore attempt
             // with nothing left to correct it. See awaitDisplayFocus's kdoc.
-            if (launchDisplayId != null) awaitDisplayFocus(launchDisplayId)
-            val focused = focusDisplay(context, focusDisplayId)
+            val launchFocusConfirmed = launchDisplayId?.let { awaitDisplayFocus(it) }
+            // reclaimDisplayFocus retries the reclaim tap within a fixed time window, verifying
+            // each time that focus actually stuck (not just that the shell command ran) - covers
+            // a tap not registering and the launched app re-stealing focus a second time after
+            // an earlier tap already landed. See its kdoc.
+            val result = reclaimDisplayFocus(context, focusDisplayId)
+            val waitNote =
+                when (launchFocusConfirmed) {
+                    null -> ""
+                    true -> "launch focus confirmed; "
+                    false -> "launch focus wait timed out; "
+                }
             debugFileLogger.logInfo(
                 LOG_TAG,
-                "${if (focused) "Restored" else "FAILED to restore"} focus to display $focusDisplayId",
+                "$waitNote${if (result.settled) "Restored" else "FAILED to restore"} " +
+                    "focus to display $focusDisplayId (${result.attempts} attempt(s))",
             )
         }
     }

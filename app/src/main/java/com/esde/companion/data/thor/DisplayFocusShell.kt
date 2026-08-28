@@ -34,8 +34,12 @@ import android.util.DisplayMetrics
  * Blocking (root-shell round trip); call off the main thread. Never throws; degrades to `false`
  * on any failure (unresolved display metrics, [PrivilegedShell] unavailable), same contract as
  * every other [PrivilegedShell] consumer.
+ *
+ * A single tap here only proves the shell command ran, not that focus actually landed and
+ * stuck on [displayId] - use [reclaimDisplayFocus] (this file's only remaining caller of this
+ * function) rather than calling this directly.
  */
-fun focusDisplay(
+private fun focusDisplay(
     context: Context,
     displayId: Int,
 ): Boolean {
@@ -55,8 +59,12 @@ fun focusDisplay(
  * as. Calling [focusDisplay] immediately after launch could win the race and land *before* the
  * launched app's own focus-steal, which then simply overwrites it once the app finishes loading,
  * with nothing left to correct it afterward. Waiting here for [displayId] (the launch target) to
- * actually take focus first means the later [focusDisplay] call is reacting to the real steal
- * rather than guessing it already happened.
+ * actually take focus first means the later [reclaimDisplayFocus] call is reacting to the real
+ * steal rather than guessing it already happened. Note this only returns `true` on the first
+ * poll that sees [displayId] focused and never looks again - [reclaimDisplayFocus] is what
+ * additionally guards against [displayId] taking focus a *second* time later on, and like this
+ * function it is time-boxed rather than persistent: it gives up for good once its own window
+ * elapses, it never keeps watching for the life of the game session.
  */
 fun awaitDisplayFocus(
     displayId: Int,
@@ -70,8 +78,85 @@ fun awaitDisplayFocus(
     return false
 }
 
+/**
+ * Polls [displayId] for the entirety of [durationMillis] and returns `false` the moment it
+ * stops being the focused display - unlike [awaitDisplayFocus] (which returns `true` as soon as
+ * [displayId] is *first* seen focused and never looks again), this also catches a later
+ * focus-steal that overwrites an earlier-looking-successful reclaim within the same short
+ * window. Used by [reclaimDisplayFocus] to decide whether a tap actually stuck, not just that
+ * the shell command that fired it succeeded.
+ */
+private fun isFocusHeld(
+    displayId: Int,
+    durationMillis: Long,
+): Boolean {
+    val deadline = System.currentTimeMillis() + durationMillis
+    do {
+        if (resolveFocusedDisplayId() != displayId) return false
+        Thread.sleep(AWAIT_FOCUS_POLL_INTERVAL_MS)
+    } while (System.currentTimeMillis() < deadline)
+    return true
+}
+
+/**
+ * Result of [reclaimDisplayFocus]: whether [displayId] was confirmed to hold focus by the end
+ * of the attempt window, and how many tap attempts it took to either land or exhaust the
+ * window - surfaced so callers can log the difference between "worked first try" and "took N
+ * retries" instead of a single collapsed boolean.
+ */
+data class DisplayFocusReclaimResult(
+    val settled: Boolean,
+    val attempts: Int,
+)
+
+/**
+ * Retries a reclaim tap against [displayId], verifying via [isFocusHeld] after each one that
+ * focus didn't just briefly land there but actually stuck - covers both remaining
+ * unreliability gaps a single tap left open:
+ * - The tap itself not registering (transient root-shell hiccup, system busy) - retried
+ *   immediately, no [isFocusHeld] wait wasted on a tap [focusDisplay] itself reports failed.
+ * - The launched app re-stealing focus a *second* time after an earlier tap already landed
+ *   (e.g. a splash screen followed by a real main activity) - the symmetric case to the race
+ *   [awaitDisplayFocus] exists to fix for the *pre*-reclaim wait, left uncorrected for the
+ *   reclaim step itself until now.
+ *
+ * Strictly time-boxed to [windowMillis] from the moment this is called, via a single
+ * `deadline = now + windowMillis` computed up front (same deadline shape as
+ * [awaitDisplayFocus], not an attempt counter) - once it passes, this stops unconditionally and
+ * returns `settled = false`, regardless of how many attempts that took. This is a deliberate
+ * guarantee: this function is only ever active for the initial launch period right after a game
+ * starts, never a persistent watcher correcting focus for the rest of the game session.
+ *
+ * Same blocking/off-main-thread/never-throws contract as every other function in this file.
+ */
+fun reclaimDisplayFocus(
+    context: Context,
+    displayId: Int,
+    windowMillis: Long = RECLAIM_WINDOW_MS,
+    settleWindowMillis: Long = RECLAIM_SETTLE_WINDOW_MS,
+): DisplayFocusReclaimResult {
+    val deadline = System.currentTimeMillis() + windowMillis
+    var attempts = 0
+    do {
+        attempts++
+        val tapped = focusDisplay(context, displayId)
+        if (tapped && isFocusHeld(displayId, settleWindowMillis)) {
+            return DisplayFocusReclaimResult(settled = true, attempts = attempts)
+        }
+    } while (System.currentTimeMillis() < deadline)
+    return DisplayFocusReclaimResult(settled = false, attempts = attempts)
+}
+
 private const val AWAIT_FOCUS_TIMEOUT_MS = 8000L
 private const val AWAIT_FOCUS_POLL_INTERVAL_MS = 150L
+
+// Total wall-clock time reclaimDisplayFocus is ever active for, starting right after the
+// launch-focus wait - a time budget, not a retry count, so "how long could this possibly keep
+// touching the screen after launch" always has a fixed, obvious answer.
+private const val RECLAIM_WINDOW_MS = 5000L
+
+// How long one reclaim tap must hold displayId focused, unbroken, before it's trusted.
+private const val RECLAIM_SETTLE_WINDOW_MS = 600L
 
 @Suppress("ReturnCount")
 private fun displayCenter(
