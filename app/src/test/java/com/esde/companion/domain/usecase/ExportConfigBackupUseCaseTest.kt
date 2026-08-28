@@ -88,6 +88,7 @@ private class ExportFixture {
             initialSystemDefaults = mapOf("n64" to "com.example.launcher"),
             initialGameOverrides = listOf(launchOverride),
             initialLaunchDisplayTarget = GameLaunchDisplayTarget.OtherScreen,
+            initialCloseAppOnGameEnd = true,
         )
     val repositories =
         BackupRepositories(
@@ -148,5 +149,6 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(mapOf("n64" to "com.example.launcher"), snapshot.gameLaunchSystemDefaults)
             assertEquals(listOf(fixture.launchOverride), snapshot.gameLaunchOverrides)
             assertEquals(GameLaunchDisplayTarget.OtherScreen, snapshot.gameLaunchDisplayTarget)
+            assertTrue(snapshot.closeAppOnGameEndEnabled)
         }
 }

@@ -14,6 +14,7 @@ import com.esde.companion.data.gamelist.FileGameRatingRepository
 import com.esde.companion.data.gamelist.FileGameRomHashRepository
 import com.esde.companion.data.gamelist.FileGamelistLibraryRepository
 import com.esde.companion.data.gamelist.GameLaunchOverrideCoordinator
+import com.esde.companion.data.gamelist.GameLaunchOverrideSettings
 import com.esde.companion.data.gamelist.GamelistFileReader
 import com.esde.companion.data.gamelist.LoggingGameDescriptionRepository
 import com.esde.companion.data.gamelist.LoggingGameRatingRepository
@@ -125,6 +126,7 @@ import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsTriggerPackagesUseCase
 import com.esde.companion.domain.usecase.ObserveBluetoothPermissionRequestedUseCase
+import com.esde.companion.domain.usecase.ObserveCloseAppOnGameEndUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
@@ -189,6 +191,7 @@ import com.esde.companion.domain.usecase.SetAppFoldersUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsTriggerPackagesUseCase
 import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
+import com.esde.companion.domain.usecase.SetCloseAppOnGameEndUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockAppsUseCase
@@ -405,6 +408,8 @@ class AppContainer(context: Context) {
     val clearGameLaunchOverrideUseCase = ClearGameLaunchOverrideUseCase(gameLaunchAppRepository)
     val observeGameLaunchDisplayTargetUseCase = ObserveGameLaunchDisplayTargetUseCase(gameLaunchAppRepository)
     val setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository)
+    val observeCloseAppOnGameEndUseCase = ObserveCloseAppOnGameEndUseCase(gameLaunchAppRepository)
+    val setCloseAppOnGameEndUseCase = SetCloseAppOnGameEndUseCase(gameLaunchAppRepository)
 
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
@@ -731,14 +736,20 @@ class AppContainer(context: Context) {
             observeVolumeSyncMode = observeVolumeSyncModeUseCase,
         )
 
+    private val gameLaunchOverrideSettings =
+        GameLaunchOverrideSettings(
+            observeSystemDefaults = observeGameLaunchSystemDefaultsUseCase,
+            observeOverrides = observeGameLaunchOverridesUseCase,
+            observeDisplayTarget = observeGameLaunchDisplayTargetUseCase,
+            observeCloseAppOnGameEnd = observeCloseAppOnGameEndUseCase,
+        )
+
     // No enable/disable gate, unlike the coordinators above - see GameLaunchOverrideCoordinator's
     // kdoc for why an unconfigured system/game already resolves to "launch nothing."
     private val gameLaunchOverrideCoordinator =
         GameLaunchOverrideCoordinator(
             observeAppState = observeAppStateUseCase,
-            observeGameLaunchSystemDefaults = observeGameLaunchSystemDefaultsUseCase,
-            observeGameLaunchOverrides = observeGameLaunchOverridesUseCase,
-            observeGameLaunchDisplayTarget = observeGameLaunchDisplayTargetUseCase,
+            settings = gameLaunchOverrideSettings,
             companionDisplayHolder = companionDisplayHolder,
             debugFileLogger = debugFileLogger,
         )

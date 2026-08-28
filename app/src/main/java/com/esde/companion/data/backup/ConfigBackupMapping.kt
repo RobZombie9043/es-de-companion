@@ -77,6 +77,7 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         gameLaunchSystemDefaults = gameLaunchSystemDefaults,
         gameLaunchOverrides = gameLaunchOverrides.map { it.toDto() },
         gameLaunchDisplayTarget = gameLaunchDisplayTarget.name,
+        closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
     )
 
 private fun ConfigBackupDto.toFabAssignments() =
@@ -148,6 +149,7 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         gameLaunchSystemDefaults = gameLaunchSystemDefaults,
         gameLaunchOverrides = gameLaunchOverrides.map { it.toDomain() },
         gameLaunchDisplayTarget = gameLaunchDisplayTarget.toEnumOrDefault(GameLaunchDisplayTarget.ThisScreen),
+        closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
     )
 }
 

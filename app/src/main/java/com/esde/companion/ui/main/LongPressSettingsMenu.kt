@@ -403,6 +403,9 @@ fun LongPressSettingsMenu(
                                         gameLaunchDisplayTarget = uiState.gameLaunchDisplayTarget,
                                         onGameLaunchDisplayTargetChanged =
                                             settingsViewModel::onGameLaunchDisplayTargetChanged,
+                                        closeAppOnGameEndEnabled = uiState.closeAppOnGameEndEnabled,
+                                        onCloseAppOnGameEndEnabledChanged =
+                                            settingsViewModel::onCloseAppOnGameEndEnabledChanged,
                                     )
                                 SettingsCategory.AppDrawer ->
                                     AppDrawerSettingsContent(

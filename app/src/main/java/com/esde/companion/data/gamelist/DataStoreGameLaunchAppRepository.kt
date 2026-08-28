@@ -1,6 +1,7 @@
 package com.esde.companion.data.gamelist
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
@@ -17,6 +18,7 @@ import kotlinx.serialization.json.Json
 private val SYSTEM_DEFAULTS_KEY = stringPreferencesKey("system_defaults")
 private val GAME_OVERRIDES_KEY = stringPreferencesKey("game_overrides")
 private val LAUNCH_DISPLAY_TARGET_KEY = stringPreferencesKey("launch_display_target")
+private val CLOSE_APP_ON_GAME_END_KEY = booleanPreferencesKey("close_app_on_game_end")
 
 /**
  * DataStore-backed [GameLaunchAppRepository] - a JSON-encoded `Map<String, String>` for the
@@ -83,6 +85,13 @@ class DataStoreGameLaunchAppRepository(
 
     override suspend fun setLaunchDisplayTarget(target: GameLaunchDisplayTarget) {
         context.gameLaunchOverrideDataStore.edit { prefs -> prefs[LAUNCH_DISPLAY_TARGET_KEY] = target.name }
+    }
+
+    override fun observeCloseAppOnGameEnd(): Flow<Boolean> =
+        context.gameLaunchOverrideDataStore.data.map { prefs -> prefs[CLOSE_APP_ON_GAME_END_KEY] ?: false }
+
+    override suspend fun setCloseAppOnGameEnd(enabled: Boolean) {
+        context.gameLaunchOverrideDataStore.edit { prefs -> prefs[CLOSE_APP_ON_GAME_END_KEY] = enabled }
     }
 
     private fun GameLaunchOverride.matches(

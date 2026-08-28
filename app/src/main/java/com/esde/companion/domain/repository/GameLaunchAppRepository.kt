@@ -42,4 +42,12 @@ interface GameLaunchAppRepository {
     fun observeLaunchDisplayTarget(): Flow<GameLaunchDisplayTarget>
 
     suspend fun setLaunchDisplayTarget(target: GameLaunchDisplayTarget)
+
+    /** Global (not per-system/per-game) setting: whether to close the app a Game Launch
+     * Override started once the game that triggered it ends - see
+     * [com.esde.companion.data.gamelist.GameLaunchOverrideCoordinator]'s kdoc for what "close"
+     * and "ends" mean here. Off by default. */
+    fun observeCloseAppOnGameEnd(): Flow<Boolean>
+
+    suspend fun setCloseAppOnGameEnd(enabled: Boolean)
 }

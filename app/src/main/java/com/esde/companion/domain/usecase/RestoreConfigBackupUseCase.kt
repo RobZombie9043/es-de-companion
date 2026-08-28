@@ -66,6 +66,7 @@ class RestoreConfigBackupUseCase(
                 setGameOverride(it.systemShortName, it.relativeRomPath, it.packageName)
             }
             setLaunchDisplayTarget(snapshot.gameLaunchDisplayTarget)
+            setCloseAppOnGameEnd(snapshot.closeAppOnGameEndEnabled)
         }
     }
 

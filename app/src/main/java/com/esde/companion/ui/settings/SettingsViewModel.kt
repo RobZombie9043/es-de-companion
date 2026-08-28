@@ -20,6 +20,7 @@ import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveCloseAppOnGameEndUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
@@ -53,6 +54,7 @@ import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
+import com.esde.companion.domain.usecase.SetCloseAppOnGameEndUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -160,6 +162,8 @@ class SettingsViewModel(
     private val setVolumeSyncModeUseCase: SetVolumeSyncModeUseCase,
     private val observeGameLaunchDisplayTargetUseCase: ObserveGameLaunchDisplayTargetUseCase,
     private val setGameLaunchDisplayTargetUseCase: SetGameLaunchDisplayTargetUseCase,
+    private val observeCloseAppOnGameEndUseCase: ObserveCloseAppOnGameEndUseCase,
+    private val setCloseAppOnGameEndUseCase: SetCloseAppOnGameEndUseCase,
     private val volumeSyncSecondarySettingPresent: Boolean,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -286,6 +290,7 @@ class SettingsViewModel(
             hallSensorCalibration = observeHallSensorCalibrationUseCase().first(),
             volumeSyncMode = observeVolumeSyncModeUseCase().first(),
             gameLaunchDisplayTarget = observeGameLaunchDisplayTargetUseCase().first(),
+            closeAppOnGameEndEnabled = observeCloseAppOnGameEndUseCase().first(),
         )
     }
 
@@ -463,6 +468,11 @@ class SettingsViewModel(
     fun onGameLaunchDisplayTargetChanged(target: GameLaunchDisplayTarget) {
         _uiState.value = _uiState.value.copy(gameLaunchDisplayTarget = target)
         viewModelScope.launch { setGameLaunchDisplayTargetUseCase(target) }
+    }
+
+    fun onCloseAppOnGameEndEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(closeAppOnGameEndEnabled = enabled)
+        viewModelScope.launch { setCloseAppOnGameEndUseCase(enabled) }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

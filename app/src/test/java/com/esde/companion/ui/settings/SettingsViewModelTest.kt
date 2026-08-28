@@ -31,6 +31,7 @@ import com.esde.companion.domain.usecase.FakeGameMatchOverrideRepository
 import com.esde.companion.domain.usecase.FakeThorSettingsRepository
 import com.esde.companion.domain.usecase.FakeWidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveCloseAppOnGameEndUseCase
 import com.esde.companion.domain.usecase.ObserveCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveDockEnabledUseCase
@@ -64,6 +65,7 @@ import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
 import com.esde.companion.domain.usecase.SetAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.SetBluetoothPermissionRequestedUseCase
+import com.esde.companion.domain.usecase.SetCloseAppOnGameEndUseCase
 import com.esde.companion.domain.usecase.SetCloseCompanionOnQuitEnabledUseCase
 import com.esde.companion.domain.usecase.SetDebugLoggingEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockEnabledUseCase
@@ -542,6 +544,8 @@ class SettingsViewModelTest {
                 setVolumeSyncModeUseCase = SetVolumeSyncModeUseCase(thorSettingsRepository),
                 observeGameLaunchDisplayTargetUseCase = ObserveGameLaunchDisplayTargetUseCase(gameLaunchAppRepository),
                 setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository),
+                observeCloseAppOnGameEndUseCase = ObserveCloseAppOnGameEndUseCase(gameLaunchAppRepository),
+                setCloseAppOnGameEndUseCase = SetCloseAppOnGameEndUseCase(gameLaunchAppRepository),
                 volumeSyncSecondarySettingPresent = false,
             )
         return viewModel to appDrawerSettingsRepository

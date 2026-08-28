@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -102,6 +103,8 @@ internal fun UISettingsContent(
     onManageGameLaunchOverridesClick: () -> Unit,
     gameLaunchDisplayTarget: GameLaunchDisplayTarget,
     onGameLaunchDisplayTargetChanged: (GameLaunchDisplayTarget) -> Unit,
+    closeAppOnGameEndEnabled: Boolean,
+    onCloseAppOnGameEndEnabledChanged: (Boolean) -> Unit,
 ) {
     Column(
         modifier =
@@ -147,6 +150,8 @@ internal fun UISettingsContent(
             launchDisplayTarget = gameLaunchDisplayTarget,
             onLaunchDisplayTargetChanged = onGameLaunchDisplayTargetChanged,
             onManageClick = onManageGameLaunchOverridesClick,
+            closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
+            onCloseAppOnGameEndEnabledChanged = onCloseAppOnGameEndEnabledChanged,
         )
     }
 }
@@ -154,9 +159,11 @@ internal fun UISettingsContent(
 /**
  * Settings > UI Settings > Game Launch Override - the entry point into the system/game browser
  * (see [com.esde.companion.ui.main.LongPressSettingsMenu]'s `GameLaunchOverrideSystems`/
- * `GameLaunchOverrideGames` pages) plus the one setting that isn't per-system/per-game: a global
- * choice of which display a launched app opens on (see [GameLaunchDisplayTarget]). A segmented
- * row rather than a dropdown - only two options, well under
+ * `GameLaunchOverrideGames` pages) plus the two settings that aren't per-system/per-game: a
+ * global choice of which display a launched app opens on (see [GameLaunchDisplayTarget]), and
+ * whether that launched app gets force-stopped once the game that triggered it ends (see
+ * [com.esde.companion.data.gamelist.GameLaunchOverrideCoordinator]'s kdoc - Thor-only, best-effort,
+ * off by default). A segmented row rather than a dropdown - only two options, well under
  * [SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD].
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -165,6 +172,8 @@ private fun GameLaunchOverrideSetting(
     launchDisplayTarget: GameLaunchDisplayTarget,
     onLaunchDisplayTargetChanged: (GameLaunchDisplayTarget) -> Unit,
     onManageClick: () -> Unit,
+    closeAppOnGameEndEnabled: Boolean,
+    onCloseAppOnGameEndEnabledChanged: (Boolean) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -212,6 +221,13 @@ private fun GameLaunchOverrideSetting(
                     }
                 }
             }
+            ToggleSettingRow(
+                icon = Icons.Filled.Close,
+                title = "Close App on Game End",
+                description = "Force-stop the launched app once the game ends (Thor devices only)",
+                enabled = closeAppOnGameEndEnabled,
+                onEnabledChanged = onCloseAppOnGameEndEnabledChanged,
+            )
         }
     }
 }

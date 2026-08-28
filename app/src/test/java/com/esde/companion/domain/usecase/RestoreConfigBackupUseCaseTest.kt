@@ -61,6 +61,7 @@ private class SourceFixture {
             initialSystemDefaults = mapOf("n64" to "com.example.launcher"),
             initialGameOverrides = listOf(launchOverride),
             initialLaunchDisplayTarget = GameLaunchDisplayTarget.OtherScreen,
+            initialCloseAppOnGameEnd = true,
         )
     val calibration =
         HallSensorCalibration(sensorType = 5, sensorName = "Hall Sensor", closedValue = 1f, openValue = 0f)
@@ -153,6 +154,7 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(mapOf("n64" to "com.example.launcher"), targetGameLaunchApp.observeSystemDefaults().first())
             assertEquals(listOf(source.launchOverride), targetGameLaunchApp.observeGameOverrides().first())
             assertEquals(GameLaunchDisplayTarget.OtherScreen, targetGameLaunchApp.observeLaunchDisplayTarget().first())
+            assertTrue(targetGameLaunchApp.observeCloseAppOnGameEnd().first())
         }
 
     @Test

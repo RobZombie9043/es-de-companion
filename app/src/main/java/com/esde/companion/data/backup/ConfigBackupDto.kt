@@ -76,6 +76,7 @@ internal data class ConfigBackupDto(
     val gameLaunchSystemDefaults: Map<String, String> = emptyMap(),
     val gameLaunchOverrides: List<GameLaunchOverrideDto> = emptyList(),
     val gameLaunchDisplayTarget: String = "ThisScreen",
+    val closeAppOnGameEndEnabled: Boolean = false,
 )
 
 @Serializable

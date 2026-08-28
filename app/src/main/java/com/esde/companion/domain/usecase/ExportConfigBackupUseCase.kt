@@ -71,6 +71,7 @@ class ExportConfigBackupUseCase(
                     gameLaunchSystemDefaults = gameLaunchAppRepository.observeSystemDefaults().first(),
                     gameLaunchOverrides = gameLaunchAppRepository.observeGameOverrides().first(),
                     gameLaunchDisplayTarget = gameLaunchAppRepository.observeLaunchDisplayTarget().first(),
+                    closeAppOnGameEndEnabled = gameLaunchAppRepository.observeCloseAppOnGameEnd().first(),
                 )
             }
         return configBackupRepository.serialize(snapshot)

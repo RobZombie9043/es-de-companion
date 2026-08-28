@@ -68,4 +68,5 @@ data class SettingsUiState(
     val volumeSyncMode: VolumeSyncMode = VolumeSyncMode.Linked,
     val volumeSyncSecondarySettingPresent: Boolean = false,
     val gameLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
+    val closeAppOnGameEndEnabled: Boolean = false,
 )

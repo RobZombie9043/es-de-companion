@@ -5,14 +5,12 @@ import com.esde.companion.data.apps.AppLauncher
 import com.esde.companion.data.apps.CompanionDisplayHolder
 import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.debug.DebugFileLogger
+import com.esde.companion.data.thor.TaskKillerShell
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.resolveGameLaunchPackage
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
-import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
-import com.esde.companion.domain.usecase.ObserveGameLaunchOverridesUseCase
-import com.esde.companion.domain.usecase.ObserveGameLaunchSystemDefaultsUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -27,17 +25,28 @@ import kotlinx.coroutines.launch
  * so this is unconditionally safe to keep running.
  *
  * Modeled on [com.esde.companion.data.thor.AutoFpsCoordinator]'s shape: independent collectors
- * keep the latest system-defaults/game-overrides/display-target snapshots in `@Volatile` fields,
- * and one more reacts to the actual [AppState] stream. No `distinctUntilChanged` is needed on the
- * `AppState` collection - it's a `StateFlow`, which already conflates truly-consecutive-identical
- * emissions, and any real replay of the same game has a non-[AppState.PlayingGame] state in
- * between (quitting to a menu, browsing away), so it naturally re-fires on a genuine restart.
+ * keep the latest system-defaults/game-overrides/display-target/close-on-end snapshots in
+ * `@Volatile` fields, and one more reacts to the actual [AppState] stream. No
+ * `distinctUntilChanged` is needed on the `AppState` collection - it's a `StateFlow`, which
+ * already conflates truly-consecutive-identical emissions, and any real replay of the same game
+ * has a non-[AppState.PlayingGame] state in between (quitting to a menu, browsing away), so it
+ * naturally re-fires on a genuine restart.
+ *
+ * When Settings > UI Settings > Game Launch Override's "Close App on Game End" toggle is on, the
+ * app most recently launched by [onGameStarted] is force-stopped the moment [AppState] moves away
+ * from [AppState.PlayingGame] ("ends" here means that state transition, not a literal ES-DE
+ * `game-end` scripting event - the reducer already folds that into whatever [AppState] comes
+ * next). Closing reuses [TaskKillerShell.forceStop] - the same root-shell mechanism Thor
+ * Settings' Task Killer uses - rather than a new mechanism: there's no public, unprivileged
+ * Android API to close another app's foreground activity from outside it, so like every other
+ * [com.esde.companion.data.thor.PrivilegedShell] consumer this is a Thor-only, best-effort
+ * capability that silently no-ops (logged, never crashes) on firmware where the privileged
+ * service isn't available - the toggle simply does nothing there, which is safe since it
+ * defaults off.
  */
 class GameLaunchOverrideCoordinator(
     private val observeAppState: ObserveAppStateUseCase,
-    private val observeGameLaunchSystemDefaults: ObserveGameLaunchSystemDefaultsUseCase,
-    private val observeGameLaunchOverrides: ObserveGameLaunchOverridesUseCase,
-    private val observeGameLaunchDisplayTarget: ObserveGameLaunchDisplayTargetUseCase,
+    private val settings: GameLaunchOverrideSettings,
     private val companionDisplayHolder: CompanionDisplayHolder,
     private val debugFileLogger: DebugFileLogger,
 ) {
@@ -50,6 +59,14 @@ class GameLaunchOverrideCoordinator(
     @Volatile
     private var displayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen
 
+    @Volatile
+    private var closeAppOnGameEnd: Boolean = false
+
+    // Only ever read/written from the single observeAppState collector below, so no
+    // synchronization beyond @Volatile's visibility guarantee is needed.
+    @Volatile
+    private var lastLaunchedPackage: String? = null
+
     fun start(
         context: Context,
         applicationScope: CoroutineScope,
@@ -57,17 +74,20 @@ class GameLaunchOverrideCoordinator(
         val appContext = context.applicationContext
 
         applicationScope.launch {
-            observeGameLaunchSystemDefaults().collect { systemDefaults = it }
+            settings.observeSystemDefaults().collect { systemDefaults = it }
         }
         applicationScope.launch {
-            observeGameLaunchOverrides().collect { gameOverrides = it }
+            settings.observeOverrides().collect { gameOverrides = it }
         }
         applicationScope.launch {
-            observeGameLaunchDisplayTarget().collect { displayTarget = it }
+            settings.observeDisplayTarget().collect { displayTarget = it }
+        }
+        applicationScope.launch {
+            settings.observeCloseAppOnGameEnd().collect { closeAppOnGameEnd = it }
         }
         applicationScope.launch {
             observeAppState().collect { state ->
-                if (state is AppState.PlayingGame) onGameStarted(appContext, state)
+                if (state is AppState.PlayingGame) onGameStarted(appContext, state) else onGameEnded()
             }
         }
     }
@@ -97,7 +117,16 @@ class GameLaunchOverrideCoordinator(
                     SecondaryDisplayResolver.secondaryDisplayId(context, companionDisplayHolder.displayId)
             }
         AppLauncher.launch(context, packageName, displayId)
+        lastLaunchedPackage = packageName
         debugFileLogger.logInfo(LOG_TAG, "Launched $packageName for ${state.gameName} (${state.systemShortName})")
+    }
+
+    private fun onGameEnded() {
+        val packageName = lastLaunchedPackage ?: return
+        lastLaunchedPackage = null
+        if (!closeAppOnGameEnd) return
+        val stopped = TaskKillerShell.forceStop(packageName)
+        debugFileLogger.logInfo(LOG_TAG, "${if (stopped) "Closed" else "FAILED to close"} $packageName on game end")
     }
 
     private companion object {
