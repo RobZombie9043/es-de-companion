@@ -86,7 +86,13 @@ class GameLaunchOverrideCoordinator(
 
         val displayId =
             when (displayTarget) {
-                GameLaunchDisplayTarget.ThisScreen -> null
+                // context is an application Context (this coordinator runs in application
+                // scope), so it isn't tied to any display - omitting a display option
+                // entirely does NOT mean "wherever Companion is running," it means Android
+                // picks one by its own heuristics (observed on-device: intermittently
+                // landing on the other screen). companionDisplayHolder.displayId is the
+                // only reliable source for "Companion's own screen" from here.
+                GameLaunchDisplayTarget.ThisScreen -> companionDisplayHolder.displayId
                 GameLaunchDisplayTarget.OtherScreen ->
                     SecondaryDisplayResolver.secondaryDisplayId(context, companionDisplayHolder.displayId)
             }
