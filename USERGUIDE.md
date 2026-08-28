@@ -394,6 +394,8 @@ Automatically launch a specific app whenever ES-DE starts playing a game — use
 - **System default**: pick an app for a whole system — every game in that system launches it unless a per-game override says otherwise.
 - **Per-game override**: drill into a system to pick an individual game and assign it its own app, overriding that system's default. An override can also be set to "nothing," which suppresses the system default for that one game rather than falling back to it.
 - **Display target**: a single global "This Screen" / "Other Screen" choice (default: This Screen) controls which display the launched app opens on — This Screen is Companion's own screen (temporarily replacing its UI there), Other Screen is whichever display ES-DE/the game itself is running on.
+- **Focus automatically returns to the game** once the launched app appears, on Ayn Thor devices — launching an app on either screen steals hardware-key/controller focus, so Companion hands it back once the launched app has actually finished loading. Best-effort and automatic; there's no toggle for it.
+- **Close App on Game End** (off by default, Thor devices only): force-stops the launched app once the triggering game ends, reusing the same mechanism as Thor Settings' Task Killer.
 - Nothing launches for a system/game with no override configured — there's no separate on/off toggle needed.
 
 ---
@@ -628,7 +630,7 @@ Everything this app persists as a user setting:
 - Background Music settings (Video is per-widget now, backed up as part of the widget canvases below)
 - Other Settings (Close Companion App on ES-DE Quit, Launch ES-DE on Companion App Start, Debug Logging)
 - App Drawer and Dock settings — hidden apps, grid columns, other-screen launch preferences, folders, and Dock configuration
-- Game Launch Override — system defaults, per-game overrides, and the This Screen/Other Screen display target
+- Game Launch Override — system defaults, per-game overrides, the This Screen/Other Screen display target, and the Close App on Game End toggle
 - Both widget canvases (System View and Game View), including every placed widget and its per-widget configuration
 - Thor Settings, on supported hardware (AYN Thor)
 

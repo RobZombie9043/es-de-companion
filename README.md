@@ -8,7 +8,7 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-1.0.5-blue)
+![Version](https://img.shields.io/badge/version-1.0.6-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 ES-DE Companion is a companion application for [ES-DE](https://es-de.org) that enhances your gaming experience by transforming dual-screen Android devices into immersive retro gaming setups. The app displays beautiful game artwork, videos, and customizable overlay widgets on a secondary screen while you browse and play games in ES-DE.
@@ -91,6 +91,8 @@ _Automatically launch a specific app whenever ES-DE starts playing a game — a 
 - Per-system defaults and per-game overrides, browsed from a `gamelist.xml`-backed system/game picker in Settings
 - A per-game override can also be set to launch nothing, suppressing that system's default for just that one game
 - A single This Screen/Other Screen choice controls which display the launched app opens on
+- Input focus automatically returns to the game once the launched app appears, so it doesn't get stuck on the wrong screen (Thor devices only)
+- Optional "Close App on Game End" toggle force-stops the launched app once the game ends (Thor devices only)
 
 ### Easy Setup
 
