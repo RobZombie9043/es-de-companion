@@ -6,6 +6,8 @@ import com.esde.companion.data.apps.CompanionDisplayHolder
 import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.thor.TaskKillerShell
+import com.esde.companion.data.thor.awaitDisplayFocus
+import com.esde.companion.data.thor.focusDisplay
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
@@ -43,6 +45,18 @@ import kotlinx.coroutines.launch
  * capability that silently no-ops (logged, never crashes) on firmware where the privileged
  * service isn't available - the toggle simply does nothing there, which is safe since it
  * defaults off.
+ *
+ * [onGameStarted] also hands hardware-key focus back once the launched app appears, via
+ * [focusDisplay] - starting an activity on a display necessarily steals focus there, and
+ * nothing else does this today. The rule is deterministic, not "restore whatever was focused
+ * before": focus always goes to whichever of the two known displays *wasn't* the launch target
+ * (`ThisScreen` launches -> focus the other display; `OtherScreen` launches -> focus Companion's
+ * own display), so the game gets focus back either way - including the case where an ES-DE
+ * setting has the game itself landing on Companion's own screen instead of its usual one, which
+ * is exactly why "the other screen" can't be assumed to always mean "the game's screen." Same
+ * Thor-only/best-effort/no-toggle reasoning as above; no public API exists for this either.
+ * [onGameStarted] first waits ([awaitDisplayFocus]) for the launched app to actually take focus
+ * before reclaiming it - see that function's kdoc for the race this avoids.
  */
 class GameLaunchOverrideCoordinator(
     private val observeAppState: ObserveAppStateUseCase,
@@ -104,21 +118,35 @@ class GameLaunchOverrideCoordinator(
                 gameOverrides = gameOverrides,
             ) ?: return
 
-        val displayId =
+        // context is an application Context (this coordinator runs in application scope), so
+        // it isn't tied to any display - omitting a display option entirely does NOT mean
+        // "wherever Companion is running," it means Android picks one by its own heuristics
+        // (observed on-device: intermittently landing on the other screen).
+        // companionDisplayHolder.displayId is the only reliable source for "Companion's own
+        // screen" from here.
+        val companionId = companionDisplayHolder.displayId
+        val secondaryId = SecondaryDisplayResolver.secondaryDisplayId(context, companionId)
+        val (launchDisplayId, focusDisplayId) =
             when (displayTarget) {
-                // context is an application Context (this coordinator runs in application
-                // scope), so it isn't tied to any display - omitting a display option
-                // entirely does NOT mean "wherever Companion is running," it means Android
-                // picks one by its own heuristics (observed on-device: intermittently
-                // landing on the other screen). companionDisplayHolder.displayId is the
-                // only reliable source for "Companion's own screen" from here.
-                GameLaunchDisplayTarget.ThisScreen -> companionDisplayHolder.displayId
-                GameLaunchDisplayTarget.OtherScreen ->
-                    SecondaryDisplayResolver.secondaryDisplayId(context, companionDisplayHolder.displayId)
+                GameLaunchDisplayTarget.ThisScreen -> companionId to secondaryId
+                GameLaunchDisplayTarget.OtherScreen -> secondaryId to companionId
             }
-        AppLauncher.launch(context, packageName, displayId)
+        AppLauncher.launch(context, packageName, launchDisplayId)
         lastLaunchedPackage = packageName
         debugFileLogger.logInfo(LOG_TAG, "Launched $packageName for ${state.gameName} (${state.systemShortName})")
+
+        if (focusDisplayId != null) {
+            // Wait for the launched app to actually grab focus before trying to reclaim it -
+            // firing immediately races the app's own (slower) focus-steal as it finishes
+            // loading, and loses: the later steal simply overwrites an early restore attempt
+            // with nothing left to correct it. See awaitDisplayFocus's kdoc.
+            if (launchDisplayId != null) awaitDisplayFocus(launchDisplayId)
+            val focused = focusDisplay(context, focusDisplayId)
+            debugFileLogger.logInfo(
+                LOG_TAG,
+                "${if (focused) "Restored" else "FAILED to restore"} focus to display $focusDisplayId",
+            )
+        }
     }
 
     private fun onGameEnded() {
