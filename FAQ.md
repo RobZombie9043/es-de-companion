@@ -263,8 +263,8 @@ Track selection is always random — there's no separate shuffle toggle because 
 
 ### Videos aren't playing. How do I fix this?
 
-1. **Check the setting**: Settings → Video Playback → "Background Video" must be on (it's off by default)
-2. **Check the delay**: there's a configurable 0-10 second delay (default 3s) before playback starts — until then, the widget canvas underneath stays visible
+1. **Check for a Video widget**: video is a widget now, not a global setting — add a **Video** widget to the Game canvas (long-press → Widgets → Add Widget → Video). No Video widget placed means no video plays.
+2. **Check the Start Delay**: each Video widget has its own configurable 0-10 second delay before playback starts (0/"Off" by default) — until then, the widget canvas underneath stays visible
 3. **File format**: supported formats are MP4, MKV, AVI, WMV, MOV, WEBM, placed in each system's `videos/` media folder
 4. **Media folder**: verify Settings → Setup → Media folder is correct
 

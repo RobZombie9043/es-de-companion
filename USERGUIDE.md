@@ -13,13 +13,14 @@ This comprehensive guide covers everything you need to know about ES-DE Companio
 5. [Widget Overlay System](#widget-overlay-system)
 6. [App Drawer](#app-drawer)
 7. [App Dock](#app-dock)
-8. [Video & Music](#video--music)
-9. [Settings Reference](#settings-reference)
-10. [File Structure](#file-structure)
-11. [How Log Events Work](#how-log-events-work)
-12. [In-App Updates](#in-app-updates)
-13. [Backup & Restore](#backup--restore)
-14. [Advanced Topics](#advanced-topics)
+8. [Game Launch Override](#game-launch-override)
+9. [Video & Music](#video--music)
+10. [Settings Reference](#settings-reference)
+11. [File Structure](#file-structure)
+12. [How Log Events Work](#how-log-events-work)
+13. [In-App Updates](#in-app-updates)
+14. [Backup & Restore](#backup--restore)
+15. [Advanced Topics](#advanced-topics)
 
 ---
 
@@ -174,7 +175,12 @@ ES-DE Companion can show up to four small floating buttons on the main screen �
 | **Manual** | Shown whenever the game currently playing, browsing, or displayed by the screensaver has a scanned manual PDF. Tapping opens it in the manual viewer — the same viewer the "Manual" Game Playing Screen Behavior option (see [Settings Reference](#settings-reference)) shows automatically, but on demand and independent of that setting. |
 | **App Drawer** | Opens the [App Drawer](#app-drawer), the same as swiping up. |
 | **App** | Launches a specific app you choose. See [Launching a Custom App](#launching-a-custom-app) below. |
+| **Clock** | Display-only — shows the current time, ticking every second, using your device's own 12h/24h format preference. Top corners only. |
+| **System Status** | Display-only — shows Battery (always, with charge tier and a charging bolt), Wifi, and Bluetooth. Wifi/Bluetooth icons only appear while actually connected; there's no "off" icon variant for either. Top corners only. |
+| **Clock & System Status** | Both of the above combined in one wide button. Top corners only. |
 | **None** | No button shown in that corner. |
+
+Clock, System Status, and Clock & System Status are variable-width (unlike every other FAB type, which is a fixed square) since their content isn't a fixed size. Showing Bluetooth status requires the Bluetooth permission on Android 12+; the first time you assign a System Status-family FAB, a one-time rationale dialog asks for it (declining just means the Bluetooth icon never appears).
 
 ### Defaults
 
@@ -230,7 +236,10 @@ While ES-DE Companion hasn't seen any activity yet (idle), no widget canvas is s
 | Widget Type | Description | Media Folder |
 |------------|-------------|--------------|
 | **Marquee** | Arcade-style marquee artwork | `marquees/` |
+| **System Logo** | The current game's system logo (same source as the System canvas widget) | (none — logo lookup only) |
+| **System Image** | The current game's system representative image (same source as the System canvas widget) | (none — image lookup only) |
 | **Description** | Scrollable text description, from `gamelist.xml` | (none — text only) |
+| **Rating** | The game's `<rating>` from `gamelist.xml`, shown as five filled/unfilled stars | (none — text/star only) |
 | **Box Cover** | Front cover of the game box | `covers/` |
 | **3D Box** | 3D perspective box art | `3dboxes/` |
 | **Mix Image** | ES-DE's composite image (screenshot + metadata) | `miximages/` |
@@ -241,6 +250,9 @@ While ES-DE Companion hasn't seen any activity yet (idle), no widget canvas is s
 | **Physical Media** | Disc/cartridge artwork | `physicalmedia/` |
 | **Custom Image** | An image you pick from your device | N/A |
 | **Color Background** | A solid color panel with adjustable transparency | N/A |
+| **Video** | The game's video, playing while browsing (never during gameplay) — see [Video Playback](#video-playback) | `videos/` |
+
+System Logo and System Image are offered on both canvases — the system a game belongs to is meaningful context either way.
 
 ### Per-Widget Configuration
 
@@ -255,6 +267,8 @@ Configuration options depend on the widget type, shown in this order in the Conf
 - **Blur** and **Darken** sliders (0-100% each) — every image-backed widget.
 - **Color Background** (its own widget type, no image options): 8 preset swatches or a free-form hex color, plus a **Transparency** slider (0-100%).
 - **Description** (its own widget type): **Text Size** (10-36sp), **Text Color**, **Background Color**, and **Background Transparency**.
+- **Rating** (its own widget type): filled/outline star colors, background color/transparency, and a **No Rating Behavior** choice (Hide, or show empty stars) for games with no `<rating>` at all.
+- **Video** (its own widget type, no image options): **Scale Mode** (Contain/Cover), **Pillarbox** (Contain only — black bars or transparent), **Audio** on/off, **Start Delay** (0-10s), **Loop** on/off, and **Render Above UI** — see [Video Playback](#video-playback).
 
 All of the above is set per widget instance, from that widget's own Configure Widget dialog — there's no global transitions/glint/pan-and-zoom setting in Settings. A freshly-added System Logo or Marquee widget starts with the Slide transition and Logo Glint on; a freshly-added System Image or Fan Art background starts with Pan & Zoom on and 10% darken.
 
@@ -372,18 +386,32 @@ The dock's transparency isn't a separate setting — it shares the same master "
 
 ---
 
+## Game Launch Override
+
+Automatically launch a specific app whenever ES-DE starts playing a game — useful for handing off to a standalone emulator or launcher instead of ES-DE's own RetroArch/core setup for particular systems or games.
+
+- Configured in **Settings → UI Settings → Game Launch Override**, which opens a browser of every system that has a `gamelist.xml` (the same source the Description widget reads from — not a full ES-DE library browser, just enough to assign overrides).
+- **System default**: pick an app for a whole system — every game in that system launches it unless a per-game override says otherwise.
+- **Per-game override**: drill into a system to pick an individual game and assign it its own app, overriding that system's default. An override can also be set to "nothing," which suppresses the system default for that one game rather than falling back to it.
+- **Display target**: a single global "This Screen" / "Other Screen" choice (default: This Screen) controls which display the launched app opens on — This Screen is Companion's own screen (temporarily replacing its UI there), Other Screen is whichever display ES-DE/the game itself is running on.
+- Nothing launches for a system/game with no override configured — there's no separate on/off toggle needed.
+
+---
+
 ## Video & Music
 
 ### Video Playback
 
-Optional video playback for the game you're currently browsing.
+Video is a **widget**, not a global setting — add a **Video** widget to the Game canvas (see [Widget Overlay System](#widget-overlay-system)) to enable it. There's no separate on/off toggle: no Video widget placed means no video plays.
 
-- **Off by default.**
 - Plays **only while browsing a specific game** — never during actual gameplay, never during the screensaver, and never while browsing systems.
-- **Video Start Delay**: 0-10 seconds before playback starts (default 3s). Until playback actually begins, the widget canvas underneath remains visible.
-- **Video Audio**: on/off toggle for whether the video plays with sound (default on).
+- **Start Delay**: 0-10 seconds before playback starts, shown as "Off" at 0 (the default for a freshly-added widget). Until playback actually begins, the widget canvas underneath remains visible.
+- **Audio**: on/off toggle for whether the video plays with sound (default on).
+- **Loop**: on/off toggle — repeats the video, or plays it once and holds on the final frame (default on).
+- **Scale Mode**: Contain (letterboxed) or Cover (crops to fill); Contain-only adds a **Pillarbox** choice (black bars or transparent).
+- **Render Above UI**: an opt-out per-widget toggle to draw this specific video above everything else (FABs, App Dock, App Drawer, dim/black screen covers) instead of at the normal widget-canvas layer.
 
-Configured in **Settings → Video Playback**.
+All of the above is configured per widget instance, from that Video widget's own Configure Widget dialog — see [Per-Widget Configuration](#per-widget-configuration).
 
 ### Background Music
 
@@ -425,11 +453,12 @@ Tapping this category in the Settings popup jumps straight to the widget editor 
 |---|---|---|---|
 | Theme | Segmented control | Auto / Light / Dark | Auto |
 | Overlay Opacity | Slider | 0-100% | 80% — applies to the App Drawer, App Dock, and other overlay surfaces |
+| Floating Action Buttons | Four dropdowns, one per corner | Music / Settings / Manual / App Drawer / App / Clock / System Status / Clock & System Status / None (Music/Clock/System Status/Clock & System Status offered only in the top corners) | Top Left: Music, Top Right: Settings, Bottom Left: None, Bottom Right: Manual |
+| Screensaver Screen Behavior | Dropdown | On / Dim / Off | On |
+| Screensaver Dimming Amount | Slider (shown only when Screensaver Screen Behavior is Dim) | 0-100% | 50% |
 | Game Playing Screen Behavior | Segmented control | On / Dim / Off / Manual | On |
 | Game Playing Dimming Amount | Slider (shown only when Game Playing Screen Behavior is Dim) | 0-100% | 50% |
-| Screensaver Screen Behavior | Segmented control | On / Dim / Off | On |
-| Screensaver Dimming Amount | Slider (shown only when Screensaver Screen Behavior is Dim) | 0-100% | 50% |
-| Floating Action Buttons | Four dropdowns, one per corner | Music / Settings / Manual / App Drawer / App / None | Top Left: Music, Top Right: Settings, Bottom Left: None, Bottom Right: Manual |
+| Game Launch Override | Opens the system/game browser, plus a This Screen/Other Screen display picker | See [Game Launch Override](#game-launch-override) | This Screen |
 
 `Screen Behavior` options: **On** leaves the screen as normal; **Dim** overlays a translucent black scrim (touches still pass through), with its darkness set independently by the matching Dimming Amount slider; **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
 
@@ -452,14 +481,6 @@ See [Floating Action Buttons](#floating-action-buttons) for what each corner opt
 `Sort folders on top of apps`: when on, folders are grouped ahead of all ungrouped apps; when off, folders and apps are interleaved into one alphabetical list by name/label. See [Folders](#folders).
 
 `Show Search Bar`: shows or hides the search field and Android/App Settings shortcut buttons above the drawer grid. Turning it off clears any in-progress search query. See [Using the App Drawer](#using-the-app-drawer).
-
-### Video Playback
-
-| Setting | Control | Options | Default |
-|---|---|---|---|
-| Background Video | Toggle | On/Off | Off |
-| Video Start Delay | Slider (shown only if enabled) | 0-10 seconds | 3 seconds |
-| Video Audio | Toggle (shown only if enabled) | On/Off | On |
 
 ### Background Music
 
@@ -604,10 +625,12 @@ Everything this app persists as a user setting:
 
 - Setup folder paths (ES-DE folder, Media folder, Custom System Images/Logos/Music folders)
 - UI Settings (theme, overlay opacity, Screen Behavior, Floating Action Button assignments)
-- Video Playback and Background Music settings
+- Background Music settings (Video is per-widget now, backed up as part of the widget canvases below)
 - Other Settings (Close Companion App on ES-DE Quit, Launch ES-DE on Companion App Start, Debug Logging)
 - App Drawer and Dock settings — hidden apps, grid columns, other-screen launch preferences, folders, and Dock configuration
+- Game Launch Override — system defaults, per-game overrides, and the This Screen/Other Screen display target
 - Both widget canvases (System View and Game View), including every placed widget and its per-widget configuration
+- Thor Settings, on supported hardware (AYN Thor)
 
 Not included: the onboarding-complete flag, the "what's new" last-seen-version marker, and other purely internal bookkeeping that isn't really a user setting.
 
