@@ -8,7 +8,7 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-1.0.4-blue)
+![Version](https://img.shields.io/badge/version-1.0.5-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 ES-DE Companion is a companion application for [ES-DE](https://es-de.org) that enhances your gaming experience by transforming dual-screen Android devices into immersive retro gaming setups. The app displays beautiful game artwork, videos, and customizable overlay widgets on a secondary screen while you browse and play games in ES-DE.
@@ -45,7 +45,7 @@ _The companion screen automatically updates as you browse games in ES-DE, showin
 
 **Display Features:**
 - Real-time synchronization with ES-DE by reading its own `es_log.txt` directly — no scripts to install or maintain
-- Optional video playback while browsing games, with a configurable start delay and an audio toggle
+- Optional video playback while browsing games, as a placeable/resizable widget with a configurable start delay, loop, and audio toggle
 - Optional background music tied to what you're browsing, with volume ducking or pause while a video plays
 - System logo display (207 built-in logos + custom logo overrides)
 - Per-widget image/logo transitions, Logo Glint, and Pan & Zoom
@@ -57,7 +57,8 @@ _Create fully customizable overlay widgets to display game artwork - marquees, b
 
 **Widget Features:**
 - Two independent canvases — System View and Game View — each with their own widget layout
-- Up to 12 widget types per canvas: Marquee, Box Cover, 3D Box, Mix Image, Screenshot, Fan Art, Title Screen, Back Cover, Physical Media, System Logo, System Image, Description, Custom Image, and Color Background
+- 6 widget types on System View: System Logo, System Image, Random Game Fan Art, Random Game Screenshot, Custom Image, and Color Background
+- 16 widget types on Game View: Marquee, System Logo, System Image, Description, Rating, Box Cover, 3D Box, Mix Image, Screenshot, Fan Art, Title Screen, Back Cover, Physical Media, Custom Image, Color Background, and Video
 - Drag-and-drop positioning and resizing, snapped to a grid
 - Independent Left/Right/Top/Bottom resize handles with edge-snapping near the screen boundary
 - Layer ordering (move forward/backward)
@@ -82,6 +83,15 @@ _A full Android app launcher accessible from the companion screen, plus an optio
 - Same this-screen/other-screen launch preferences as the App Drawer
 - A pinnable App Drawer shortcut slot for one-tap drawer access alongside your apps
 
+### Game Launch Override
+
+_Automatically launch a specific app whenever ES-DE starts playing a game — a standalone emulator or launcher instead of ES-DE's own setup, on a per-system or per-game basis._
+
+**Game Launch Override Features:**
+- Per-system defaults and per-game overrides, browsed from a `gamelist.xml`-backed system/game picker in Settings
+- A per-game override can also be set to launch nothing, suppressing that system's default for just that one game
+- A single This Screen/Other Screen choice controls which display the launched app opens on
+
 ### Easy Setup
 
 _The built-in onboarding wizard guides you through configuration on first launch — no scripts to generate, just a few settings to confirm._
@@ -99,7 +109,8 @@ _The built-in onboarding wizard guides you through configuration on first launch
 _Up to four small buttons — one per screen corner — each independently configurable to whatever's most useful to you._
 
 **FAB Features:**
-- Six types per corner: Music Playback, Settings, Game Manual, App Drawer, a specific app you pick, or none
+- Nine types per corner: Music Playback, Settings, Game Manual, App Drawer, a specific app you pick, Clock, System Status (battery/wifi/bluetooth), Clock & System Status combined, or none
+- Music Playback and the Clock/System Status types are offered only in the two top corners
 - Music Playback can occupy either top corner (but only one at a time) — assigning it to the other top corner swaps the displaced button into place rather than discarding it
 - The Game Manual button appears automatically whenever the current game has a scanned manual, independent of the automatic "Manual" screen behavior setting
 - A custom-app button follows the same this-screen/other-screen launch preference (and indicator dot) as the App Drawer and App Dock
@@ -130,7 +141,7 @@ _ES-DE Companion checks GitHub for newer releases itself — no need to watch th
 _Export your entire configuration to a file, and bring it back with one restore — handy before a reinstall, a factory reset, or setting up a replacement device._
 
 **Backup Features:**
-- Settings → Setup → "Backup & Restore" exports every setting — Setup folder paths, UI/Video/Music/Other Settings, Floating Action Button assignments, App Drawer/Dock configuration and folders, and both widget canvases — to a single JSON file you choose the name and location for
+- Settings → Setup → "Backup & Restore" exports every setting — Setup folder paths, UI/Music/Other Settings, Floating Action Button assignments, Game Launch Override, App Drawer/Dock configuration and folders, both widget canvases (Video widget config included), and Thor Settings on supported hardware — to a single JSON file you choose the name and location for
 - Restoring reads a previously exported file back, with a confirmation step first since it overwrites every current setting
 - No extra permissions or setup required beyond picking where the file goes
 
