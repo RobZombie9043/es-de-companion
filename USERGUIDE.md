@@ -14,13 +14,14 @@ This comprehensive guide covers everything you need to know about ES-DE Companio
 6. [App Drawer](#app-drawer)
 7. [App Dock](#app-dock)
 8. [Game Launch Override](#game-launch-override)
-9. [Video & Music](#video--music)
-10. [Settings Reference](#settings-reference)
-11. [File Structure](#file-structure)
-12. [How Log Events Work](#how-log-events-work)
-13. [In-App Updates](#in-app-updates)
-14. [Backup & Restore](#backup--restore)
-15. [Advanced Topics](#advanced-topics)
+9. [Thor Settings](#thor-settings)
+10. [Video & Music](#video--music)
+11. [Settings Reference](#settings-reference)
+12. [File Structure](#file-structure)
+13. [How Log Events Work](#how-log-events-work)
+14. [In-App Updates](#in-app-updates)
+15. [Backup & Restore](#backup--restore)
+16. [Advanced Topics](#advanced-topics)
 
 ---
 
@@ -400,6 +401,49 @@ Automatically launch a specific app whenever ES-DE starts playing a game — use
 
 ---
 
+## Thor Settings
+
+Four extra settings panels, visible only when the app detects it's running on an AYN Thor device — reachable via **Settings → Thor Settings**. Each one needs the app's Accessibility Service permission granted (a "Grant" link appears inline in the panel whenever it isn't), since that's how these features detect BACK-button holds, foreground-app changes, and volume-key presses. Two of the four (Auto FPS Mode and Task Killer) also depend on a privileged settings service being present on the device's firmware — if it isn't, the panel says so and the feature is unavailable rather than silently doing nothing. All four are included in Backup & Restore.
+
+### Lid Wake Guard
+
+Re-locks the screen if a stray button press wakes it while the lid is still closed.
+
+- Uses the device's Hall-effect (lid) sensor, auto-detected and calibrated the first time you open this panel — since the panel can only be showing while the screen is on and you're looking at it, the lid can't be closed at that moment, so whatever the sensor reads right then is recorded as "open." There's no manual sensor picker.
+- Status text under the toggle shows whether a sensor was found and calibrated.
+- No system notification — check the toggle/status in this panel if you want to confirm it's active.
+
+### Auto FPS Mode
+
+Automatically boosts the top screen's refresh rate to 120Hz for a chosen set of apps.
+
+- **Choose Trigger Apps** opens a picker for which apps get the boost while they're in the foreground — including apps launched from the [App Drawer](#app-drawer), not just ES-DE itself.
+- Detects the foreground app via the Accessibility Service, and writes the refresh rate via a privileged settings service — if that service isn't present on your firmware, the panel says Auto FPS Mode is unavailable.
+
+### Task Killer
+
+Hold the physical BACK button for about a second to force-quit an app.
+
+- **Force-Quit Target** controls which app(s) actually get force-stopped:
+  - **Focus App** (default) — whichever app currently has hardware-key/controller focus, on whichever screen that is. This is the original behavior.
+  - **This Screen** — the app on Companion's own screen.
+  - **Other Screen** — the app on the other screen.
+  - **Both Screens** — the app on each screen, force-stopped independently.
+- **Choose Excluded Apps** lets you add apps that should never be force-stopped, on top of ES-DE and Companion itself, which are always protected regardless of target.
+- A short vibration confirms the hold registered once you've held BACK long enough; the actual force-quit only happens on release, so a still-held button never leaks into whatever app appears next.
+- Needs the same privileged settings service as Auto FPS Mode — unavailable with a clear message if your firmware doesn't have it.
+
+### Volume Control
+
+Changes what the physical volume buttons do across the two screens.
+
+- **Default**: standard system volume behavior — whichever screen/app currently has focus captures the volume keys, same as without this feature.
+- **Synced**: the volume buttons control both screens together.
+- **Focus**: the volume buttons control whichever screen currently has focus.
+- Some firmware doesn't expose a way to control the bottom screen's volume separately — if so, this panel notes that rather than pretending the setting works.
+
+---
+
 ## Video & Music
 
 ### Video Playback
@@ -521,6 +565,10 @@ There's no "Show Settings Button" toggle anymore — Settings visibility on the 
 | Backup & Restore | Export Backup / Restore Backup buttons | n/a |
 
 **Backup & Restore** is the bottom row of this category — see [Backup & Restore](#backup--restore) for the full export/restore flow.
+
+### Thor Settings
+
+Only shown when the app detects an AYN Thor device. Four independent toggles/pickers — Lid Wake Guard, Auto FPS Mode, Task Killer, Volume Control — each with its own accessibility-permission/firmware-availability messaging. See [Thor Settings](#thor-settings) for the full breakdown of each one.
 
 ---
 
