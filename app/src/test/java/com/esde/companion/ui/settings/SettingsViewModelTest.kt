@@ -58,6 +58,7 @@ import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
@@ -90,6 +91,7 @@ import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
@@ -538,6 +540,8 @@ class SettingsViewModelTest {
                 setAutoFpsEnabledUseCase = SetAutoFpsEnabledUseCase(thorSettingsRepository),
                 observeTaskKillerEnabledUseCase = ObserveTaskKillerEnabledUseCase(thorSettingsRepository),
                 setTaskKillerEnabledUseCase = SetTaskKillerEnabledUseCase(thorSettingsRepository),
+                observeTaskKillerTargetUseCase = ObserveTaskKillerTargetUseCase(thorSettingsRepository),
+                setTaskKillerTargetUseCase = SetTaskKillerTargetUseCase(thorSettingsRepository),
                 observeVolumeSyncEnabledUseCase = ObserveVolumeSyncEnabledUseCase(thorSettingsRepository),
                 setVolumeSyncEnabledUseCase = SetVolumeSyncEnabledUseCase(thorSettingsRepository),
                 observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository),

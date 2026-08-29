@@ -16,6 +16,7 @@ import com.esde.companion.domain.model.PlacedWidget
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
@@ -350,6 +351,7 @@ internal class FakeThorSettingsRepository(
     autoFpsTriggerPackages: Set<String> = emptySet(),
     taskKillerEnabled: Boolean = false,
     taskKillerExcludedPackages: Set<String> = emptySet(),
+    taskKillerTarget: TaskKillerTarget = TaskKillerTarget.FocusApp,
     volumeSyncEnabled: Boolean = false,
     volumeSyncMode: VolumeSyncMode = VolumeSyncMode.Linked,
 ) : ThorSettingsRepository {
@@ -359,6 +361,7 @@ internal class FakeThorSettingsRepository(
     private val autoFpsTriggerPackagesFlow = MutableStateFlow(autoFpsTriggerPackages)
     private val taskKillerEnabledFlow = MutableStateFlow(taskKillerEnabled)
     private val taskKillerExcludedPackagesFlow = MutableStateFlow(taskKillerExcludedPackages)
+    private val taskKillerTargetFlow = MutableStateFlow(taskKillerTarget)
     private val volumeSyncEnabledFlow = MutableStateFlow(volumeSyncEnabled)
     private val volumeSyncModeFlow = MutableStateFlow(volumeSyncMode)
 
@@ -397,6 +400,12 @@ internal class FakeThorSettingsRepository(
     }
 
     override fun observeTaskKillerExcludedPackages(): Flow<Set<String>> = taskKillerExcludedPackagesFlow
+
+    override suspend fun setTaskKillerTarget(target: TaskKillerTarget) {
+        taskKillerTargetFlow.value = target
+    }
+
+    override fun observeTaskKillerTarget(): Flow<TaskKillerTarget> = taskKillerTargetFlow
 
     override suspend fun setVolumeSyncEnabled(enabled: Boolean) {
         volumeSyncEnabledFlow.value = enabled

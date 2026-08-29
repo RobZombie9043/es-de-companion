@@ -62,6 +62,7 @@ data class AppConfigBackup(
     val autoFpsTriggerPackages: Set<String>,
     val taskKillerEnabled: Boolean,
     val taskKillerExcludedPackages: Set<String>,
+    val taskKillerTarget: TaskKillerTarget = TaskKillerTarget.FocusApp,
     val volumeSyncEnabled: Boolean,
     val volumeSyncMode: VolumeSyncMode,
     val gameLaunchSystemDefaults: Map<String, String> = emptyMap(),

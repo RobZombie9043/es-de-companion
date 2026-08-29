@@ -17,6 +17,7 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.model.StateGroup
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
 
@@ -72,6 +73,7 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         autoFpsTriggerPackages = autoFpsTriggerPackages,
         taskKillerEnabled = taskKillerEnabled,
         taskKillerExcludedPackages = taskKillerExcludedPackages,
+        taskKillerTarget = taskKillerTarget.name,
         volumeSyncEnabled = volumeSyncEnabled,
         volumeSyncMode = volumeSyncMode.name,
         gameLaunchSystemDefaults = gameLaunchSystemDefaults,
@@ -144,6 +146,7 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         // the user having explicitly saved an empty set, which decodes as an empty set, not
         // this default - see ConfigBackupDto's nullable field).
         taskKillerExcludedPackages = taskKillerExcludedPackages ?: DEFAULT_TASK_KILLER_EXCLUDED_PACKAGES,
+        taskKillerTarget = taskKillerTarget.toEnumOrDefault(TaskKillerTarget.FocusApp),
         volumeSyncEnabled = volumeSyncEnabled,
         volumeSyncMode = volumeSyncMode.toEnumOrDefault(VolumeSyncMode.Linked),
         gameLaunchSystemDefaults = gameLaunchSystemDefaults,

@@ -169,6 +169,7 @@ import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveSystemStatusUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
@@ -227,6 +228,7 @@ import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerExcludedPackagesUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
@@ -523,6 +525,8 @@ class AppContainer(context: Context) {
     val setTaskKillerEnabledUseCase = SetTaskKillerEnabledUseCase(thorSettingsRepository)
     val observeTaskKillerExcludedPackagesUseCase = ObserveTaskKillerExcludedPackagesUseCase(thorSettingsRepository)
     val setTaskKillerExcludedPackagesUseCase = SetTaskKillerExcludedPackagesUseCase(thorSettingsRepository)
+    val observeTaskKillerTargetUseCase = ObserveTaskKillerTargetUseCase(thorSettingsRepository)
+    val setTaskKillerTargetUseCase = SetTaskKillerTargetUseCase(thorSettingsRepository)
     val observeVolumeSyncEnabledUseCase = ObserveVolumeSyncEnabledUseCase(thorSettingsRepository)
     val setVolumeSyncEnabledUseCase = SetVolumeSyncEnabledUseCase(thorSettingsRepository)
     val observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository)
@@ -726,6 +730,8 @@ class AppContainer(context: Context) {
             observeTaskKillerEnabled = observeTaskKillerEnabledUseCase,
             setTaskKillerEnabled = setTaskKillerEnabledUseCase,
             observeTaskKillerExcludedPackages = observeTaskKillerExcludedPackagesUseCase,
+            observeTaskKillerTarget = observeTaskKillerTargetUseCase,
+            companionDisplayHolder = companionDisplayHolder,
             debugFileLogger = debugFileLogger,
         )
 

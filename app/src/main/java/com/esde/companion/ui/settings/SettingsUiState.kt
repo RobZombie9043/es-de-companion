@@ -10,6 +10,7 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
 
@@ -64,6 +65,7 @@ data class SettingsUiState(
     val thorAccessibilityGranted: Boolean = false,
     val thorPrivilegedServiceAvailable: Boolean = false,
     val taskKillerEnabled: Boolean = false,
+    val taskKillerTarget: TaskKillerTarget = TaskKillerTarget.FocusApp,
     val volumeSyncEnabled: Boolean = false,
     val volumeSyncMode: VolumeSyncMode = VolumeSyncMode.Linked,
     val volumeSyncSecondarySettingPresent: Boolean = false,

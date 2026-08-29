@@ -1,6 +1,7 @@
 package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.HallSensorCalibration
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.VolumeSyncMode
 import kotlinx.coroutines.flow.Flow
 
@@ -47,6 +48,10 @@ interface ThorSettingsRepository {
     suspend fun setTaskKillerExcludedPackages(packages: Set<String>)
 
     fun observeTaskKillerExcludedPackages(): Flow<Set<String>>
+
+    suspend fun setTaskKillerTarget(target: TaskKillerTarget)
+
+    fun observeTaskKillerTarget(): Flow<TaskKillerTarget>
 
     suspend fun setVolumeSyncEnabled(enabled: Boolean)
 

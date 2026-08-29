@@ -211,6 +211,7 @@ fun LongPressSettingsMenu(
     val onLidWakeGuardEnabledChanged = settingsViewModel::onLidWakeGuardEnabledChanged
     val onHallSensorCalibrationChanged = settingsViewModel::onHallSensorCalibrationChanged
     val onTaskKillerEnabledChanged = settingsViewModel::onTaskKillerEnabledChanged
+    val onTaskKillerTargetChanged = settingsViewModel::onTaskKillerTargetChanged
     val onVolumeSyncEnabledChanged = settingsViewModel::onVolumeSyncEnabledChanged
     val onVolumeSyncModeChanged = settingsViewModel::onVolumeSyncModeChanged
     val onBluetoothPermissionRequested = settingsViewModel::onBluetoothPermissionRequested
@@ -511,7 +512,9 @@ fun LongPressSettingsMenu(
                                                 enabled = uiState.taskKillerEnabled,
                                                 accessibilityGranted = uiState.thorAccessibilityGranted,
                                                 privilegedServiceAvailable = uiState.thorPrivilegedServiceAvailable,
+                                                target = uiState.taskKillerTarget,
                                                 onEnabledChanged = onTaskKillerEnabledChanged,
+                                                onTargetChanged = onTaskKillerTargetChanged,
                                                 onManageExcludedAppsClick = {
                                                     val category = targetPage.category
                                                     page = MenuPage.TaskKillerExcludedApps(fromCategory = category)

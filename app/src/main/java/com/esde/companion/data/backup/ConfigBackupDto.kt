@@ -71,6 +71,7 @@ internal data class ConfigBackupDto(
     val autoFpsTriggerPackages: Set<String> = emptySet(),
     val taskKillerEnabled: Boolean = false,
     val taskKillerExcludedPackages: Set<String>? = null,
+    val taskKillerTarget: String = "FocusApp",
     val volumeSyncEnabled: Boolean = false,
     val volumeSyncMode: String = "Linked",
     val gameLaunchSystemDefaults: Map<String, String> = emptyMap(),

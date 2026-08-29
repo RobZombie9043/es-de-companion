@@ -6,8 +6,11 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.HandlerThread
+import com.esde.companion.data.apps.CompanionDisplayHolder
+import com.esde.companion.data.apps.SecondaryDisplayResolver
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.thor.accessibility.CompanionAccessibilityService
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.thor.THOR_IGNORED_SYSTEM_PACKAGES
 import com.esde.companion.domain.thor.TaskKillerCapabilities
 import com.esde.companion.domain.thor.TaskKillerDecision
@@ -16,6 +19,7 @@ import com.esde.companion.domain.thor.TaskKillerForegroundContext
 import com.esde.companion.domain.thor.TaskKillerHoldEvent
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -40,19 +44,28 @@ import kotlinx.coroutines.launch
  * press: it never touches input dispatch, so there's no leak risk in giving the user that
  * feedback the moment the hold threshold elapses rather than waiting for release too.
  *
- * The foreground app to act on is resolved fresh via root shell ([TaskKillerShell]) at *press*
+ * The package(s) to act on are resolved fresh via root shell ([TaskKillerShell]) at *press*
  * time, not release: a window-state-changed event only fires when a window's state actually
  * changes, not on a pure focus shift between two already-running windows on different displays,
  * so it can't be tracked from accessibility events. Press time (not release) matters too: an
  * ordinary app sitting at its root/home screen can finish exiting to the previous task on the
  * same physical BACK release - delivered to it normally, since nothing here consumes the
- * KeyEvent - faster than the two root-shell round trips take, so a release-time resolution risks
- * reading the *next* app instead of the one actually held.
+ * KeyEvent - faster than the root-shell round trips take, so a release-time resolution risks
+ * reading the *next* app instead of the one actually held. Which package(s) get resolved depends
+ * on the current [TaskKillerTarget] ([target]): [TaskKillerTarget.FocusApp] resolves the single
+ * app with hardware-key focus (the original behavior); [TaskKillerTarget.ThisScreen]/
+ * [TaskKillerTarget.OtherScreen]/[TaskKillerTarget.Both] resolve relative to
+ * [companionDisplayHolder] instead, the same this-screen/other-screen pattern
+ * `GameLaunchOverrideCoordinator` uses. [TaskKillerDecision] itself stays single-package - `Both`
+ * is handled by running the decide/force-stop/cleanup sequence independently once per resolved
+ * package, not by teaching that pure function about multiple targets.
  */
 class TaskKillerCoordinator(
     private val observeTaskKillerEnabled: ObserveTaskKillerEnabledUseCase,
     private val setTaskKillerEnabled: SetTaskKillerEnabledUseCase,
     private val observeTaskKillerExcludedPackages: ObserveTaskKillerExcludedPackagesUseCase,
+    private val observeTaskKillerTarget: ObserveTaskKillerTargetUseCase,
+    private val companionDisplayHolder: CompanionDisplayHolder,
     private val debugFileLogger: DebugFileLogger,
 ) {
     private val workerThread = HandlerThread("TaskKillerCoordinator").apply { start() }
@@ -66,11 +79,15 @@ class TaskKillerCoordinator(
     @Volatile
     private var excludedPackages: Set<String> = THOR_IGNORED_SYSTEM_PACKAGES
 
+    @Volatile
+    private var target: TaskKillerTarget = TaskKillerTarget.FocusApp
+
     private var pendingVibration: Runnable? = null
 
     // Resolved on press, not on release (see class doc) - only ever touched on `handler`'s
-    // thread, same as everything else here, so no synchronization needed.
-    private var pressTimeForegroundPackage: String? = null
+    // thread, same as everything else here, so no synchronization needed. 0-2 entries depending
+    // on target and what each resolved display actually reported.
+    private var pressTimeForegroundPackages: List<String> = emptyList()
 
     fun start(
         context: Context,
@@ -94,11 +111,14 @@ class TaskKillerCoordinator(
         applicationScope.launch {
             observeTaskKillerEnabled().distinctUntilChanged().collect { enabled -> featureEnabled = enabled }
         }
+        applicationScope.launch {
+            observeTaskKillerTarget().collect { target = it }
+        }
     }
 
     private fun onBackPressed(context: Context) {
         cancelPendingVibration()
-        pressTimeForegroundPackage = null
+        pressTimeForegroundPackages = emptyList()
         if (!featureEnabled) return
         // Short, light tap - just enough to confirm the hold registered, not a full alert buzz.
         val runnable =
@@ -107,8 +127,27 @@ class TaskKillerCoordinator(
             }
         pendingVibration = runnable
         handler.postDelayed(runnable, HOLD_DURATION_MS)
-        pressTimeForegroundPackage = TaskKillerShell.resolveFocusedForegroundPackage()
+        pressTimeForegroundPackages = resolveTargetPackages(context)
     }
+
+    /** See class doc for what each [TaskKillerTarget] resolves to. */
+    private fun resolveTargetPackages(context: Context): List<String> =
+        when (target) {
+            TaskKillerTarget.FocusApp ->
+                listOfNotNull(TaskKillerShell.resolveFocusedForegroundPackage())
+            TaskKillerTarget.ThisScreen, TaskKillerTarget.OtherScreen, TaskKillerTarget.Both -> {
+                val companionId = companionDisplayHolder.displayId
+                val secondaryId = SecondaryDisplayResolver.secondaryDisplayId(context, companionId)
+                val displayIds =
+                    when (target) {
+                        TaskKillerTarget.ThisScreen -> listOfNotNull(companionId)
+                        TaskKillerTarget.OtherScreen -> listOfNotNull(secondaryId)
+                        TaskKillerTarget.Both -> listOfNotNull(companionId, secondaryId)
+                        TaskKillerTarget.FocusApp -> emptyList()
+                    }
+                displayIds.mapNotNull { TaskKillerShell.resolveForegroundPackageForDisplay(it) }.distinct()
+            }
+        }
 
     private fun cancelPendingVibration() {
         pendingVibration?.let { handler.removeCallbacks(it) }
@@ -120,13 +159,27 @@ class TaskKillerCoordinator(
         heldMs: Long,
     ) {
         cancelPendingVibration()
-        val foreground = pressTimeForegroundPackage
         val hold = TaskKillerHoldEvent(heldMs = heldMs, thresholdMs = HOLD_DURATION_MS)
         val capabilities =
             TaskKillerCapabilities(
                 featureEnabled = featureEnabled,
                 privilegedAvailable = RefreshRateController.canWrite(),
             )
+        val resolvedPackages = pressTimeForegroundPackages
+        if (resolvedPackages.isEmpty()) {
+            // Preserves the NO_FOREGROUND log path even when nothing resolved for any target.
+            processTarget(context, hold, capabilities, foreground = null)
+            return
+        }
+        resolvedPackages.forEach { pkg -> processTarget(context, hold, capabilities, foreground = pkg) }
+    }
+
+    private fun processTarget(
+        context: Context,
+        hold: TaskKillerHoldEvent,
+        capabilities: TaskKillerCapabilities,
+        foreground: String?,
+    ) {
         val foregroundContext =
             TaskKillerForegroundContext(
                 foregroundPackage = foreground,

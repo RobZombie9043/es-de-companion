@@ -76,6 +76,8 @@ class SettingsViewModelFactory(
             setAutoFpsEnabledUseCase = appContainer.setAutoFpsEnabledUseCase,
             observeTaskKillerEnabledUseCase = appContainer.observeTaskKillerEnabledUseCase,
             setTaskKillerEnabledUseCase = appContainer.setTaskKillerEnabledUseCase,
+            observeTaskKillerTargetUseCase = appContainer.observeTaskKillerTargetUseCase,
+            setTaskKillerTargetUseCase = appContainer.setTaskKillerTargetUseCase,
             observeVolumeSyncEnabledUseCase = appContainer.observeVolumeSyncEnabledUseCase,
             setVolumeSyncEnabledUseCase = appContainer.setVolumeSyncEnabledUseCase,
             observeVolumeSyncModeUseCase = appContainer.observeVolumeSyncModeUseCase,

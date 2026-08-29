@@ -1,3 +1,9 @@
+// This file covers four separate Thor Settings panels (Lid Wake Guard, Auto FPS, Task Killer,
+// Volume Sync), each needing its own composables/dropdowns - same TooManyFunctions reasoning as
+// ThorSettingsRepository's suppression: more panels naturally means more small functions, not
+// something to force into fewer larger ones.
+@file:Suppress("TooManyFunctions")
+
 package com.esde.companion.ui.settings
 
 import android.content.Context
@@ -5,6 +11,7 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,12 +24,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.DevicesOther
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.ShieldMoon
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SyncAlt
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +63,7 @@ import com.esde.companion.data.thor.ThorAccessibilityPermission
 import com.esde.companion.data.thor.sensor.HallSensorReader
 import com.esde.companion.data.thor.sensor.autoPickHallSensor
 import com.esde.companion.domain.model.HallSensorCalibration
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.ui.SegmentedButtonLabel
 
@@ -78,7 +92,9 @@ internal data class TaskKillerSettingsState(
     val enabled: Boolean,
     val accessibilityGranted: Boolean,
     val privilegedServiceAvailable: Boolean,
+    val target: TaskKillerTarget,
     val onEnabledChanged: (Boolean) -> Unit,
+    val onTargetChanged: (TaskKillerTarget) -> Unit,
     val onManageExcludedAppsClick: () -> Unit,
 )
 
@@ -308,7 +324,7 @@ private fun TaskKillerSetting(state: TaskKillerSettingsState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Hold BACK to force-quit the app in focus",
+                    text = "Hold BACK to force-quit",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -334,10 +350,68 @@ private fun TaskKillerSetting(state: TaskKillerSettingsState) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = "Force-Quit Target", style = MaterialTheme.typography.labelLarge)
+                TaskKillerTargetDropdown(selected = state.target, onSelected = state.onTargetChanged)
+            }
             ThorAppPickerNavigationRow(label = "Choose Excluded Apps", onClick = state.onManageExcludedAppsClick)
         }
     }
 }
+
+/** Dropdown variant of a target picker, used since [TaskKillerTarget] has 4 options - same
+ * shape as [FabTypeDropdown]/[ScreenBehaviorDropdown] in UISettingsContent.kt, parameterized on
+ * [TaskKillerTarget]. */
+@Composable
+private fun TaskKillerTargetDropdown(
+    selected: TaskKillerTarget,
+    onSelected: (TaskKillerTarget) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        FabRowSurface(onClick = { expanded = true }) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = selected.icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(text = selected.label, style = MaterialTheme.typography.bodyMedium)
+            }
+            Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            TaskKillerTarget.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    leadingIcon = { Icon(imageVector = option.icon, contentDescription = null) },
+                    onClick = {
+                        expanded = false
+                        onSelected(option)
+                    },
+                )
+            }
+        }
+    }
+}
+
+// Presentation-only icon/label, same reasoning as ScreenBehavior.icon/label in UISettingsContent.
+// ThisScreen/OtherScreen deliberately reuse GameLaunchDisplayTarget's exact icon/label choices
+// for the same shared concept.
+private val TaskKillerTarget.icon: ImageVector
+    get() =
+        when (this) {
+            TaskKillerTarget.FocusApp -> Icons.Filled.CenterFocusStrong
+            TaskKillerTarget.ThisScreen -> Icons.Filled.PhoneAndroid
+            TaskKillerTarget.OtherScreen -> Icons.Filled.Devices
+            TaskKillerTarget.Both -> Icons.Filled.DevicesOther
+        }
+
+private val TaskKillerTarget.label: String
+    get() =
+        when (this) {
+            TaskKillerTarget.FocusApp -> "Focus App"
+            TaskKillerTarget.ThisScreen -> "This Screen"
+            TaskKillerTarget.OtherScreen -> "Other Screen"
+            TaskKillerTarget.Both -> "Both Screens"
+        }
 
 @Composable
 private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {

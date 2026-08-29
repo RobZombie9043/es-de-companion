@@ -49,6 +49,7 @@ class RestoreConfigBackupUseCase(
             setAutoFpsTriggerPackages(snapshot.autoFpsTriggerPackages)
             setTaskKillerEnabled(snapshot.taskKillerEnabled)
             setTaskKillerExcludedPackages(snapshot.taskKillerExcludedPackages)
+            setTaskKillerTarget(snapshot.taskKillerTarget)
             setVolumeSyncEnabled(snapshot.volumeSyncEnabled)
             setVolumeSyncMode(snapshot.volumeSyncMode)
         }

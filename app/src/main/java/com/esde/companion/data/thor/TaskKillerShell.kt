@@ -9,20 +9,30 @@ import com.esde.companion.domain.thor.parseRecentTaskIds
  */
 object TaskKillerShell {
     /**
-     * Two root-shell round trips, resolving fresh state rather than trusting anything tracked
-     * from accessibility events: first [resolveFocusedDisplayId] - the actual display current
-     * hardware key routing (BACK, HOME, etc.) targets, as opposed to a display that merely has a
-     * "resumed" activity (both screens can simultaneously) - then that display's
-     * topResumedActivity from `dumpsys activity activities`.
+     * Resolves [displayId]'s topResumedActivity via `dumpsys activity activities`. Used both by
+     * [resolveFocusedForegroundPackage] (for [displayId] = [resolveFocusedDisplayId]'s result)
+     * and directly by `TaskKillerCoordinator` for Task Killer's This Screen/Other Screen/Both
+     * targets, which need a specific display's foreground app rather than whichever display
+     * currently has hardware-key focus.
      */
-    @Suppress("ReturnCount")
-    fun resolveFocusedForegroundPackage(): String? {
-        val displayId = resolveFocusedDisplayId() ?: return null
+    fun resolveForegroundPackageForDisplay(displayId: Int): String? {
         val activityCommand =
             "dumpsys activity activities | awk " +
                 "'/^Display #/{f=(\$0 ~ /^Display #$displayId /)} f && /topResumedActivity=/{print; f=0}'"
         val activityLine = PrivilegedShell.execute(activityCommand).getOrNull()?.trim() ?: return null
         return Regex("""u0 ([^/]+)/""").find(activityLine)?.groupValues?.get(1)
+    }
+
+    /**
+     * Two root-shell round trips, resolving fresh state rather than trusting anything tracked
+     * from accessibility events: first [resolveFocusedDisplayId] - the actual display current
+     * hardware key routing (BACK, HOME, etc.) targets, as opposed to a display that merely has a
+     * "resumed" activity (both screens can simultaneously) - then that display's foreground
+     * package via [resolveForegroundPackageForDisplay].
+     */
+    fun resolveFocusedForegroundPackage(): String? {
+        val displayId = resolveFocusedDisplayId() ?: return null
+        return resolveForegroundPackageForDisplay(displayId)
     }
 
     fun forceStop(packageName: String): Boolean = PrivilegedShell.execute("am force-stop $packageName").isSuccess

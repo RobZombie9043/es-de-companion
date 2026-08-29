@@ -639,9 +639,10 @@ private fun FabTypeDropdown(
 
 /** Shared row chrome for [FabTypeDropdown]'s trigger and the Custom App selector row - a
  * tappable surface a shade lighter than the panel behind it, with its content spaced to
- * the edges. */
+ * the edges. Internal (not private) so ThorSettingsContent.kt's TaskKillerTargetDropdown can
+ * reuse the same trigger-row chrome rather than duplicating it. */
 @Composable
-private fun FabRowSurface(
+internal fun FabRowSurface(
     onClick: () -> Unit,
     content: @Composable RowScope.() -> Unit,
 ) {

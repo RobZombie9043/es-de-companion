@@ -14,6 +14,7 @@ import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.ScreenBehavior
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.OnboardingRepository
@@ -47,6 +48,7 @@ import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveShowSearchBarUseCase
 import com.esde.companion.domain.usecase.ObserveSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
@@ -79,6 +81,7 @@ import com.esde.companion.domain.usecase.SetScreensaverDimPercentUseCase
 import com.esde.companion.domain.usecase.SetShowSearchBarUseCase
 import com.esde.companion.domain.usecase.SetSortFoldersOnTopUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
+import com.esde.companion.domain.usecase.SetTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
@@ -156,6 +159,8 @@ class SettingsViewModel(
     private val setAutoFpsEnabledUseCase: SetAutoFpsEnabledUseCase,
     private val observeTaskKillerEnabledUseCase: ObserveTaskKillerEnabledUseCase,
     private val setTaskKillerEnabledUseCase: SetTaskKillerEnabledUseCase,
+    private val observeTaskKillerTargetUseCase: ObserveTaskKillerTargetUseCase,
+    private val setTaskKillerTargetUseCase: SetTaskKillerTargetUseCase,
     private val observeVolumeSyncEnabledUseCase: ObserveVolumeSyncEnabledUseCase,
     private val setVolumeSyncEnabledUseCase: SetVolumeSyncEnabledUseCase,
     private val observeVolumeSyncModeUseCase: ObserveVolumeSyncModeUseCase,
@@ -285,10 +290,12 @@ class SettingsViewModel(
             // loaded here - they're continuously collected in init instead, same reasoning as
             // installedApps above (a coordinator can flip any of them back off on its own; a
             // one-shot load here would just be immediately overwritten by, or race with, that
-            // live collector). volumeSyncMode has no such coordinator-driven path - only this
-            // screen's own onVolumeSyncModeChanged ever changes it - so a one-shot load is fine.
+            // live collector). volumeSyncMode/taskKillerTarget have no such coordinator-driven
+            // path - only this screen's own onVolumeSyncModeChanged/onTaskKillerTargetChanged
+            // ever changes them - so a one-shot load is fine.
             hallSensorCalibration = observeHallSensorCalibrationUseCase().first(),
             volumeSyncMode = observeVolumeSyncModeUseCase().first(),
+            taskKillerTarget = observeTaskKillerTargetUseCase().first(),
             gameLaunchDisplayTarget = observeGameLaunchDisplayTargetUseCase().first(),
             closeAppOnGameEndEnabled = observeCloseAppOnGameEndUseCase().first(),
         )
@@ -453,6 +460,11 @@ class SettingsViewModel(
     fun onTaskKillerEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(taskKillerEnabled = enabled)
         viewModelScope.launch { setTaskKillerEnabledUseCase(enabled) }
+    }
+
+    fun onTaskKillerTargetChanged(target: TaskKillerTarget) {
+        _uiState.value = _uiState.value.copy(taskKillerTarget = target)
+        viewModelScope.launch { setTaskKillerTargetUseCase(target) }
     }
 
     fun onVolumeSyncEnabledChanged(enabled: Boolean) {

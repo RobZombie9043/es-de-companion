@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.esde.companion.domain.model.HallSensorCalibration
+import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.ThorSettingsRepository
 import kotlinx.coroutines.flow.Flow
@@ -98,6 +99,19 @@ class FileThorSettingsRepository(
         }
     }
 
+    override suspend fun setTaskKillerTarget(target: TaskKillerTarget) {
+        context.thorSettingsDataStore.edit { it[TASK_KILLER_TARGET_KEY] = target.name }
+    }
+
+    override fun observeTaskKillerTarget(): Flow<TaskKillerTarget> =
+        context.thorSettingsDataStore.data.map { prefs ->
+            // Falls back to FocusApp for both the unset case and any unrecognized stored value -
+            // same reasoning as observeVolumeSyncMode.
+            prefs[TASK_KILLER_TARGET_KEY]?.let { stored ->
+                runCatching { TaskKillerTarget.valueOf(stored) }.getOrNull()
+            } ?: TaskKillerTarget.FocusApp
+        }
+
     override suspend fun setVolumeSyncEnabled(enabled: Boolean) {
         context.thorSettingsDataStore.edit { it[VOLUME_SYNC_ENABLED_KEY] = enabled }
     }
@@ -129,6 +143,7 @@ class FileThorSettingsRepository(
         val AUTO_FPS_TRIGGER_PACKAGES_KEY = stringSetPreferencesKey("auto_fps_trigger_packages")
         val TASK_KILLER_ENABLED_KEY = booleanPreferencesKey("task_killer_enabled")
         val TASK_KILLER_EXCLUDED_PACKAGES_KEY = stringSetPreferencesKey("task_killer_excluded_packages")
+        val TASK_KILLER_TARGET_KEY = stringPreferencesKey("task_killer_target")
         val VOLUME_SYNC_ENABLED_KEY = booleanPreferencesKey("volume_sync_enabled")
         val VOLUME_SYNC_MODE_KEY = stringPreferencesKey("volume_sync_mode")
 
