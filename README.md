@@ -8,7 +8,7 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-1.0.6-blue)
+![Version](https://img.shields.io/badge/version-1.0.7-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 ES-DE Companion is a companion application for [ES-DE](https://es-de.org) that enhances your gaming experience by transforming dual-screen Android devices into immersive retro gaming setups. The app displays beautiful game artwork, videos, and customizable overlay widgets on a secondary screen while you browse and play games in ES-DE.
@@ -93,6 +93,17 @@ _Automatically launch a specific app whenever ES-DE starts playing a game — a 
 - A single This Screen/Other Screen choice controls which display the launched app opens on
 - Input focus automatically returns to the game once the launched app appears, so it doesn't get stuck on the wrong screen (Thor devices only)
 - Optional "Close App on Game End" toggle force-stops the launched app once the game ends (Thor devices only)
+
+### Thor Settings (AYN Thor)
+
+_Four extra settings panels that only appear on an AYN Thor device (detected automatically), covering things that only make sense on that hardware's dual-screen clamshell design._
+
+**Thor Settings Features:**
+- **Lid Wake Guard**: re-locks the screen if a stray button press wakes it while a Hall-effect sensor still reads the lid as closed — sensor auto-detected and calibrated in the background, no manual picker
+- **Auto FPS Mode**: boosts the top screen to 120Hz automatically for a chosen set of trigger apps (including ones launched from the App Drawer)
+- **Task Killer**: hold the physical BACK button for about a second to force-quit an app, with a Force-Quit Target choice — Focus App (whichever app has controller focus), This Screen, Other Screen, or Both Screens — plus a list of apps that are never force-stopped
+- **Volume Control**: Default/Synced/Focus modes for how the volume buttons behave across the two screens
+- All four are covered by Backup & Restore, and each degrades to "unavailable" with a clear message if the underlying firmware capability it needs isn't present, rather than failing silently
 
 ### Easy Setup
 
