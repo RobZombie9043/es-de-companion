@@ -19,6 +19,7 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
+import com.esde.companion.domain.usecase.DeleteAllGameGuidesUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveCloseAppOnGameEndUseCase
@@ -169,6 +170,7 @@ class SettingsViewModel(
     private val setGameLaunchDisplayTargetUseCase: SetGameLaunchDisplayTargetUseCase,
     private val observeCloseAppOnGameEndUseCase: ObserveCloseAppOnGameEndUseCase,
     private val setCloseAppOnGameEndUseCase: SetCloseAppOnGameEndUseCase,
+    private val deleteAllGameGuidesUseCase: DeleteAllGameGuidesUseCase,
     private val volumeSyncSecondarySettingPresent: Boolean,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -485,6 +487,10 @@ class SettingsViewModel(
     fun onCloseAppOnGameEndEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(closeAppOnGameEndEnabled = enabled)
         viewModelScope.launch { setCloseAppOnGameEndUseCase(enabled) }
+    }
+
+    fun onClearAllGameGuidesClicked() {
+        viewModelScope.launch { deleteAllGameGuidesUseCase() }
     }
 
     fun onCustomMusicFolderPicked(path: String) {

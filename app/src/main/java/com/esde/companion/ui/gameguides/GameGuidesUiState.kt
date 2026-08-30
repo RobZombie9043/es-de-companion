@@ -1,0 +1,43 @@
+package com.esde.companion.ui.gameguides
+
+import com.esde.companion.domain.gameguides.GuideDownloadProgress
+import com.esde.companion.domain.model.DownloadedGameGuide
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
+import com.esde.companion.domain.model.GameReference
+
+/**
+ * What the Game Guides overlay currently shows - [Library] first if any guides are already
+ * downloaded for the current game, otherwise straight into [Browsing]. [Viewing] a saved
+ * guide is reached from [Library], not nested inside it, so the viewer can be full-screen
+ * on its own.
+ */
+sealed interface GameGuidesUiState {
+    data object NoGame : GameGuidesUiState
+
+    data class Library(
+        val gameReference: GameReference,
+        val gameName: String,
+        val guides: List<DownloadedGameGuide>,
+        val readingProgressByGuideId: Map<String, Float> = emptyMap(),
+    ) : GameGuidesUiState
+
+    data class Browsing(
+        val gameReference: GameReference,
+        val gameName: String,
+        val searchUrl: String,
+        val currentPageIsGuide: Boolean,
+        // null when not saving - non-null while GameGuidesViewModel.saveCurrentGuide is
+        // running, driving GameGuidesBrowserScreen's download progress dialog.
+        val downloadProgress: GuideDownloadProgress? = null,
+    ) : GameGuidesUiState {
+        val isSaving: Boolean get() = downloadProgress != null
+    }
+
+    data class Viewing(
+        val guide: DownloadedGameGuide,
+        val pages: List<String>,
+        val displayPreferences: GameGuideDisplayPreferences,
+        val initialScrollFraction: Float,
+        val initialPageIndex: Int = 0,
+    ) : GameGuidesUiState
+}

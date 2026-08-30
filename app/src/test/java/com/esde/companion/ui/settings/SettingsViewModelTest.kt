@@ -2,10 +2,12 @@ package com.esde.companion.ui.settings
 
 import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.domain.model.DockSize
+import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
 import com.esde.companion.domain.model.MediaFolderValidation
@@ -19,11 +21,13 @@ import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.BackupRepositories
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameGuideLibraryRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
 import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
+import com.esde.companion.domain.usecase.DeleteAllGameGuidesUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
 import com.esde.companion.domain.usecase.FakeAppFolderRepository
 import com.esde.companion.domain.usecase.FakeGameLaunchAppRepository
@@ -368,6 +372,30 @@ class SettingsViewModelTest {
         override fun observeCredentials(): Flow<RetroAchievementsCredentials?> = credentialsFlow
     }
 
+    private class FakeGameGuideLibraryRepository : GameGuideLibraryRepository {
+        var deleteAllCalled = false
+            private set
+
+        override suspend fun saveGuide(
+            guide: DownloadedGameGuide,
+            content: List<String>,
+        ) = error("not used in this test")
+
+        override fun observeGuidesFor(gameReference: GameReference): Flow<List<DownloadedGameGuide>> {
+            error("not used in this test")
+        }
+
+        override fun observeAllGuides(): Flow<List<DownloadedGameGuide>> = error("not used in this test")
+
+        override suspend fun loadContent(guideId: String): List<String>? = error("not used in this test")
+
+        override suspend fun deleteGuide(guideId: String) = error("not used in this test")
+
+        override suspend fun deleteAllGuides() {
+            deleteAllCalled = true
+        }
+    }
+
     private class FakeRetroAchievementsRepository : RetroAchievementsRepository {
         override suspend fun validateCredentials(creds: RetroAchievementsCredentials): RetroAchievementsAuthState {
             return RetroAchievementsAuthState.Error("not implemented in this test")
@@ -463,6 +491,7 @@ class SettingsViewModelTest {
         val observeUpdateOnScreensaverUseCase =
             ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
         val setUpdateOnScreensaverUseCase = SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+        val gameGuideLibraryRepository = FakeGameGuideLibraryRepository()
         val viewModel =
             SettingsViewModel(
                 onboardingRepository = onboardingRepository,
@@ -550,6 +579,7 @@ class SettingsViewModelTest {
                 setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository),
                 observeCloseAppOnGameEndUseCase = ObserveCloseAppOnGameEndUseCase(gameLaunchAppRepository),
                 setCloseAppOnGameEndUseCase = SetCloseAppOnGameEndUseCase(gameLaunchAppRepository),
+                deleteAllGameGuidesUseCase = DeleteAllGameGuidesUseCase(gameGuideLibraryRepository),
                 volumeSyncSecondarySettingPresent = false,
             )
         return viewModel to appDrawerSettingsRepository

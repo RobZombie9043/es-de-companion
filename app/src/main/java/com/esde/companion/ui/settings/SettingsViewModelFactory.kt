@@ -86,6 +86,7 @@ class SettingsViewModelFactory(
             setGameLaunchDisplayTargetUseCase = appContainer.setGameLaunchDisplayTargetUseCase,
             observeCloseAppOnGameEndUseCase = appContainer.observeCloseAppOnGameEndUseCase,
             setCloseAppOnGameEndUseCase = appContainer.setCloseAppOnGameEndUseCase,
+            deleteAllGameGuidesUseCase = appContainer.deleteAllGameGuidesUseCase,
             volumeSyncSecondarySettingPresent = appContainer.volumeSyncSecondarySettingPresent,
         ) as T
     }

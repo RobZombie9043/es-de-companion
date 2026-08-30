@@ -8,7 +8,9 @@ package com.esde.companion.domain.model
  * types - see MainActivity's `retroAchievementsFabMode`. [Clock], [SystemStatus], and
  * [ClockAndSystemStatus] are display-only (no click behavior) and are offered only in the
  * top corners - see UISettingsContent's TOP_FAB_OPTIONS/BOTTOM_FAB_OPTIONS, same mechanism
- * that already keeps [Music] top-only.
+ * that already keeps [Music] top-only. [GameGuides] opens the Game Guides overlay (search/
+ * download/read GameFAQs guides for the current game) and, like [GameManual], is offered in
+ * any corner.
  */
 enum class FabType {
     Music,
@@ -20,5 +22,6 @@ enum class FabType {
     Clock,
     SystemStatus,
     ClockAndSystemStatus,
+    GameGuides,
     None,
 }

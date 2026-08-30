@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MusicNote
@@ -68,6 +69,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.esde.companion.data.gameguides.gameGuidesEnabled
 import com.esde.companion.data.retroachievements.retroAchievementsEnabled
 import com.esde.companion.data.systemstatus.BluetoothConnectPermission
 import com.esde.companion.domain.model.FabAssignments
@@ -136,11 +138,12 @@ internal fun UISettingsContent(
             title = "Game Playing Screen Behavior",
             icon = Icons.Filled.SportsEsports,
             options =
-                listOf(
+                listOfNotNull(
                     ScreenBehavior.Nothing,
                     ScreenBehavior.Dim,
                     ScreenBehavior.Black,
                     ScreenBehavior.GameManual,
+                    ScreenBehavior.GameGuide.takeIf { gameGuidesEnabled() },
                 ),
             selected = gamePlayingBehavior,
             onSelected = onGamePlayingBehaviorChanged,
@@ -250,8 +253,8 @@ private val GameLaunchDisplayTarget.label: String
 // Bottom corners never offer Music - it can only occupy one of the two top corners (see
 // FabAssignments.with) - so the picker itself simply never presents the option there
 // rather than needing runtime validation to reject an invalid selection. RetroAchievements
-// is filtered out entirely while retroAchievementsEnabled() is false - see that function's
-// kdoc.
+// and GameGuides are filtered out entirely while their respective feature flags are false -
+// see retroAchievementsEnabled()/gameGuidesEnabled()'s kdocs.
 private val TOP_FAB_OPTIONS =
     listOf(
         FabType.Music,
@@ -263,8 +266,10 @@ private val TOP_FAB_OPTIONS =
         FabType.Clock,
         FabType.SystemStatus,
         FabType.ClockAndSystemStatus,
+        FabType.GameGuides,
         FabType.None,
     ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
+        .filter { it != FabType.GameGuides || gameGuidesEnabled() }
 private val BOTTOM_FAB_OPTIONS =
     listOf(
         FabType.Settings,
@@ -272,8 +277,10 @@ private val BOTTOM_FAB_OPTIONS =
         FabType.AppDrawer,
         FabType.CustomApp,
         FabType.RetroAchievements,
+        FabType.GameGuides,
         FabType.None,
     ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
+        .filter { it != FabType.GameGuides || gameGuidesEnabled() }
 
 /**
  * Master background opacity for every translucent overlay surface - the App Drawer, the
@@ -443,6 +450,7 @@ private val ScreenBehavior.icon: ImageVector
             ScreenBehavior.Dim -> Icons.Filled.Brightness4
             ScreenBehavior.Black -> Icons.Filled.Brightness1
             ScreenBehavior.GameManual -> Icons.AutoMirrored.Filled.MenuBook
+            ScreenBehavior.GameGuide -> Icons.Filled.LibraryBooks
         }
 
 private val ScreenBehavior.label: String
@@ -452,6 +460,7 @@ private val ScreenBehavior.label: String
             ScreenBehavior.Dim -> "Dim"
             ScreenBehavior.Black -> "Off"
             ScreenBehavior.GameManual -> "Manual"
+            ScreenBehavior.GameGuide -> "Guide"
         }
 
 /**
@@ -673,6 +682,7 @@ private val FabType.icon: ImageVector
             FabType.Clock -> Icons.Filled.AccessTime
             FabType.SystemStatus -> Icons.Filled.Wifi
             FabType.ClockAndSystemStatus -> Icons.Filled.AccessTime
+            FabType.GameGuides -> Icons.Filled.LibraryBooks
             FabType.None -> Icons.Filled.Clear
         }
 
@@ -688,6 +698,7 @@ private val FabType.label: String
             FabType.Clock -> "Clock"
             FabType.SystemStatus -> "System Status"
             FabType.ClockAndSystemStatus -> "Clock & Status"
+            FabType.GameGuides -> "Game Guides"
             FabType.None -> "None"
         }
 

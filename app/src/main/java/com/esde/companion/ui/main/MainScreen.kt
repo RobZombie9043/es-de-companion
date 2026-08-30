@@ -56,6 +56,8 @@ import com.esde.companion.ui.dock.dockBarHeight
 import com.esde.companion.ui.drawer.AppDrawer
 import com.esde.companion.ui.drawer.AppDrawerHandle
 import com.esde.companion.ui.drawer.AppDrawerViewModel
+import com.esde.companion.ui.gameguides.GameGuidesOverlayState
+import com.esde.companion.ui.settings.DownloadedGuidesViewModel
 import com.esde.companion.ui.settings.GameLaunchOverrideViewModel
 import com.esde.companion.ui.settings.ManageAppsViewModel
 import com.esde.companion.ui.settings.SettingsViewModel
@@ -112,6 +114,8 @@ fun MainScreen(
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
     taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
     gameLaunchOverrideViewModel: GameLaunchOverrideViewModel,
+    downloadedGuidesViewModel: DownloadedGuidesViewModel,
+    gameGuides: GameGuidesOverlayState,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -122,6 +126,7 @@ fun MainScreen(
     onLongPressMenuOpenChanged: (Boolean) -> Unit = {},
     onFolderOpenChanged: (Boolean) -> Unit = {},
     openSettingsMenuRequest: Int = 0,
+    swipeToOpenDrawerEnabled: Boolean = true,
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
     topEndOverlay: @Composable BoxScope.() -> Unit = {},
     bottomStartOverlay: @Composable BoxScope.() -> Unit = {},
@@ -135,6 +140,8 @@ fun MainScreen(
         autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
         taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
         gameLaunchOverrideViewModel = gameLaunchOverrideViewModel,
+        downloadedGuidesViewModel = downloadedGuidesViewModel,
+        gameGuides = gameGuides,
         updateViewModel = updateViewModel,
         fabAssignments = fabAssignments,
         overlayOpacityPercent = overlayOpacityPercent,
@@ -145,6 +152,7 @@ fun MainScreen(
         onLongPressMenuOpenChanged = onLongPressMenuOpenChanged,
         onFolderOpenChanged = onFolderOpenChanged,
         openSettingsMenuRequest = openSettingsMenuRequest,
+        swipeToOpenDrawerEnabled = swipeToOpenDrawerEnabled,
         topStartOverlay = topStartOverlay,
         topEndOverlay = topEndOverlay,
         bottomStartOverlay = bottomStartOverlay,
@@ -170,6 +178,8 @@ private fun MainScreenContent(
     autoFpsTriggerAppsViewModel: AutoFpsTriggerAppsViewModel,
     taskKillerExcludedAppsViewModel: TaskKillerExcludedAppsViewModel,
     gameLaunchOverrideViewModel: GameLaunchOverrideViewModel,
+    downloadedGuidesViewModel: DownloadedGuidesViewModel,
+    gameGuides: GameGuidesOverlayState,
     updateViewModel: UpdateViewModel,
     fabAssignments: FabAssignments,
     overlayOpacityPercent: Int,
@@ -180,6 +190,7 @@ private fun MainScreenContent(
     onLongPressMenuOpenChanged: (Boolean) -> Unit,
     onFolderOpenChanged: (Boolean) -> Unit,
     openSettingsMenuRequest: Int,
+    swipeToOpenDrawerEnabled: Boolean,
     topStartOverlay: @Composable BoxScope.() -> Unit,
     topEndOverlay: @Composable BoxScope.() -> Unit,
     bottomStartOverlay: @Composable BoxScope.() -> Unit,
@@ -326,7 +337,15 @@ private fun MainScreenContent(
                     // listen for vertical drags over the grid area - not resolved via
                     // Compose's nested-scroll protocol here. The handle below remains the
                     // reliable way to close.
-                    .pointerInput(drawerHeightPx) {
+                    //
+                    // swipeToOpenDrawerEnabled lets a full-screen content overlay drawn as a
+                    // sibling elsewhere in MainActivity (e.g. the Game Guides viewer) suppress
+                    // this detector entirely while it's showing - per MainScreen's own touch-
+                    // priority notes below, a same-level sibling's own scroll gesture isn't
+                    // guaranteed to win a race against this Box's detector, so the reliable
+                    // fix is to not run this detector at all rather than trying to out-race it.
+                    .pointerInput(drawerHeightPx, swipeToOpenDrawerEnabled) {
+                        if (!swipeToOpenDrawerEnabled) return@pointerInput
                         var velocityTracker = VelocityTracker()
                         detectVerticalDragGestures(
                             onDragStart = { velocityTracker = VelocityTracker() },
@@ -411,7 +430,8 @@ private fun MainScreenContent(
                             Icon(imageVector = Icons.Filled.Apps, contentDescription = "App Drawer")
                         }
                     FabType.Music, FabType.GameManual, FabType.CustomApp, FabType.RetroAchievements,
-                    FabType.Clock, FabType.SystemStatus, FabType.ClockAndSystemStatus, FabType.None,
+                    FabType.Clock, FabType.SystemStatus, FabType.ClockAndSystemStatus, FabType.GameGuides,
+                    FabType.None,
                     -> {}
                 }
             }
@@ -479,6 +499,8 @@ private fun MainScreenContent(
                             autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
                             taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
                             gameLaunchOverrideViewModel = gameLaunchOverrideViewModel,
+                            downloadedGuidesViewModel = downloadedGuidesViewModel,
+                            gameGuides = gameGuides,
                             updateViewModel = updateViewModel,
                             onEditWidgetsClick = {
                                 setLongPressMenuOpen(false)

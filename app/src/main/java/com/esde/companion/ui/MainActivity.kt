@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +81,12 @@ import com.esde.companion.ui.dock.AppDockViewModel
 import com.esde.companion.ui.dock.AppDockViewModelFactory
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
+import com.esde.companion.ui.gameguides.GameGuideLibraryActions
+import com.esde.companion.ui.gameguides.GameGuideLibraryScreen
+import com.esde.companion.ui.gameguides.GameGuideViewerScreen
+import com.esde.companion.ui.gameguides.GameGuidesBrowserScreen
+import com.esde.companion.ui.gameguides.GameGuidesUiState
+import com.esde.companion.ui.gameguides.rememberGameGuidesOverlayState
 import com.esde.companion.ui.main.MainScreen
 import com.esde.companion.ui.main.MainViewModel
 import com.esde.companion.ui.main.MainViewModelFactory
@@ -100,6 +107,8 @@ import com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesViewM
 import com.esde.companion.ui.retroachievements.RetroAchievementsViewModel
 import com.esde.companion.ui.retroachievements.RetroAchievementsViewModelFactory
 import com.esde.companion.ui.retroachievements.SystemGamesUiState
+import com.esde.companion.ui.settings.DownloadedGuidesViewModel
+import com.esde.companion.ui.settings.DownloadedGuidesViewModelFactory
 import com.esde.companion.ui.settings.GameLaunchOverrideViewModel
 import com.esde.companion.ui.settings.GameLaunchOverrideViewModelFactory
 import com.esde.companion.ui.settings.ManageAppsViewModel
@@ -252,6 +261,8 @@ class MainActivity : ComponentActivity() {
                                 viewModel(factory = TaskKillerExcludedAppsViewModelFactory(appContainer))
                             val gameLaunchOverrideViewModel: GameLaunchOverrideViewModel =
                                 viewModel(factory = GameLaunchOverrideViewModelFactory(appContainer))
+                            val downloadedGuidesViewModel: DownloadedGuidesViewModel =
+                                viewModel(factory = DownloadedGuidesViewModelFactory(appContainer))
                             val updateViewModel: UpdateViewModel =
                                 viewModel(factory = UpdateViewModelFactory(appContainer))
                             val updateUiState by updateViewModel.uiState.collectAsStateWithLifecycle()
@@ -352,6 +363,7 @@ class MainActivity : ComponentActivity() {
                             val systemGamesViewModel: RetroAchievementsSystemGamesViewModel =
                                 viewModel(factory = RetroAchievementsSystemGamesViewModelFactory(appContainer))
                             val systemGamesState by systemGamesViewModel.state.collectAsStateWithLifecycle()
+
                             // True for every state that means "signed in and browsing an
                             // actual system" - not just Loaded. Loading is included since
                             // RetroAchievementsSystemGamesViewModel only ever enters it once
@@ -614,6 +626,11 @@ class MainActivity : ComponentActivity() {
                                 isBlanked = autoBlackTrigger
                             }
 
+                            val isPlayingGame =
+                                (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
+                            val gameGuides =
+                                rememberGameGuidesOverlayState(appContainer, activeScreenBehavior, isPlayingGame)
+
                             // Extracted so each corner's content can be handed to
                             // MainScreen as a slot rendered INSIDE its own
                             // gesture-handling Box (see topStartOverlay's kdoc in
@@ -653,6 +670,14 @@ class MainActivity : ComponentActivity() {
                                     overlayOpacityPercent = overlayOpacityPercent,
                                     onWidthMeasured = { px -> measuredFabWidthsPx[position] = px },
                                     onClick = { openSettingsMenuRequest++ },
+                                )
+
+                            fun gameGuidesFabContext(position: FabPosition) =
+                                GameGuidesFabContext(
+                                    position = position,
+                                    visible = !isBlanked && isActivityVisible && gameGuides.hasCurrentGame,
+                                    overlayOpacityPercent = overlayOpacityPercent,
+                                    onClick = gameGuides.actions.onOpen,
                                 )
 
                             fun fabSlotContent(position: FabPosition): @Composable BoxScope.() -> Unit =
@@ -698,6 +723,7 @@ class MainActivity : ComponentActivity() {
                                                 overlayOpacityPercent = overlayOpacityPercent,
                                                 onClick = { showRetroAchievementsOverlay = true },
                                             )
+                                        FabType.GameGuides -> GameGuidesFabContent(gameGuidesFabContext(position))
                                         FabType.Clock -> ClockFabContent(wideFabContext(position))
                                         FabType.SystemStatus ->
                                             SystemStatusFabContent(
@@ -780,6 +806,8 @@ class MainActivity : ComponentActivity() {
                                             autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
                                             taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
                                             gameLaunchOverrideViewModel = gameLaunchOverrideViewModel,
+                                            downloadedGuidesViewModel = downloadedGuidesViewModel,
+                                            gameGuides = gameGuides,
                                             updateViewModel = updateViewModel,
                                             fabAssignments = fabAssignments,
                                             overlayOpacityPercent = overlayOpacityPercent,
@@ -790,6 +818,10 @@ class MainActivity : ComponentActivity() {
                                             onLongPressMenuOpenChanged = { longPressMenuOpen = it },
                                             onFolderOpenChanged = { folderOpen = it },
                                             openSettingsMenuRequest = openSettingsMenuRequest,
+                                            // Otherwise a swipe meant to scroll a Game Guides
+                                            // page can also open the App Drawer underneath -
+                                            // see MainScreen's swipeToOpenDrawerEnabled kdoc.
+                                            swipeToOpenDrawerEnabled = !(gameGuides.isShowing && mainScreenActive),
                                             topStartOverlay = fabSlotContent(FabPosition.TopStart),
                                             topEndOverlay = fabSlotContent(FabPosition.TopEnd),
                                             bottomStartOverlay = fabSlotContent(FabPosition.BottomStart),
@@ -934,6 +966,59 @@ class MainActivity : ComponentActivity() {
                                         onExit = { showRetroAchievementsOverlay = false },
                                         modifier = Modifier.fillMaxSize(),
                                     )
+                                }
+
+                                // Game Guides (Game Guides FAB) - same placement/guard as
+                                // GameManual/RetroAchievements above. Which of Browsing/
+                                // Library/Viewing renders is decided live by
+                                // gameGuides.uiState, not frozen at tap time.
+                                AnimatedVisibility(
+                                    visible = gameGuides.isShowing && mainScreenActive,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    when (val state = gameGuides.uiState) {
+                                        is GameGuidesUiState.Browsing ->
+                                            GameGuidesBrowserScreen(
+                                                state = state,
+                                                onPageLoaded = gameGuides.viewModel::onBrowserPageLoaded,
+                                                onSave = gameGuides.viewModel::saveCurrentGuide,
+                                                onClose = gameGuides.actions.onClose,
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        is GameGuidesUiState.Library ->
+                                            GameGuideLibraryScreen(
+                                                state = state,
+                                                actions =
+                                                    GameGuideLibraryActions(
+                                                        onOpenGuide = gameGuides.viewModel::openGuide,
+                                                        onDeleteGuide = { guide ->
+                                                            gameGuides.viewModel.deleteGuide(guide.id)
+                                                        },
+                                                        onFindAnotherGuide = gameGuides.viewModel::openBrowser,
+                                                        onClose = gameGuides.actions.onClose,
+                                                    ),
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        is GameGuidesUiState.Viewing -> {
+                                            val guideId = state.guide.id
+                                            GameGuideViewerScreen(
+                                                state = state,
+                                                onScrollFractionChanged = { pageIndex, fraction ->
+                                                    gameGuides.viewModel.onReadingPositionChanged(
+                                                        guideId,
+                                                        pageIndex,
+                                                        fraction,
+                                                    )
+                                                },
+                                                onDisplayPreferencesChanged =
+                                                    gameGuides.viewModel::onDisplayPreferencesChanged,
+                                                onClose = gameGuides.actions.onCloseViewer,
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        }
+                                        GameGuidesUiState.NoGame -> {}
+                                    }
                                 }
 
                                 // Video widgets with their Configure Widget "Render Above
@@ -1124,6 +1209,32 @@ private fun BoxScope.GameManualFabContent(
         modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
     ) {
         Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+    }
+}
+
+/** Bundles [GameGuidesFabContent]'s parameters into one, same reasoning as [WideFabContext]. */
+private data class GameGuidesFabContext(
+    val position: FabPosition,
+    val visible: Boolean,
+    val overlayOpacityPercent: Int,
+    val onClick: () -> Unit,
+)
+
+/**
+ * Content for a corner assigned [FabType.GameGuides] (see MainActivity's fabSlotContent) -
+ * a FAB shown whenever there's a current game (regardless of whether a guide has been
+ * downloaded for it yet - the first-run flow is search-then-download), opening the Game
+ * Guides overlay on tap (see MainActivity's rememberGameGuidesOverlayState).
+ */
+@Composable
+private fun BoxScope.GameGuidesFabContent(context: GameGuidesFabContext) {
+    if (!context.visible) return
+    CornerFab(
+        onClick = context.onClick,
+        opacityPercent = context.overlayOpacityPercent,
+        modifier = Modifier.align(context.position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
+    ) {
+        Icon(imageVector = Icons.Filled.LibraryBooks, contentDescription = "Game Guides")
     }
 }
 
