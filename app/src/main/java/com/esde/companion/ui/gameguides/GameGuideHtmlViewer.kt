@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
@@ -101,12 +102,20 @@ fun HtmlGuideContent(
     // lastLoadedHtml tracks which page is actually currently loaded so a same-page reload can
     // capture the live scroll position first and restore that instead.
     val lastLoadedHtml = remember { mutableStateOf<String?>(null) }
+    // Gates the WebView's own visibility (not Compose's, see the AndroidView call below) so a
+    // genuine page navigation renders fully scrolled-into-position before it's ever shown,
+    // rather than flashing the top of the page first and then visibly jumping once the
+    // restore script runs. Left true across a same-page reload (font/theme change) - that
+    // path already re-restores the live scroll fraction it just captured, so there's nothing
+    // to hide.
+    val contentVisible = remember { mutableStateOf(false) }
     LaunchedEffect(config.html, config.fontScale, config.isDarkTheme) {
         // Set before the new document loads (not left for the CSS background to establish
         // once rendered) so a theme change while a guide is already open doesn't itself
         // produce the same white-flash-before-the-real-background gap this is fixing.
         webView.setBackgroundColor(backgroundColorInt(config.isDarkTheme))
         val isSamePage = config.html == lastLoadedHtml.value
+        if (!isSamePage) contentVisible.value = false
         val liveFraction = if (isSamePage) queryScrollFraction(webView) else null
         val document = buildGuideHtmlDocument(config.html, config.isDarkTheme, config.fontScale)
         // A non-null base URL so an in-line HTML guide's own relative links (that
@@ -119,7 +128,8 @@ fun HtmlGuideContent(
         lastLoadedHtml.value = config.html
         awaitScrollableLayout(webView)
         val targetFraction = liveFraction ?: config.initialScrollFraction
-        webView.evaluateJavascript(restoreScrollFractionScript(targetFraction), null)
+        restoreScrollFraction(webView, targetFraction)
+        contentVisible.value = true
     }
 
     LaunchedEffect(config.searchQuery) {
@@ -167,7 +177,7 @@ fun HtmlGuideContent(
         }
     }
 
-    AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
+    AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize().alpha(if (contentVisible.value) 1f else 0f))
 }
 
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
@@ -291,6 +301,21 @@ private suspend fun evaluateNumber(
     suspendCancellableCoroutine { continuation ->
         webView.evaluateJavascript("($expression);") { result -> continuation.resume(result?.toFloatOrNull()) }
     }
+
+/**
+ * Awaits the restore script's own completion callback rather than firing it and moving on -
+ * [HtmlGuideContent] only reveals the WebView once this returns, so it's never shown mid-scroll.
+ */
+private suspend fun restoreScrollFraction(
+    webView: WebView,
+    fraction: Float,
+) {
+    suspendCancellableCoroutine { continuation ->
+        webView.evaluateJavascript(restoreScrollFractionScript(fraction)) {
+            if (continuation.isActive) continuation.resume(Unit)
+        }
+    }
+}
 
 private fun restoreScrollFractionScript(fraction: Float): String =
     "(function(){var d=document.documentElement;var s=d.scrollHeight-window.innerHeight;" +
