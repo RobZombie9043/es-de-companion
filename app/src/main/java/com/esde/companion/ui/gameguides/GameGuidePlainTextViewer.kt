@@ -7,12 +7,15 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -37,8 +40,8 @@ data class PlainTextViewerConfig(
 data class ScrollControl(
     val listState: LazyListState,
     val initialScrollFraction: Float,
-    val scrollToFractionRequest: Float?,
-    val onScrollToFractionHandled: () -> Unit,
+    val scrollToCharOffsetRequest: Int?,
+    val onScrollToCharOffsetHandled: () -> Unit,
 )
 
 /**
@@ -57,17 +60,34 @@ fun PlainTextGuideContent(
     onScrollFractionChanged: (Float) -> Unit,
 ) {
     val listState = scroll.listState
+    val textLayoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+
+    val annotatedText =
+        remember(config.text, config.matches) {
+            if (config.matches.isEmpty()) {
+                AnnotatedString(config.text)
+            } else {
+                highlightMatches(config.text, config.matches)
+            }
+        }
 
     LaunchedEffect(config.text) {
         awaitFirstMeasuredItem(listState)
         scrollToFraction(listState, scroll.initialScrollFraction)
     }
 
-    LaunchedEffect(scroll.scrollToFractionRequest) {
-        val fraction = scroll.scrollToFractionRequest ?: return@LaunchedEffect
+    // Resolves the offset against the text's own actual line layout (see awaitTextLayout/
+    // scrollToCharOffset) rather than approximating a scroll fraction from the offset's
+    // position relative to the text's total character count - that approximation assumed
+    // every character takes equal vertical space, which real guide text never does (blank
+    // lines, ASCII-art borders, wrapped lines all break it), so a table-of-contents jump on
+    // a long guide could land a meaningful number of lines away from the real heading.
+    LaunchedEffect(scroll.scrollToCharOffsetRequest) {
+        val charOffset = scroll.scrollToCharOffsetRequest ?: return@LaunchedEffect
         awaitFirstMeasuredItem(listState)
-        scrollToFraction(listState, fraction)
-        scroll.onScrollToFractionHandled()
+        val layout = awaitTextLayout(textLayoutResult, annotatedText)
+        scrollToCharOffset(listState, layout, charOffset)
+        scroll.onScrollToCharOffsetHandled()
     }
 
     LaunchedEffect(listState) {
@@ -78,14 +98,6 @@ fun PlainTextGuideContent(
     }
 
     val fontFamily = if (config.displayPreferences.monospaceFont) FontFamily.Monospace else FontFamily.Default
-    val annotatedText =
-        remember(config.text, config.matches) {
-            if (config.matches.isEmpty()) {
-                AnnotatedString(config.text)
-            } else {
-                highlightMatches(config.text, config.matches)
-            }
-        }
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(16.dp)) {
         item {
@@ -93,6 +105,7 @@ fun PlainTextGuideContent(
                 text = annotatedText,
                 fontFamily = fontFamily,
                 fontSize = (BASE_FONT_SIZE_SP * config.displayPreferences.fontScale).sp,
+                onTextLayout = { textLayoutResult.value = it },
             )
         }
     }
@@ -111,6 +124,31 @@ private suspend fun scrollToFraction(
     val item = listState.layoutInfo.visibleItemsInfo.first { it.index == 0 }
     val scrollableRange = (item.size - listState.layoutInfo.viewportSize.height).coerceAtLeast(0)
     listState.scrollToItem(0, (fraction * scrollableRange).toInt())
+}
+
+/** Waits for a layout pass of exactly [expectedText] - a layout still describing the
+ * previous font scale/text (mid-recomposition) would resolve [charOffset] against the wrong
+ * line metrics. */
+private suspend fun awaitTextLayout(
+    layoutResult: State<TextLayoutResult?>,
+    expectedText: AnnotatedString,
+): TextLayoutResult =
+    snapshotFlow { layoutResult.value }
+        .filterNotNull()
+        .first { it.layoutInput.text == expectedText }
+
+/** Scrolls to the top of the line [charOffset] falls on, using [layout]'s own measured line
+ * positions - exact, unlike [scrollToFraction]'s density-based approximation. */
+private suspend fun scrollToCharOffset(
+    listState: LazyListState,
+    layout: TextLayoutResult,
+    charOffset: Int,
+) {
+    val item = listState.layoutInfo.visibleItemsInfo.first { it.index == 0 }
+    val clampedOffset = charOffset.coerceIn(0, layout.layoutInput.text.length)
+    val lineTop = layout.getLineTop(layout.getLineForOffset(clampedOffset))
+    val scrollableRange = (item.size - listState.layoutInfo.viewportSize.height).coerceAtLeast(0)
+    listState.scrollToItem(0, lineTop.toInt().coerceIn(0, scrollableRange))
 }
 
 /**

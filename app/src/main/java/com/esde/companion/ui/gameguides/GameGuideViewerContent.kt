@@ -31,7 +31,6 @@ data class ViewerDerivedState(
     val isHtml: Boolean,
     val originalText: String,
     val displayedText: String,
-    val tocEntries: List<GuideTocEntry>,
     val plainTextMatches: List<IntRange>,
 )
 
@@ -51,11 +50,29 @@ private fun buildDerivedViewerState(
     val originalText = state.pages.joinToString("\n\n")
     val displayedText =
         if (!isHtml && state.displayPreferences.reflowEnabled) GuideTextReflow.reflow(originalText) else originalText
-    val tocEntries = if (isHtml) state.guide.tocEntries else PlainTextGuideTocParser.parse(originalText)
     val plainTextMatches =
         if (!isHtml && searchQuery.isNotBlank()) findAllMatches(displayedText, searchQuery) else emptyList()
-    return ViewerDerivedState(isHtml, originalText, displayedText, tocEntries, plainTextMatches)
+    return ViewerDerivedState(isHtml, originalText, displayedText, plainTextMatches)
 }
+
+/**
+ * The guide's table of contents, computed only when actually asked for - call this from
+ * inside `if (uiState.showToc) { ... }`, not unconditionally alongside [rememberDerivedViewerState].
+ * [PlainTextGuideTocParser.parse] runs several full-text passes and can take a real,
+ * user-visible moment on a large guide (confirmed on a ~1MB real guide); computing it eagerly
+ * on every guide open - even though the table of contents is only ever shown after an explicit
+ * tap - was adding that delay to opening the guide itself, not just to opening the dialog.
+ * [GuideTocEntry]s for HTML are already stored on the guide's own metadata (tagged at download
+ * time - see `GameFaqsBrowserBridge`), so this is a no-op lookup for that format.
+ */
+@Composable
+fun rememberGuideTocEntries(
+    state: GameGuidesUiState.Viewing,
+    derived: ViewerDerivedState,
+): List<GuideTocEntry> =
+    remember(state.guide.tocEntries, derived.isHtml, derived.displayedText) {
+        if (derived.isHtml) state.guide.tocEntries else PlainTextGuideTocParser.parse(derived.displayedText)
+    }
 
 data class GuideContentState(
     val currentPage: String,
@@ -65,14 +82,14 @@ data class GuideContentState(
     val searchQuery: String,
     val htmlFindRequestId: Int,
     val scrollToAnchorId: String?,
-    val scrollToFractionRequest: Float?,
+    val scrollToCharOffsetRequest: Int?,
 )
 
 data class GuideContentActions(
     val onScrollFractionChanged: (Float) -> Unit,
     val onHtmlFindResult: (active: Int, total: Int) -> Unit,
     val onScrollToAnchorHandled: () -> Unit,
-    val onScrollToFractionHandled: () -> Unit,
+    val onScrollToCharOffsetHandled: () -> Unit,
     val onToggleChrome: () -> Unit,
 )
 
@@ -93,7 +110,7 @@ internal fun buildGuideContentState(
         searchQuery = uiState.searchQuery,
         htmlFindRequestId = uiState.htmlFindRequestId,
         scrollToAnchorId = uiState.scrollToAnchorId,
-        scrollToFractionRequest = uiState.scrollToFractionRequest,
+        scrollToCharOffsetRequest = uiState.scrollToCharOffsetRequest,
     )
 }
 
@@ -108,7 +125,7 @@ internal fun buildGuideContentActions(
             uiState.htmlMatchTotal = total
         },
         onScrollToAnchorHandled = { uiState.scrollToAnchorId = null },
-        onScrollToFractionHandled = { uiState.scrollToFractionRequest = null },
+        onScrollToCharOffsetHandled = { uiState.scrollToCharOffsetRequest = null },
         onToggleChrome = { uiState.chromeVisible = !uiState.chromeVisible },
     )
 
@@ -164,8 +181,8 @@ fun GuideContentArea(
                 ScrollControl(
                     listState = listState,
                     initialScrollFraction = state.initialScrollFraction,
-                    scrollToFractionRequest = state.scrollToFractionRequest,
-                    onScrollToFractionHandled = actions.onScrollToFractionHandled,
+                    scrollToCharOffsetRequest = state.scrollToCharOffsetRequest,
+                    onScrollToCharOffsetHandled = actions.onScrollToCharOffsetHandled,
                 )
             PlainTextGuideContent(
                 config = plainTextConfig,

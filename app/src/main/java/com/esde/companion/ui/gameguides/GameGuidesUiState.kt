@@ -39,5 +39,10 @@ sealed interface GameGuidesUiState {
         val displayPreferences: GameGuideDisplayPreferences,
         val initialScrollFraction: Float,
         val initialPageIndex: Int = 0,
+        // True for the brief window between the viewer appearing (header/chrome, matching the
+        // HTML viewer's own "show immediately, render when ready" feel) and its actual page
+        // content finishing its (potentially slow, disk-bound) load - see
+        // GameGuidesViewModel.openGuide's kdoc.
+        val isLoadingContent: Boolean = false,
     ) : GameGuidesUiState
 }

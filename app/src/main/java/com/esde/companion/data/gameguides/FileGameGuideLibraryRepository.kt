@@ -9,9 +9,11 @@ import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GuideTocEntry
 import com.esde.companion.domain.model.identifies
 import com.esde.companion.domain.repository.GameGuideLibraryRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -56,12 +58,17 @@ class FileGameGuideLibraryRepository(
     override fun observeAllGuides(): Flow<List<DownloadedGameGuide>> =
         context.gameGuideLibraryDataStore.data.map { prefs -> decodeIndex(prefs[GUIDES_INDEX_KEY]) }
 
-    override suspend fun loadContent(guideId: String): List<String>? {
-        val guide = readIndex().find { it.id == guideId } ?: return null
-        val dir = guideDirectory(guideId)
-        val files = (0 until guide.pageCount).map { index -> File(dir, "page_$index.txt") }
-        return files.takeIf { it.all(File::exists) }?.map(File::readText)
-    }
+    // withContext(Dispatchers.IO), not left on whatever dispatcher the caller happens to be
+    // on: viewModelScope.launch defaults to Dispatchers.Main.immediate, so File.readText()
+    // here was blocking the UI thread for however long the read took - confirmed as a real,
+    // noticeable "did my tap even register" pause opening a large (~1MB) real guide.
+    override suspend fun loadContent(guideId: String): List<String>? =
+        withContext(Dispatchers.IO) {
+            val guide = readIndex().find { it.id == guideId } ?: return@withContext null
+            val dir = guideDirectory(guideId)
+            val files = (0 until guide.pageCount).map { index -> File(dir, "page_$index.txt") }
+            files.takeIf { it.all(File::exists) }?.map(File::readText)
+        }
 
     override suspend fun deleteGuide(guideId: String) {
         guideDirectory(guideId).deleteRecursively()

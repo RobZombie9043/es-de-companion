@@ -126,8 +126,19 @@ class GameGuidesViewModel(
         }
     }
 
+    /**
+     * Shows the viewer immediately (header/chrome, resumed page position already known)
+     * before the guide's actual page content has loaded - see [openingViewingStateFor]'s
+     * kdoc for why. A guide can never be re-opened while another is still loading (opening
+     * one already navigates away from the guide list this is invoked from), so there's
+     * nothing to race against once [loadedViewingStateFor] finishes.
+     */
     fun openGuide(guide: DownloadedGameGuide) {
-        viewModelScope.launch { _uiState.value = viewingStateFor(useCases, guide, clock) }
+        viewModelScope.launch {
+            val opening = openingViewingStateFor(useCases, guide)
+            _uiState.value = opening
+            _uiState.value = loadedViewingStateFor(useCases, opening, clock)
+        }
     }
 
     /**
@@ -141,7 +152,11 @@ class GameGuidesViewModel(
     suspend fun autoOpenLastViewedGuideForCurrentGame(): Boolean {
         val reference = currentGame.value?.first
         val mostRecent = reference?.let { mostRecentlyViewedGuide(useCases, it) }
-        if (mostRecent != null) _uiState.value = viewingStateFor(useCases, mostRecent, clock)
+        if (mostRecent != null) {
+            val opening = openingViewingStateFor(useCases, mostRecent)
+            _uiState.value = opening
+            _uiState.value = loadedViewingStateFor(useCases, opening, clock)
+        }
         return mostRecent != null
     }
 
@@ -176,7 +191,33 @@ class GameGuidesViewModel(
 }
 
 /**
- * The Viewing state for [guide], resuming its own last-saved reading position. Also bumps
+ * The initial Viewing state for [guide] - resumed scroll fraction/preferences already known
+ * (both fast DataStore reads), but [GameGuidesUiState.Viewing.pages] empty and
+ * [GameGuidesUiState.Viewing.isLoadingContent] true. Shown immediately, before the guide's
+ * actual page content (a real, disk-bound file read - see `FileGameGuideLibraryRepository`)
+ * has loaded, the same way [HtmlGuideContent] shows its header/chrome before its WebView has
+ * finished loading - confirmed on a large real guide (~1MB of plain text) that loading its
+ * content synchronously before showing anything left the tap feeling like it hadn't
+ * registered at all. See [loadedViewingStateFor] for the second half of this two-step open.
+ */
+internal suspend fun openingViewingStateFor(
+    useCases: GameGuidesUseCases,
+    guide: DownloadedGameGuide,
+): GameGuidesUiState.Viewing {
+    val progress = useCases.observeReadingProgress(guide.id).first()
+    val preferences = useCases.observeDisplayPreferences().first()
+    return GameGuidesUiState.Viewing(
+        guide = guide,
+        pages = emptyList(),
+        displayPreferences = preferences,
+        initialScrollFraction = progress?.scrollFraction ?: 0f,
+        isLoadingContent = true,
+    )
+}
+
+/**
+ * Loads [opening]'s real page content and returns the fully-resolved Viewing state - see
+ * [openingViewingStateFor]'s kdoc for why this is a separate second step. Also bumps
  * [GameGuideReadingProgress.lastOpenedAtMillis] to now, immediately - not only once the
  * reading position later changes (see [GameGuidesViewModel.onReadingPositionChanged]).
  * Without this, a guide that's opened but never scrolled far enough to cross that other
@@ -186,28 +227,23 @@ class GameGuidesViewModel(
  * downloaded more recently could wrongly outrank one actually opened more recently,
  * confirmed as "always opens the last downloaded guide, not the last opened one."
  */
-internal suspend fun viewingStateFor(
+internal suspend fun loadedViewingStateFor(
     useCases: GameGuidesUseCases,
-    guide: DownloadedGameGuide,
+    opening: GameGuidesUiState.Viewing,
     clock: Clock,
 ): GameGuidesUiState.Viewing {
+    val guide = opening.guide
     val pages = useCases.loadGameGuideContent(guide.id) ?: emptyList()
     val progress = useCases.observeReadingProgress(guide.id).first()
-    val preferences = useCases.observeDisplayPreferences().first()
     val maxPageIndex = (pages.size - 1).coerceAtLeast(0)
-    val scrollFraction = progress?.scrollFraction ?: 0f
     // Coerced in case a stale progress record (saved against a since-re-downloaded,
     // differently-paginated copy of this guide) points past the end of the pages actually on
     // disk now.
     val pageIndex = (progress?.pageIndex ?: 0).coerceIn(0, maxPageIndex)
-    useCases.setReadingProgress(GameGuideReadingProgress(guide.id, scrollFraction, clock.millis(), pageIndex))
-    return GameGuidesUiState.Viewing(
-        guide = guide,
-        pages = pages,
-        displayPreferences = preferences,
-        initialScrollFraction = scrollFraction,
-        initialPageIndex = pageIndex,
+    useCases.setReadingProgress(
+        GameGuideReadingProgress(guide.id, opening.initialScrollFraction, clock.millis(), pageIndex),
     )
+    return opening.copy(pages = pages, initialPageIndex = pageIndex, isLoadingContent = false)
 }
 
 /** Library-or-Browsing state for [reference]/[name] - Library when at least one guide is

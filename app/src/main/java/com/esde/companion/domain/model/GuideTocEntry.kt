@@ -7,9 +7,10 @@ package com.esde.companion.domain.model
  * tags headings in the same script pass), so jumping to it is an exact
  * `scrollIntoView()`-style WebView jump; for [GameGuideFormat.PlainText] it's a stringified
  * character offset into the guide's single page string (see
- * `domain/gameguides/PlainTextGuideTocParser`), used to compute an approximate scroll
- * fraction rather than an exact position, since the viewer renders a plain-text page as one
- * unchunked block of text with no addressable sub-position.
+ * `domain/gameguides/PlainTextGuideTocParser`) - the viewer resolves this against the
+ * rendered text's own line layout (`ui/gameguides/GameGuidePlainTextViewer.kt`'s
+ * `scrollToCharOffset`) for an exact jump to that line, since the plain-text page is one
+ * unchunked block of text with no other addressable sub-position to jump to directly.
  *
  * [pageIndex] is which of a multi-page [GameGuideFormat.Html] guide's saved pages [anchorId]
  * lives on (a real in-line HTML guide is saved and shown page-by-page, one per chapter -

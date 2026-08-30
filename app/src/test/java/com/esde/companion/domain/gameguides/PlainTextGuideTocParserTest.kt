@@ -198,4 +198,270 @@ class PlainTextGuideTocParserTest {
 
         assertEquals(listOf("Fallback Header"), entries.map { it.title })
     }
+
+    @Test
+    fun `Chapter and Section headings are recognized as a hierarchical table of contents`() {
+        val tocBlock =
+            listOf(
+                "Chapter 1: Intro",
+                "Section 1.1: Gameplay",
+                "Section 1.2: Story",
+                "Chapter 2: Walkthrough",
+            )
+        val body = listOf("Some filler paragraph.", "", "Intro", "Gameplay", "Story", "Walkthrough")
+        val text = (tocBlock + body).joinToString("\n")
+
+        val entries = PlainTextGuideTocParser.parse(text)
+
+        assertEquals(
+            listOf("Intro" to 0, "Gameplay" to 1, "Story" to 1, "Walkthrough" to 0),
+            entries.map { it.title to it.depth },
+        )
+    }
+
+    @Test
+    fun `anchor prefers a whole matching line over an earlier incidental substring`() {
+        val tocBlock = listOf("| I. Introduction |", "| a. Gameplay |", "| b. Story |", "| II. Walkthrough |")
+        val body =
+            listOf(
+                "This guide's Introduction was written over several weeks.",
+                "",
+                "Introduction",
+                "Gameplay /",
+                "Story /",
+                "Walkthrough /",
+            )
+        val text = (tocBlock + body).joinToString("\n")
+
+        val entries = PlainTextGuideTocParser.parse(text)
+
+        val introEntry = entries.first { it.title == "Introduction" }
+        val realHeadingOffset = text.indexOf("\nIntroduction\n") + 1
+        assertEquals(realHeadingOffset.toString(), introEntry.anchorId)
+    }
+
+    // --- Author-printed "Search Code" table of contents -------------------------------------
+
+    @Test
+    fun `a printed Search Code table of contents is parsed ahead of the noisy flat border scan`() {
+        val toc =
+            listOf(
+                "(Table of Contents)",
+                "",
+                "Search Code",
+                " ----",
+                " PA1        Controls",
+                " PA2        The World",
+                " PA3        Characters",
+                " PG1        Gameplay Basics",
+                "",
+            )
+        // A real guide has far more than CODE_TOC_MAX_GAP_LINES of ordinary prose between the
+        // printed table of contents and the first real body heading - reproduced here with
+        // plain filler so the scan actually stops at the TOC's real end (a too-short gap would
+        // let scanning run straight into the body, defeating the point of this test).
+        val filler = List(30) { "Ordinary prose line $it, not part of any table of contents." }
+        // Every visited location in a real guide's body is wrapped in an underscore banner -
+        // exactly the "hundreds of lines" symptom this fix targets - none of which should
+        // show up now that a real printed table of contents was found.
+        val body =
+            filler +
+                listOf(
+                    "===============================",
+                    "PA1 Controls",
+                    "===============================",
+                    "Controls body text.",
+                    "_______________________________",
+                    "Random Location One",
+                    "_______________________________",
+                    "Filler location text.",
+                    "_______________________________",
+                    "Random Location Two",
+                    "_______________________________",
+                    "More filler location text.",
+                    "===============================",
+                    "PA2 The World",
+                    "===============================",
+                    "World body text.",
+                    "===============================",
+                    "PA3 Characters",
+                    "===============================",
+                    "Characters body text.",
+                    "===============================",
+                    "PG1 Gameplay Basics",
+                    "===============================",
+                    "Gameplay basics body text.",
+                )
+        val text = (toc + body).joinToString("\n")
+
+        val entries = PlainTextGuideTocParser.parse(text)
+
+        assertEquals(
+            listOf("Controls", "The World", "Characters", "Gameplay Basics"),
+            entries.map { it.title },
+        )
+        val realControlsHeadingOffset = text.indexOf("PA1 Controls", startIndex = toc.joinToString("\n").length)
+        assertEquals(realControlsHeadingOffset.toString(), entries.first { it.title == "Controls" }.anchorId)
+    }
+
+    @Test
+    fun `a two-column Search Code line produces column-major entries, not row-major`() {
+        val toc =
+            listOf(
+                "Table of Contents",
+                "",
+                "Search Code",
+                " PM1        April\t\tPM7        October",
+                " PM2        May\t\tPM8        November",
+                " PM3        June\t\tPM9        December",
+                " PM4        July\t\tPMA1       January",
+                "",
+            )
+        val body =
+            listOf(
+                "===============================",
+                "PM1 April",
+                "===============================",
+                "April body text.",
+            )
+        val text = (toc + body).joinToString("\n")
+
+        val entries = PlainTextGuideTocParser.parse(text)
+
+        // Reading down the first column (April, May, June, July) before the second
+        // (October, November, December, January) - not across each printed row in turn.
+        assertEquals(
+            listOf("April", "May", "June", "July", "October", "November", "December", "January"),
+            entries.map { it.title },
+        )
+    }
+
+    @Test
+    fun `trailing column-only rows are appended after the shorter first column, not before it`() {
+        // Mirrors a real guide's calendar-month listing (Persona 4 Golden, GameFAQs FAQ id
+        // 64387): column 1 runs out after 2 rows, but column 2 keeps going for 2 more - those
+        // extra rows have only a column-2 entry, with nothing in column 1's position.
+        val toc =
+            listOf(
+                "Table of Contents",
+                "",
+                "Search Code",
+                " PM1        April\t\tPM7        October",
+                " PM2        May\t\tPM8        November",
+                "\t\t\t\tPMA4\t   Ending",
+                "\t\t\t\tPMA5\t   Second Playthrough",
+                "",
+            )
+        val body =
+            listOf(
+                "===============================",
+                "PM1 April",
+                "===============================",
+                "April body text.",
+            )
+        val text = (toc + body).joinToString("\n")
+
+        val entries = PlainTextGuideTocParser.parse(text)
+
+        assertEquals(
+            listOf("April", "May", "October", "November", "Ending", "Second Playthrough"),
+            entries.map { it.title },
+        )
+    }
+
+    @Test
+    fun `Section headers group their codes under one parent entry, in column-major order`() {
+        val filler = List(30) { "Ordinary prose line $it, not part of any table of contents." }
+        val toc =
+            listOf(
+                "(Table of Contents)",
+                "",
+                "Search Code",
+                "-----------------------------",
+                "  Section 1 About the game  /",
+                "----------------------------",
+                " PA1        Controls",
+                " PA2        The World",
+                " PA3        Characters",
+                "--------------------------------",
+                "  Section 2 Main Walkthrough /",
+                "------------------------------",
+                " PM1        April\t\tPM7        October",
+                " PM2        May\t\tPM8        November",
+            )
+        val body =
+            filler +
+                listOf(
+                    "===============================",
+                    "PA1 Controls",
+                    "===============================",
+                    "Controls body text.",
+                    "===============================",
+                    "PA2 The World",
+                    "===============================",
+                    "World body text.",
+                    "===============================",
+                    "PA3 Characters",
+                    "===============================",
+                    "Characters body text.",
+                    "===============================",
+                    "April 2011 (PM1)",
+                    "===============================",
+                    "April body text.",
+                )
+        val text = (toc + body).joinToString("\n")
+
+        val entries = PlainTextGuideTocParser.parse(text)
+
+        assertEquals(
+            listOf(
+                "About the game" to 0,
+                "Controls" to 1,
+                "The World" to 1,
+                "Characters" to 1,
+                "Main Walkthrough" to 0,
+                "April" to 1,
+                "May" to 1,
+                "October" to 1,
+                "November" to 1,
+            ),
+            entries.map { it.title to it.depth },
+        )
+        // No real "Section 1" text exists anywhere in a real guide's body (confirmed on a real
+        // guide, see parseCodeToc's kdoc) - its entry is anchored at its first child instead.
+        val sectionEntry = entries.first { it.title == "About the game" }
+        val controlsEntry = entries.first { it.title == "Controls" }
+        assertEquals(controlsEntry.anchorId, sectionEntry.anchorId)
+    }
+
+    @Test
+    fun `too few Search Code lines falls back to the hierarchical parser`() {
+        val text =
+            listOf(
+                "Table of Contents",
+                " PA1        Controls",
+                "",
+                "| I. Intro |",
+                "| a. Gameplay |",
+                "| b. Story |",
+                "| II. Walkthrough |",
+            ).joinToString("\n")
+
+        val entries = PlainTextGuideTocParser.parse(text)
+
+        assertEquals(listOf("Intro", "Gameplay", "Story", "Walkthrough"), entries.map { it.title })
+    }
+
+    @Test
+    fun `underscore-bordered headings are ignored by the flat border parser`() {
+        val text =
+            listOf(
+                "_______________________________",
+                "Random Location",
+                "_______________________________",
+                "Filler location text.",
+            ).joinToString("\n")
+
+        assertTrue(PlainTextGuideTocParser.parse(text).isEmpty())
+    }
 }

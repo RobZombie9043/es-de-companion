@@ -1,14 +1,17 @@
 package com.esde.companion.ui.gameguides
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GuideTocEntry
@@ -76,7 +79,7 @@ private fun jumpToMatch(
         uiState.htmlFindRequestId++
     } else if (derived.plainTextMatches.isNotEmpty()) {
         val target = derived.plainTextMatches[index.mod(derived.plainTextMatches.size)]
-        uiState.scrollToFractionRequest = target.first.toFloat() / derived.displayedText.length.coerceAtLeast(1)
+        uiState.scrollToCharOffsetRequest = target.first
     }
 }
 
@@ -128,8 +131,7 @@ fun GameGuideViewerScreen(
             uiState.currentPageIndex = entry.pageIndex.coerceIn(0, lastPageIndex)
             uiState.scrollToAnchorId = entry.anchorId
         } else {
-            val offset = entry.anchorId.toIntOrNull() ?: 0
-            uiState.scrollToFractionRequest = offset.toFloat() / derived.originalText.length.coerceAtLeast(1)
+            uiState.scrollToCharOffsetRequest = entry.anchorId.toIntOrNull() ?: 0
         }
     }
 
@@ -141,12 +143,18 @@ fun GameGuideViewerScreen(
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (uiState.chromeVisible) GuideHeader(config = headerConfig, actions = headerActions)
-            GuideContentArea(
-                derived = derived,
-                state = contentState,
-                actions = contentActions,
-                modifier = Modifier.weight(1f),
-            )
+            if (state.isLoadingContent) {
+                Box(modifier = Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                GuideContentArea(
+                    derived = derived,
+                    state = contentState,
+                    actions = contentActions,
+                    modifier = Modifier.weight(1f),
+                )
+            }
             if (uiState.chromeVisible && headerConfig.pageNav.totalPages > 1) {
                 GuideFooter(
                     pageNav = headerConfig.pageNav,
@@ -158,8 +166,9 @@ fun GameGuideViewerScreen(
     }
 
     if (uiState.showToc) {
+        val tocEntries = rememberGuideTocEntries(state, derived)
         TocDialog(
-            entries = derived.tocEntries,
+            entries = tocEntries,
             onEntrySelected = ::onEntrySelected,
             onDismiss = { uiState.showToc = false },
         )
