@@ -275,6 +275,17 @@ class GameFaqsBrowserBridge(
         // its "Next: <title>" link (null on the last chapter), and the total chapter count
         // from .ftoc's own link list (every chapter page repeats the same full listing, so
         // this is stable regardless of which chapter it's read from).
+        //
+        // .ftoc lists every real chapter link (one per separate page GameFAQs will actually
+        // serve) AND, nested underneath each, in-page sub-section anchors that jump to a
+        // heading *within* that same chapter rather than a new page - counting all of them
+        // together massively overcounts the walk's true length. Confirmed on a real guide
+        // (Persona 4 Golden, GameFAQs FAQ id 76145): 13 real chapters, but 160 total <a>
+        // elements once every sub-section link is included, reported to the user as
+        // "downloading page x of 160" for a guide that's actually 13 pages. A real chapter
+        // link's href is just a page slug ("dungeons"); a sub-section link's href is that
+        // same slug plus a "#fragment" pointing at a heading id on that page - filtering to
+        // only fragment-free hrefs recovers the real per-page chapter count.
         val CHAPTER_EXTRACT_SCRIPT =
             """
             (function() {
@@ -288,10 +299,15 @@ class GameFaqsBrowserBridge(
                 }
                 var nextLink = Array.prototype.slice.call(document.querySelectorAll('ul.paginate a'))
                     .filter(function(a) { return (a.innerText || a.textContent || '').trim().indexOf('Next:') === 0; })[0];
+                var chapterLinks = Array.prototype.slice.call(document.querySelectorAll('.ftoc a'))
+                    .filter(function(a) {
+                        var href = a.getAttribute('href');
+                        return href && href.indexOf('#') === -1;
+                    });
                 return {
                     html: html,
                     nextUrl: nextLink ? nextLink.href : null,
-                    totalChapters: document.querySelectorAll('.ftoc a').length
+                    totalChapters: chapterLinks.length
                 };
             })();
             """.trimIndent()
