@@ -14,7 +14,9 @@ import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.currentGameName
 import com.esde.companion.domain.model.currentGameReference
+import com.esde.companion.domain.repository.GuidePageContent
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -70,6 +72,10 @@ class GameGuidesViewModel(
     private val _uiState = MutableStateFlow<GameGuidesUiState>(GameGuidesUiState.NoGame)
     val uiState: StateFlow<GameGuidesUiState> = _uiState
 
+    /** Tracks [loadPage]'s in-flight coroutine so a new page request can cancel a stale one -
+     * see [loadPage]'s kdoc. */
+    private var pageLoadJob: Job? = null
+
     /** Reopens to the Library for whichever game is current right now - called when the FAB
      * is tapped, when a FAB-opened Viewer is closed (back to that game's Library), and after
      * deleting a guide/importing one. */
@@ -117,7 +123,7 @@ class GameGuidesViewModel(
             val guide = buildImportedGuide(reference, fileName, format, clock.millis())
             when (format) {
                 GameGuideFormat.PlainText, GameGuideFormat.Html ->
-                    useCases.saveGameGuide(guide, listOf(String(bytes, Charsets.UTF_8)))
+                    useCases.saveGameGuide(guide) { GuidePageContent(html = String(bytes, Charsets.UTF_8)) }
                 GameGuideFormat.Pdf, GameGuideFormat.Image ->
                     useCases.importGameGuide(guide, bytes, fileName.substringAfterLast('.', ""))
             }
@@ -171,6 +177,7 @@ class GameGuidesViewModel(
      * nothing to race against once [loadedViewingStateFor] finishes.
      */
     fun openGuide(guide: DownloadedGameGuide) {
+        pageLoadJob?.cancel()
         viewModelScope.launch {
             val opening = openingViewingStateFor(useCases, guide)
             _uiState.value = opening
@@ -190,6 +197,7 @@ class GameGuidesViewModel(
         val reference = currentGame.value?.first
         val mostRecent = reference?.let { mostRecentlyViewedGuide(useCases, it) }
         if (mostRecent != null) {
+            pageLoadJob?.cancel()
             val opening = openingViewingStateFor(useCases, mostRecent)
             _uiState.value = opening
             _uiState.value = loadedViewingStateFor(useCases, opening, clock)
@@ -204,16 +212,30 @@ class GameGuidesViewModel(
      * page the guide was just opened/resumed on (already loaded by [loadedViewingStateFor]).
      * See [GameGuidesUiState.Viewing]'s kdoc for why pages are loaded one at a time rather
      * than all up front. A no-op if the viewer's already been closed by the time this runs.
+     *
+     * [pageLoadJob] cancels a still-in-flight previous call before starting this one - rapid
+     * page-turns/TOC jumps used to launch overlapping, untracked disk reads with no ordering
+     * guarantee, so an earlier-requested page's content could land after a later one and
+     * silently overwrite it (confirmed: neither [LoadGameGuidePageUseCase] nor
+     * `FileGameGuideLibraryRepository.loadPage` catch/swallow `CancellationException`, so a
+     * cancelled job's coroutine never reaches the write-back below). The `guide.id` check on
+     * write-back is a second, independent guard for the cross-guide case - see [openGuide]/
+     * [autoOpenLastViewedGuideForCurrentGame], which also cancel [pageLoadJob] so a slow load
+     * from a previously-viewed guide can never land after a different guide is opened.
      */
     fun loadPage(pageIndex: Int) {
         val viewing = _uiState.value as? GameGuidesUiState.Viewing ?: return
         _uiState.value = viewing.copy(isLoadingContent = true)
-        viewModelScope.launch {
-            val content = useCases.loadGameGuidePage(viewing.guide.id, pageIndex) ?: ""
-            (_uiState.value as? GameGuidesUiState.Viewing)?.let { current ->
-                _uiState.value = current.copy(currentPageContent = content, isLoadingContent = false)
+        pageLoadJob?.cancel()
+        pageLoadJob =
+            viewModelScope.launch {
+                val content = useCases.loadGameGuidePage(viewing.guide.id, pageIndex) ?: ""
+                (_uiState.value as? GameGuidesUiState.Viewing)
+                    ?.takeIf { it.guide.id == viewing.guide.id }
+                    ?.let { current ->
+                        _uiState.value = current.copy(currentPageContent = content, isLoadingContent = false)
+                    }
             }
-        }
     }
 
     fun onReadingPositionChanged(

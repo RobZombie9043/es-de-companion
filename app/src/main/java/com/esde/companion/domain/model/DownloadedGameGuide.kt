@@ -8,10 +8,11 @@ package com.esde.companion.domain.model
  * [id] is instead derived from [gameReference] + the imported file's own name + the import
  * timestamp, and [sourceUrl] is a synthetic, never-dereferenced marker
  * (`"import://<fileName>"`) kept only for debugging/id-provenance. Keyed per-game via [gameReference],
- * the same per-ROM identity `ResolveGameMediaUseCase` already keys manuals by. [pageCount]
- * reflects how many page-strings were handed to `GameGuideLibraryRepository.saveGuide` -
- * always 1 for a single-page guide, more for a multi-page HTML guide whose pagination was
- * walked and stored page-by-page rather than concatenated into one blob. [tocEntries] is
+ * the same per-ROM identity `ResolveGameMediaUseCase` already keys manuals by. [pageCount] is
+ * the number of pages `GameGuideLibraryRepository.saveGuide` will request (and save) one at a
+ * time via its per-page callback - always 1 for a single-page guide, more for a multi-page
+ * HTML guide whose pagination was walked and stored page-by-page rather than concatenated into
+ * one blob. [tocEntries] is
  * only ever populated for [GameGuideFormat.Html] (tagged at download time, alongside image
  * embedding - see `GameFaqsBrowserBridge`); a [GameGuideFormat.PlainText] guide's table of
  * contents is instead computed on the fly when opened (see

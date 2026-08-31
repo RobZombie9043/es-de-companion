@@ -2,18 +2,28 @@ package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.GuideTocEntry
 import kotlinx.coroutines.flow.Flow
+
+/** What one page's [GameGuideLibraryRepository.saveGuide] callback produces - its html plus
+ * whatever table-of-contents entries were tagged on that specific page (empty for a page/
+ * format that doesn't tag any, e.g. plain text). */
+data class GuidePageContent(
+    val html: String,
+    val tocEntries: List<GuideTocEntry> = emptyList(),
+)
 
 /**
  * Downloaded guide storage - see the app-private filesystem + DataStore-backed
- * implementation for the real details. Content is stored as one string per page ([saveGuide]'s
- * [content]) so a multi-page HTML guide's pages can be loaded/rendered independently rather
- * than as one concatenated blob.
+ * implementation for the real details. Content is stored as one string per page - [saveGuide]
+ * calls [GuidePageContent] back once per page (`0 until guide.pageCount`) and writes each one
+ * to disk immediately, so a multi-page HTML guide's pages are never all resident in memory at
+ * once, whether being loaded/rendered (see [loadPage]) or saved.
  */
 interface GameGuideLibraryRepository {
     suspend fun saveGuide(
         guide: DownloadedGameGuide,
-        content: List<String>,
+        pageContent: suspend (pageIndex: Int) -> GuidePageContent,
     ): Result<Unit>
 
     /** Saves an imported [GameGuideFormat.Pdf]/[GameGuideFormat.Image] guide's raw file

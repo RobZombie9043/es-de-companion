@@ -10,6 +10,7 @@ import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GuideTocEntry
 import com.esde.companion.domain.model.identifies
 import com.esde.companion.domain.repository.GameGuideLibraryRepository
+import com.esde.companion.domain.repository.GuidePageContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -42,19 +43,35 @@ private val GUIDES_INDEX_KEY = stringPreferencesKey("guides_index")
 class FileGameGuideLibraryRepository(
     private val context: Context,
 ) : GameGuideLibraryRepository {
+    // withContext(Dispatchers.IO) - same "don't block the caller's dispatcher" reasoning as
+    // loadContent/loadPage below, now unmissable since this reads each page's content via a
+    // real suspend callback (pageContent) rather than a plain in-memory list.
     override suspend fun saveGuide(
         guide: DownloadedGameGuide,
-        content: List<String>,
+        pageContent: suspend (pageIndex: Int) -> GuidePageContent,
     ): Result<Unit> =
-        runCatching {
-            val dir = guideDirectory(guide.id)
-            dir.mkdirs()
-            content.forEachIndexed { index, page -> File(dir, "page_$index.txt").writeText(page) }
-            // Computed from what was actually written, not trusted from the caller - the
-            // authoritative size is however many bytes ended up on disk.
-            val sizeBytes = content.sumOf { it.toByteArray(Charsets.UTF_8).size.toLong() }
-            val stored = guide.copy(sizeBytes = sizeBytes)
-            writeIndex(readIndex().filterNot { it.id == guide.id } + stored)
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val dir = guideDirectory(guide.id)
+                dir.mkdirs()
+                var sizeBytes = 0L
+                val tocEntries = mutableListOf<GuideTocEntry>()
+                // One page in memory at a time - the whole point of this being a callback
+                // rather than a List<String> handed in up front. Confirmed necessary: a real
+                // 20+ chapter, image-heavy guide can put ~8MB of base64-embedded HTML per page,
+                // which used to all sit in one list before a single byte reached disk.
+                for (index in 0 until guide.pageCount) {
+                    val page = pageContent(index)
+                    val bytes = page.html.toByteArray(Charsets.UTF_8)
+                    File(dir, "page_$index.txt").writeBytes(bytes)
+                    // Reuses the same encoded bytes just written, rather than re-encoding the
+                    // whole string a second time purely to size it.
+                    sizeBytes += bytes.size
+                    tocEntries += page.tocEntries
+                }
+                val stored = guide.copy(sizeBytes = sizeBytes, tocEntries = tocEntries)
+                writeIndex(readIndex().filterNot { it.id == guide.id } + stored)
+            }
         }
 
     // withContext(Dispatchers.IO) - same "don't block the caller's dispatcher" reasoning as

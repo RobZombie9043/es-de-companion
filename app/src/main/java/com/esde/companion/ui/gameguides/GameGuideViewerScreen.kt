@@ -16,9 +16,27 @@ import androidx.compose.ui.Modifier
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GuideTocEntry
 
+/**
+ * Keyed on [guideId] + [initialPageIndex], not a bare [remember] - this composable first
+ * mounts during the brief "opening" window (see `GameGuidesViewModel.openingViewingStateFor`'s
+ * kdoc) where [GameGuidesUiState.Viewing.initialPageIndex] is still its 0 default, before
+ * `loadedViewingStateFor` resolves the real resumed page from disk moments later. A bare
+ * `remember { GuideViewerUiState(initialPageIndex) }` locks onto that transient 0 forever,
+ * leaving [GuideViewerUiState.currentPageIndex] stuck at 0 even once the real resumed page
+ * (say, 5) loads - confirmed on-device: the guide list correctly showed 20% progress, but the
+ * viewer opened with its own page indicator reading "Page 1" and (via
+ * [buildGuideContentState]'s `isResumedPage` check comparing the two, now permanently
+ * mismatched) the saved scroll position lost too, resetting to the top of the page. Keying on
+ * [initialPageIndex] re-runs the initializer exactly once more when it settles to the real
+ * value, and on [guideId] too so switching to a different guide never reuses stale UI state
+ * (search query, TOC dialog, etc.) by coincidence of both guides resuming on the same index.
+ */
 @Composable
-private fun rememberGuideViewerUiState(initialPageIndex: Int): GuideViewerUiState {
-    return remember { GuideViewerUiState(initialPageIndex) }
+private fun rememberGuideViewerUiState(
+    guideId: String,
+    initialPageIndex: Int,
+): GuideViewerUiState {
+    return remember(guideId, initialPageIndex) { GuideViewerUiState(initialPageIndex) }
 }
 
 private fun buildHeaderConfig(
@@ -89,15 +107,24 @@ private fun jumpToMatch(
  * implementation runs - that poll only fires after roughly a second of dwell time AND a
  * meaningful scroll delta, so quickly flipping through several chapters and closing before
  * either happens left the saved position stuck on an earlier chapter. Skipped on the very
- * first composition, since that "change" is really just the resumed page - a 0f write there
- * would clobber the real resumed scroll fraction before the poll ever runs.
+ * first composition of [resetKey], since that "change" is really just the resumed page - a 0f
+ * write there would clobber the real resumed scroll fraction before the poll ever runs.
+ *
+ * [resetKey] must be [rememberGuideViewerUiState]'s own `uiState` instance, not just
+ * [currentPageIndex] read some other way - that `GuideViewerUiState` is itself re-created once
+ * [GameGuidesUiState.Viewing.initialPageIndex] settles from its transient 0 default to the
+ * real resumed page (see that composable's kdoc), which changes `currentPageIndex` too. Without
+ * re-arming this "skip the first change" guard on the same trigger, that settling was
+ * mistaken for a real user navigation and clobbered the just-restored scroll fraction with 0f
+ * - confirmed on-device as a guide's saved position resetting to the top of the page.
  */
 @Composable
 private fun PersistPageIndexOnChange(
+    resetKey: Any,
     currentPageIndex: Int,
     onScrollFractionChanged: (pageIndex: Int, fraction: Float) -> Unit,
 ) {
-    val isFirstComposition = remember { mutableStateOf(true) }
+    val isFirstComposition = remember(resetKey) { mutableStateOf(true) }
     LaunchedEffect(currentPageIndex) {
         if (isFirstComposition.value) {
             isFirstComposition.value = false
@@ -111,16 +138,16 @@ private fun PersistPageIndexOnChange(
  * Loads [currentPageIndex]'s content the moment it actually changes (next/previous, a table-
  * of-contents jump to a different page) - see [GameGuidesUiState.Viewing]'s kdoc for why a
  * page's content isn't already sitting in memory the way it used to be. Skipped on the very
- * first composition, same reasoning as [PersistPageIndexOnChange]: that "change" is really
- * just the resumed page, whose content [GameGuidesViewModel.loadedViewingStateFor] already
- * loaded before the viewer ever appeared.
+ * first composition of [resetKey], same reasoning as [PersistPageIndexOnChange] - see its
+ * kdoc for why [resetKey] must be `uiState` itself, not [currentPageIndex].
  */
 @Composable
 private fun LoadPageOnChange(
+    resetKey: Any,
     currentPageIndex: Int,
     onPageChanged: (pageIndex: Int) -> Unit,
 ) {
-    val isFirstComposition = remember { mutableStateOf(true) }
+    val isFirstComposition = remember(resetKey) { mutableStateOf(true) }
     LaunchedEffect(currentPageIndex) {
         if (isFirstComposition.value) {
             isFirstComposition.value = false
@@ -149,14 +176,14 @@ fun GameGuideViewerScreen(
 ) {
     BackHandler(onBack = actions.onClose)
 
-    val uiState = rememberGuideViewerUiState(state.initialPageIndex)
+    val uiState = rememberGuideViewerUiState(state.guide.id, state.initialPageIndex)
     val derived = rememberDerivedViewerState(state, uiState.searchQuery)
     val matchTotal = if (derived.isHtml) uiState.htmlMatchTotal else derived.plainTextMatches.size
     val lastPageIndex = (state.guide.pageCount - 1).coerceAtLeast(0)
 
     LaunchedEffect(uiState.searchQuery) { uiState.currentMatchIndex = 0 }
-    PersistPageIndexOnChange(uiState.currentPageIndex, actions.onScrollFractionChanged)
-    LoadPageOnChange(uiState.currentPageIndex, actions.onPageChanged)
+    PersistPageIndexOnChange(uiState, uiState.currentPageIndex, actions.onScrollFractionChanged)
+    LoadPageOnChange(uiState, uiState.currentPageIndex, actions.onPageChanged)
 
     fun onEntrySelected(entry: GuideTocEntry) {
         uiState.showToc = false

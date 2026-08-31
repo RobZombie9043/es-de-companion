@@ -7,11 +7,13 @@ import com.esde.companion.domain.model.GameGuideFormat
 import com.esde.companion.domain.model.GameGuideReadingProgress
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.GuideTocEntry
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameGuideLibraryRepository
 import com.esde.companion.domain.repository.GameGuideSettingsRepository
 import com.esde.companion.domain.repository.GameMediaRepository
+import com.esde.companion.domain.repository.GuidePageContent
 import com.esde.companion.domain.usecase.DeleteGameGuideUseCase
 import com.esde.companion.domain.usecase.ImportGameGuideUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
@@ -27,6 +29,7 @@ import com.esde.companion.domain.usecase.SaveGameGuideUseCase
 import com.esde.companion.domain.usecase.SetGameGuideDisplayPreferencesUseCase
 import com.esde.companion.domain.usecase.SetGameGuideReadingProgressUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,6 +66,7 @@ class GameGuidesViewModelTest {
         private val binaryPathByGuideId = mutableMapOf<String, String>()
         val deletedGuideIds = mutableListOf<String>()
         val loadPageCalls = mutableListOf<Pair<String, Int>>()
+        val savePageCalls = mutableListOf<Int>()
 
         fun seedGuide(
             guide: DownloadedGameGuide,
@@ -74,10 +78,18 @@ class GameGuidesViewModelTest {
 
         override suspend fun saveGuide(
             guide: DownloadedGameGuide,
-            content: List<String>,
+            pageContent: suspend (pageIndex: Int) -> GuidePageContent,
         ): Result<Unit> {
-            contentByGuideId[guide.id] = content
-            flowFor(guide.gameReference).value += guide
+            val tocEntries = mutableListOf<GuideTocEntry>()
+            val pages =
+                (0 until guide.pageCount).map { index ->
+                    savePageCalls += index
+                    val page = pageContent(index)
+                    tocEntries += page.tocEntries
+                    page.html
+                }
+            contentByGuideId[guide.id] = pages
+            flowFor(guide.gameReference).value += guide.copy(tocEntries = tocEntries)
             return Result.success(Unit)
         }
 
@@ -101,11 +113,17 @@ class GameGuidesViewModelTest {
 
         override suspend fun loadContent(guideId: String): List<String>? = contentByGuideId[guideId]
 
+        // Lets a test simulate one page's read finishing later than another's, to reproduce
+        // the stale-write race loadPage()'s job cancellation guards against - see
+        // "loadPage cancels a still-in-flight previous load..." below.
+        var loadPageDelayMillisFor: (Int) -> Long = { 0L }
+
         override suspend fun loadPage(
             guideId: String,
             pageIndex: Int,
         ): String? {
             loadPageCalls += guideId to pageIndex
+            delay(loadPageDelayMillisFor(pageIndex))
             return contentByGuideId[guideId]?.getOrNull(pageIndex)
         }
 
@@ -415,6 +433,49 @@ class GameGuidesViewModelTest {
             check(state is GameGuidesUiState.Viewing)
             assertEquals("page two", state.currentPageContent)
             assertFalse(state.isLoadingContent)
+        }
+
+    @Test
+    fun `loadPage cancels a still-in-flight previous load so a rapid page change doesn't leave stale content`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 3)
+            libraryRepository.seedGuide(guide, listOf("page zero", "page one", "page two"))
+            // Page 1's read finishes later than page 2's would - reproduces the shape of the
+            // race this guards against (an earlier-requested page landing after a later one).
+            libraryRepository.loadPageDelayMillisFor = { index -> if (index == 1) 100L else 0L }
+            val viewModel = buildViewModel(libraryRepository = libraryRepository)
+            viewModel.openGuide(guide)
+            advanceUntilIdle()
+
+            viewModel.loadPage(1)
+            viewModel.loadPage(2)
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Viewing)
+            assertEquals("page two", state.currentPageContent)
+            assertFalse(state.isLoadingContent)
+        }
+
+    @Test
+    fun `saveGuide requests and writes pages in order, aggregating per-page toc entries`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val saveGameGuide = SaveGameGuideUseCase(libraryRepository)
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 3)
+
+            saveGameGuide(guide) { index ->
+                val entry = GuideTocEntry(title = "Section $index", anchorId = "toc-$index", pageIndex = index)
+                GuidePageContent(html = "page $index", tocEntries = listOf(entry))
+            }
+
+            assertEquals(listOf(0, 1, 2), libraryRepository.savePageCalls)
+            assertEquals(listOf("page 0", "page 1", "page 2"), libraryRepository.loadContent("g1"))
+            val saved = libraryRepository.observeGuidesFor(reference).first().single()
+            assertEquals(listOf("Section 0", "Section 1", "Section 2"), saved.tocEntries.map { it.title })
         }
 
     @Test

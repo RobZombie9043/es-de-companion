@@ -25,6 +25,7 @@ import com.esde.companion.domain.repository.BackupRepositories
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.GameGuideLibraryRepository
 import com.esde.companion.domain.repository.GameGuideSettingsRepository
+import com.esde.companion.domain.repository.GuidePageContent
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
@@ -386,7 +387,7 @@ class SettingsViewModelTest {
 
         override suspend fun saveGuide(
             guide: DownloadedGameGuide,
-            content: List<String>,
+            pageContent: suspend (pageIndex: Int) -> GuidePageContent,
         ) = error("not used in this test")
 
         override fun observeGuidesFor(gameReference: GameReference): Flow<List<DownloadedGameGuide>> {
