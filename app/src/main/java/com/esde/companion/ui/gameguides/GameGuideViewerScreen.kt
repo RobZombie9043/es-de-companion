@@ -34,7 +34,7 @@ private fun buildHeaderConfig(
         searchQuery = uiState.searchQuery,
         matchTotal = matchTotal,
         currentMatchIndex = uiState.currentMatchIndex,
-        pageNav = PageNav(currentPageIndex = uiState.currentPageIndex, totalPages = state.pages.size),
+        pageNav = PageNav(currentPageIndex = uiState.currentPageIndex, totalPages = state.guide.pageCount),
     )
 
 /** [derived] (rather than a plain match-jump callback) keeps this within detekt's
@@ -48,7 +48,7 @@ private fun buildHeaderActions(
     onClose: () -> Unit,
 ): HeaderActions {
     val matchTotal = if (derived.isHtml) uiState.htmlMatchTotal else derived.plainTextMatches.size
-    val lastPageIndex = (state.pages.size - 1).coerceAtLeast(0)
+    val lastPageIndex = (state.guide.pageCount - 1).coerceAtLeast(0)
     return HeaderActions(
         displayPreferences = state.displayPreferences,
         onDisplayPreferencesChanged = onDisplayPreferencesChanged,
@@ -107,23 +107,56 @@ private fun PersistPageIndexOnChange(
     }
 }
 
+/**
+ * Loads [currentPageIndex]'s content the moment it actually changes (next/previous, a table-
+ * of-contents jump to a different page) - see [GameGuidesUiState.Viewing]'s kdoc for why a
+ * page's content isn't already sitting in memory the way it used to be. Skipped on the very
+ * first composition, same reasoning as [PersistPageIndexOnChange]: that "change" is really
+ * just the resumed page, whose content [GameGuidesViewModel.loadedViewingStateFor] already
+ * loaded before the viewer ever appeared.
+ */
+@Composable
+private fun LoadPageOnChange(
+    currentPageIndex: Int,
+    onPageChanged: (pageIndex: Int) -> Unit,
+) {
+    val isFirstComposition = remember { mutableStateOf(true) }
+    LaunchedEffect(currentPageIndex) {
+        if (isFirstComposition.value) {
+            isFirstComposition.value = false
+        } else {
+            onPageChanged(currentPageIndex)
+        }
+    }
+}
+
+/** Bundles [GameGuideViewerScreen]'s own external callbacks into one parameter - same
+ * LongParameterList-avoidance reasoning as [HeaderActions]/[GuideContentActions] below,
+ * needed once [onPageChanged] joined the other three (see [GameGuidesUiState.Viewing]'s kdoc
+ * for why loading a page is now its own callback rather than already-available data). */
+data class GuideViewerActions(
+    val onScrollFractionChanged: (pageIndex: Int, fraction: Float) -> Unit,
+    val onDisplayPreferencesChanged: (GameGuideDisplayPreferences) -> Unit,
+    val onPageChanged: (pageIndex: Int) -> Unit,
+    val onClose: () -> Unit,
+)
+
 @Composable
 fun GameGuideViewerScreen(
     state: GameGuidesUiState.Viewing,
-    onScrollFractionChanged: (pageIndex: Int, fraction: Float) -> Unit,
-    onDisplayPreferencesChanged: (GameGuideDisplayPreferences) -> Unit,
-    onClose: () -> Unit,
+    actions: GuideViewerActions,
     modifier: Modifier = Modifier,
 ) {
-    BackHandler(onBack = onClose)
+    BackHandler(onBack = actions.onClose)
 
     val uiState = rememberGuideViewerUiState(state.initialPageIndex)
     val derived = rememberDerivedViewerState(state, uiState.searchQuery)
     val matchTotal = if (derived.isHtml) uiState.htmlMatchTotal else derived.plainTextMatches.size
-    val lastPageIndex = (state.pages.size - 1).coerceAtLeast(0)
+    val lastPageIndex = (state.guide.pageCount - 1).coerceAtLeast(0)
 
     LaunchedEffect(uiState.searchQuery) { uiState.currentMatchIndex = 0 }
-    PersistPageIndexOnChange(uiState.currentPageIndex, onScrollFractionChanged)
+    PersistPageIndexOnChange(uiState.currentPageIndex, actions.onScrollFractionChanged)
+    LoadPageOnChange(uiState.currentPageIndex, actions.onPageChanged)
 
     fun onEntrySelected(entry: GuideTocEntry) {
         uiState.showToc = false
@@ -136,9 +169,10 @@ fun GameGuideViewerScreen(
     }
 
     val headerConfig = buildHeaderConfig(state, derived, uiState, matchTotal)
-    val headerActions = buildHeaderActions(state, uiState, derived, onDisplayPreferencesChanged, onClose)
+    val headerActions =
+        buildHeaderActions(state, uiState, derived, actions.onDisplayPreferencesChanged, actions.onClose)
     val contentState = buildGuideContentState(state, uiState)
-    val contentActions = buildGuideContentActions(uiState, onScrollFractionChanged)
+    val contentActions = buildGuideContentActions(uiState, actions.onScrollFractionChanged)
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {

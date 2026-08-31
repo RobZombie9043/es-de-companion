@@ -1,6 +1,7 @@
 package com.esde.companion
 
 import android.app.Application
+import android.webkit.WebView
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -14,6 +15,10 @@ class CompanionApplication : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        // Lets chrome://inspect attach to Game Guides' browser WebView on a debug build,
+        // for diagnosing site-specific rendering issues (e.g. Zelda Dungeon's mobile nav)
+        // that don't reproduce in a desktop browser. No effect on release builds.
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         appContainer = AppContainer(this)
     }
 

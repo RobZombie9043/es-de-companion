@@ -30,8 +30,8 @@ import java.time.Clock
  * Drives the Game Guides FAB overlay: [open] always shows the current game's Library
  * (downloaded guides, plus that game's manual if one resolves - see [libraryStateFor]) -
  * reaching the GameFAQs Browser is only ever a deliberate choice via [openBrowser]/
- * [openBrowserFor] (the "+" dropdown's GameFAQs item), never an automatic fallback for an
- * empty Library. Game context follows the same [ObserveConnectionStateUseCase] ->
+ * [openBrowserFor] (the "+" dropdown's items), never an automatic fallback for an empty
+ * Library. Game context follows the same [ObserveConnectionStateUseCase] ->
  * `currentGameReference()` plumbing `GameManualViewModel` uses to resolve per-game media.
  *
  * Manual resolution here deliberately calls [GameGuidesUseCases.resolveGameMedia] directly
@@ -197,6 +197,25 @@ class GameGuidesViewModel(
         return mostRecent != null
     }
 
+    /**
+     * Loads [pageIndex]'s content into the currently-Viewing guide - called whenever
+     * [com.esde.companion.ui.gameguides.GuideViewerUiState.currentPageIndex] actually changes
+     * (next/previous page-turn, a table-of-contents jump to a different page), never for the
+     * page the guide was just opened/resumed on (already loaded by [loadedViewingStateFor]).
+     * See [GameGuidesUiState.Viewing]'s kdoc for why pages are loaded one at a time rather
+     * than all up front. A no-op if the viewer's already been closed by the time this runs.
+     */
+    fun loadPage(pageIndex: Int) {
+        val viewing = _uiState.value as? GameGuidesUiState.Viewing ?: return
+        _uiState.value = viewing.copy(isLoadingContent = true)
+        viewModelScope.launch {
+            val content = useCases.loadGameGuidePage(viewing.guide.id, pageIndex) ?: ""
+            (_uiState.value as? GameGuidesUiState.Viewing)?.let { current ->
+                _uiState.value = current.copy(currentPageContent = content, isLoadingContent = false)
+            }
+        }
+    }
+
     fun onReadingPositionChanged(
         guideId: String,
         pageIndex: Int,
@@ -229,7 +248,7 @@ class GameGuidesViewModel(
 
 /**
  * The initial Viewing state for [guide] - resumed scroll fraction/preferences already known
- * (both fast DataStore reads), but [GameGuidesUiState.Viewing.pages] empty and
+ * (both fast DataStore reads), but [GameGuidesUiState.Viewing.currentPageContent] empty and
  * [GameGuidesUiState.Viewing.isLoadingContent] true. Shown immediately, before the guide's
  * actual page content (a real, disk-bound file read - see `FileGameGuideLibraryRepository`)
  * has loaded, the same way [HtmlGuideContent] shows its header/chrome before its WebView has
@@ -245,7 +264,7 @@ internal suspend fun openingViewingStateFor(
     val preferences = useCases.observeDisplayPreferences().first()
     return GameGuidesUiState.Viewing(
         guide = guide,
-        pages = emptyList(),
+        currentPageContent = "",
         displayPreferences = preferences,
         initialScrollFraction = progress?.scrollFraction ?: 0f,
         isLoadingContent = true,
@@ -280,17 +299,19 @@ private suspend fun loadedTextViewingStateFor(
     clock: Clock,
 ): GameGuidesUiState.Viewing {
     val guide = opening.guide
-    val pages = useCases.loadGameGuideContent(guide.id) ?: emptyList()
     val progress = useCases.observeReadingProgress(guide.id).first()
-    val maxPageIndex = (pages.size - 1).coerceAtLeast(0)
+    val maxPageIndex = (guide.pageCount - 1).coerceAtLeast(0)
     // Coerced in case a stale progress record (saved against a since-re-downloaded,
     // differently-paginated copy of this guide) points past the end of the pages actually on
     // disk now.
     val pageIndex = (progress?.pageIndex ?: 0).coerceIn(0, maxPageIndex)
+    // Only this one resumed page is loaded here - see GameGuidesUiState.Viewing's kdoc for
+    // why every other page is loaded lazily instead, via loadPage, as the user navigates.
+    val content = useCases.loadGameGuidePage(guide.id, pageIndex) ?: ""
     useCases.setReadingProgress(
         GameGuideReadingProgress(guide.id, opening.initialScrollFraction, clock.millis(), pageIndex),
     )
-    return opening.copy(pages = pages, initialPageIndex = pageIndex, isLoadingContent = false)
+    return opening.copy(currentPageContent = content, initialPageIndex = pageIndex, isLoadingContent = false)
 }
 
 /** The Pdf/Image counterpart to [loadedTextViewingStateFor] - resolves the on-disk binary

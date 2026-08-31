@@ -37,6 +37,16 @@ interface GameGuideLibraryRepository {
 
     suspend fun loadContent(guideId: String): List<String>?
 
+    /** Loads just [pageIndex]'s saved content, without touching any other page - the Viewer
+     * uses this instead of [loadContent] so an image-heavy, many-chapter HTML guide never
+     * needs every chapter resident in memory at once (confirmed crashing with an
+     * OutOfMemoryError otherwise - see `GameGuidesViewModel.loadedTextViewingStateFor`'s
+     * kdoc). Null if [guideId] doesn't exist or has no page at [pageIndex]. */
+    suspend fun loadPage(
+        guideId: String,
+        pageIndex: Int,
+    ): String?
+
     /** The on-disk path to a [GameGuideFormat.Pdf]/[GameGuideFormat.Image] guide's saved
      * binary file - the binary counterpart to [loadContent]. Null if [guideId] doesn't exist
      * or was never saved via [saveImportedGuide]. */

@@ -16,6 +16,7 @@ import com.esde.companion.domain.usecase.DeleteGameGuideUseCase
 import com.esde.companion.domain.usecase.ImportGameGuideUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideContentUseCase
+import com.esde.companion.domain.usecase.LoadGameGuidePageUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCase
@@ -61,6 +62,7 @@ class GameGuidesViewModelTest {
         private val contentByGuideId = mutableMapOf<String, List<String>>()
         private val binaryPathByGuideId = mutableMapOf<String, String>()
         val deletedGuideIds = mutableListOf<String>()
+        val loadPageCalls = mutableListOf<Pair<String, Int>>()
 
         fun seedGuide(
             guide: DownloadedGameGuide,
@@ -98,6 +100,14 @@ class GameGuidesViewModelTest {
         }
 
         override suspend fun loadContent(guideId: String): List<String>? = contentByGuideId[guideId]
+
+        override suspend fun loadPage(
+            guideId: String,
+            pageIndex: Int,
+        ): String? {
+            loadPageCalls += guideId to pageIndex
+            return contentByGuideId[guideId]?.getOrNull(pageIndex)
+        }
 
         override suspend fun binaryContentPath(guideId: String): String? = binaryPathByGuideId[guideId]
 
@@ -188,6 +198,7 @@ class GameGuidesViewModelTest {
                 saveGameGuide = SaveGameGuideUseCase(libraryRepository),
                 importGameGuide = ImportGameGuideUseCase(libraryRepository),
                 loadGameGuideContent = LoadGameGuideContentUseCase(libraryRepository),
+                loadGameGuidePage = LoadGameGuidePageUseCase(libraryRepository),
                 loadGameGuideBinaryPath = LoadGameGuideBinaryPathUseCase(libraryRepository),
                 deleteGameGuide = DeleteGameGuideUseCase(libraryRepository),
                 observeDisplayPreferences = ObserveGameGuideDisplayPreferencesUseCase(settingsRepository),
@@ -359,8 +370,51 @@ class GameGuidesViewModelTest {
 
             val state = viewModel.uiState.value
             check(state is GameGuidesUiState.Viewing)
-            assertEquals(listOf("page one", "page two"), state.pages)
+            assertEquals("page one", state.currentPageContent)
             assertEquals(0.5f, state.initialScrollFraction)
+        }
+
+    @Test
+    fun `openGuide loads only the resumed page's content, not every page`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 3)
+            libraryRepository.seedGuide(guide, listOf("page one", "page two", "page three"))
+            val settingsRepository = FakeGameGuideSettingsRepository()
+            settingsRepository.setReadingProgress(GameGuideReadingProgress("g1", 0f, 123L, pageIndex = 1))
+            val viewModel =
+                buildViewModel(libraryRepository = libraryRepository, settingsRepository = settingsRepository)
+
+            viewModel.openGuide(guide)
+            advanceUntilIdle()
+
+            assertEquals(listOf("g1" to 1), libraryRepository.loadPageCalls)
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Viewing)
+            assertEquals("page two", state.currentPageContent)
+        }
+
+    @Test
+    fun `loadPage loads a different page's content into an already-Viewing guide`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 2)
+            libraryRepository.seedGuide(guide, listOf("page one", "page two"))
+            val viewModel = buildViewModel(libraryRepository = libraryRepository)
+            viewModel.openGuide(guide)
+            advanceUntilIdle()
+            libraryRepository.loadPageCalls.clear()
+
+            viewModel.loadPage(1)
+            advanceUntilIdle()
+
+            assertEquals(listOf("g1" to 1), libraryRepository.loadPageCalls)
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Viewing)
+            assertEquals("page two", state.currentPageContent)
+            assertFalse(state.isLoadingContent)
         }
 
     @Test

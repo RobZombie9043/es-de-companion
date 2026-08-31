@@ -130,6 +130,7 @@ import com.esde.companion.domain.usecase.ListGamelistGamesUseCase
 import com.esde.companion.domain.usecase.ListGamelistSystemsUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideContentUseCase
+import com.esde.companion.domain.usecase.LoadGameGuidePageUseCase
 import com.esde.companion.domain.usecase.ObserveAllGameGuidesUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
@@ -738,6 +739,7 @@ class AppContainer(context: Context) {
     val saveGameGuideUseCase = SaveGameGuideUseCase(gameGuideLibraryRepository)
     val importGameGuideUseCase = ImportGameGuideUseCase(gameGuideLibraryRepository)
     val loadGameGuideContentUseCase = LoadGameGuideContentUseCase(gameGuideLibraryRepository)
+    val loadGameGuidePageUseCase = LoadGameGuidePageUseCase(gameGuideLibraryRepository)
     val loadGameGuideBinaryPathUseCase = LoadGameGuideBinaryPathUseCase(gameGuideLibraryRepository)
     val deleteGameGuideUseCase = DeleteGameGuideUseCase(gameGuideLibraryRepository)
     val deleteAllGameGuidesUseCase = DeleteAllGameGuidesUseCase(gameGuideLibraryRepository)

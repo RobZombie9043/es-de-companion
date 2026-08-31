@@ -18,6 +18,7 @@ class GameGuidesViewModelFactory(
                 saveGameGuide = appContainer.saveGameGuideUseCase,
                 importGameGuide = appContainer.importGameGuideUseCase,
                 loadGameGuideContent = appContainer.loadGameGuideContentUseCase,
+                loadGameGuidePage = appContainer.loadGameGuidePageUseCase,
                 loadGameGuideBinaryPath = appContainer.loadGameGuideBinaryPathUseCase,
                 deleteGameGuide = appContainer.deleteGameGuideUseCase,
                 observeDisplayPreferences = appContainer.observeGameGuideDisplayPreferencesUseCase,

@@ -47,12 +47,26 @@ private fun buildDerivedViewerState(
     searchQuery: String,
 ): ViewerDerivedState {
     val isHtml = state.guide.format == GameGuideFormat.Html
-    val originalText = state.pages.joinToString("\n\n")
+    // HTML guides render each page straight from state.currentPageContent (see
+    // GuideContentArea's HtmlGuideContent branch, fed via state.currentPage) and never read
+    // originalText/displayedText/plainTextMatches - confirmed no reference to any of the
+    // three outside this file's own plain-text branches. Skipping the join for HTML avoids
+    // joining every chapter's already-multi-megabyte embedded-image HTML into one combined
+    // string just to discard it - confirmed crashing an 18-chapter, image-heavy Zelda Dungeon
+    // guide with an OutOfMemoryError right here (~58MB single allocation) the moment it was
+    // opened.
+    if (isHtml) {
+        return ViewerDerivedState(isHtml = true, originalText = "", displayedText = "", plainTextMatches = emptyList())
+    }
+    // PlainText guides are always exactly one page (GameFaqsBrowserBridge's chapter-walking
+    // only ever runs for GameGuideFormat.Html), so currentPageContent already IS the whole
+    // guide - no join needed.
+    val originalText = state.currentPageContent
     val displayedText =
-        if (!isHtml && state.displayPreferences.reflowEnabled) GuideTextReflow.reflow(originalText) else originalText
+        if (state.displayPreferences.reflowEnabled) GuideTextReflow.reflow(originalText) else originalText
     val plainTextMatches =
-        if (!isHtml && searchQuery.isNotBlank()) findAllMatches(displayedText, searchQuery) else emptyList()
-    return ViewerDerivedState(isHtml, originalText, displayedText, plainTextMatches)
+        if (searchQuery.isNotBlank()) findAllMatches(displayedText, searchQuery) else emptyList()
+    return ViewerDerivedState(isHtml = false, originalText, displayedText, plainTextMatches)
 }
 
 /**
@@ -103,7 +117,7 @@ internal fun buildGuideContentState(
     val isResumedPage = uiState.currentPageIndex == state.initialPageIndex
     val initialScrollFraction = if (isResumedPage) state.initialScrollFraction else 0f
     return GuideContentState(
-        currentPage = state.pages.getOrNull(uiState.currentPageIndex).orEmpty(),
+        currentPage = state.currentPageContent,
         initialScrollFraction = initialScrollFraction,
         displayPreferences = state.displayPreferences,
         showSearch = uiState.showSearch,

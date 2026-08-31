@@ -91,6 +91,7 @@ import com.esde.companion.ui.gameguides.GameGuidesBrowserScreen
 import com.esde.companion.ui.gameguides.GameGuidesOverlayState
 import com.esde.companion.ui.gameguides.GameGuidesUiState
 import com.esde.companion.ui.gameguides.GuideManualFallback
+import com.esde.companion.ui.gameguides.GuideViewerActions
 import com.esde.companion.ui.gameguides.rememberGameGuidesOverlayState
 import com.esde.companion.ui.main.MainScreen
 import com.esde.companion.ui.main.MainViewModel
@@ -1293,7 +1294,7 @@ private fun buildGameGuideLibraryActions(
     GameGuideLibraryActions(
         onOpenGuide = gameGuides.viewModel::openGuide,
         onDeleteGuide = { guide -> gameGuides.viewModel.deleteGuide(guide.id) },
-        onBrowseGameFaqs = gameGuides.viewModel::openBrowser,
+        onBrowseGameFaqs = { gameGuides.viewModel.openBrowser() },
         onImportGuide = { bytes, fileName, format ->
             gameGuides.viewModel.importGuideFor(state.gameReference, state.gameName, bytes, fileName, format)
         },
@@ -1311,16 +1312,18 @@ private fun GameGuidesViewingContent(
 ) {
     val guideId = state.guide.id
     when (state.guide.format) {
-        GameGuideFormat.PlainText, GameGuideFormat.Html ->
-            GameGuideViewerScreen(
-                state = state,
-                onScrollFractionChanged = { pageIndex, fraction ->
-                    gameGuides.viewModel.onReadingPositionChanged(guideId, pageIndex, fraction)
-                },
-                onDisplayPreferencesChanged = gameGuides.viewModel::onDisplayPreferencesChanged,
-                onClose = gameGuides.actions.onCloseViewer,
-                modifier = modifier,
-            )
+        GameGuideFormat.PlainText, GameGuideFormat.Html -> {
+            val viewerActions =
+                GuideViewerActions(
+                    onScrollFractionChanged = { pageIndex, fraction ->
+                        gameGuides.viewModel.onReadingPositionChanged(guideId, pageIndex, fraction)
+                    },
+                    onDisplayPreferencesChanged = gameGuides.viewModel::onDisplayPreferencesChanged,
+                    onPageChanged = gameGuides.viewModel::loadPage,
+                    onClose = gameGuides.actions.onCloseViewer,
+                )
+            GameGuideViewerScreen(state = state, actions = viewerActions, modifier = modifier)
+        }
         GameGuideFormat.Pdf ->
             GameGuidePdfViewerScreen(
                 state = state,

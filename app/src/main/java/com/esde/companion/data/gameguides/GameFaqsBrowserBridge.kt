@@ -60,27 +60,30 @@ class GameFaqsBrowserBridge(
     suspend fun downloadFullGuide(
         webView: WebView,
         onProgress: (GuideDownloadProgress) -> Unit = {},
-    ): GameFaqsGuidePage {
-        val first = evaluate(webView, DETECT_SCRIPT)
-        val walked =
-            if (first.isGuidePage && first.format == GameGuideFormat.Html) {
-                walkHtmlChapters(webView, first, onProgress)
+    ): GameFaqsGuidePage =
+        withNetworkImagesDisabled(webView) {
+            val first = evaluate(webView, DETECT_SCRIPT)
+            val walked =
+                if (first.isGuidePage && first.format == GameGuideFormat.Html) {
+                    walkHtmlChapters(webView, first, onProgress)
+                } else {
+                    first
+                }
+            if (!walked.isGuidePage || walked.format != GameGuideFormat.Html) {
+                walked
             } else {
-                first
+                val embeddedPages = mutableListOf<String>()
+                val tocEntries = mutableListOf<GuideTocEntry>()
+                val totalPages = walked.pages.size
+                walked.pages.forEachIndexed { index, chapterHtml ->
+                    onProgress(GuideDownloadProgress.EmbeddingImages(index + 1, totalPages))
+                    val embedded = pageProcessor.process(webView, chapterHtml, pageIndex = index)
+                    embeddedPages += embedded.html
+                    tocEntries += embedded.tocEntries
+                }
+                walked.copy(pages = embeddedPages, tocEntries = tocEntries)
             }
-        if (!walked.isGuidePage || walked.format != GameGuideFormat.Html) return walked
-
-        val embeddedPages = mutableListOf<String>()
-        val tocEntries = mutableListOf<GuideTocEntry>()
-        val totalPages = walked.pages.size
-        walked.pages.forEachIndexed { index, chapterHtml ->
-            onProgress(GuideDownloadProgress.EmbeddingImages(index + 1, totalPages))
-            val embedded = pageProcessor.process(webView, chapterHtml, pageIndex = index)
-            embeddedPages += embedded.html
-            tocEntries += embedded.tocEntries
         }
-        return walked.copy(pages = embeddedPages, tocEntries = tocEntries)
-    }
 
     /**
      * In-line HTML guides are split across separate page loads by GameFAQs itself (one
@@ -311,6 +314,31 @@ class GameFaqsBrowserBridge(
                 };
             })();
             """.trimIndent()
+    }
+}
+
+/**
+ * Runs [block] (a multi-chapter walk - see [GameFaqsBrowserBridge.walkHtmlChapters]) with the
+ * WebView's own network image loading turned off, restoring it afterward regardless of how
+ * [block] finishes. Each chapter navigation already waits for
+ * [android.webkit.WebViewClient.onPageFinished], which doesn't fire until the WebView has also
+ * fetched every on-page image for rendering - images this download flow immediately discards,
+ * since [NativeImageDownloader] re-fetches them separately anyway. A real 18-chapter,
+ * image-heavy guide (confirmed while building - since reverted - Zelda Dungeon support, 70-180
+ * images per chapter there) was visibly slower without this, since every chapter's navigation
+ * was blocked on the WebView's own redundant image fetches, not just its HTML. GameFAQs guides
+ * are typically lighter, but the same wasted-fetch problem applies to any multi-chapter guide
+ * this bridge downloads, so the fix is kept regardless.
+ */
+private suspend fun <T> withNetworkImagesDisabled(
+    webView: WebView,
+    block: suspend () -> T,
+): T {
+    webView.settings.blockNetworkImage = true
+    try {
+        return block()
+    } finally {
+        webView.settings.blockNetworkImage = false
     }
 }
 

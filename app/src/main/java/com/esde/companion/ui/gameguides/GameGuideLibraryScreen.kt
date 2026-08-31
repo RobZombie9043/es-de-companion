@@ -53,7 +53,7 @@ private val GUIDE_ROW_SHAPE = RoundedCornerShape(16.dp)
 
 /** Downloaded guides and the Game Manual for the current game (Game Guides FAB) - reopen a
  * saved guide/manual, delete a guide, or use the "+" dropdown to add another guide (Import a
- * file, or search GameFAQs). Always shows both sections, even when one or both are empty
+ * file, or browse GameFAQs). Always shows both sections, even when one or both are empty
  * (see [GameGuidesUiState.Library]'s kdoc) - each empty section renders its own note rather
  * than this screen ever falling back to the Browser on its own. */
 @Composable

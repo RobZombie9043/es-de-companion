@@ -397,6 +397,11 @@ class SettingsViewModelTest {
 
         override suspend fun loadContent(guideId: String): List<String>? = error("not used in this test")
 
+        override suspend fun loadPage(
+            guideId: String,
+            pageIndex: Int,
+        ): String? = error("not used in this test")
+
         override suspend fun deleteGuide(guideId: String) = error("not used in this test")
 
         override suspend fun saveImportedGuide(

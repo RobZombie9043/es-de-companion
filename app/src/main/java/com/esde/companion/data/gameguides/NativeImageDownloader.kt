@@ -16,6 +16,22 @@ private const val READ_TIMEOUT_MS = 8_000
 private const val MAX_CONCURRENT_DOWNLOADS = 12
 private const val DEFAULT_MIME_TYPE = "image/jpeg"
 
+// A single oversized image (a rare full-resolution screenshot rather than a web-optimized
+// one) is skipped outright - same benign "left pointing at its original URL" fallback as any
+// other failed download - rather than let it dominate the page-wide budget below.
+private const val MAX_SINGLE_IMAGE_BYTES = 1_500_000
+
+// Confirmed crash cause: a Zelda Dungeon chapter page can carry 70-180 real screenshots
+// (vs. GameFAQs' mostly-text guides, which never exercised this path at any real scale).
+// Embedding all of them as base64 built one ~53MB string that failed to allocate on top of
+// everything else already on the heap (OutOfMemoryError in
+// GuidePageContentProcessor.substituteImageSrcs, "51228856 free bytes... 48MB until OOM").
+// Capping the total raw bytes embedded per page bounds each chapter's contribution to the
+// guide's in-memory page list - the images past the budget just keep pointing at their
+// original network URL, same as any other failed/skipped download, rather than crash the
+// whole download.
+private const val MAX_EMBEDDED_BYTES_PER_PAGE = 6_000_000
+
 /**
  * Downloads guide images as base64 data URIs via real concurrent native HTTP connections -
  * the same [HttpURLConnection] tool `data/update/GitHubUpdateRepository.kt` already uses to
@@ -30,19 +46,37 @@ private const val DEFAULT_MIME_TYPE = "image/jpeg"
  * both bottlenecks.
  */
 class NativeImageDownloader {
-    /** Best-effort - any URL that fails or times out is simply absent from the returned map,
-     * left pointing at its original (network) URL by whichever caller substitutes these in. */
+    /** Best-effort - any URL that fails, times out, is individually oversized, or would push
+     * the page past [MAX_EMBEDDED_BYTES_PER_PAGE] is simply absent from the returned map, left
+     * pointing at its original (network) URL by whichever caller substitutes these in. The
+     * budget is applied in [urls]' own order (its callers pass images in DOM order), not
+     * download-completion order, so which images get embedded doesn't depend on network
+     * timing. */
     suspend fun downloadAsDataUris(urls: List<String>): Map<String, String> =
         withContext(Dispatchers.IO) {
             val semaphore = Semaphore(MAX_CONCURRENT_DOWNLOADS)
-            urls.distinct()
-                .map { url -> async { url to semaphore.withPermit { downloadOne(url) } } }
-                .awaitAll()
-                .mapNotNull { (url, dataUri) -> dataUri?.let { url to it } }
-                .toMap()
+            val downloads =
+                urls.distinct()
+                    .map { url -> async { url to semaphore.withPermit { downloadOne(url) } } }
+                    .awaitAll()
+            withinPageBudget(downloads)
         }
 
-    private fun downloadOne(url: String): String? {
+    /** Walks [downloads] in order, keeping images until their combined raw size would exceed
+     * [MAX_EMBEDDED_BYTES_PER_PAGE] - everything after that point is dropped, same fallback as
+     * an individually failed download. */
+    private fun withinPageBudget(downloads: List<Pair<String, DownloadedImage?>>): Map<String, String> {
+        var budgetRemaining = MAX_EMBEDDED_BYTES_PER_PAGE
+        val result = mutableMapOf<String, String>()
+        for ((url, image) in downloads) {
+            if (image == null || image.rawByteCount > budgetRemaining) continue
+            result[url] = image.dataUri
+            budgetRemaining -= image.rawByteCount
+        }
+        return result
+    }
+
+    private fun downloadOne(url: String): DownloadedImage? {
         var connection: HttpURLConnection? = null
         return try {
             connection =
@@ -56,8 +90,13 @@ class NativeImageDownloader {
                 null
             } else {
                 val bytes = connection.inputStream.use { it.readBytes() }
-                val mimeType = imageMimeType(connection.contentType, url)
-                "data:$mimeType;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}"
+                if (bytes.size > MAX_SINGLE_IMAGE_BYTES) {
+                    null
+                } else {
+                    val mimeType = imageMimeType(connection.contentType, url)
+                    val dataUri = "data:$mimeType;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}"
+                    DownloadedImage(dataUri, bytes.size)
+                }
             }
         } catch (
             @Suppress("SwallowedException") e: IOException,
@@ -83,3 +122,8 @@ class NativeImageDownloader {
         }
     }
 }
+
+private data class DownloadedImage(
+    val dataUri: String,
+    val rawByteCount: Int,
+)

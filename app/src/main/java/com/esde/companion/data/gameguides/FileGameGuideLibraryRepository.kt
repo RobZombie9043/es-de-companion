@@ -112,6 +112,15 @@ class FileGameGuideLibraryRepository(
             files.takeIf { it.all(File::exists) }?.map(File::readText)
         }
 
+    override suspend fun loadPage(
+        guideId: String,
+        pageIndex: Int,
+    ): String? =
+        withContext(Dispatchers.IO) {
+            val file = File(guideDirectory(guideId), "page_$pageIndex.txt")
+            file.takeIf(File::exists)?.readText()
+        }
+
     override suspend fun deleteGuide(guideId: String) {
         guideDirectory(guideId).deleteRecursively()
         writeIndex(readIndex().filterNot { it.id == guideId })

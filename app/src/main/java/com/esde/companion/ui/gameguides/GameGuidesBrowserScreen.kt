@@ -43,11 +43,11 @@ private const val GAMEFAQS_HOST = "gamefaqs.gamespot.com"
 
 /**
  * Embedded GameFAQs browser (Game Guides FAB, when no guides are downloaded yet, or the
- * Library's "Find another guide" entry). Navigation stays inside GameFAQs' domain -
- * anything else opens in the system browser instead of hijacking this WebView (see
- * [shouldStayInApp]), keeping this from becoming a general-purpose browser. The Save action
- * only appears once [state]'s [GameGuidesUiState.Browsing.currentPageIsGuide] is true,
- * following what [GameGuidesViewModel.onBrowserPageLoaded] detected.
+ * Library's "+" dropdown). Navigation stays inside GameFAQs' own domain - anything else opens
+ * in the system browser instead of hijacking this WebView (see [shouldStayInApp]), keeping
+ * this from becoming a general-purpose browser. The Save action only appears once [state]'s
+ * [GameGuidesUiState.Browsing.currentPageIsGuide] is true, following what
+ * [GameGuidesViewModel.onBrowserPageLoaded] detected.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable

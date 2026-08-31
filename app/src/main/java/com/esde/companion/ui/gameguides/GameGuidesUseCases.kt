@@ -4,6 +4,7 @@ import com.esde.companion.domain.usecase.DeleteGameGuideUseCase
 import com.esde.companion.domain.usecase.ImportGameGuideUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideContentUseCase
+import com.esde.companion.domain.usecase.LoadGameGuidePageUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuidesUseCase
@@ -19,6 +20,7 @@ data class GameGuidesUseCases(
     val saveGameGuide: SaveGameGuideUseCase,
     val importGameGuide: ImportGameGuideUseCase,
     val loadGameGuideContent: LoadGameGuideContentUseCase,
+    val loadGameGuidePage: LoadGameGuidePageUseCase,
     val loadGameGuideBinaryPath: LoadGameGuideBinaryPathUseCase,
     val deleteGameGuide: DeleteGameGuideUseCase,
     val observeDisplayPreferences: ObserveGameGuideDisplayPreferencesUseCase,
