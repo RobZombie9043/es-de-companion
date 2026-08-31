@@ -152,8 +152,7 @@ fun PdfPageViewer(
             state = state,
             actions = actions,
             zoom = zoomState,
-            controlsVisible = controlsVisible,
-            onControlsVisibleChanged = { controlsVisible = it },
+            onToggleControlsVisible = { controlsVisible = !controlsVisible },
         )
         PdfPageViewerOverlayControls(state = state, actions = actions, controlsVisible = controlsVisible)
     }
@@ -175,8 +174,7 @@ private fun PdfPageImage(
     state: PdfPageViewerState,
     actions: PdfPageViewerActions,
     zoom: PdfPageZoomState,
-    controlsVisible: Boolean,
-    onControlsVisibleChanged: (Boolean) -> Unit,
+    onToggleControlsVisible: () -> Unit,
 ) {
     val (scale, offset, scope) = zoom
     val hapticFeedback = LocalHapticFeedback.current
@@ -225,7 +223,7 @@ private fun PdfPageImage(
                 detectTapGestures(
                     onTap = {
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onControlsVisibleChanged(!controlsVisible)
+                        onToggleControlsVisible()
                     },
                 )
             }

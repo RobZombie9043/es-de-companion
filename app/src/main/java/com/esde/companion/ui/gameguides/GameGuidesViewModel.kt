@@ -14,13 +14,17 @@ import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.currentGameName
 import com.esde.companion.domain.model.currentGameReference
+import com.esde.companion.domain.model.resolveScreensaverAwareGame
 import com.esde.companion.domain.repository.GuidePageContent
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEnabledUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -41,14 +45,33 @@ import java.time.Clock
  * explicitly-picked game (Settings > Game Guides > Add Guide, via [openBrowserFor]/
  * [importGuideFor]) that isn't ES-DE's live current game - `GameManualViewModel.pdfPath`
  * only ever resolves the live one.
+ *
+ * [currentGame] deliberately stays a plain live `map` - the same one this class used before
+ * "Update on Screensaver" existed - rather than being routed through
+ * [resolveScreensaverAwareGame] itself: it's what [hasCurrentGame] (the FAB's own visibility)
+ * and every imperative call site below (`open()`/`openBrowser()`/`importGuideFor()`/etc.) reads,
+ * so keeping it simple and independent of the toggle/visibility machinery means a problem in
+ * that machinery can never take the FAB down with it. The screensaver-hold/live-follow behavior
+ * is instead layered on top, additively, by the [init] block's own collector below - see its
+ * comment for why.
  */
 @Suppress("TooManyFunctions")
 class GameGuidesViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
+    observeUpdateGameGuidesOnScreensaverEnabled: ObserveUpdateGameGuidesOnScreensaverEnabledUseCase,
     private val useCases: GameGuidesUseCases,
     private val browserBridge: GameFaqsBrowserBridge = GameFaqsBrowserBridge(),
     private val clock: Clock = Clock.systemUTC(),
 ) : ViewModel() {
+    // Set by MainActivity via onOverlayVisibilityChanged, reflecting whether the Library
+    // screen is actually on screen right now (its AnimatedVisibility condition) - see
+    // resolveScreensaverAwareGame's kdoc for why the screensaver-hold logic needs this.
+    private val overlayVisible = MutableStateFlow(false)
+
+    fun onOverlayVisibilityChanged(visible: Boolean) {
+        overlayVisible.value = visible
+    }
+
     // Eagerly shared, not WhileSubscribed - open()/openBrowser()/saveCurrentGuide() all read
     // currentGame.value imperatively rather than only ever observing it reactively, so this
     // must stay live even during a brief gap with no active UI collector (e.g. between
@@ -71,6 +94,44 @@ class GameGuidesViewModel(
 
     private val _uiState = MutableStateFlow<GameGuidesUiState>(GameGuidesUiState.NoGame)
     val uiState: StateFlow<GameGuidesUiState> = _uiState
+
+    // Keeps an already-open, visible Library following the current game - e.g. scrolling
+    // ES-DE's game list while the Library is showing updates it to the newly-highlighted game -
+    // and, per resolveScreensaverAwareGame, holds it during a screensaver instead when Settings
+    // > Game Guides > "Update on Screensaver" is off. Computes its own resolved value directly
+    // (rather than calling open(), which reads the plain ungated [currentGame] above) so a
+    // fresh FAB tap always shows what's live right now, and only an already-open, already-
+    // visible Library gets the hold treatment - matching resolveScreensaverAwareGame's own
+    // [visible] contract. distinctUntilChanged/drop(1) mean only a genuine change after this
+    // collector starts triggers a refresh; gated on overlayVisible so this does no work while
+    // the overlay is closed, and on uiState being Library so a live game change never
+    // interrupts someone actively reading a guide (Viewing) or browsing GameFAQs (Browsing).
+    //
+    // Deliberately never reacts to a null (no-game) resolution by clearing the Library to
+    // NoGame - there was no such reactive-clear behavior before this feature existed, and doing
+    // so is actively harmful here: ES-DE fires screensaver-start before screensaver-game-select,
+    // so with the toggle on there's a real, if brief, window where the live resolution is
+    // legitimately "no game yet" mid-screensaver. Reacting to that by flipping to NoGame would
+    // then permanently block this same collector's own uiState-is-Library guard above from ever
+    // firing again for the real screensaver-game-select that follows moments later - confirmed
+    // as the actual cause of a reported "the Library stops following/updating" regression.
+    // Skipping a null resolution just leaves the previous game showing until a real one arrives.
+    init {
+        viewModelScope.launch {
+            val screensaverAwareGame =
+                ObserveScreensaverAwareContextUseCase(
+                    observeConnectionState,
+                    observeUpdateGameGuidesOnScreensaverEnabled::invoke,
+                    { overlayVisible },
+                    ::resolveScreensaverAwareGame,
+                )()
+            screensaverAwareGame.drop(1).distinctUntilChanged().collect { resolved ->
+                if (!overlayVisible.value || _uiState.value !is GameGuidesUiState.Library) return@collect
+                val (reference, name) = resolved ?: return@collect
+                _uiState.value = libraryStateFor(useCases, reference, name)
+            }
+        }
+    }
 
     /** Tracks [loadPage]'s in-flight coroutine so a new page request can cancel a stale one -
      * see [loadPage]'s kdoc. */

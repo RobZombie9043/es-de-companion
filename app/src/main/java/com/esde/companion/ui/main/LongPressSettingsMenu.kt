@@ -70,6 +70,8 @@ import com.esde.companion.ui.settings.DownloadedGuidesGamesScreen
 import com.esde.companion.ui.settings.DownloadedGuidesListScreen
 import com.esde.companion.ui.settings.DownloadedGuidesSystemsScreen
 import com.esde.companion.ui.settings.DownloadedGuidesViewModel
+import com.esde.companion.ui.settings.GameGuidesManualFallbackToggle
+import com.esde.companion.ui.settings.GameGuidesScreensaverToggle
 import com.esde.companion.ui.settings.GameGuidesSettingsContent
 import com.esde.companion.ui.settings.GameLaunchOverrideGamesScreen
 import com.esde.companion.ui.settings.GameLaunchOverrideSystemsScreen
@@ -669,9 +671,18 @@ fun LongPressSettingsMenu(
                                             page = MenuPage.DownloadedGuidesSystems(targetPage.category)
                                         },
                                         onClearAllGuidesClicked = settingsViewModel::onClearAllGameGuidesClicked,
-                                        manualFallbackOnNoGuideEnabled = uiState.manualFallbackOnNoGuideEnabled,
-                                        onManualFallbackOnNoGuideEnabledChanged =
-                                            settingsViewModel::onManualFallbackOnNoGuideEnabledChanged,
+                                        manualFallbackToggle =
+                                            GameGuidesManualFallbackToggle(
+                                                enabled = uiState.manualFallbackOnNoGuideEnabled,
+                                                onEnabledChanged =
+                                                    settingsViewModel::onManualFallbackOnNoGuideEnabledChanged,
+                                            ),
+                                        screensaverToggle =
+                                            GameGuidesScreensaverToggle(
+                                                enabled = uiState.updateGameGuidesOnScreensaverEnabled,
+                                                onEnabledChanged =
+                                                    settingsViewModel::onUpdateGameGuidesOnScreensaverEnabledChanged,
+                                            ),
                                     )
                                 SettingsCategory.Thor ->
                                     ThorSettingsContent(

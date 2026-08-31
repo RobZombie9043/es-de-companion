@@ -71,6 +71,7 @@ import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
@@ -106,6 +107,7 @@ import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.SetUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -144,6 +146,7 @@ class SettingsViewModelTest {
         var launchEsdeOnStartEnabled = false
         var debugLoggingEnabled = false
         var updateAchievementsOnScreensaverEnabled = true
+        var updateGameGuidesOnScreensaverEnabled = false
         var bluetoothPermissionRequested = false
 
         override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
@@ -280,6 +283,14 @@ class SettingsViewModelTest {
 
         override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
             return flowOf(updateAchievementsOnScreensaverEnabled)
+        }
+
+        override suspend fun setUpdateGameGuidesOnScreensaverEnabled(enabled: Boolean) {
+            updateGameGuidesOnScreensaverEnabled = enabled
+        }
+
+        override fun observeUpdateGameGuidesOnScreensaverEnabled(): Flow<Boolean> {
+            return flowOf(updateGameGuidesOnScreensaverEnabled)
         }
 
         override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
@@ -633,6 +644,10 @@ class SettingsViewModelTest {
                     ObserveManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository),
                 setManualFallbackOnNoGuideEnabledUseCase =
                     SetManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository),
+                observeUpdateGameGuidesOnScreensaverEnabledUseCase =
+                    ObserveUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository),
+                setUpdateGameGuidesOnScreensaverEnabledUseCase =
+                    SetUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository),
                 volumeSyncSecondarySettingPresent = false,
             )
         return viewModel to appDrawerSettingsRepository

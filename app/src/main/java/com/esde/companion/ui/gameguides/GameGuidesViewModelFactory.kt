@@ -27,8 +27,10 @@ class GameGuidesViewModelFactory(
                 setReadingProgress = appContainer.setGameGuideReadingProgressUseCase,
                 resolveGameMedia = appContainer.resolveGameMediaUseCase,
             )
+        val observeUpdateOnScreensaver = appContainer.observeUpdateGameGuidesOnScreensaverEnabledUseCase
         return GameGuidesViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
+            observeUpdateGameGuidesOnScreensaverEnabled = observeUpdateOnScreensaver,
             useCases = useCases,
         ) as T
     }

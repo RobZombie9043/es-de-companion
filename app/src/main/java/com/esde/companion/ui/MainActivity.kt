@@ -406,29 +406,20 @@ class MainActivity : ComponentActivity() {
                                     systemGamesState is SystemGamesUiState.Loaded ||
                                     systemGamesState is SystemGamesUiState.UnsupportedSystem
 
-                            // One FAB, contextually aware of what ES-DE is currently
-                            // showing rather than a separate FAB type per screen: whichever
-                            // of the game-achievements/system-games ViewModels currently has
-                            // content wins (the two are naturally mutually exclusive - RA-DE
-                            // is either browsing a system or a game/screensaver at once, so
-                            // at most one of the two "has content" flags above is ever true).
-                            // Read live (not just at FAB-tap time) below so the open overlay
-                            // itself flips between the two screens if the browsed system/game
-                            // changes while it's still showing, rather than staying stuck on
-                            // whichever one was open when the FAB was tapped.
-                            val retroAchievementsFabMode =
-                                when {
-                                    retroAchievementsHasContent -> RetroAchievementsFabMode.Game
-                                    systemGamesHasContent -> RetroAchievementsFabMode.System
-                                    else -> RetroAchievementsFabMode.None
-                                }
-                            // See rememberHeldRetroAchievementsFabMode's kdoc: retroAchievementsFabMode
-                            // genuinely is None for one or more frames during a live system<->game
-                            // navigation, since the two source ViewModels resolve independently and
-                            // asynchronously - this holds the previous mode through that gap rather
-                            // than reacting to a momentary None.
+                            // One FAB, contextually aware of what ES-DE is currently showing
+                            // rather than a separate FAB type per screen. Read live (not just at
+                            // FAB-tap time) below so the open overlay itself flips between the two
+                            // screens if the browsed system/game changes while it's still showing,
+                            // rather than staying stuck on whichever one was open when the FAB was
+                            // tapped. See rememberRetroAchievementsFabMode's kdoc: sticks to whichever mode
+                            // is already showing as long as it still has content, rather than
+                            // always preferring Game - otherwise a screensaver starting while the
+                            // System page is open (with "Update on Screensaver" off, holding
+                            // systemGamesHasContent true) would get preempted by the
+                            // still-live-tracking Game ViewModel picking up the screensaver's own
+                            // game and forcing a switch to the Game screen.
                             val heldRetroAchievementsFabMode =
-                                rememberHeldRetroAchievementsFabMode(retroAchievementsFabMode)
+                                rememberRetroAchievementsFabMode(retroAchievementsHasContent, systemGamesHasContent)
 
                             // Set by tapping the RetroAchievements FAB (FAB Control); closed
                             // via either screen's own close button. No automatic open-on-launch
@@ -451,7 +442,7 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // Fed into each ViewModel's onOverlayVisibilityChanged below so its
-                            // own screensaver-hold logic (resolveAchievementsGame/System) only
+                            // own screensaver-hold logic (resolveScreensaverAwareGame/resolveAchievementsSystem) only
                             // freezes the displayed game/system while that exact screen is
                             // genuinely on screen, matching these AnimatedVisibility conditions.
                             val retroAchievementsGameVisible =
@@ -675,6 +666,24 @@ class MainActivity : ComponentActivity() {
                                             onFallbackToManual = { manualShownAsGuideFallback = true },
                                         ),
                                 )
+
+                            // Fed into GameGuidesViewModel.onOverlayVisibilityChanged so its own
+                            // screensaver-hold/live-follow logic (resolveScreensaverAwareGame)
+                            // only acts while the Library screen - not the Viewer or Browser -
+                            // is genuinely on screen, same reasoning as
+                            // retroAchievementsGameVisible/retroAchievementsSystemVisible above.
+                            // Excludes gameGuides.openedDirectly the same way the overlay's own
+                            // reopen-on-FAB-tap effect does (see GameGuidesOverlayState) - a
+                            // Library shown via Settings > Game Guides > Add Guide can be for an
+                            // explicitly-picked game that isn't ES-DE's live current one, so it
+                            // must never be silently swapped out for whatever game ES-DE is
+                            // showing live.
+                            val gameGuidesLibraryVisible =
+                                gameGuides.isShowing && mainScreenActive && !gameGuides.openedDirectly &&
+                                    gameGuides.uiState is GameGuidesUiState.Library
+                            LaunchedEffect(gameGuidesLibraryVisible) {
+                                gameGuides.viewModel.onOverlayVisibilityChanged(gameGuidesLibraryVisible)
+                            }
 
                             // Extracted so each corner's content can be handed to
                             // MainScreen as a slot rendered INSIDE its own
@@ -1341,50 +1350,75 @@ private fun GameGuidesViewingContent(
  * currently points at - [Game] while browsing a game/screensaver/playing (see
  * RetroAchievementsViewModel.resolution), [System] while browsing a system's game list (see
  * RetroAchievementsSystemGamesViewModel.state), [None] when neither has anything to show
- * (e.g. signed out, or Idle). The two source states are naturally mutually exclusive - ES-DE
- * is never simultaneously "browsing a system" and "browsing/playing a game" - so this is a
- * plain priority pick, not a merge of overlapping signals. Note that mutually exclusive
- * *states* doesn't mean atomic *transitions* between them - see
- * [rememberHeldRetroAchievementsFabMode].
+ * (e.g. signed out, or Idle). See [rememberRetroAchievementsFabMode] for how the two source
+ * signals get turned into this.
  */
 private enum class RetroAchievementsFabMode { Game, System, None }
 
 /**
- * Holds the previous non-[RetroAchievementsFabMode.None] mode for
- * [RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS] before actually reporting
- * [RetroAchievementsFabMode.None], rather than propagating a momentary None straight
- * through to the UI.
+ * Picks which of the two RetroAchievements screens is showing, sticking to whichever one is
+ * already displayed as long as it still has content rather than always preferring
+ * [RetroAchievementsFabMode.Game] when both signals happen to be true at once.
  *
- * `RetroAchievementsViewModel` and `RetroAchievementsSystemGamesViewModel` are independent,
- * each resolving asynchronously (a candidate-list/ROM-hash lookup, or a system's cached game
- * list) - on a live system<->game navigation, the side losing context drops to "no content"
+ * The two source states aren't as mutually exclusive as they look. Ordinarily ES-DE is never
+ * simultaneously "browsing a system" and "browsing/playing a game", so [gameHasContent] and
+ * [systemHasContent] are naturally exclusive too - except when "Update on Screensaver" is off:
+ * `RetroAchievementsSystemGamesViewModel` then *holds* [systemHasContent] true through a
+ * screensaver (see `resolveAchievementsSystem`), but `RetroAchievementsViewModel` only holds
+ * its own resolution while the Game screen is the one actually on screen - while the System
+ * screen is showing instead, it keeps live-tracking `AppState` in the background (by design,
+ * so opening the Game screen later shows the right thing) and picks up the screensaver's own
+ * game, making [gameHasContent] true too. A plain "Game always wins" priority pick would then
+ * yank the already-open System screen over to Game the instant a screensaver starts - the
+ * sticky rule here means System stays showing as long as it still has content, exactly the
+ * "held" system the toggle was asking for.
+ *
+ * Also holds the previous non-[RetroAchievementsFabMode.None] mode for
+ * [RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS] before actually reporting
+ * [RetroAchievementsFabMode.None], rather than propagating a momentary None straight through
+ * to the UI. `RetroAchievementsViewModel` and `RetroAchievementsSystemGamesViewModel` each
+ * resolve asynchronously (a candidate-list/ROM-hash lookup, or a system's cached game list) -
+ * on a live system<->game navigation, the side losing context drops to "no content"
  * synchronously (its ViewModel sees the game/system disappear from AppState) while the side
- * gaining context is still mid-resolve, so [target] genuinely is
- * [RetroAchievementsFabMode.None] for one or more frames even though the transition is
- * expected to land on a real mode shortly after. Without this hold, that frame both hides
- * both RetroAchievements screens (MainActivity's two `AnimatedVisibility` blocks require a
- * mode match) and permanently auto-dismisses the overlay (see MainActivity's
- * `LaunchedEffect` keyed on this value) - exposing the widget canvas underneath and
- * requiring the FAB to be tapped again to reopen. Confirmed on-device: the backdrop-image
- * flash this was mistaken for during a WidgetOverlay fix turned out to be this instead, once
- * that fix didn't resolve it.
+ * gaining context is still mid-resolve, so both signals genuinely are false for one or more
+ * frames even though the transition is expected to land on a real mode shortly after. Without
+ * this hold, that frame both hides both RetroAchievements screens (MainActivity's two
+ * `AnimatedVisibility` blocks require a mode match) and permanently auto-dismisses the
+ * overlay (see MainActivity's `LaunchedEffect` keyed on this value) - exposing the widget
+ * canvas underneath and requiring the FAB to be tapped again to reopen. Confirmed on-device:
+ * the backdrop-image flash this was mistaken for during a WidgetOverlay fix turned out to be
+ * this instead, once that fix didn't resolve it.
  *
  * A genuine "nothing to show" (signed out, Idle, both screens truly inapplicable) still
- * resolves to [RetroAchievementsFabMode.None] once the grace period elapses with no
- * non-None [target] having arrived.
+ * resolves to [RetroAchievementsFabMode.None] once the grace period elapses with neither
+ * signal having come back true.
  */
 @Composable
-private fun rememberHeldRetroAchievementsFabMode(target: RetroAchievementsFabMode): RetroAchievementsFabMode {
-    var held by remember { mutableStateOf(target) }
-    LaunchedEffect(target) {
-        if (target != RetroAchievementsFabMode.None) {
-            held = target
+private fun rememberRetroAchievementsFabMode(
+    gameHasContent: Boolean,
+    systemHasContent: Boolean,
+): RetroAchievementsFabMode {
+    var mode by remember { mutableStateOf(RetroAchievementsFabMode.None) }
+    LaunchedEffect(gameHasContent, systemHasContent) {
+        val sticky =
+            when {
+                mode == RetroAchievementsFabMode.Game && gameHasContent -> RetroAchievementsFabMode.Game
+                mode == RetroAchievementsFabMode.System && systemHasContent -> RetroAchievementsFabMode.System
+                gameHasContent -> RetroAchievementsFabMode.Game
+                systemHasContent -> RetroAchievementsFabMode.System
+                else -> null
+            }
+        if (sticky != null) {
+            mode = sticky
             return@LaunchedEffect
         }
+        // A key change (either signal flipping) cancels/restarts this coroutine, so if content
+        // arrives during the delay below, this call is already cancelled before it can write
+        // RetroAchievementsFabMode.None - only a genuine, sustained gap falls through.
         delay(RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS)
-        held = RetroAchievementsFabMode.None
+        mode = RetroAchievementsFabMode.None
     }
-    return held
+    return mode
 }
 
 private const val RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS = 500L
@@ -1395,7 +1429,7 @@ private const val RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS = 500L
  * [RetroAchievementsScreen] for the current game or [RetroAchievementsSystemGamesScreen]
  * for the current system, whichever currently applies. Same trophy icon in both contexts -
  * the FAB doesn't hint at which screen a tap opens, since that already flips live once the
- * screen itself is open (see MainActivity's `retroAchievementsFabMode` usage below).
+ * screen itself is open (see MainActivity's `heldRetroAchievementsFabMode` usage below).
  */
 @Composable
 private fun BoxScope.RetroAchievementsFabContent(

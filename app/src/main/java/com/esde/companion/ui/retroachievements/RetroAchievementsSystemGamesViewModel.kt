@@ -94,13 +94,13 @@ class RetroAchievementsSystemGamesViewModel(
     private val getLeaderboardEntries: GetLeaderboardEntriesUseCase,
 ) : ViewModel() {
     // Set by MainActivity via onOverlayVisibilityChanged - see resolveAchievementsSystem's kdoc
-    // (via resolveAchievementsGame's) for why the screensaver-hold logic needs this.
+    // (via resolveScreensaverAwareGame's) for why the screensaver-hold logic needs this.
     private val overlayVisible = MutableStateFlow(false)
 
     private val currentSystemContext =
         ObserveScreensaverAwareContextUseCase(
             observeConnectionState,
-            observeUpdateAchievementsOnScreensaverEnabled,
+            observeUpdateAchievementsOnScreensaverEnabled::invoke,
             { overlayVisible },
             ::resolveAchievementsSystem,
         )

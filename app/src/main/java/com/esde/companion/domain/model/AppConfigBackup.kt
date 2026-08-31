@@ -70,6 +70,7 @@ data class AppConfigBackup(
     val gameLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
     val closeAppOnGameEndEnabled: Boolean = false,
     val gameLaunchEnabled: Boolean = true,
+    val updateGameGuidesOnScreensaverEnabled: Boolean = false,
 ) {
     companion object {
         const val CURRENT_VERSION = 1

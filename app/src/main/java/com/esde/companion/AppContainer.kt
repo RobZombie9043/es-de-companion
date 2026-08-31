@@ -188,6 +188,7 @@ import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCas
 import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
@@ -252,6 +253,7 @@ import com.esde.companion.domain.usecase.SetTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.SetUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -649,6 +651,14 @@ class AppContainer(context: Context) {
         ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
     val setUpdateAchievementsOnScreensaverEnabledUseCase =
         SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
+
+    // Settings > Game Guides: whether the Library screen follows ES-DE's screensaver to
+    // whatever game it's showing, or freezes on the pre-screensaver game instead. Defaults
+    // off, unlike the achievements toggle above - see OnboardingRepository's kdoc.
+    val observeUpdateGameGuidesOnScreensaverEnabledUseCase =
+        ObserveUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository)
+    val setUpdateGameGuidesOnScreensaverEnabledUseCase =
+        SetUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository)
 
     // The achievement screens' Playtime Stats line's Casual/Hardcore toggle - global, not
     // per-game, see OnboardingRepository.observePlaytimeStatsHardcoreModeEnabled's kdoc.

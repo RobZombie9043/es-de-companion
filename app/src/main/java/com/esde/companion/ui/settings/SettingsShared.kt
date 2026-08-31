@@ -198,7 +198,12 @@ internal fun ToggleSettingRow(
                 Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            // Arrangement.SpaceBetween reserves no minimum gap here - a weight(1f) child
+            // already expands to fill all remaining width on its own, leaving nothing for
+            // SpaceBetween to distribute, so long/wrapping description text could butt right
+            // up against the Switch with zero breathing room. spacedBy guarantees a real gap
+            // regardless of how much of the row the weighted text column's content fills.
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (description != null) {

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -26,6 +27,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
+/** Bundles the "Load game manual..." fallback toggle - keeps [GameGuidesSettingsContent]
+ * under detekt's LongParameterList threshold, same reasoning as RetroAchievementsScreensaverToggle. */
+internal data class GameGuidesManualFallbackToggle(
+    val enabled: Boolean,
+    val onEnabledChanged: (Boolean) -> Unit,
+)
+
+/** Bundles the "Update on Screensaver" toggle - same reasoning as [GameGuidesManualFallbackToggle]. */
+internal data class GameGuidesScreensaverToggle(
+    val enabled: Boolean,
+    val onEnabledChanged: (Boolean) -> Unit,
+)
+
 /**
  * Settings > Game Guides. Text size lives in the guide viewer itself (its own toolbar's
  * text-size buttons, persisted the same way this used to duplicate) - not repeated here, so
@@ -40,8 +54,8 @@ internal fun GameGuidesSettingsContent(
     onAddGuideClicked: () -> Unit,
     onBrowseDownloadedGuidesClicked: () -> Unit,
     onClearAllGuidesClicked: () -> Unit,
-    manualFallbackOnNoGuideEnabled: Boolean,
-    onManualFallbackOnNoGuideEnabledChanged: (Boolean) -> Unit,
+    manualFallbackToggle: GameGuidesManualFallbackToggle,
+    screensaverToggle: GameGuidesScreensaverToggle,
 ) {
     var showClearAllConfirmation by remember { mutableStateOf(false) }
 
@@ -64,8 +78,15 @@ internal fun GameGuidesSettingsContent(
             icon = Icons.AutoMirrored.Filled.MenuBook,
             title = "Load game manual on game start when no guide is available",
             description = manualFallbackDescription,
-            enabled = manualFallbackOnNoGuideEnabled,
-            onEnabledChanged = onManualFallbackOnNoGuideEnabledChanged,
+            enabled = manualFallbackToggle.enabled,
+            onEnabledChanged = manualFallbackToggle.onEnabledChanged,
+        )
+        ToggleSettingRow(
+            icon = Icons.Filled.Nightlight,
+            title = "Update on Screensaver",
+            description = "Switch the open Library to the screensaver's game while it's active.",
+            enabled = screensaverToggle.enabled,
+            onEnabledChanged = screensaverToggle.onEnabledChanged,
         )
         GameGuidesSettingsSection(
             icon = Icons.Filled.LibraryBooks,

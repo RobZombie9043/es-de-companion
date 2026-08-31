@@ -54,6 +54,7 @@ import com.esde.companion.domain.usecase.ObserveTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
@@ -89,6 +90,7 @@ import com.esde.companion.domain.usecase.SetTaskKillerEnabledUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.SetUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -179,6 +181,8 @@ class SettingsViewModel(
     private val deleteAllGameGuidesUseCase: DeleteAllGameGuidesUseCase,
     private val observeManualFallbackOnNoGuideEnabledUseCase: ObserveManualFallbackOnNoGuideEnabledUseCase,
     private val setManualFallbackOnNoGuideEnabledUseCase: SetManualFallbackOnNoGuideEnabledUseCase,
+    private val observeUpdateGameGuidesOnScreensaverEnabledUseCase: ObserveUpdateGameGuidesOnScreensaverEnabledUseCase,
+    private val setUpdateGameGuidesOnScreensaverEnabledUseCase: SetUpdateGameGuidesOnScreensaverEnabledUseCase,
     private val volumeSyncSecondarySettingPresent: Boolean,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -292,6 +296,7 @@ class SettingsViewModel(
             musicDuckingMode = observeMusicDuckingModeUseCase().first(),
             closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first(),
             manualFallbackOnNoGuideEnabled = observeManualFallbackOnNoGuideEnabledUseCase().first(),
+            updateGameGuidesOnScreensaverEnabled = observeUpdateGameGuidesOnScreensaverEnabledUseCase().first(),
             fabAssignments = observeFabAssignmentsUseCase().first(),
             launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first(),
             debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first(),
@@ -410,6 +415,11 @@ class SettingsViewModel(
     fun onManualFallbackOnNoGuideEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(manualFallbackOnNoGuideEnabled = enabled)
         viewModelScope.launch { setManualFallbackOnNoGuideEnabledUseCase(enabled) }
+    }
+
+    fun onUpdateGameGuidesOnScreensaverEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(updateGameGuidesOnScreensaverEnabled = enabled)
+        viewModelScope.launch { setUpdateGameGuidesOnScreensaverEnabledUseCase(enabled) }
     }
 
     // Resets any previously-selected custom app - switching type away from CustomApp and

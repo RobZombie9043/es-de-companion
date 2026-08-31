@@ -15,6 +15,7 @@ import com.esde.companion.domain.repository.GameGuideSettingsRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.GuidePageContent
 import com.esde.companion.domain.usecase.DeleteGameGuideUseCase
+import com.esde.companion.domain.usecase.FakeOnboardingRepository
 import com.esde.companion.domain.usecase.ImportGameGuideUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideContentUseCase
@@ -24,6 +25,7 @@ import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuidesUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.SaveGameGuideUseCase
 import com.esde.companion.domain.usecase.SetGameGuideDisplayPreferencesUseCase
@@ -207,6 +209,7 @@ class GameGuidesViewModelTest {
         libraryRepository: FakeGameGuideLibraryRepository = FakeGameGuideLibraryRepository(),
         settingsRepository: FakeGameGuideSettingsRepository = FakeGameGuideSettingsRepository(),
         gameMediaRepository: FakeGameMediaRepository = FakeGameMediaRepository(),
+        onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
     ): GameGuidesViewModel {
         val observeAppState = ObserveAppStateUseCase(esdeLogRepository, backgroundScope)
         val observeConnectionState = ObserveConnectionStateUseCase(esdeLogRepository, observeAppState)
@@ -225,7 +228,8 @@ class GameGuidesViewModelTest {
                 setReadingProgress = SetGameGuideReadingProgressUseCase(settingsRepository),
                 resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
             )
-        val viewModel = GameGuidesViewModel(observeConnectionState, useCases)
+        val observeUpdateOnScreensaver = ObserveUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository)
+        val viewModel = GameGuidesViewModel(observeConnectionState, observeUpdateOnScreensaver, useCases)
         advanceUntilIdle()
         return viewModel
     }
@@ -615,5 +619,99 @@ class GameGuidesViewModelTest {
 
             assertFalse(opened)
             assertEquals(GameGuidesUiState.NoGame, viewModel.uiState.value)
+        }
+
+    // --- live-follow / screensaver hold (onOverlayVisibilityChanged) ----------------------
+
+    @Test
+    fun `an open Library follows game-to-game browsing while visible`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val referenceB = GameReference("snes", "/roms/snes/b.sfc", null)
+            libraryRepository.seedGuide(downloadedGuide(referenceB, id = "g1"), listOf("page one"))
+            val viewModel = buildViewModel(esdeLogRepository, libraryRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+            viewModel.open()
+            viewModel.onOverlayVisibilityChanged(true)
+            advanceUntilIdle()
+            check((viewModel.uiState.value as GameGuidesUiState.Library).guides.isEmpty())
+
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/b.sfc", "B", "snes", "SNES"))
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertEquals(referenceB, state.gameReference)
+            assertEquals("g1", state.guides.single().id)
+        }
+
+    @Test
+    fun `an open Library does not follow game-to-game browsing while not visible`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val viewModel = buildViewModel(esdeLogRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+            viewModel.open()
+            advanceUntilIdle()
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            check((viewModel.uiState.value as GameGuidesUiState.Library).gameReference == reference)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/b.sfc", "B", "snes", "SNES"))
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertEquals(reference, state.gameReference)
+        }
+
+    @Test
+    fun `visible Library holds its game through a screensaver when the toggle is off`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val onboardingRepository = FakeOnboardingRepository(updateGameGuidesOnScreensaverEnabled = false)
+            val viewModel = buildViewModel(esdeLogRepository, onboardingRepository = onboardingRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+            viewModel.open()
+            viewModel.onOverlayVisibilityChanged(true)
+            advanceUntilIdle()
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            check((viewModel.uiState.value as GameGuidesUiState.Library).gameReference == reference)
+
+            esdeLogRepository.events.emit(EsdeEvent.ScreensaverStart("timer"))
+            esdeLogRepository.events.emit(
+                EsdeEvent.ScreensaverGameSelect("/roms/genesis/other.md", "Other Game", "genesis", "Sega Genesis"),
+            )
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertEquals(reference, state.gameReference)
+        }
+
+    @Test
+    fun `visible Library follows the screensaver's game when the toggle is on`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val onboardingRepository = FakeOnboardingRepository(updateGameGuidesOnScreensaverEnabled = true)
+            val viewModel = buildViewModel(esdeLogRepository, onboardingRepository = onboardingRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameSelect("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+            viewModel.open()
+            viewModel.onOverlayVisibilityChanged(true)
+            advanceUntilIdle()
+
+            esdeLogRepository.events.emit(EsdeEvent.ScreensaverStart("timer"))
+            esdeLogRepository.events.emit(
+                EsdeEvent.ScreensaverGameSelect("/roms/genesis/other.md", "Other Game", "genesis", "Sega Genesis"),
+            )
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertEquals(GameReference("genesis", "/roms/genesis/other.md", null), state.gameReference)
         }
 }

@@ -107,6 +107,7 @@ class RestoreConfigBackupUseCase(
             setLaunchEsdeOnStartEnabled(snapshot.launchEsdeOnStartEnabled)
             setDebugLoggingEnabled(snapshot.debugLoggingEnabled)
             setUpdateAchievementsOnScreensaverEnabled(snapshot.updateAchievementsOnScreensaverEnabled)
+            setUpdateGameGuidesOnScreensaverEnabled(snapshot.updateGameGuidesOnScreensaverEnabled)
         }
     }
 }

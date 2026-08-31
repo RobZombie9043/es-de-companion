@@ -50,6 +50,7 @@ data class SettingsUiState(
     val isValidatingCustomMusicFolder: Boolean = false,
     val closeCompanionOnQuitEnabled: Boolean = false,
     val manualFallbackOnNoGuideEnabled: Boolean = false,
+    val updateGameGuidesOnScreensaverEnabled: Boolean = false,
     val fabAssignments: FabAssignments = FabAssignments.Default,
     val installedApps: List<InstalledApp> = emptyList(),
     val launchEsdeOnStartEnabled: Boolean = false,

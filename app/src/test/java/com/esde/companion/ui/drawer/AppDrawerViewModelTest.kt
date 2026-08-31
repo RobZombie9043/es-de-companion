@@ -202,6 +202,10 @@ class AppDrawerViewModelTest {
 
         override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = flowOf(true)
 
+        override suspend fun setUpdateGameGuidesOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateGameGuidesOnScreensaverEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
 
         override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)

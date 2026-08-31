@@ -25,13 +25,17 @@ class ExportConfigBackupUseCase(
             }
         val updateAchievementsOnScreensaverEnabled =
             repositories.onboardingRepository.observeUpdateAchievementsOnScreensaverEnabled().first()
-        val snapshot = buildSnapshot(widgetCanvases, updateAchievementsOnScreensaverEnabled)
+        val updateGameGuidesOnScreensaverEnabled =
+            repositories.onboardingRepository.observeUpdateGameGuidesOnScreensaverEnabled().first()
+        val snapshot =
+            buildSnapshot(widgetCanvases, updateAchievementsOnScreensaverEnabled, updateGameGuidesOnScreensaverEnabled)
         return configBackupRepository.serialize(snapshot)
     }
 
     private suspend fun buildSnapshot(
         widgetCanvases: Map<StateGroup, SavedWidgetCanvas>,
         updateAchievementsOnScreensaverEnabled: Boolean,
+        updateGameGuidesOnScreensaverEnabled: Boolean,
     ): AppConfigBackup =
         with(repositories) {
             AppConfigBackup(
@@ -82,6 +86,7 @@ class ExportConfigBackupUseCase(
                 gameLaunchDisplayTarget = gameLaunchAppRepository.observeLaunchDisplayTarget().first(),
                 closeAppOnGameEndEnabled = gameLaunchAppRepository.observeCloseAppOnGameEnd().first(),
                 gameLaunchEnabled = gameLaunchAppRepository.observeEnabled().first(),
+                updateGameGuidesOnScreensaverEnabled = updateGameGuidesOnScreensaverEnabled,
             )
         }
 }

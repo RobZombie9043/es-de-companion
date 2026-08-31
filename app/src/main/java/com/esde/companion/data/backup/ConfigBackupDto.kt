@@ -79,6 +79,7 @@ internal data class ConfigBackupDto(
     val gameLaunchDisplayTarget: String = "ThisScreen",
     val closeAppOnGameEndEnabled: Boolean = false,
     val gameLaunchEnabled: Boolean = true,
+    val updateGameGuidesOnScreensaverEnabled: Boolean = false,
 )
 
 @Serializable

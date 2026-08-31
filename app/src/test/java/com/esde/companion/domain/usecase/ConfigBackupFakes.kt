@@ -60,6 +60,7 @@ internal class FakeOnboardingRepository(
     launchEsdeOnStartEnabled: Boolean = false,
     debugLoggingEnabled: Boolean = false,
     updateAchievementsOnScreensaverEnabled: Boolean = true,
+    updateGameGuidesOnScreensaverEnabled: Boolean = false,
 ) : OnboardingRepository {
     private val logFolderPathFlow = MutableStateFlow(logFolderPath)
     private val mediaFolderPathFlow = MutableStateFlow(mediaFolderPath)
@@ -82,6 +83,7 @@ internal class FakeOnboardingRepository(
     private val launchEsdeOnStartEnabledFlow = MutableStateFlow(launchEsdeOnStartEnabled)
     private val debugLoggingEnabledFlow = MutableStateFlow(debugLoggingEnabled)
     private val updateAchievementsOnScreensaverEnabledFlow = MutableStateFlow(updateAchievementsOnScreensaverEnabled)
+    private val updateGameGuidesOnScreensaverEnabledFlow = MutableStateFlow(updateGameGuidesOnScreensaverEnabled)
 
     override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
 
@@ -233,6 +235,14 @@ internal class FakeOnboardingRepository(
 
     override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
         return updateAchievementsOnScreensaverEnabledFlow
+    }
+
+    override suspend fun setUpdateGameGuidesOnScreensaverEnabled(enabled: Boolean) {
+        updateGameGuidesOnScreensaverEnabledFlow.value = enabled
+    }
+
+    override fun observeUpdateGameGuidesOnScreensaverEnabled(): Flow<Boolean> {
+        return updateGameGuidesOnScreensaverEnabledFlow
     }
 
     // Deliberately not part of this fake's constructor params, same as the RetroAchievements
