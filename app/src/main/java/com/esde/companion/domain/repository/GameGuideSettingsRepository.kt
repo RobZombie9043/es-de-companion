@@ -14,4 +14,11 @@ interface GameGuideSettingsRepository {
     suspend fun setReadingProgress(progress: GameGuideReadingProgress)
 
     fun observeReadingProgress(guideId: String): Flow<GameGuideReadingProgress?>
+
+    /** Settings > Game Guides: whether Game Playing Behavior = Guide should fall back to
+     * showing the current game's manual when it has no downloaded guide, instead of showing
+     * nothing. Defaults off, like every other automation toggle in this app. */
+    suspend fun setManualFallbackOnNoGuideEnabled(enabled: Boolean)
+
+    fun observeManualFallbackOnNoGuideEnabled(): Flow<Boolean>
 }

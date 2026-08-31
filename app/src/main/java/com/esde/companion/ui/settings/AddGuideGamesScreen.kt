@@ -25,7 +25,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
  * picker. [onGameSelected] carries both the game's ES-DE-relative ROM path (see
  * [com.esde.companion.domain.model.identifies]'s kdoc for why that's enough to key a
  * downloaded guide by) and its scraped display name (for the GameFAQs search query and the
- * guide's own title-cleaning).
+ * guide's own title-cleaning). The caller drills one level deeper still into
+ * `MenuPage.AddGuideMethod` on selection, rather than acting on it directly here.
  */
 @Composable
 fun AddGuideGamesScreen(

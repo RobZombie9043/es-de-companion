@@ -1,6 +1,7 @@
 package com.esde.companion.data.gameguides
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.map
 
 private val FONT_SCALE_KEY = floatPreferencesKey("font_scale")
 private const val DEFAULT_FONT_SCALE = 1.0f
+private val MANUAL_FALLBACK_ON_NO_GUIDE_KEY = booleanPreferencesKey("manual_fallback_on_no_guide")
 
 /**
  * DataStore-backed [GameGuideSettingsRepository]. Reading progress is keyed per guide id
@@ -51,6 +53,13 @@ class FileGameGuideSettingsRepository(
             val pageIndex = prefs[pageIndexKey(guideId)] ?: 0
             GameGuideReadingProgress(guideId, scrollFraction, lastOpenedAt, pageIndex)
         }
+
+    override suspend fun setManualFallbackOnNoGuideEnabled(enabled: Boolean) {
+        context.gameGuideSettingsDataStore.edit { it[MANUAL_FALLBACK_ON_NO_GUIDE_KEY] = enabled }
+    }
+
+    override fun observeManualFallbackOnNoGuideEnabled(): Flow<Boolean> =
+        context.gameGuideSettingsDataStore.data.map { prefs -> prefs[MANUAL_FALLBACK_ON_NO_GUIDE_KEY] ?: false }
 
     private fun scrollFractionKey(guideId: String) = floatPreferencesKey("progress_${guideId}_scroll")
 

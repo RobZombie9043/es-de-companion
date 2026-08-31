@@ -5,17 +5,23 @@ import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GameGuideFormat
 import com.esde.companion.domain.model.GameGuideReadingProgress
+import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameGuideLibraryRepository
 import com.esde.companion.domain.repository.GameGuideSettingsRepository
+import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.usecase.DeleteGameGuideUseCase
+import com.esde.companion.domain.usecase.ImportGameGuideUseCase
+import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideContentUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuidesUseCase
+import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.SaveGameGuideUseCase
 import com.esde.companion.domain.usecase.SetGameGuideDisplayPreferencesUseCase
 import com.esde.companion.domain.usecase.SetGameGuideReadingProgressUseCase
@@ -34,6 +40,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -52,6 +59,7 @@ class GameGuidesViewModelTest {
     private class FakeGameGuideLibraryRepository : GameGuideLibraryRepository {
         private val guidesByGame = mutableMapOf<GameReference, MutableStateFlow<List<DownloadedGameGuide>>>()
         private val contentByGuideId = mutableMapOf<String, List<String>>()
+        private val binaryPathByGuideId = mutableMapOf<String, String>()
         val deletedGuideIds = mutableListOf<String>()
 
         fun seedGuide(
@@ -71,6 +79,16 @@ class GameGuidesViewModelTest {
             return Result.success(Unit)
         }
 
+        override suspend fun saveImportedGuide(
+            guide: DownloadedGameGuide,
+            contentBytes: ByteArray,
+            fileExtension: String,
+        ): Result<Unit> {
+            binaryPathByGuideId[guide.id] = "/fake/guides/${guide.id}/content.$fileExtension"
+            flowFor(guide.gameReference).value += guide
+            return Result.success(Unit)
+        }
+
         override fun observeGuidesFor(gameReference: GameReference): Flow<List<DownloadedGameGuide>> {
             return flowFor(gameReference)
         }
@@ -80,6 +98,8 @@ class GameGuidesViewModelTest {
         }
 
         override suspend fun loadContent(guideId: String): List<String>? = contentByGuideId[guideId]
+
+        override suspend fun binaryContentPath(guideId: String): String? = binaryPathByGuideId[guideId]
 
         override suspend fun deleteGuide(guideId: String) {
             deletedGuideIds += guideId
@@ -98,6 +118,7 @@ class GameGuidesViewModelTest {
     private class FakeGameGuideSettingsRepository : GameGuideSettingsRepository {
         private val displayPreferencesFlow = MutableStateFlow(GameGuideDisplayPreferences())
         private val progressByGuideId = mutableMapOf<String, GameGuideReadingProgress>()
+        private val manualFallbackFlow = MutableStateFlow(false)
 
         override suspend fun setDisplayPreferences(preferences: GameGuideDisplayPreferences) {
             displayPreferencesFlow.value = preferences
@@ -111,6 +132,31 @@ class GameGuidesViewModelTest {
 
         override fun observeReadingProgress(guideId: String): Flow<GameGuideReadingProgress?> {
             return flowOf(progressByGuideId[guideId])
+        }
+
+        override suspend fun setManualFallbackOnNoGuideEnabled(enabled: Boolean) {
+            manualFallbackFlow.value = enabled
+        }
+
+        override fun observeManualFallbackOnNoGuideEnabled(): Flow<Boolean> = manualFallbackFlow
+    }
+
+    /** Only ever resolves [MediaType.Manuals] for [manualPathByReference]'s seeded game, if
+     * any - null (no manual) for anything else, same "expected, routine outcome" shape the
+     * real repository documents. */
+    private class FakeGameMediaRepository(
+        private val manualPathByReference: Map<GameReference, String> = emptyMap(),
+    ) : GameMediaRepository {
+        override suspend fun resolveMedia(
+            systemShortName: String,
+            systemPath: String?,
+            romPath: String,
+            mediaTypes: Set<MediaType>,
+        ): GameMedia {
+            val reference = GameReference(systemShortName, romPath, systemPath)
+            val manualPath = manualPathByReference[reference]
+            val filesByType = if (manualPath != null) mapOf(MediaType.Manuals to manualPath) else emptyMap()
+            return GameMedia(baseRelativePath = null, filesByType = filesByType)
         }
     }
 
@@ -132,6 +178,7 @@ class GameGuidesViewModelTest {
         esdeLogRepository: FakeEsdeLogRepository = FakeEsdeLogRepository(),
         libraryRepository: FakeGameGuideLibraryRepository = FakeGameGuideLibraryRepository(),
         settingsRepository: FakeGameGuideSettingsRepository = FakeGameGuideSettingsRepository(),
+        gameMediaRepository: FakeGameMediaRepository = FakeGameMediaRepository(),
     ): GameGuidesViewModel {
         val observeAppState = ObserveAppStateUseCase(esdeLogRepository, backgroundScope)
         val observeConnectionState = ObserveConnectionStateUseCase(esdeLogRepository, observeAppState)
@@ -139,12 +186,15 @@ class GameGuidesViewModelTest {
             GameGuidesUseCases(
                 observeGameGuides = ObserveGameGuidesUseCase(libraryRepository),
                 saveGameGuide = SaveGameGuideUseCase(libraryRepository),
+                importGameGuide = ImportGameGuideUseCase(libraryRepository),
                 loadGameGuideContent = LoadGameGuideContentUseCase(libraryRepository),
+                loadGameGuideBinaryPath = LoadGameGuideBinaryPathUseCase(libraryRepository),
                 deleteGameGuide = DeleteGameGuideUseCase(libraryRepository),
                 observeDisplayPreferences = ObserveGameGuideDisplayPreferencesUseCase(settingsRepository),
                 setDisplayPreferences = SetGameGuideDisplayPreferencesUseCase(settingsRepository),
                 observeReadingProgress = ObserveGameGuideReadingProgressUseCase(settingsRepository),
                 setReadingProgress = SetGameGuideReadingProgressUseCase(settingsRepository),
+                resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
             )
         val viewModel = GameGuidesViewModel(observeConnectionState, useCases)
         advanceUntilIdle()
@@ -200,7 +250,7 @@ class GameGuidesViewModelTest {
         }
 
     @Test
-    fun `open shows Browsing with a GameFAQs search url when no guides exist yet`() =
+    fun `open shows Library, not Browsing, when no guides exist yet for the current game`() =
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()
             val viewModel = buildViewModel(esdeLogRepository)
@@ -211,11 +261,8 @@ class GameGuidesViewModelTest {
             advanceUntilIdle()
 
             val state = viewModel.uiState.value
-            check(state is GameGuidesUiState.Browsing)
-            assertTrue(state.searchUrl.startsWith("https://gamefaqs.gamespot.com/search?game="))
-            assertTrue(state.searchUrl.contains("Super"))
-            assertFalse(state.currentPageIsGuide)
-            assertFalse(state.isSaving)
+            check(state is GameGuidesUiState.Library)
+            assertTrue(state.guides.isEmpty())
         }
 
     @Test
@@ -236,6 +283,41 @@ class GameGuidesViewModelTest {
             val state = viewModel.uiState.value
             check(state is GameGuidesUiState.Library)
             assertEquals(listOf(guide), state.guides)
+        }
+
+    @Test
+    fun `open resolves the current game's manual path into Library`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val gameMediaRepository =
+                FakeGameMediaRepository(manualPathByReference = mapOf(reference to "/media/snes/manuals/a.pdf"))
+            val viewModel = buildViewModel(esdeLogRepository, gameMediaRepository = gameMediaRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+
+            viewModel.open()
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertEquals("/media/snes/manuals/a.pdf", state.manualPdfPath)
+        }
+
+    @Test
+    fun `open resolves a null manual path when the current game has no manual`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val viewModel = buildViewModel(esdeLogRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+
+            viewModel.open()
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertNull(state.manualPdfPath)
         }
 
     @Test
@@ -306,7 +388,7 @@ class GameGuidesViewModelTest {
     // --- deleteGuide() -------------------------------------------------------------------
 
     @Test
-    fun `deleteGuide removes it and returns to the browser once the game has no guides left`() =
+    fun `deleteGuide removes it and stays in an empty Library, not the browser`() =
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()
             val reference = GameReference("snes", "/roms/snes/a.sfc", null)
@@ -323,6 +405,100 @@ class GameGuidesViewModelTest {
             advanceUntilIdle()
 
             assertEquals(listOf("g1"), libraryRepository.deletedGuideIds)
-            assertTrue(viewModel.uiState.value is GameGuidesUiState.Browsing)
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertTrue(state.guides.isEmpty())
+        }
+
+    // --- importGuideFor() ----------------------------------------------------------------
+
+    @Test
+    fun `importGuideFor saves a PlainText import through the text page pipeline`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val viewModel = buildViewModel(libraryRepository = libraryRepository)
+
+            viewModel.importGuideFor(
+                reference,
+                "Super Game",
+                "hello guide".toByteArray(),
+                "notes.txt",
+                GameGuideFormat.PlainText,
+            )
+            advanceUntilIdle()
+
+            val guides = libraryRepository.observeGuidesFor(reference).first()
+            assertEquals(1, guides.size)
+            val guide = guides.single()
+            assertEquals(GameGuideFormat.PlainText, guide.format)
+            assertEquals(listOf("hello guide"), libraryRepository.loadContent(guide.id))
+        }
+
+    @Test
+    fun `importGuideFor saves a Pdf import through the binary pipeline`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val viewModel = buildViewModel(libraryRepository = libraryRepository)
+
+            viewModel.importGuideFor(
+                reference,
+                "Super Game",
+                byteArrayOf(1, 2, 3),
+                "manual-scan.pdf",
+                GameGuideFormat.Pdf,
+            )
+            advanceUntilIdle()
+
+            val guides = libraryRepository.observeGuidesFor(reference).first()
+            assertEquals(1, guides.size)
+            val guide = guides.single()
+            assertEquals(GameGuideFormat.Pdf, guide.format)
+            assertEquals(null, libraryRepository.loadContent(guide.id))
+            assertTrue(libraryRepository.binaryContentPath(guide.id)?.endsWith(".pdf") == true)
+        }
+
+    @Test
+    fun `importGuideFor refreshes the Library to include the newly imported guide`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val viewModel = buildViewModel(esdeLogRepository, libraryRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/a.sfc", "Super Game", "snes", "SNES"))
+            advanceUntilIdle()
+            viewModel.open()
+            advanceUntilIdle()
+
+            viewModel.importGuideFor(
+                reference,
+                "Super Game",
+                "screenshot".toByteArray(),
+                "cover.png",
+                GameGuideFormat.Image,
+            )
+            advanceUntilIdle()
+
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Library)
+            assertEquals(1, state.guides.size)
+            assertEquals(GameGuideFormat.Image, state.guides.single().format)
+        }
+
+    // --- autoOpenLastViewedGuideForCurrentGame() -------------------------------------------
+
+    @Test
+    fun `autoOpenLastViewedGuideForCurrentGame returns false when the current game has no guides`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val viewModel = buildViewModel(esdeLogRepository)
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+
+            val opened = viewModel.autoOpenLastViewedGuideForCurrentGame()
+
+            assertFalse(opened)
+            assertEquals(GameGuidesUiState.NoGame, viewModel.uiState.value)
         }
 }

@@ -15,12 +15,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,8 +51,11 @@ private const val PERCENT_MULTIPLIER = 100
 // the RetroAchievements/leaderboard tiles) so a guide's row reads as the same kind of surface.
 private val GUIDE_ROW_SHAPE = RoundedCornerShape(16.dp)
 
-/** Downloaded guides for the current game (Game Guides FAB, when at least one guide already
- * exists) - reopen a saved guide, delete one, or head back into the Browser to find another. */
+/** Downloaded guides and the Game Manual for the current game (Game Guides FAB) - reopen a
+ * saved guide/manual, delete a guide, or use the "+" dropdown to add another guide (Import a
+ * file, or search GameFAQs). Always shows both sections, even when one or both are empty
+ * (see [GameGuidesUiState.Library]'s kdoc) - each empty section renders its own note rather
+ * than this screen ever falling back to the Browser on its own. */
 @Composable
 fun GameGuideLibraryScreen(
     state: GameGuidesUiState.Library,
@@ -76,45 +85,110 @@ fun GameGuideLibraryScreen(
                 modifier = Modifier.fillMaxSize(),
             )
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                // No per-row icon/title here (deliberately removed, see GuideRow) - each row
-                // only ever needs the guide's own title, but the game name is still shown
-                // once, here in the header, so it's clear at a glance which game's guides
-                // this list belongs to.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = state.gameName,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f).padding(end = 8.dp),
-                    )
-                    IconButton(onClick = actions.onFindAnotherGuide) {
-                        Icon(Icons.Filled.Add, contentDescription = "Find another guide")
-                    }
-                    IconButton(onClick = actions.onClose) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close")
-                    }
-                }
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(top = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(state.guides, key = { it.id }) { guide ->
-                        GuideRow(
-                            guide = guide,
-                            readingProgressFraction = state.readingProgressByGuideId[guide.id] ?: 0f,
-                            onOpen = { actions.onOpenGuide(guide) },
-                            onDelete = { actions.onDeleteGuide(guide) },
-                        )
-                    }
-                }
+                GuideLibraryHeader(gameName = state.gameName, actions = actions)
+                GuideLibraryList(state = state, actions = actions)
             }
         }
     }
+}
+
+// No per-row icon/title here (deliberately removed, see GuideRow) - each row only ever needs
+// the guide's own title, but the game name is still shown once, here in the header, so it's
+// clear at a glance which game's guides this list belongs to.
+@Composable
+private fun GuideLibraryHeader(
+    gameName: String,
+    actions: GameGuideLibraryActions,
+) {
+    val importLauncher = rememberGuideImportLauncher(onImported = actions.onImportGuide)
+    var showAddMenu by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = gameName,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(end = 8.dp),
+        )
+        Box {
+            IconButton(onClick = { showAddMenu = true }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add a guide")
+            }
+            DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text("Import") },
+                    onClick = {
+                        showAddMenu = false
+                        importLauncher()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("GameFAQs") },
+                    onClick = {
+                        showAddMenu = false
+                        actions.onBrowseGameFaqs()
+                    },
+                )
+            }
+        }
+        IconButton(onClick = actions.onClose) {
+            Icon(Icons.Filled.Close, contentDescription = "Close")
+        }
+    }
+}
+
+@Composable
+private fun GuideLibraryList(
+    state: GameGuidesUiState.Library,
+    actions: GameGuideLibraryActions,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(top = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item { SectionHeader("Guides") }
+        if (state.guides.isEmpty()) {
+            item { GuideSectionEmptyNote("No guides, tap + to add a guide") }
+        } else {
+            items(state.guides, key = { it.id }) { guide ->
+                GuideRow(
+                    guide = guide,
+                    readingProgressFraction = state.readingProgressByGuideId[guide.id] ?: 0f,
+                    onOpen = { actions.onOpenGuide(guide) },
+                    onDelete = { actions.onDeleteGuide(guide) },
+                )
+            }
+        }
+        item { SectionHeader("Game Manual") }
+        if (state.manualPdfPath != null) {
+            item { ManualRow(onOpen = actions.onOpenManual) }
+        } else {
+            item { GuideSectionEmptyNote("No manual available for this game") }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+private fun GuideSectionEmptyNote(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(vertical = 4.dp),
+    )
 }
 
 @Composable
@@ -170,14 +244,48 @@ private fun GuideRow(
     }
 }
 
+/** The Game Manual section's row - same shape as [GuideRow] but with no delete affordance
+ * (a manual isn't something this screen can remove) and disabled ([Surface.onClick] omitted)
+ * when [onOpen] is null - see [GameGuideLibraryActions]'s kdoc for when that happens. */
+@Composable
+private fun ManualRow(onOpen: (() -> Unit)?) {
+    Surface(
+        onClick = onOpen ?: {},
+        enabled = onOpen != null,
+        modifier = Modifier.fillMaxWidth(),
+        shape = GUIDE_ROW_SHAPE,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Game Manual",
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
 private fun guideSubtitle(
     guide: DownloadedGameGuide,
     readingProgressFraction: Float,
 ): String {
     val percent = (readingProgressFraction * PERCENT_MULTIPLIER).roundToInt().coerceIn(0, PERCENT_MULTIPLIER)
-    val format = if (guide.format == GameGuideFormat.Html) "HTML" else "TXT"
-    return "$format · ${formatGuideSize(guide.sizeBytes)} · $percent% read"
+    return "${guide.format.shortLabel()} · ${formatGuideSize(guide.sizeBytes)} · $percent% read"
 }
+
+private fun GameGuideFormat.shortLabel(): String =
+    when (this) {
+        GameGuideFormat.PlainText -> "TXT"
+        GameGuideFormat.Html -> "HTML"
+        GameGuideFormat.Pdf -> "PDF"
+        GameGuideFormat.Image -> "IMG"
+    }
 
 private fun formatGuideSize(bytes: Long): String =
     when {

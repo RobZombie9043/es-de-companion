@@ -7,6 +7,7 @@ import com.esde.companion.domain.model.ScreenBehavior
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
+import com.esde.companion.domain.usecase.ObserveManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverDimPercentUseCase
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,6 +26,7 @@ class MainViewModel(
     observeGamePlayingDimPercent: ObserveGamePlayingDimPercentUseCase,
     observeScreensaverBehavior: ObserveScreensaverBehaviorUseCase,
     observeScreensaverDimPercent: ObserveScreensaverDimPercentUseCase,
+    observeManualFallbackOnNoGuideEnabled: ObserveManualFallbackOnNoGuideEnabledUseCase,
 ) : ViewModel() {
     val connectionState: StateFlow<EsdeConnectionState> =
         observeConnectionState()
@@ -70,6 +72,16 @@ class MainViewModel(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
                 initialValue = DEFAULT_DIM_PERCENT,
+            )
+
+    // Settings > Game Guides: whether the Guide behavior above should fall back to showing
+    // the manual when the current game has no downloaded guide - see GameGuidesOverlayState.
+    val manualFallbackOnNoGuideEnabled: StateFlow<Boolean> =
+        observeManualFallbackOnNoGuideEnabled()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
+                initialValue = false,
             )
 
     private companion object {

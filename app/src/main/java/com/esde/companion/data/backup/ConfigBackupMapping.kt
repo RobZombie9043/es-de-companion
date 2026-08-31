@@ -21,6 +21,9 @@ import com.esde.companion.domain.model.TaskKillerTarget
 import com.esde.companion.domain.model.ThemePreference
 import com.esde.companion.domain.model.VolumeSyncMode
 
+// A flat 1:1 field mapping onto ConfigBackupDto - inherently long (one line per backed-up
+// setting), not complex; suppressed rather than artificially split.
+@Suppress("LongMethod")
 internal fun AppConfigBackup.toDto(): ConfigBackupDto =
     ConfigBackupDto(
         version = version,
@@ -80,6 +83,7 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         gameLaunchOverrides = gameLaunchOverrides.map { it.toDto() },
         gameLaunchDisplayTarget = gameLaunchDisplayTarget.name,
         closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
+        gameLaunchEnabled = gameLaunchEnabled,
     )
 
 private fun ConfigBackupDto.toFabAssignments() =
@@ -153,6 +157,7 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         gameLaunchOverrides = gameLaunchOverrides.map { it.toDomain() },
         gameLaunchDisplayTarget = gameLaunchDisplayTarget.toEnumOrDefault(GameLaunchDisplayTarget.ThisScreen),
         closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
+        gameLaunchEnabled = gameLaunchEnabled,
     )
 }
 

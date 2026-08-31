@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +53,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -103,6 +106,8 @@ internal fun UISettingsContent(
     onFabCustomAppChanged: (FabPosition, String) -> Unit,
     onBluetoothPermissionRequested: () -> Unit,
     onManageGameLaunchOverridesClick: () -> Unit,
+    gameLaunchEnabled: Boolean,
+    onGameLaunchEnabledChanged: (Boolean) -> Unit,
     gameLaunchDisplayTarget: GameLaunchDisplayTarget,
     onGameLaunchDisplayTargetChanged: (GameLaunchDisplayTarget) -> Unit,
     closeAppOnGameEndEnabled: Boolean,
@@ -150,33 +155,58 @@ internal fun UISettingsContent(
             dimAmount = DimAmountControl(gamePlayingDimPercent, onGamePlayingDimPercentChanged),
         )
         GameLaunchOverrideSetting(
-            launchDisplayTarget = gameLaunchDisplayTarget,
-            onLaunchDisplayTargetChanged = onGameLaunchDisplayTargetChanged,
-            onManageClick = onManageGameLaunchOverridesClick,
-            closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
-            onCloseAppOnGameEndEnabledChanged = onCloseAppOnGameEndEnabledChanged,
+            state =
+                GameLaunchOverrideState(
+                    enabled = gameLaunchEnabled,
+                    launchDisplayTarget = gameLaunchDisplayTarget,
+                    closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
+                ),
+            actions =
+                GameLaunchOverrideActions(
+                    onEnabledChanged = onGameLaunchEnabledChanged,
+                    onLaunchDisplayTargetChanged = onGameLaunchDisplayTargetChanged,
+                    onManageClick = onManageGameLaunchOverridesClick,
+                    onCloseAppOnGameEndEnabledChanged = onCloseAppOnGameEndEnabledChanged,
+                ),
         )
     }
 }
 
+/** Bundles [GameLaunchOverrideSetting]'s non-callback state into one parameter, keeping that
+ * composable under detekt's LongParameterList threshold - same reasoning as [DimAmountControl]. */
+private data class GameLaunchOverrideState(
+    val enabled: Boolean,
+    val launchDisplayTarget: GameLaunchDisplayTarget,
+    val closeAppOnGameEndEnabled: Boolean,
+)
+
+/** The callback half of [GameLaunchOverrideSetting]'s parameters - see [GameLaunchOverrideState]. */
+private data class GameLaunchOverrideActions(
+    val onEnabledChanged: (Boolean) -> Unit,
+    val onLaunchDisplayTargetChanged: (GameLaunchDisplayTarget) -> Unit,
+    val onManageClick: () -> Unit,
+    val onCloseAppOnGameEndEnabledChanged: (Boolean) -> Unit,
+)
+
 /**
- * Settings > UI Settings > Game Launch Override - the entry point into the system/game browser
- * (see [com.esde.companion.ui.main.LongPressSettingsMenu]'s `GameLaunchOverrideSystems`/
- * `GameLaunchOverrideGames` pages) plus the two settings that aren't per-system/per-game: a
+ * Settings > UI Settings > Game Launch Override - a master enable toggle ([GameLaunchOverrideState.enabled],
+ * defaults on - see [com.esde.companion.domain.repository.GameLaunchAppRepository.observeEnabled]'s
+ * kdoc for why), plus, only while that's on: the entry point into the system/game browser (see
+ * [com.esde.companion.ui.main.LongPressSettingsMenu]'s `GameLaunchOverrideSystems`/
+ * `GameLaunchOverrideGames` pages) and the two settings that aren't per-system/per-game: a
  * global choice of which display a launched app opens on (see [GameLaunchDisplayTarget]), and
  * whether that launched app gets force-stopped once the game that triggered it ends (see
  * [com.esde.companion.data.gamelist.GameLaunchOverrideCoordinator]'s kdoc - Thor-only, best-effort,
- * off by default). A segmented row rather than a dropdown - only two options, well under
- * [SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD].
+ * off by default). Hiding those three while disabled (rather than just disabling them) avoids
+ * showing settings for per-game overrides that, while the master toggle is off, don't do
+ * anything regardless of what they're set to. A segmented row rather than a dropdown for the
+ * display-target choice - only two options, well under [SEGMENTED_ROW_TO_DROPDOWN_THRESHOLD].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameLaunchOverrideSetting(
-    launchDisplayTarget: GameLaunchDisplayTarget,
-    onLaunchDisplayTargetChanged: (GameLaunchDisplayTarget) -> Unit,
-    onManageClick: () -> Unit,
-    closeAppOnGameEndEnabled: Boolean,
-    onCloseAppOnGameEndEnabledChanged: (Boolean) -> Unit,
+    state: GameLaunchOverrideState,
+    actions: GameLaunchOverrideActions,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -187,50 +217,92 @@ private fun GameLaunchOverrideSetting(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                SettingsLabel(icon = Icons.AutoMirrored.Filled.Launch, text = "Launch App on Game Start")
-                Text(
-                    text = "Launch an app automatically when a game starts",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            FabRowSurface(onClick = onManageClick) {
+            GameLaunchOverrideHeader(enabled = state.enabled, onEnabledChanged = actions.onEnabledChanged)
+            if (!state.enabled) return@Column
+            FabRowSurface(onClick = actions.onManageClick) {
                 Text(text = "Manage Systems & Games", style = MaterialTheme.typography.bodyMedium)
                 Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Launch App On", style = MaterialTheme.typography.labelLarge)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    GameLaunchDisplayTarget.entries.forEachIndexed { index, target ->
-                        SegmentedButton(
-                            selected = target == launchDisplayTarget,
-                            onClick = { onLaunchDisplayTargetChanged(target) },
-                            shape =
-                                SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = GameLaunchDisplayTarget.entries.size,
-                                ),
-                            icon = {
-                                SegmentedButtonDefaults.Icon(active = target == launchDisplayTarget) {
-                                    Icon(
-                                        imageVector = target.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                                    )
-                                }
-                            },
-                            label = { SegmentedButtonLabel(target.label) },
-                        )
-                    }
-                }
-            }
+            LaunchDisplayTargetPicker(
+                selected = state.launchDisplayTarget,
+                onSelected = actions.onLaunchDisplayTargetChanged,
+            )
             ToggleSettingRow(
                 icon = Icons.Filled.Close,
                 title = "Close App on Game End",
                 description = "Force-stop the launched app once the game ends (Thor devices only)",
-                enabled = closeAppOnGameEndEnabled,
-                onEnabledChanged = onCloseAppOnGameEndEnabledChanged,
+                enabled = state.closeAppOnGameEndEnabled,
+                onEnabledChanged = actions.onCloseAppOnGameEndEnabledChanged,
             )
+        }
+    }
+}
+
+// Plain label + inline Switch, not ToggleSettingRow - same "panel header with its own master
+// switch" shape ThorSettingsContent's LidWakeGuard/AutoFpsMode/TaskKiller panels use, rather
+// than nesting ToggleSettingRow's own card-styled Surface inside this panel's Surface (doubled
+// padding/background, inconsistent with every other panel here). Pulled out of
+// GameLaunchOverrideSetting purely to keep that function under detekt's LongMethod threshold.
+@Composable
+private fun GameLaunchOverrideHeader(
+    enabled: Boolean,
+    onEnabledChanged: (Boolean) -> Unit,
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    SettingsLabel(icon = Icons.AutoMirrored.Filled.Launch, text = "Launch App on Game Start")
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Launch an app automatically when a game starts",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Switch(
+            checked = enabled,
+            onCheckedChange = {
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                onEnabledChanged(it)
+            },
+        )
+    }
+}
+
+/** The "Launch App On" segmented display-target picker - pulled out of
+ * [GameLaunchOverrideSetting] for the same LongMethod reasoning as [GameLaunchOverrideHeader]. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LaunchDisplayTargetPicker(
+    selected: GameLaunchDisplayTarget,
+    onSelected: (GameLaunchDisplayTarget) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = "Launch App On", style = MaterialTheme.typography.labelLarge)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            GameLaunchDisplayTarget.entries.forEachIndexed { index, target ->
+                SegmentedButton(
+                    selected = target == selected,
+                    onClick = { onSelected(target) },
+                    shape =
+                        SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = GameLaunchDisplayTarget.entries.size,
+                        ),
+                    icon = {
+                        SegmentedButtonDefaults.Icon(active = target == selected) {
+                            Icon(
+                                imageVector = target.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
+                            )
+                        }
+                    },
+                    label = { SegmentedButtonLabel(target.label) },
+                )
+            }
         }
     }
 }

@@ -86,7 +86,11 @@ class SettingsViewModelFactory(
             setGameLaunchDisplayTargetUseCase = appContainer.setGameLaunchDisplayTargetUseCase,
             observeCloseAppOnGameEndUseCase = appContainer.observeCloseAppOnGameEndUseCase,
             setCloseAppOnGameEndUseCase = appContainer.setCloseAppOnGameEndUseCase,
+            observeGameLaunchEnabledUseCase = appContainer.observeGameLaunchEnabledUseCase,
+            setGameLaunchEnabledUseCase = appContainer.setGameLaunchEnabledUseCase,
             deleteAllGameGuidesUseCase = appContainer.deleteAllGameGuidesUseCase,
+            observeManualFallbackOnNoGuideEnabledUseCase = appContainer.observeManualFallbackOnNoGuideEnabledUseCase,
+            setManualFallbackOnNoGuideEnabledUseCase = appContainer.setManualFallbackOnNoGuideEnabledUseCase,
             volumeSyncSecondarySettingPresent = appContainer.volumeSyncSecondarySettingPresent,
         ) as T
     }

@@ -69,6 +69,7 @@ import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameGuideFormat
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.MusicPlaybackState
@@ -81,11 +82,15 @@ import com.esde.companion.ui.dock.AppDockViewModel
 import com.esde.companion.ui.dock.AppDockViewModelFactory
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
+import com.esde.companion.ui.gameguides.GameGuideImageViewerScreen
 import com.esde.companion.ui.gameguides.GameGuideLibraryActions
 import com.esde.companion.ui.gameguides.GameGuideLibraryScreen
+import com.esde.companion.ui.gameguides.GameGuidePdfViewerScreen
 import com.esde.companion.ui.gameguides.GameGuideViewerScreen
 import com.esde.companion.ui.gameguides.GameGuidesBrowserScreen
+import com.esde.companion.ui.gameguides.GameGuidesOverlayState
 import com.esde.companion.ui.gameguides.GameGuidesUiState
+import com.esde.companion.ui.gameguides.GuideManualFallback
 import com.esde.companion.ui.gameguides.rememberGameGuidesOverlayState
 import com.esde.companion.ui.main.MainScreen
 import com.esde.companion.ui.main.MainViewModel
@@ -331,6 +336,8 @@ class MainActivity : ComponentActivity() {
                             val screensaverBehavior by viewModel.screensaverBehavior.collectAsStateWithLifecycle()
                             val gamePlayingDimPercent by viewModel.gamePlayingDimPercent.collectAsStateWithLifecycle()
                             val screensaverDimPercent by viewModel.screensaverDimPercent.collectAsStateWithLifecycle()
+                            val manualFallbackOnNoGuideEnabled by
+                                viewModel.manualFallbackOnNoGuideEnabled.collectAsStateWithLifecycle()
 
                             val widgetsViewModel: WidgetsViewModel =
                                 viewModel(factory = WidgetsViewModelFactory(appContainer))
@@ -349,8 +356,22 @@ class MainActivity : ComponentActivity() {
                             // Set by tapping the Game Manual FAB (FAB Control) - opens the
                             // same GameManualScreen the automatic Game Playing Behavior >
                             // Manual setting does, independent of that setting. Reset
-                            // together with manualDismissed below.
+                            // together with manualDismissed below. Deliberately independent of
+                            // isPlayingGame (a FAB-opened manual stays open across playing
+                            // ending, since the user opened it themselves) - contrast
+                            // manualShownAsGuideFallback below, which needs the opposite.
                             var manualViewerOpenedViaFab by rememberSaveable { mutableStateOf(false) }
+
+                            // Set by GameGuidesOverlayState's manual fallback (Settings > Game
+                            // Guides > "Load game manual on game start when no guide is
+                            // available") - unlike manualViewerOpenedViaFab, this is an
+                            // *automatic* substitute for the Guide behavior's own auto-show,
+                            // which always closes when PlayingGame ends (see
+                            // GameGuidesOverlayState's isPlayingGame LaunchedEffect) - so this
+                            // needs the same closes-on-game-end lifecycle, reset below whenever
+                            // isPlayingGame goes false, rather than manualViewerOpenedViaFab's
+                            // stays-open-until-dismissed one.
+                            var manualShownAsGuideFallback by rememberSaveable { mutableStateOf(false) }
 
                             val retroAchievementsViewModel: RetroAchievementsViewModel =
                                 viewModel(factory = RetroAchievementsViewModelFactory(appContainer))
@@ -603,20 +624,35 @@ class MainActivity : ComponentActivity() {
                                     else -> 0
                                 }
 
-                            // Shows either because Game Playing Behavior is set to Manual
-                            // (and the user hasn't dismissed it for this game), or because
-                            // the Game Manual FAB was tapped - either way, only if a manual
-                            // actually resolved for the current game. Resets below
+                            val isPlayingGame =
+                                (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
+
+                            // Shows because Game Playing Behavior is set to Manual (and the
+                            // user hasn't dismissed it for this game), because the Game Manual
+                            // FAB was tapped, or because the Game Guides fallback (Settings >
+                            // Game Guides > "Load game manual...") kicked in - either way, only
+                            // if a manual actually resolved for the current game. Resets below
                             // (LaunchedEffect(manualPdfPath)) whenever the resolved manual
                             // itself changes.
                             val autoShowGameManual =
                                 activeScreenBehavior == ScreenBehavior.GameManual && !manualDismissed
                             val showGameManual =
-                                (autoShowGameManual || manualViewerOpenedViaFab) && manualPdfPath != null
+                                (autoShowGameManual || manualViewerOpenedViaFab || manualShownAsGuideFallback) &&
+                                    manualPdfPath != null
 
                             LaunchedEffect(manualPdfPath) {
                                 manualDismissed = false
                                 manualViewerOpenedViaFab = false
+                            }
+
+                            // manualShownAsGuideFallback is deliberately NOT reset by the
+                            // manualPdfPath effect above (unlike the other two flags) - it
+                            // needs to close specifically when playing ends, same as the Guide
+                            // auto-show trigger it's substituting for (see
+                            // GameGuidesOverlayState's own isPlayingGame LaunchedEffect), not
+                            // merely when the resolved manual changes.
+                            LaunchedEffect(isPlayingGame) {
+                                if (!isPlayingGame) manualShownAsGuideFallback = false
                             }
 
                             val autoBlackTrigger = activeScreenBehavior == ScreenBehavior.Black && !showGameManual
@@ -626,10 +662,18 @@ class MainActivity : ComponentActivity() {
                                 isBlanked = autoBlackTrigger
                             }
 
-                            val isPlayingGame =
-                                (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
                             val gameGuides =
-                                rememberGameGuidesOverlayState(appContainer, activeScreenBehavior, isPlayingGame)
+                                rememberGameGuidesOverlayState(
+                                    appContainer = appContainer,
+                                    activeScreenBehavior = activeScreenBehavior,
+                                    isPlayingGame = isPlayingGame,
+                                    manualFallback =
+                                        GuideManualFallback(
+                                            manualPdfPath = manualPdfPath,
+                                            manualFallbackEnabled = manualFallbackOnNoGuideEnabled,
+                                            onFallbackToManual = { manualShownAsGuideFallback = true },
+                                        ),
+                                )
 
                             // Extracted so each corner's content can be handed to
                             // MainScreen as a slot rendered INSIDE its own
@@ -900,6 +944,7 @@ class MainActivity : ComponentActivity() {
                                         onExit = {
                                             manualDismissed = true
                                             manualViewerOpenedViaFab = false
+                                            manualShownAsGuideFallback = false
                                         },
                                         modifier = Modifier.fillMaxSize(),
                                     )
@@ -977,48 +1022,14 @@ class MainActivity : ComponentActivity() {
                                     enter = fadeIn(),
                                     exit = fadeOut(),
                                 ) {
-                                    when (val state = gameGuides.uiState) {
-                                        is GameGuidesUiState.Browsing ->
-                                            GameGuidesBrowserScreen(
-                                                state = state,
-                                                onPageLoaded = gameGuides.viewModel::onBrowserPageLoaded,
-                                                onSave = gameGuides.viewModel::saveCurrentGuide,
-                                                onClose = gameGuides.actions.onClose,
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                        is GameGuidesUiState.Library ->
-                                            GameGuideLibraryScreen(
-                                                state = state,
-                                                actions =
-                                                    GameGuideLibraryActions(
-                                                        onOpenGuide = gameGuides.viewModel::openGuide,
-                                                        onDeleteGuide = { guide ->
-                                                            gameGuides.viewModel.deleteGuide(guide.id)
-                                                        },
-                                                        onFindAnotherGuide = gameGuides.viewModel::openBrowser,
-                                                        onClose = gameGuides.actions.onClose,
-                                                    ),
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                        is GameGuidesUiState.Viewing -> {
-                                            val guideId = state.guide.id
-                                            GameGuideViewerScreen(
-                                                state = state,
-                                                onScrollFractionChanged = { pageIndex, fraction ->
-                                                    gameGuides.viewModel.onReadingPositionChanged(
-                                                        guideId,
-                                                        pageIndex,
-                                                        fraction,
-                                                    )
-                                                },
-                                                onDisplayPreferencesChanged =
-                                                    gameGuides.viewModel::onDisplayPreferencesChanged,
-                                                onClose = gameGuides.actions.onCloseViewer,
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                        }
-                                        GameGuidesUiState.NoGame -> {}
-                                    }
+                                    GameGuidesOverlayContent(
+                                        gameGuides = gameGuides,
+                                        onOpenManual = {
+                                            manualViewerOpenedViaFab = true
+                                            gameGuides.actions.onClose()
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
                                 }
 
                                 // Video widgets with their Configure Widget "Render Above
@@ -1235,6 +1246,90 @@ private fun BoxScope.GameGuidesFabContent(context: GameGuidesFabContext) {
         modifier = Modifier.align(context.position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
     ) {
         Icon(imageVector = Icons.Filled.LibraryBooks, contentDescription = "Game Guides")
+    }
+}
+
+/**
+ * Full-screen Game Guides content (Browsing/Library/Viewing), dispatched from
+ * [gameGuides]'s live [GameGuidesOverlayState.uiState] - pulled out of MainActivity's own
+ * composable body (which was tipping detekt's LargeClass threshold) purely to keep the class
+ * itself smaller; none of this needs anything MainActivity-specific beyond [onOpenManual]
+ * (setting `manualViewerOpenedViaFab`, which only MainActivity owns).
+ */
+@Composable
+private fun GameGuidesOverlayContent(
+    gameGuides: GameGuidesOverlayState,
+    onOpenManual: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (val state = gameGuides.uiState) {
+        is GameGuidesUiState.Browsing ->
+            GameGuidesBrowserScreen(
+                state = state,
+                onPageLoaded = gameGuides.viewModel::onBrowserPageLoaded,
+                onSave = gameGuides.viewModel::saveCurrentGuide,
+                onClose = gameGuides.actions.onClose,
+                modifier = modifier,
+            )
+        is GameGuidesUiState.Library ->
+            GameGuideLibraryScreen(
+                state = state,
+                actions = buildGameGuideLibraryActions(gameGuides, state, onOpenManual),
+                modifier = modifier,
+            )
+        is GameGuidesUiState.Viewing -> GameGuidesViewingContent(state, gameGuides, modifier)
+        GameGuidesUiState.NoGame -> {}
+    }
+}
+
+/** [onOpenManual] is only ever wired when [GameGuidesOverlayState.openedDirectly] is false -
+ * see [GameGuideLibraryActions]'s own kdoc for why a directly-opened Library (an explicitly-
+ * picked game, not necessarily ES-DE's live current one) disables the Game Manual row instead. */
+private fun buildGameGuideLibraryActions(
+    gameGuides: GameGuidesOverlayState,
+    state: GameGuidesUiState.Library,
+    onOpenManual: () -> Unit,
+): GameGuideLibraryActions =
+    GameGuideLibraryActions(
+        onOpenGuide = gameGuides.viewModel::openGuide,
+        onDeleteGuide = { guide -> gameGuides.viewModel.deleteGuide(guide.id) },
+        onBrowseGameFaqs = gameGuides.viewModel::openBrowser,
+        onImportGuide = { bytes, fileName, format ->
+            gameGuides.viewModel.importGuideFor(state.gameReference, state.gameName, bytes, fileName, format)
+        },
+        onOpenManual = if (gameGuides.openedDirectly) null else onOpenManual,
+        onClose = gameGuides.actions.onClose,
+    )
+
+/** The Viewing branch of [GameGuidesOverlayContent] - an exhaustive dispatch on
+ * [DownloadedGameGuide.format] across the three guide viewer implementations. */
+@Composable
+private fun GameGuidesViewingContent(
+    state: GameGuidesUiState.Viewing,
+    gameGuides: GameGuidesOverlayState,
+    modifier: Modifier,
+) {
+    val guideId = state.guide.id
+    when (state.guide.format) {
+        GameGuideFormat.PlainText, GameGuideFormat.Html ->
+            GameGuideViewerScreen(
+                state = state,
+                onScrollFractionChanged = { pageIndex, fraction ->
+                    gameGuides.viewModel.onReadingPositionChanged(guideId, pageIndex, fraction)
+                },
+                onDisplayPreferencesChanged = gameGuides.viewModel::onDisplayPreferencesChanged,
+                onClose = gameGuides.actions.onCloseViewer,
+                modifier = modifier,
+            )
+        GameGuideFormat.Pdf ->
+            GameGuidePdfViewerScreen(
+                state = state,
+                onPageChanged = { pageIndex -> gameGuides.viewModel.onReadingPositionChanged(guideId, pageIndex, 0f) },
+                onClose = gameGuides.actions.onCloseViewer,
+                modifier = modifier,
+            )
+        GameGuideFormat.Image ->
+            GameGuideImageViewerScreen(state = state, onClose = gameGuides.actions.onCloseViewer, modifier = modifier)
     }
 }
 

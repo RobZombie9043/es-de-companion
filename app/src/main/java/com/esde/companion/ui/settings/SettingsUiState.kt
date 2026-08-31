@@ -49,6 +49,7 @@ data class SettingsUiState(
     val customMusicFolderValidation: MediaFolderValidation? = null,
     val isValidatingCustomMusicFolder: Boolean = false,
     val closeCompanionOnQuitEnabled: Boolean = false,
+    val manualFallbackOnNoGuideEnabled: Boolean = false,
     val fabAssignments: FabAssignments = FabAssignments.Default,
     val installedApps: List<InstalledApp> = emptyList(),
     val launchEsdeOnStartEnabled: Boolean = false,
@@ -71,4 +72,5 @@ data class SettingsUiState(
     val volumeSyncSecondarySettingPresent: Boolean = false,
     val gameLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
     val closeAppOnGameEndEnabled: Boolean = false,
+    val gameLaunchEnabled: Boolean = true,
 )

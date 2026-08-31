@@ -125,8 +125,10 @@ import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
 import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
+import com.esde.companion.domain.usecase.ImportGameGuideUseCase
 import com.esde.companion.domain.usecase.ListGamelistGamesUseCase
 import com.esde.companion.domain.usecase.ListGamelistSystemsUseCase
+import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
 import com.esde.companion.domain.usecase.LoadGameGuideContentUseCase
 import com.esde.companion.domain.usecase.ObserveAllGameGuidesUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
@@ -150,6 +152,7 @@ import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCa
 import com.esde.companion.domain.usecase.ObserveGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuidesUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchOverridesUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchSystemDefaultsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
@@ -163,6 +166,7 @@ import com.esde.companion.domain.usecase.ObserveLastSeenChangelogVersionCodeUseC
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -215,6 +219,7 @@ import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGameGuideDisplayPreferencesUseCase
 import com.esde.companion.domain.usecase.SetGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchOverrideUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchSystemDefaultUseCase
 import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
@@ -228,6 +233,7 @@ import com.esde.companion.domain.usecase.SetLastSeenChangelogVersionCodeUseCase
 import com.esde.companion.domain.usecase.SetLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.SetManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -426,6 +432,8 @@ class AppContainer(context: Context) {
     val setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository)
     val observeCloseAppOnGameEndUseCase = ObserveCloseAppOnGameEndUseCase(gameLaunchAppRepository)
     val setCloseAppOnGameEndUseCase = SetCloseAppOnGameEndUseCase(gameLaunchAppRepository)
+    val observeGameLaunchEnabledUseCase = ObserveGameLaunchEnabledUseCase(gameLaunchAppRepository)
+    val setGameLaunchEnabledUseCase = SetGameLaunchEnabledUseCase(gameLaunchAppRepository)
 
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
@@ -728,7 +736,9 @@ class AppContainer(context: Context) {
     val observeGameGuidesUseCase = ObserveGameGuidesUseCase(gameGuideLibraryRepository)
     val observeAllGameGuidesUseCase = ObserveAllGameGuidesUseCase(gameGuideLibraryRepository)
     val saveGameGuideUseCase = SaveGameGuideUseCase(gameGuideLibraryRepository)
+    val importGameGuideUseCase = ImportGameGuideUseCase(gameGuideLibraryRepository)
     val loadGameGuideContentUseCase = LoadGameGuideContentUseCase(gameGuideLibraryRepository)
+    val loadGameGuideBinaryPathUseCase = LoadGameGuideBinaryPathUseCase(gameGuideLibraryRepository)
     val deleteGameGuideUseCase = DeleteGameGuideUseCase(gameGuideLibraryRepository)
     val deleteAllGameGuidesUseCase = DeleteAllGameGuidesUseCase(gameGuideLibraryRepository)
     val observeGameGuideDisplayPreferencesUseCase =
@@ -736,6 +746,10 @@ class AppContainer(context: Context) {
     val setGameGuideDisplayPreferencesUseCase = SetGameGuideDisplayPreferencesUseCase(gameGuideSettingsRepository)
     val observeGameGuideReadingProgressUseCase = ObserveGameGuideReadingProgressUseCase(gameGuideSettingsRepository)
     val setGameGuideReadingProgressUseCase = SetGameGuideReadingProgressUseCase(gameGuideSettingsRepository)
+    val observeManualFallbackOnNoGuideEnabledUseCase =
+        ObserveManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository)
+    val setManualFallbackOnNoGuideEnabledUseCase =
+        SetManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository)
 
     // Constructed unconditionally (cheap - same as the self-healing directory watchers above),
     // but each coordinator's *internal* listeners/receivers stay gated behind its own
@@ -781,10 +795,9 @@ class AppContainer(context: Context) {
             observeOverrides = observeGameLaunchOverridesUseCase,
             observeDisplayTarget = observeGameLaunchDisplayTargetUseCase,
             observeCloseAppOnGameEnd = observeCloseAppOnGameEndUseCase,
+            observeEnabled = observeGameLaunchEnabledUseCase,
         )
 
-    // No enable/disable gate, unlike the coordinators above - see GameLaunchOverrideCoordinator's
-    // kdoc for why an unconfigured system/game already resolves to "launch nothing."
     private val gameLaunchOverrideCoordinator =
         GameLaunchOverrideCoordinator(
             observeAppState = observeAppStateUseCase,

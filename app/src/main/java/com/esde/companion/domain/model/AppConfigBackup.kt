@@ -69,6 +69,7 @@ data class AppConfigBackup(
     val gameLaunchOverrides: List<GameLaunchOverride> = emptyList(),
     val gameLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
     val closeAppOnGameEndEnabled: Boolean = false,
+    val gameLaunchEnabled: Boolean = true,
 ) {
     companion object {
         const val CURRENT_VERSION = 1

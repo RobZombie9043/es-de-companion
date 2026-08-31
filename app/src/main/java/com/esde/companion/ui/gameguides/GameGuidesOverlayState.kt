@@ -40,11 +40,26 @@ data class GameGuidesOverlayActions(
     val onOpenDirectly: () -> Unit,
 )
 
+/** Bundles [rememberGameGuidesOverlayState]'s manual-fallback parameters into one, keeping
+ * that function under detekt's LongParameterList threshold - same reasoning as
+ * `GuideDownloadDeps`. See the `autoShowGuide` `LaunchedEffect` below for how these are used:
+ * a fallback strictly within the existing Guide-behavior auto-show trigger, never an
+ * independent one of its own. */
+data class GuideManualFallback(
+    val manualPdfPath: String?,
+    val manualFallbackEnabled: Boolean,
+    val onFallbackToManual: () -> Unit,
+)
+
 class GameGuidesOverlayState(
     val viewModel: GameGuidesViewModel,
     val hasCurrentGame: Boolean,
     val uiState: GameGuidesUiState,
     val isShowing: Boolean,
+    // True only while showing a Library opened via onOpenDirectly (Settings > Game Guides),
+    // which may be for a game other than ES-DE's live current one - see MainActivity's
+    // GameGuideLibraryActions.onOpenManual wiring for why this gates that callback.
+    val openedDirectly: Boolean,
     val actions: GameGuidesOverlayActions,
 )
 
@@ -53,6 +68,7 @@ fun rememberGameGuidesOverlayState(
     appContainer: AppContainer,
     activeScreenBehavior: ScreenBehavior,
     isPlayingGame: Boolean,
+    manualFallback: GuideManualFallback,
 ): GameGuidesOverlayState {
     val viewModel: GameGuidesViewModel = viewModel(factory = GameGuidesViewModelFactory(appContainer))
     val hasCurrentGame by viewModel.hasCurrentGame.collectAsStateWithLifecycle()
@@ -116,12 +132,20 @@ fun rememberGameGuidesOverlayState(
     // straight into the current game's most-recently-viewed downloaded guide,
     // resumed at its last position. The resolve is async (it reads guide/
     // progress records) so this is a LaunchedEffect rather than a derived
-    // boolean feeding a simpler `visible =` condition.
+    // boolean feeding a simpler `visible =` condition. When there's no guide to
+    // auto-open, Settings > Game Guides' "Load game manual on game start when no
+    // guide is available" toggle (manualFallbackEnabled) falls back to the manual
+    // instead of leaving the screen showing nothing - this is deliberately only a
+    // fallback within this trigger, never an independent one of its own.
     val autoShowGuide = isPlayingGame && activeScreenBehavior == ScreenBehavior.GameGuide && !guideDismissed.value
     LaunchedEffect(autoShowGuide) {
-        if (autoShowGuide && !showOverlay.value && viewModel.autoOpenLastViewedGuideForCurrentGame()) {
-            guideAutoOpened.value = true
-            showOverlay.value = true
+        if (autoShowGuide && !showOverlay.value) {
+            if (viewModel.autoOpenLastViewedGuideForCurrentGame()) {
+                guideAutoOpened.value = true
+                showOverlay.value = true
+            } else if (manualFallback.manualFallbackEnabled && manualFallback.manualPdfPath != null) {
+                manualFallback.onFallbackToManual()
+            }
         }
     }
 
@@ -130,6 +154,7 @@ fun rememberGameGuidesOverlayState(
         hasCurrentGame = hasCurrentGame,
         uiState = uiState,
         isShowing = showOverlay.value,
+        openedDirectly = guideOpenedDirectly.value,
         actions = buildOverlayActions(viewModel, showOverlay, guideAutoOpened, guideOpenedDirectly, guideDismissed),
     )
 }

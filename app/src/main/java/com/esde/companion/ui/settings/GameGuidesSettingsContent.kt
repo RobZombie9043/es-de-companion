@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material3.AlertDialog
@@ -39,6 +40,8 @@ internal fun GameGuidesSettingsContent(
     onAddGuideClicked: () -> Unit,
     onBrowseDownloadedGuidesClicked: () -> Unit,
     onClearAllGuidesClicked: () -> Unit,
+    manualFallbackOnNoGuideEnabled: Boolean,
+    onManualFallbackOnNoGuideEnabledChanged: (Boolean) -> Unit,
 ) {
     var showClearAllConfirmation by remember { mutableStateOf(false) }
 
@@ -50,9 +53,19 @@ internal fun GameGuidesSettingsContent(
         GameGuidesSettingsSection(
             icon = Icons.Filled.Add,
             title = "Add Guide",
-            description = "Pick a system and game, then browse GameFAQs to find and download a guide for it.",
+            description = "Pick a system and game, then import a file or browse GameFAQs to find one.",
             buttonLabel = "Add Guide",
             onClick = onAddGuideClicked,
+        )
+        val manualFallbackDescription =
+            "When Game Playing Behavior is set to Guide and the current game has no downloaded " +
+                "guide, show its manual instead."
+        ToggleSettingRow(
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            title = "Load game manual on game start when no guide is available",
+            description = manualFallbackDescription,
+            enabled = manualFallbackOnNoGuideEnabled,
+            onEnabledChanged = onManualFallbackOnNoGuideEnabledChanged,
         )
         GameGuidesSettingsSection(
             icon = Icons.Filled.LibraryBooks,
@@ -71,27 +84,30 @@ internal fun GameGuidesSettingsContent(
     }
 
     if (showClearAllConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showClearAllConfirmation = false },
-            title = { Text("Clear all downloaded guides?") },
-            text = {
-                Text("This removes every guide saved for offline reading, across all games. This can't be undone.")
+        ClearAllGuidesConfirmationDialog(
+            onConfirm = {
+                showClearAllConfirmation = false
+                onClearAllGuidesClicked()
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showClearAllConfirmation = false
-                        onClearAllGuidesClicked()
-                    },
-                ) {
-                    Text("Clear All")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearAllConfirmation = false }) { Text("Cancel") }
-            },
+            onDismiss = { showClearAllConfirmation = false },
         )
     }
+}
+
+@Composable
+private fun ClearAllGuidesConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Clear all downloaded guides?") },
+        text = {
+            Text("This removes every guide saved for offline reading, across all games. This can't be undone.")
+        },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Clear All") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

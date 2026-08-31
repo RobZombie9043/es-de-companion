@@ -19,6 +19,7 @@ private val SYSTEM_DEFAULTS_KEY = stringPreferencesKey("system_defaults")
 private val GAME_OVERRIDES_KEY = stringPreferencesKey("game_overrides")
 private val LAUNCH_DISPLAY_TARGET_KEY = stringPreferencesKey("launch_display_target")
 private val CLOSE_APP_ON_GAME_END_KEY = booleanPreferencesKey("close_app_on_game_end")
+private val GAME_LAUNCH_ENABLED_KEY = booleanPreferencesKey("game_launch_enabled")
 
 /**
  * DataStore-backed [GameLaunchAppRepository] - a JSON-encoded `Map<String, String>` for the
@@ -26,6 +27,7 @@ private val CLOSE_APP_ON_GAME_END_KEY = booleanPreferencesKey("close_app_on_game
  * [DataStoreGameMatchOverrideRepository] (one key, decode-the-whole-thing, linear-scan lookup -
  * trivially fast at the sizes this ever reaches). Not a secret - plain DataStore.
  */
+@Suppress("TooManyFunctions")
 class DataStoreGameLaunchAppRepository(
     private val context: Context,
 ) : GameLaunchAppRepository {
@@ -92,6 +94,13 @@ class DataStoreGameLaunchAppRepository(
 
     override suspend fun setCloseAppOnGameEnd(enabled: Boolean) {
         context.gameLaunchOverrideDataStore.edit { prefs -> prefs[CLOSE_APP_ON_GAME_END_KEY] = enabled }
+    }
+
+    override fun observeEnabled(): Flow<Boolean> =
+        context.gameLaunchOverrideDataStore.data.map { prefs -> prefs[GAME_LAUNCH_ENABLED_KEY] ?: true }
+
+    override suspend fun setEnabled(enabled: Boolean) {
+        context.gameLaunchOverrideDataStore.edit { prefs -> prefs[GAME_LAUNCH_ENABLED_KEY] = enabled }
     }
 
     private fun GameLaunchOverride.matches(

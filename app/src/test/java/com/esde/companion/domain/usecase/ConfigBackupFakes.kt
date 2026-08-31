@@ -469,11 +469,13 @@ internal class FakeGameLaunchAppRepository(
     initialGameOverrides: List<GameLaunchOverride> = emptyList(),
     initialLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
     initialCloseAppOnGameEnd: Boolean = false,
+    initialEnabled: Boolean = true,
 ) : GameLaunchAppRepository {
     private val systemDefaultsFlow = MutableStateFlow(initialSystemDefaults)
     private val gameOverridesFlow = MutableStateFlow(initialGameOverrides)
     private val launchDisplayTargetFlow = MutableStateFlow(initialLaunchDisplayTarget)
     private val closeAppOnGameEndFlow = MutableStateFlow(initialCloseAppOnGameEnd)
+    private val enabledFlow = MutableStateFlow(initialEnabled)
 
     override fun observeSystemDefaults(): Flow<Map<String, String>> = systemDefaultsFlow
 
@@ -518,6 +520,12 @@ internal class FakeGameLaunchAppRepository(
 
     override suspend fun setCloseAppOnGameEnd(enabled: Boolean) {
         closeAppOnGameEndFlow.value = enabled
+    }
+
+    override fun observeEnabled(): Flow<Boolean> = enabledFlow
+
+    override suspend fun setEnabled(enabled: Boolean) {
+        enabledFlow.value = enabled
     }
 
     private fun GameLaunchOverride.matches(

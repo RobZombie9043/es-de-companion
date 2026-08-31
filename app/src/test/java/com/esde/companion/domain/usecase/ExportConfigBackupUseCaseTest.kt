@@ -21,6 +21,7 @@ import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.repository.BackupRepositories
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -89,6 +90,7 @@ private class ExportFixture {
             initialGameOverrides = listOf(launchOverride),
             initialLaunchDisplayTarget = GameLaunchDisplayTarget.OtherScreen,
             initialCloseAppOnGameEnd = true,
+            initialEnabled = false,
         )
     val repositories =
         BackupRepositories(
@@ -150,5 +152,6 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(listOf(fixture.launchOverride), snapshot.gameLaunchOverrides)
             assertEquals(GameLaunchDisplayTarget.OtherScreen, snapshot.gameLaunchDisplayTarget)
             assertTrue(snapshot.closeAppOnGameEndEnabled)
+            assertFalse(snapshot.gameLaunchEnabled)
         }
 }

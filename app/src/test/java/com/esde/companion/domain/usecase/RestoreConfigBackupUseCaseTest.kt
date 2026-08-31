@@ -62,6 +62,7 @@ private class SourceFixture {
             initialGameOverrides = listOf(launchOverride),
             initialLaunchDisplayTarget = GameLaunchDisplayTarget.OtherScreen,
             initialCloseAppOnGameEnd = true,
+            initialEnabled = false,
         )
     val calibration =
         HallSensorCalibration(sensorType = 5, sensorName = "Hall Sensor", closedValue = 1f, openValue = 0f)
@@ -155,6 +156,7 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(listOf(source.launchOverride), targetGameLaunchApp.observeGameOverrides().first())
             assertEquals(GameLaunchDisplayTarget.OtherScreen, targetGameLaunchApp.observeLaunchDisplayTarget().first())
             assertTrue(targetGameLaunchApp.observeCloseAppOnGameEnd().first())
+            assertFalse(targetGameLaunchApp.observeEnabled().first())
         }
 
     @Test

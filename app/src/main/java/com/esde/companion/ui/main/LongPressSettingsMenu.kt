@@ -61,7 +61,9 @@ import com.esde.companion.data.thor.ThorAccessibilityPermission
 import com.esde.companion.data.thor.isAynThorDevice
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.ui.gameguides.GameGuidesOverlayState
+import com.esde.companion.ui.gameguides.rememberGuideImportLauncher
 import com.esde.companion.ui.settings.AddGuideGamesScreen
+import com.esde.companion.ui.settings.AddGuideMethodScreen
 import com.esde.companion.ui.settings.AppDrawerSettingsContent
 import com.esde.companion.ui.settings.AutoFpsSettingsState
 import com.esde.companion.ui.settings.DownloadedGuidesGamesScreen
@@ -122,6 +124,9 @@ private const val DOWNLOADED_GUIDES_GUIDES_DEPTH = 4
 
 /** Same reasoning as [GAME_LAUNCH_OVERRIDE_GAMES_DEPTH], for the Add Guide drill-down. */
 private const val ADD_GUIDE_GAMES_DEPTH = 3
+
+/** One level deeper again for [MenuPage.AddGuideMethod] - see [DOWNLOADED_GUIDES_GUIDES_DEPTH]. */
+private const val ADD_GUIDE_METHOD_DEPTH = ADD_GUIDE_GAMES_DEPTH + 1
 
 private val EasterEggMessages =
     listOf(
@@ -202,15 +207,27 @@ private sealed interface MenuPage {
 
     /** Reachable only from [SettingsCategory.GameGuides]'s "Add Guide" entry - the systems
      * list (reuses [GameLaunchOverrideSystemsScreen] as-is, since picking a system needs
-     * nothing feature-specific). Drills into [AddGuideGames], which - like
-     * [DownloadedGuidesGuides] - is this drill-down's last Settings-hosted page; picking a
-     * game there opens the FAB's own full-screen browser instead of a third page here. */
+     * nothing feature-specific). Drills into [AddGuideGames], then [AddGuideMethod]. */
     data class AddGuideSystems(val fromCategory: SettingsCategory) : MenuPage
 
     /** One system's games for Add Guide - same fromCategory/systemShortName shape as
      * [GameLaunchOverrideGames]/[DownloadedGuidesGames], but rendered by [AddGuideGamesScreen]
-     * (a plain "tap to pick" list, not [GameLaunchOverrideGamesScreen]'s app-override picker). */
+     * (a plain "tap to pick" list, not [GameLaunchOverrideGamesScreen]'s app-override picker).
+     * Picking a game drills one level deeper still, into [AddGuideMethod], rather than opening
+     * the FAB's browser directly. */
     data class AddGuideGames(val fromCategory: SettingsCategory, val systemShortName: String) : MenuPage
+
+    /** The "+" dropdown's Settings counterpart - Import vs GameFAQs for the game picked in
+     * [AddGuideGames] - carries [romPath]/[gameName] on top of [systemShortName]/[fromCategory]
+     * since either choice needs the full picked-game identity to save/browse against. This is
+     * this drill-down's last Settings-hosted page; either choice opens the FAB's own
+     * full-screen browser/overlay instead of a fourth page here, same as [DownloadedGuidesGuides]. */
+    data class AddGuideMethod(
+        val fromCategory: SettingsCategory,
+        val systemShortName: String,
+        val romPath: String,
+        val gameName: String,
+    ) : MenuPage
 }
 
 /** Home = 0, a Category subpage = 1, ManageApps/AutoFpsTriggerApps/TaskKillerExcludedApps = 2 -
@@ -232,6 +249,7 @@ private val MenuPage.depth: Int
             is MenuPage.DownloadedGuidesGuides -> DOWNLOADED_GUIDES_GUIDES_DEPTH
             is MenuPage.AddGuideSystems -> 2
             is MenuPage.AddGuideGames -> ADD_GUIDE_GAMES_DEPTH
+            is MenuPage.AddGuideMethod -> ADD_GUIDE_METHOD_DEPTH
         }
 
 /**
@@ -317,6 +335,8 @@ fun LongPressSettingsMenu(
                 page = MenuPage.DownloadedGuidesGames(current.fromCategory, current.systemShortName)
             is MenuPage.DownloadedGuidesGames -> page = MenuPage.DownloadedGuidesSystems(current.fromCategory)
             is MenuPage.DownloadedGuidesSystems -> page = MenuPage.Category(current.fromCategory)
+            is MenuPage.AddGuideMethod ->
+                page = MenuPage.AddGuideGames(current.fromCategory, current.systemShortName)
             is MenuPage.AddGuideGames -> page = MenuPage.AddGuideSystems(current.fromCategory)
             is MenuPage.AddGuideSystems -> page = MenuPage.Category(current.fromCategory)
             is MenuPage.Category -> page = MenuPage.Home
@@ -347,6 +367,7 @@ fun LongPressSettingsMenu(
             is MenuPage.DownloadedGuidesGuides -> displayNameForRomPath(current.romPath)
             is MenuPage.AddGuideSystems -> "Add Guide"
             is MenuPage.AddGuideGames -> current.systemShortName
+            is MenuPage.AddGuideMethod -> current.gameName
         }
 
     Box(modifier = modifier) {
@@ -474,14 +495,38 @@ fun LongPressSettingsMenu(
                             AddGuideGamesScreen(
                                 viewModel = gameLaunchOverrideViewModel,
                                 systemShortName = targetPage.systemShortName,
-                                // Same reasoning as DownloadedGuidesGuides' onOpenGuide above -
-                                // opens the FAB's own full-screen browser, not a Settings copy.
                                 onGameSelected = { romPath, gameName ->
-                                    val reference = GameReference(targetPage.systemShortName, romPath)
-                                    gameGuides.viewModel.openBrowserFor(reference, gameName)
+                                    page =
+                                        MenuPage.AddGuideMethod(
+                                            targetPage.fromCategory,
+                                            targetPage.systemShortName,
+                                            romPath,
+                                            gameName,
+                                        )
+                                },
+                            )
+
+                        is MenuPage.AddGuideMethod ->
+                            AddGuideMethodScreen(
+                                onGameFaqsSelected = {
+                                    val reference = GameReference(targetPage.systemShortName, targetPage.romPath)
+                                    gameGuides.viewModel.openBrowserFor(reference, targetPage.gameName)
                                     gameGuides.actions.onOpenDirectly()
                                     onDismiss()
                                 },
+                                onImportSelected =
+                                    rememberGuideImportLauncher(onImported = { bytes, fileName, format ->
+                                        val reference = GameReference(targetPage.systemShortName, targetPage.romPath)
+                                        gameGuides.viewModel.importGuideFor(
+                                            reference,
+                                            targetPage.gameName,
+                                            bytes,
+                                            fileName,
+                                            format,
+                                        )
+                                        gameGuides.actions.onOpenDirectly()
+                                        onDismiss()
+                                    }),
                             )
 
                         is MenuPage.Category ->
@@ -528,6 +573,8 @@ fun LongPressSettingsMenu(
                                             val category = targetPage.category
                                             page = MenuPage.GameLaunchOverrideSystems(fromCategory = category)
                                         },
+                                        gameLaunchEnabled = uiState.gameLaunchEnabled,
+                                        onGameLaunchEnabledChanged = settingsViewModel::onGameLaunchEnabledChanged,
                                         gameLaunchDisplayTarget = uiState.gameLaunchDisplayTarget,
                                         onGameLaunchDisplayTargetChanged =
                                             settingsViewModel::onGameLaunchDisplayTargetChanged,
@@ -622,6 +669,9 @@ fun LongPressSettingsMenu(
                                             page = MenuPage.DownloadedGuidesSystems(targetPage.category)
                                         },
                                         onClearAllGuidesClicked = settingsViewModel::onClearAllGameGuidesClicked,
+                                        manualFallbackOnNoGuideEnabled = uiState.manualFallbackOnNoGuideEnabled,
+                                        onManualFallbackOnNoGuideEnabledChanged =
+                                            settingsViewModel::onManualFallbackOnNoGuideEnabledChanged,
                                     )
                                 SettingsCategory.Thor ->
                                     ThorSettingsContent(

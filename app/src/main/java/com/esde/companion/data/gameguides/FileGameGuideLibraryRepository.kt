@@ -3,6 +3,7 @@ package com.esde.companion.data.gameguides
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.esde.companion.data.pdf.PdfManualRenderer
 import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.GameGuideFormat
 import com.esde.companion.domain.model.GameReference
@@ -21,17 +22,23 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
+private const val PDF_EXTENSION = "pdf"
+
 private val GUIDES_INDEX_KEY = stringPreferencesKey("guides_index")
 
 /**
  * App-private storage for downloaded guides - never a user-visible/SAF folder, matching the
  * precedent every other app-fetched/cached blob in this app follows (the RetroAchievements
  * caches, the update checker's downloaded APK). Guide text content lives under [context]'s
- * files dir, one file per page; a single DataStore key holds the JSON-encoded index of
+ * files dir, one file per page ([saveGuide]); an imported binary guide (PDF/Image) instead
+ * gets a single `content.<extension>` file in its own directory ([saveImportedGuide]) - the
+ * two schemes coexist per-guide-directory since [GameGuideFormat] determines which one a
+ * given guide actually used. A single DataStore key holds the JSON-encoded index of
  * every [DownloadedGameGuide]'s metadata - the expected guide count per device is small
  * enough that filtering the whole list in memory ([observeGuidesFor]) is simpler than
  * keying DataStore per game the way `GameListCache` keys per console.
  */
+@Suppress("TooManyFunctions")
 class FileGameGuideLibraryRepository(
     private val context: Context,
 ) : GameGuideLibraryRepository {
@@ -48,6 +55,41 @@ class FileGameGuideLibraryRepository(
             val sizeBytes = content.sumOf { it.toByteArray(Charsets.UTF_8).size.toLong() }
             val stored = guide.copy(sizeBytes = sizeBytes)
             writeIndex(readIndex().filterNot { it.id == guide.id } + stored)
+        }
+
+    // withContext(Dispatchers.IO) - same "don't block the caller's dispatcher" reasoning as
+    // loadContent below - writing the file and (for a PDF) opening it to read the real page
+    // count are both real disk/native-library work.
+    override suspend fun saveImportedGuide(
+        guide: DownloadedGameGuide,
+        contentBytes: ByteArray,
+        fileExtension: String,
+    ): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val dir = guideDirectory(guide.id)
+                dir.mkdirs()
+                val file = File(dir, "content.$fileExtension")
+                file.writeBytes(contentBytes)
+                val pageCount =
+                    if (fileExtension.equals(PDF_EXTENSION, ignoreCase = true)) {
+                        val renderer = PdfManualRenderer.open(file.absolutePath)
+                        val count = renderer?.pageCount ?: guide.pageCount
+                        renderer?.close()
+                        count
+                    } else {
+                        guide.pageCount
+                    }
+                val stored = guide.copy(sizeBytes = contentBytes.size.toLong(), pageCount = pageCount)
+                writeIndex(readIndex().filterNot { it.id == guide.id } + stored)
+            }
+        }
+
+    override suspend fun binaryContentPath(guideId: String): String? =
+        withContext(Dispatchers.IO) {
+            guideDirectory(guideId).listFiles { file -> file.name.startsWith("content.") }
+                ?.firstOrNull()
+                ?.absolutePath
         }
 
     override fun observeGuidesFor(gameReference: GameReference): Flow<List<DownloadedGameGuide>> =

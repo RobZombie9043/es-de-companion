@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
  * Restore's export via [BackupRepositories], since this is user-curated preference data rather
  * than anything sensitive.
  */
+@Suppress("TooManyFunctions")
 interface GameLaunchAppRepository {
     fun observeSystemDefaults(): Flow<Map<String, String>>
 
@@ -50,4 +51,13 @@ interface GameLaunchAppRepository {
     fun observeCloseAppOnGameEnd(): Flow<Boolean>
 
     suspend fun setCloseAppOnGameEnd(enabled: Boolean)
+
+    /** Master on/off switch for the whole Game Launch Override feature - off suppresses every
+     * launch regardless of configured system defaults/game overrides. Defaults true: this
+     * feature ran unconditionally before this switch existed (an unconfigured system/game
+     * already resolved to "launch nothing"), so anyone with overrides already configured keeps
+     * getting them until they explicitly turn this off. */
+    fun observeEnabled(): Flow<Boolean>
+
+    suspend fun setEnabled(enabled: Boolean)
 }

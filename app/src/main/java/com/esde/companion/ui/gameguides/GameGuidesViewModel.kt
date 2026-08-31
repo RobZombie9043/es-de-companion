@@ -8,8 +8,10 @@ import com.esde.companion.domain.gameguides.GuideDownloadProgress
 import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
+import com.esde.companion.domain.model.GameGuideFormat
 import com.esde.companion.domain.model.GameGuideReadingProgress
 import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.currentGameName
 import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
@@ -25,11 +27,20 @@ import java.net.URLEncoder
 import java.time.Clock
 
 /**
- * Drives the Game Guides FAB overlay: shows the downloaded-guide Library for the current
- * game if any exist, otherwise the GameFAQs Browser to find one. Game context follows the
- * same [ObserveConnectionStateUseCase] -> `currentGameReference()` plumbing
- * `GameManualViewModel` uses to resolve per-game media.
+ * Drives the Game Guides FAB overlay: [open] always shows the current game's Library
+ * (downloaded guides, plus that game's manual if one resolves - see [libraryStateFor]) -
+ * reaching the GameFAQs Browser is only ever a deliberate choice via [openBrowser]/
+ * [openBrowserFor] (the "+" dropdown's GameFAQs item), never an automatic fallback for an
+ * empty Library. Game context follows the same [ObserveConnectionStateUseCase] ->
+ * `currentGameReference()` plumbing `GameManualViewModel` uses to resolve per-game media.
+ *
+ * Manual resolution here deliberately calls [GameGuidesUseCases.resolveGameMedia] directly
+ * rather than reusing `GameManualViewModel`, since a Library shown here can be for an
+ * explicitly-picked game (Settings > Game Guides > Add Guide, via [openBrowserFor]/
+ * [importGuideFor]) that isn't ES-DE's live current game - `GameManualViewModel.pdfPath`
+ * only ever resolves the live one.
  */
+@Suppress("TooManyFunctions")
 class GameGuidesViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     private val useCases: GameGuidesUseCases,
@@ -59,9 +70,9 @@ class GameGuidesViewModel(
     private val _uiState = MutableStateFlow<GameGuidesUiState>(GameGuidesUiState.NoGame)
     val uiState: StateFlow<GameGuidesUiState> = _uiState
 
-    /** Reopens to the Library/Browser for whichever game is current right now - called when
-     * the FAB is tapped, when a FAB-opened Viewer is closed (back to that game's Library),
-     * and after deleting a guide. */
+    /** Reopens to the Library for whichever game is current right now - called when the FAB
+     * is tapped, when a FAB-opened Viewer is closed (back to that game's Library), and after
+     * deleting a guide/importing one. */
     fun open() {
         viewModelScope.launch {
             val (reference, name) =
@@ -69,7 +80,7 @@ class GameGuidesViewModel(
                     _uiState.value = GameGuidesUiState.NoGame
                     return@launch
                 }
-            _uiState.value = libraryOrBrowsingState(useCases, reference, name)
+            _uiState.value = libraryStateFor(useCases, reference, name)
         }
     }
 
@@ -86,6 +97,32 @@ class GameGuidesViewModel(
         name: String,
     ) {
         _uiState.value = browsingStateFor(reference, name)
+    }
+
+    /** Imports a picked file as a new guide for [reference] - the "+" dropdown's Import item,
+     * for either the current game (the overlay's own Library) or an explicitly-picked one
+     * (Settings > Game Guides > Add Guide). [format] is [GameGuideFormat.PlainText]/[GameGuideFormat.Html]
+     * for a text-based import (saved through the same page-list pipeline a GameFAQs download
+     * uses) or [GameGuideFormat.Pdf]/[GameGuideFormat.Image] for a binary one (saved as a
+     * single raw file - see [GameGuidesUseCases.importGameGuide]). Refreshes to this game's
+     * Library once saved, same as [saveCurrentGuide]'s post-save refresh. */
+    fun importGuideFor(
+        reference: GameReference,
+        name: String,
+        bytes: ByteArray,
+        fileName: String,
+        format: GameGuideFormat,
+    ) {
+        viewModelScope.launch {
+            val guide = buildImportedGuide(reference, fileName, format, clock.millis())
+            when (format) {
+                GameGuideFormat.PlainText, GameGuideFormat.Html ->
+                    useCases.saveGameGuide(guide, listOf(String(bytes, Charsets.UTF_8)))
+                GameGuideFormat.Pdf, GameGuideFormat.Image ->
+                    useCases.importGameGuide(guide, bytes, fileName.substringAfterLast('.', ""))
+            }
+            _uiState.value = libraryStateFor(useCases, reference, name)
+        }
     }
 
     /** Called after every page load in the Browser's WebView to refresh whether Save should show. */
@@ -121,7 +158,7 @@ class GameGuidesViewModel(
                     },
                 )
             } finally {
-                _uiState.value = libraryOrBrowsingState(useCases, browsing.gameReference, browsing.gameName)
+                _uiState.value = libraryStateFor(useCases, browsing.gameReference, browsing.gameName)
             }
         }
     }
@@ -231,6 +268,16 @@ internal suspend fun loadedViewingStateFor(
     useCases: GameGuidesUseCases,
     opening: GameGuidesUiState.Viewing,
     clock: Clock,
+): GameGuidesUiState.Viewing =
+    when (opening.guide.format) {
+        GameGuideFormat.PlainText, GameGuideFormat.Html -> loadedTextViewingStateFor(useCases, opening, clock)
+        GameGuideFormat.Pdf, GameGuideFormat.Image -> loadedBinaryViewingStateFor(useCases, opening, clock)
+    }
+
+private suspend fun loadedTextViewingStateFor(
+    useCases: GameGuidesUseCases,
+    opening: GameGuidesUiState.Viewing,
+    clock: Clock,
 ): GameGuidesUiState.Viewing {
     val guide = opening.guide
     val pages = useCases.loadGameGuideContent(guide.id) ?: emptyList()
@@ -246,21 +293,43 @@ internal suspend fun loadedViewingStateFor(
     return opening.copy(pages = pages, initialPageIndex = pageIndex, isLoadingContent = false)
 }
 
-/** Library-or-Browsing state for [reference]/[name] - Library when at least one guide is
- * already downloaded for this game, Browsing (a fresh GameFAQs search) otherwise. Shared by
- * [GameGuidesViewModel.open] and [GameGuidesViewModel.saveCurrentGuide]'s post-save refresh. */
-private suspend fun libraryOrBrowsingState(
+/** The Pdf/Image counterpart to [loadedTextViewingStateFor] - resolves the on-disk binary
+ * file path instead of text pages. A resumed scroll fraction doesn't apply to either format
+ * (a PDF page is either shown or not; an image guide has no concept of "page" progress at
+ * all), so this always records 0f rather than [opening]'s own initialScrollFraction. */
+private suspend fun loadedBinaryViewingStateFor(
+    useCases: GameGuidesUseCases,
+    opening: GameGuidesUiState.Viewing,
+    clock: Clock,
+): GameGuidesUiState.Viewing {
+    val guide = opening.guide
+    val path = useCases.loadGameGuideBinaryPath(guide.id)
+    val progress = useCases.observeReadingProgress(guide.id).first()
+    val maxPageIndex = (guide.pageCount - 1).coerceAtLeast(0)
+    val pageIndex = (progress?.pageIndex ?: 0).coerceIn(0, maxPageIndex)
+    useCases.setReadingProgress(GameGuideReadingProgress(guide.id, 0f, clock.millis(), pageIndex))
+    return opening.copy(contentFilePath = path, initialPageIndex = pageIndex, isLoadingContent = false)
+}
+
+/** The Library state for [reference]/[name], including that game's downloaded guides (which
+ * may be empty - see [GameGuidesUiState.Library]'s kdoc) and its resolved manual, if any.
+ * Shared by [GameGuidesViewModel.open], [GameGuidesViewModel.importGuideFor], and
+ * [GameGuidesViewModel.saveCurrentGuide]'s post-save refresh. */
+private suspend fun libraryStateFor(
     useCases: GameGuidesUseCases,
     reference: GameReference,
     name: String,
-): GameGuidesUiState {
+): GameGuidesUiState.Library {
     val guides = useCases.observeGameGuides(reference).first()
-    return if (guides.isNotEmpty()) {
-        val progressByGuideId = guides.associate { guide -> guide.id to readOverallProgressFraction(useCases, guide) }
-        GameGuidesUiState.Library(reference, name, guides, progressByGuideId)
-    } else {
-        browsingStateFor(reference, name)
-    }
+    val progressByGuideId = guides.associate { guide -> guide.id to readOverallProgressFraction(useCases, guide) }
+    val manualPdfPath =
+        useCases.resolveGameMedia(
+            systemShortName = reference.systemShortName,
+            systemPath = reference.systemPath,
+            romPath = reference.romPath,
+            mediaTypes = setOf(MediaType.Manuals),
+        ).path(MediaType.Manuals)
+    return GameGuidesUiState.Library(reference, name, guides, progressByGuideId, manualPdfPath)
 }
 
 /** The current game's downloaded guide most recently interacted with (by

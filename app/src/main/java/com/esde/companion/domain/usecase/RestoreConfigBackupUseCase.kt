@@ -68,6 +68,7 @@ class RestoreConfigBackupUseCase(
             }
             setLaunchDisplayTarget(snapshot.gameLaunchDisplayTarget)
             setCloseAppOnGameEnd(snapshot.closeAppOnGameEndEnabled)
+            setEnabled(snapshot.gameLaunchEnabled)
         }
     }
 

@@ -7,6 +7,8 @@ import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
+import com.esde.companion.domain.model.GameGuideReadingProgress
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
@@ -22,6 +24,7 @@ import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.BackupRepositories
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.GameGuideLibraryRepository
+import com.esde.companion.domain.repository.GameGuideSettingsRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.OnboardingRepository
 import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
@@ -43,6 +46,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -50,6 +54,7 @@ import com.esde.companion.domain.usecase.ObserveHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -78,12 +83,14 @@ import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.SetManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -106,6 +113,7 @@ import com.esde.companion.domain.usecase.ValidateRetroAchievementsCredentialsUse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -391,9 +399,41 @@ class SettingsViewModelTest {
 
         override suspend fun deleteGuide(guideId: String) = error("not used in this test")
 
+        override suspend fun saveImportedGuide(
+            guide: DownloadedGameGuide,
+            contentBytes: ByteArray,
+            fileExtension: String,
+        ) = error("not used in this test")
+
+        override suspend fun binaryContentPath(guideId: String) = error("not used in this test")
+
         override suspend fun deleteAllGuides() {
             deleteAllCalled = true
         }
+    }
+
+    private class FakeGameGuideSettingsRepository : GameGuideSettingsRepository {
+        private val manualFallbackFlow = MutableStateFlow(false)
+
+        override suspend fun setDisplayPreferences(preferences: GameGuideDisplayPreferences): Nothing {
+            error("not used in this test")
+        }
+
+        override fun observeDisplayPreferences(): Flow<GameGuideDisplayPreferences> = error("not used in this test")
+
+        override suspend fun setReadingProgress(progress: GameGuideReadingProgress): Nothing {
+            error("not used in this test")
+        }
+
+        override fun observeReadingProgress(guideId: String): Flow<GameGuideReadingProgress?> {
+            error("not used in this test")
+        }
+
+        override suspend fun setManualFallbackOnNoGuideEnabled(enabled: Boolean) {
+            manualFallbackFlow.value = enabled
+        }
+
+        override fun observeManualFallbackOnNoGuideEnabled(): Flow<Boolean> = manualFallbackFlow
     }
 
     private class FakeRetroAchievementsRepository : RetroAchievementsRepository {
@@ -492,6 +532,7 @@ class SettingsViewModelTest {
             ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
         val setUpdateOnScreensaverUseCase = SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
         val gameGuideLibraryRepository = FakeGameGuideLibraryRepository()
+        val gameGuideSettingsRepository = FakeGameGuideSettingsRepository()
         val viewModel =
             SettingsViewModel(
                 onboardingRepository = onboardingRepository,
@@ -579,7 +620,13 @@ class SettingsViewModelTest {
                 setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository),
                 observeCloseAppOnGameEndUseCase = ObserveCloseAppOnGameEndUseCase(gameLaunchAppRepository),
                 setCloseAppOnGameEndUseCase = SetCloseAppOnGameEndUseCase(gameLaunchAppRepository),
+                observeGameLaunchEnabledUseCase = ObserveGameLaunchEnabledUseCase(gameLaunchAppRepository),
+                setGameLaunchEnabledUseCase = SetGameLaunchEnabledUseCase(gameLaunchAppRepository),
                 deleteAllGameGuidesUseCase = DeleteAllGameGuidesUseCase(gameGuideLibraryRepository),
+                observeManualFallbackOnNoGuideEnabledUseCase =
+                    ObserveManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository),
+                setManualFallbackOnNoGuideEnabledUseCase =
+                    SetManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository),
                 volumeSyncSecondarySettingPresent = false,
             )
         return viewModel to appDrawerSettingsRepository
@@ -757,5 +804,37 @@ class SettingsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(false, viewModel.uiState.value.showSearchBar)
+        }
+
+    @Test
+    fun `gameLaunchEnabled defaults on and persists when changed`() =
+        runTest(testDispatcher) {
+            val gameLaunchAppRepository = FakeGameLaunchAppRepository()
+            val (viewModel, _) = buildViewModel(gameLaunchAppRepository = gameLaunchAppRepository)
+            advanceUntilIdle()
+
+            assertEquals(true, viewModel.uiState.value.gameLaunchEnabled)
+
+            viewModel.onGameLaunchEnabledChanged(false)
+
+            // ui state updates synchronously, before the persistence coroutine runs.
+            assertEquals(false, viewModel.uiState.value.gameLaunchEnabled)
+
+            advanceUntilIdle()
+            assertEquals(false, gameLaunchAppRepository.observeEnabled().first())
+        }
+
+    @Test
+    fun `manualFallbackOnNoGuideEnabled defaults off and persists when changed`() =
+        runTest(testDispatcher) {
+            val (viewModel, _) = buildViewModel()
+            advanceUntilIdle()
+
+            assertEquals(false, viewModel.uiState.value.manualFallbackOnNoGuideEnabled)
+
+            viewModel.onManualFallbackOnNoGuideEnabledChanged(true)
+
+            // ui state updates synchronously, before the persistence coroutine runs.
+            assertEquals(true, viewModel.uiState.value.manualFallbackOnNoGuideEnabled)
         }
 }

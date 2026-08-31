@@ -231,9 +231,16 @@ internal fun displayNameForRomPath(romPath: String): String {
 }
 
 private fun downloadedGuideSubtitle(guide: DownloadedGameGuide): String {
-    val format = if (guide.format == GameGuideFormat.Html) "HTML" else "TXT"
-    return "$format · ${formatGuideSize(guide.sizeBytes)}"
+    return "${guide.format.shortLabel()} · ${formatGuideSize(guide.sizeBytes)}"
 }
+
+private fun GameGuideFormat.shortLabel(): String =
+    when (this) {
+        GameGuideFormat.PlainText -> "TXT"
+        GameGuideFormat.Html -> "HTML"
+        GameGuideFormat.Pdf -> "PDF"
+        GameGuideFormat.Image -> "IMG"
+    }
 
 private fun formatGuideSize(bytes: Long): String =
     when {

@@ -16,12 +16,15 @@ class GameGuidesViewModelFactory(
             GameGuidesUseCases(
                 observeGameGuides = appContainer.observeGameGuidesUseCase,
                 saveGameGuide = appContainer.saveGameGuideUseCase,
+                importGameGuide = appContainer.importGameGuideUseCase,
                 loadGameGuideContent = appContainer.loadGameGuideContentUseCase,
+                loadGameGuideBinaryPath = appContainer.loadGameGuideBinaryPathUseCase,
                 deleteGameGuide = appContainer.deleteGameGuideUseCase,
                 observeDisplayPreferences = appContainer.observeGameGuideDisplayPreferencesUseCase,
                 setDisplayPreferences = appContainer.setGameGuideDisplayPreferencesUseCase,
                 observeReadingProgress = appContainer.observeGameGuideReadingProgressUseCase,
                 setReadingProgress = appContainer.setGameGuideReadingProgressUseCase,
+                resolveGameMedia = appContainer.resolveGameMediaUseCase,
             )
         return GameGuidesViewModel(
             observeConnectionState = appContainer.observeConnectionStateUseCase,

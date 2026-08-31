@@ -16,6 +16,18 @@ interface GameGuideLibraryRepository {
         content: List<String>,
     ): Result<Unit>
 
+    /** Saves an imported [GameGuideFormat.Pdf]/[GameGuideFormat.Image] guide's raw file
+     * bytes - the binary counterpart to [saveGuide], used by GameGuideImportPicker's flow.
+     * [fileExtension] (no leading dot, e.g. "pdf") names the single file written under this
+     * guide's own directory. For a "pdf" extension, the implementation corrects
+     * [DownloadedGameGuide.pageCount] to the file's real page count before persisting it -
+     * callers pass a placeholder pageCount that only matters for non-PDF formats. */
+    suspend fun saveImportedGuide(
+        guide: DownloadedGameGuide,
+        contentBytes: ByteArray,
+        fileExtension: String,
+    ): Result<Unit>
+
     fun observeGuidesFor(gameReference: GameReference): Flow<List<DownloadedGameGuide>>
 
     /** Every downloaded guide across every game/system - Settings > Game Guides >
@@ -24,6 +36,11 @@ interface GameGuideLibraryRepository {
     fun observeAllGuides(): Flow<List<DownloadedGameGuide>>
 
     suspend fun loadContent(guideId: String): List<String>?
+
+    /** The on-disk path to a [GameGuideFormat.Pdf]/[GameGuideFormat.Image] guide's saved
+     * binary file - the binary counterpart to [loadContent]. Null if [guideId] doesn't exist
+     * or was never saved via [saveImportedGuide]. */
+    suspend fun binaryContentPath(guideId: String): String?
 
     suspend fun deleteGuide(guideId: String)
 

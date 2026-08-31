@@ -30,6 +30,7 @@ import com.esde.companion.domain.usecase.ObserveDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.ObserveDockSizeUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.ObserveGridColumnsUseCase
@@ -37,6 +38,7 @@ import com.esde.companion.domain.usecase.ObserveHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -65,12 +67,14 @@ import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingBehaviorUseCase
 import com.esde.companion.domain.usecase.SetGamePlayingDimPercentUseCase
 import com.esde.companion.domain.usecase.SetGridColumnsUseCase
 import com.esde.companion.domain.usecase.SetHallSensorCalibrationUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.SetManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -170,7 +174,11 @@ class SettingsViewModel(
     private val setGameLaunchDisplayTargetUseCase: SetGameLaunchDisplayTargetUseCase,
     private val observeCloseAppOnGameEndUseCase: ObserveCloseAppOnGameEndUseCase,
     private val setCloseAppOnGameEndUseCase: SetCloseAppOnGameEndUseCase,
+    private val observeGameLaunchEnabledUseCase: ObserveGameLaunchEnabledUseCase,
+    private val setGameLaunchEnabledUseCase: SetGameLaunchEnabledUseCase,
     private val deleteAllGameGuidesUseCase: DeleteAllGameGuidesUseCase,
+    private val observeManualFallbackOnNoGuideEnabledUseCase: ObserveManualFallbackOnNoGuideEnabledUseCase,
+    private val setManualFallbackOnNoGuideEnabledUseCase: SetManualFallbackOnNoGuideEnabledUseCase,
     private val volumeSyncSecondarySettingPresent: Boolean,
 ) : ViewModel() {
     // Seeded with the real value up front - see OnboardingViewModel's kdoc for why
@@ -283,6 +291,7 @@ class SettingsViewModel(
             musicPlayDuringScreensaver = observeMusicPlayDuringScreensaverUseCase().first(),
             musicDuckingMode = observeMusicDuckingModeUseCase().first(),
             closeCompanionOnQuitEnabled = observeCloseCompanionOnQuitEnabledUseCase().first(),
+            manualFallbackOnNoGuideEnabled = observeManualFallbackOnNoGuideEnabledUseCase().first(),
             fabAssignments = observeFabAssignmentsUseCase().first(),
             launchEsdeOnStartEnabled = observeLaunchEsdeOnStartEnabledUseCase().first(),
             debugLoggingEnabled = observeDebugLoggingEnabledUseCase().first(),
@@ -300,6 +309,7 @@ class SettingsViewModel(
             taskKillerTarget = observeTaskKillerTargetUseCase().first(),
             gameLaunchDisplayTarget = observeGameLaunchDisplayTargetUseCase().first(),
             closeAppOnGameEndEnabled = observeCloseAppOnGameEndUseCase().first(),
+            gameLaunchEnabled = observeGameLaunchEnabledUseCase().first(),
         )
     }
 
@@ -397,6 +407,11 @@ class SettingsViewModel(
         viewModelScope.launch { setCloseCompanionOnQuitEnabledUseCase(enabled) }
     }
 
+    fun onManualFallbackOnNoGuideEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(manualFallbackOnNoGuideEnabled = enabled)
+        viewModelScope.launch { setManualFallbackOnNoGuideEnabledUseCase(enabled) }
+    }
+
     // Resets any previously-selected custom app - switching type away from CustomApp and
     // back always starts from an unset selection rather than silently resurrecting a
     // stale one.
@@ -487,6 +502,11 @@ class SettingsViewModel(
     fun onCloseAppOnGameEndEnabledChanged(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(closeAppOnGameEndEnabled = enabled)
         viewModelScope.launch { setCloseAppOnGameEndUseCase(enabled) }
+    }
+
+    fun onGameLaunchEnabledChanged(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(gameLaunchEnabled = enabled)
+        viewModelScope.launch { setGameLaunchEnabledUseCase(enabled) }
     }
 
     fun onClearAllGameGuidesClicked() {
