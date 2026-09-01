@@ -256,7 +256,17 @@ private suspend fun scrollToAnchorWhenReady(
         attempts++
     }
     val encodedId = Json.encodeToString(id)
-    webView.evaluateJavascript("document.getElementById($encodedId)?.scrollIntoView({block: 'start'});", null)
+    // Not every guide's anchor markers use id="..." - confirmed on a real guide (Ori and the
+    // Blind Forest, GameFAQs FAQ id 71410) whose own section markers are legacy
+    // <a name="section13">, never matched by getElementById at all. Falling back to
+    // getElementsByName covers that template too, without needing to tell guides apart -
+    // getElementById always wins first when a real id is present (every other guide sampled so
+    // far, e.g. NieR: Automata's own <a id="Introduction">).
+    webView.evaluateJavascript(
+        "(document.getElementById($encodedId) || document.getElementsByName($encodedId)[0])" +
+            "?.scrollIntoView({block: 'start'});",
+        null,
+    )
 }
 
 /**
