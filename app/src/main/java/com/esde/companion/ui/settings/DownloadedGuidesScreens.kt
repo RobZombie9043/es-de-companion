@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.esde.companion.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.GameGuideFormat
+import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.identifies
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -92,10 +96,11 @@ fun DownloadedGuidesGamesScreen(
     val allGuides by viewModel.allGuides.collectAsStateWithLifecycle()
     val games =
         remember(allGuides, systemShortName) {
-            allGuides
-                .filter { it.gameReference.systemShortName == systemShortName }
-                .groupBy { it.gameReference.romPath }
-                .map { (romPath, guides) -> Triple(romPath, displayNameForRomPath(romPath), guides.size) }
+            groupGuidesByGame(allGuides.filter { it.gameReference.systemShortName == systemShortName })
+                .map { group ->
+                    val romPath = group.first().gameReference.romPath
+                    Triple(romPath, displayNameForRomPath(romPath), group.size)
+                }
                 .sortedBy { it.second.lowercase() }
         }
 
@@ -134,8 +139,9 @@ fun DownloadedGuidesListScreen(
     val allGuides by viewModel.allGuides.collectAsStateWithLifecycle()
     val guides =
         remember(allGuides, systemShortName, romPath) {
+            val target = GameReference(systemShortName, romPath)
             allGuides
-                .filter { it.gameReference.systemShortName == systemShortName && it.gameReference.romPath == romPath }
+                .filter { it.gameReference.identifies(target) }
                 .sortedBy { it.title.lowercase() }
         }
 
@@ -222,6 +228,25 @@ private fun DownloadedGuideRow(
             }
         }
     }
+}
+
+/**
+ * Groups [guides] (already filtered to one system) into per-game buckets using
+ * [identifies] rather than a plain `groupBy { romPath }` - a guide added via the in-game FAB
+ * (ES-DE's live absolute romPath) and one added for the same game via Settings > Add Guide (a
+ * gamelist.xml-relative romPath) would otherwise land in two separate buckets even though
+ * [FileGameGuideLibraryRepository.observeGuidesFor] already treats them as the same game.
+ * Linear/O(n²), same as this codebase's other "expected count per device is small" grouping
+ * (see [FileGameGuideLibraryRepository]'s own kdoc) - `identifies` isn't a hashable equality
+ * key, so a `groupBy` can't be used directly.
+ */
+private fun groupGuidesByGame(guides: List<DownloadedGameGuide>): List<List<DownloadedGameGuide>> {
+    val groups = mutableListOf<MutableList<DownloadedGameGuide>>()
+    for (guide in guides) {
+        val group = groups.find { it.first().gameReference.identifies(guide.gameReference) }
+        if (group != null) group.add(guide) else groups.add(mutableListOf(guide))
+    }
+    return groups
 }
 
 private fun guideCountLabel(count: Int): String = if (count == 1) "1 guide" else "$count guides"

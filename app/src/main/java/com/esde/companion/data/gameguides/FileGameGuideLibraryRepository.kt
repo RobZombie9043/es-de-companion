@@ -11,6 +11,7 @@ import com.esde.companion.domain.model.GuideTocEntry
 import com.esde.companion.domain.model.identifies
 import com.esde.companion.domain.repository.GameGuideLibraryRepository
 import com.esde.companion.domain.repository.GuidePageContent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -59,7 +60,7 @@ class FileGameGuideLibraryRepository(
         guide: DownloadedGameGuide,
         pageContent: suspend (pageIndex: Int) -> GuidePageContent,
     ): Result<Unit> =
-        runCatching {
+        runCatchingCancellable {
             val dir = guideDirectory(guide.id)
             withContext(Dispatchers.IO) { dir.mkdirs() }
             val tocEntries = mutableListOf<GuideTocEntry>()
@@ -94,7 +95,7 @@ class FileGameGuideLibraryRepository(
         fileExtension: String,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatchingCancellable {
                 val dir = guideDirectory(guide.id)
                 dir.mkdirs()
                 val file = File(dir, "content.$fileExtension")
@@ -177,6 +178,27 @@ class FileGameGuideLibraryRepository(
         }
     }
 }
+
+/**
+ * Same shape as the stdlib's `runCatching`, but rethrows [CancellationException] instead of
+ * wrapping it into a [Result.failure] - a plain `runCatching` around a cancellable suspend
+ * block (as [FileGameGuideLibraryRepository.saveGuide]/[FileGameGuideLibraryRepository.
+ * saveImportedGuide] both are, once [GameGuidesViewModel.cancelDownload] can cancel their
+ * caller's coroutine mid-save) breaks structured concurrency: swallowing the cancellation
+ * signal here both stops it from propagating to cancel the rest of the coroutine hierarchy
+ * promptly, and turns a normal user-initiated cancel into a `GuideDownloadAndSave.kt`-logged
+ * ERROR indistinguishable from a real save failure.
+ */
+private suspend fun <T> runCatchingCancellable(block: suspend () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (
+        @Suppress("TooGenericExceptionCaught") e: Throwable,
+    ) {
+        Result.failure(e)
+    }
 
 private fun decodeIndex(json: String?): List<DownloadedGameGuide> {
     if (json == null) return emptyList()

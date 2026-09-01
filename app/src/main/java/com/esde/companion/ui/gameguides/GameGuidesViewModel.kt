@@ -1,5 +1,6 @@
 package com.esde.companion.ui.gameguides
 
+import android.util.Log
 import android.webkit.WebView
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -187,11 +188,19 @@ class GameGuidesViewModel(
     ) {
         viewModelScope.launch {
             val guide = buildImportedGuide(reference, fileName, format, clock.millis())
-            when (format) {
-                GameGuideFormat.PlainText, GameGuideFormat.Html ->
-                    useCases.saveGameGuide(guide) { GuidePageContent(html = String(bytes, Charsets.UTF_8)) }
-                GameGuideFormat.Pdf, GameGuideFormat.Image ->
-                    useCases.importGameGuide(guide, bytes, fileName.substringAfterLast('.', ""))
+            val result =
+                when (format) {
+                    GameGuideFormat.PlainText, GameGuideFormat.Html ->
+                        useCases.saveGameGuide(guide) { GuidePageContent(html = String(bytes, Charsets.UTF_8)) }
+                    GameGuideFormat.Pdf, GameGuideFormat.Image ->
+                        useCases.importGameGuide(guide, bytes, fileName.substringAfterLast('.', ""))
+                }
+            // Same "log but don't block the Library refresh" handling as downloadAndSaveGuide's
+            // own saveGameGuide call - a failure here (disk write error) previously vanished
+            // silently, with the import looking like it succeeded even though no guide was
+            // actually written; this at least makes it diagnosable, matching the download path.
+            result.onFailure { error ->
+                Log.e("GameGuides", "Failed to import guide '${guide.title}' ($fileName)", error)
             }
             _uiState.value = libraryStateFor(useCases, reference, name)
         }
