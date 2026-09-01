@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.esde.companion.ui.gameguides
 
 import android.annotation.SuppressLint
@@ -21,7 +23,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.esde.companion.data.gameguides.writeViewerDocument
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -98,6 +105,7 @@ data class HtmlViewerCallbacks(
  * to a known issue) has no real origin's cookies/session to reach and no real network endpoint
  * to call.
  */
+@OptIn(FlowPreview::class)
 @Composable
 fun HtmlGuideContent(
     config: HtmlViewerConfig,
@@ -165,29 +173,50 @@ fun HtmlGuideContent(
     // which page, but not the scroll position on it" once page-index persistence itself was
     // fixed separately.
     //
-    // Waits out SCROLL_INITIAL_SETTLE_MILLIS before its very first check - this effect starts
+    // Waits out SCROLL_INITIAL_SETTLE_MILLIS before its first evaluation - this effect starts
     // concurrently with the OTHER effect above that loads the page and restores
     // initialScrollFraction (loadDataWithBaseURL -> awaitScrollableLayout, up to
     // SCROLL_LAYOUT_POLL_ATTEMPTS * SCROLL_LAYOUT_POLL_INTERVAL_MILLIS -> the actual restore
-    // script). Checking immediately raced that restore: it read the still-loading (or
+    // script). Evaluating immediately raced that restore: it read the still-loading (or
     // previous) page's near-zero scroll position and reported it right away, silently
     // overwriting the just-read resumed fraction back to ~0 on every single reopen - a worse
     // regression than the dead-zone-on-quick-close problem it was meant to fix.
+    //
+    // Driven by webViewScrollEvents (a real native scroll callback), not a fixed-interval
+    // poll - the previous `while (true) { ...; delay(SCROLL_POLL_INTERVAL_MILLIS) }` shape
+    // kept evaluating this JS expression twice a second for as long as any HTML guide page
+    // was open, on this always-on kiosk app, even while the user wasn't scrolling at all.
+    // debounce means the actual evaluate-and-report only runs once scrolling has paused for
+    // SCROLL_POLL_INTERVAL_MILLIS, same idiom PlainTextGuideContent already uses for its own
+    // (Compose-state-driven) scroll position.
     LaunchedEffect(config.html) {
         delay(SCROLL_INITIAL_SETTLE_MILLIS)
         var lastReported = config.initialScrollFraction
-        while (true) {
+        webViewScrollEvents(webView).debounce(SCROLL_POLL_INTERVAL_MILLIS).collect {
             val fraction = evaluateNumber(webView, SCROLL_FRACTION_EXPRESSION)
             if (fraction != null && abs(fraction - lastReported) >= SCROLL_REPORT_THRESHOLD) {
                 lastReported = fraction
                 callbacks.onScrollFractionChanged(fraction)
             }
-            delay(SCROLL_POLL_INTERVAL_MILLIS)
         }
     }
 
     AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize().alpha(if (contentVisible.value) 1f else 0f))
 }
+
+/**
+ * Bridges [webView]'s native scroll callback (a real Android [View.OnScrollChangeListener],
+ * fired by both a user drag/fling and a JS `window.scrollTo()` - both move the same underlying
+ * View scroll position) into a [Flow], the same callbackFlow-wraps-a-callback-API idiom
+ * `AndroidSystemStatusRepository` already uses. This exists purely so [HtmlGuideContent]'s
+ * scroll-position effect can react to actual scrolling instead of polling on a fixed interval
+ * regardless of whether anything moved.
+ */
+private fun webViewScrollEvents(webView: WebView): Flow<Unit> =
+    callbackFlow {
+        webView.setOnScrollChangeListener { _, _, _, _, _ -> trySend(Unit) }
+        awaitClose { webView.setOnScrollChangeListener(null) }
+    }
 
 /**
  * The body of [HtmlGuideContent]'s page-loading effect - pulled out purely to keep that

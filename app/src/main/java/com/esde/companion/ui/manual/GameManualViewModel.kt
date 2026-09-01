@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.pdf.ManualRenderer
 import com.esde.companion.data.pdf.PdfManualRenderer
+import com.esde.companion.data.pdf.PdfPagePager
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.MediaType
@@ -66,6 +67,7 @@ class GameManualViewModel(
             )
 
     private var renderer: ManualRenderer? = null
+    private var pager: PdfPagePager? = null
     private var openedForPath: String? = null
     private var targetWidthPx: Int = 0
 
@@ -96,6 +98,7 @@ class GameManualViewModel(
         if (path == openedForPath) return
         renderer?.close()
         renderer = null
+        pager = null
         openedForPath = path
         _currentPage.value = 0
         _currentBitmap.value = null
@@ -104,6 +107,7 @@ class GameManualViewModel(
 
         val opened = path?.let { openRenderer(it) } ?: return
         renderer = opened
+        pager = PdfPagePager(opened)
         _pageCount.value = opened.pageCount
         renderCurrentAndPrefetch()
     }
@@ -127,11 +131,11 @@ class GameManualViewModel(
     }
 
     private suspend fun renderCurrentAndPrefetch() {
-        val renderer = renderer ?: return
+        val pager = pager ?: return
         if (targetWidthPx <= 0) return
-        val page = _currentPage.value
-        _currentBitmap.value = renderer.renderPage(page, targetWidthPx)
-        _nextBitmap.value = if (page + 1 < renderer.pageCount) renderer.renderPage(page + 1, targetWidthPx) else null
+        val result = pager.render(_currentPage.value, targetWidthPx)
+        _currentBitmap.value = result.currentBitmap
+        _nextBitmap.value = result.nextBitmap
     }
 
     override fun onCleared() {

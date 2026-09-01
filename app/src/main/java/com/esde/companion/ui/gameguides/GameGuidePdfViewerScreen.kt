@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import com.esde.companion.data.pdf.ManualRenderer
 import com.esde.companion.data.pdf.PdfManualRenderer
+import com.esde.companion.data.pdf.PdfPagePager
 import com.esde.companion.ui.pdf.PdfPageViewer
 import com.esde.companion.ui.pdf.PdfPageViewerActions
 import com.esde.companion.ui.pdf.PdfPageViewerState
@@ -23,7 +24,8 @@ import com.esde.companion.ui.pdf.PdfPageViewerState
  * isn't necessarily the current game's manual) against [GameGuidesUiState.Viewing.contentFilePath],
  * seeded at [GameGuidesUiState.Viewing.initialPageIndex]. [onPageChanged] is called (skipping
  * the very first, resumed page) so the caller can persist reading progress the same way the
- * text viewer does.
+ * text viewer does. Paging itself goes through [PdfPagePager], the same next-page prefetch
+ * `GameManualViewModel` uses for the Game Manual viewer.
  */
 @Composable
 fun GameGuidePdfViewerScreen(
@@ -33,6 +35,7 @@ fun GameGuidePdfViewerScreen(
     modifier: Modifier = Modifier,
 ) {
     var renderer by remember { mutableStateOf<ManualRenderer?>(null) }
+    var pager by remember { mutableStateOf<PdfPagePager?>(null) }
     var currentPage by remember { mutableIntStateOf(state.initialPageIndex) }
     var pageCount by remember { mutableIntStateOf(0) }
     var currentBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
@@ -45,6 +48,7 @@ fun GameGuidePdfViewerScreen(
         pageCount = 0
         val opened = path?.let { PdfManualRenderer.open(it) }
         renderer = opened
+        pager = opened?.let { PdfPagePager(it) }
         if (opened != null) {
             pageCount = opened.pageCount
             currentPage = state.initialPageIndex.coerceIn(0, (opened.pageCount - 1).coerceAtLeast(0))
@@ -55,10 +59,13 @@ fun GameGuidePdfViewerScreen(
         onDispose { renderer?.close() }
     }
 
-    LaunchedEffect(renderer, currentPage, targetWidthPx) {
-        val activeRenderer = renderer ?: return@LaunchedEffect
+    // PdfPagePager reuses whatever it prefetched for currentPage last time this ran (see its
+    // own kdoc) - the same next-page prefetch GameManualViewModel uses for the Game Manual
+    // viewer, which this composable used to just call renderPage fresh for every page instead.
+    LaunchedEffect(pager, currentPage, targetWidthPx) {
+        val activePager = pager ?: return@LaunchedEffect
         if (targetWidthPx <= 0) return@LaunchedEffect
-        currentBitmap = activeRenderer.renderPage(currentPage, targetWidthPx)
+        currentBitmap = activePager.render(currentPage, targetWidthPx).currentBitmap
     }
 
     // Skips the first composition's "change" (the resumed page), same reasoning as
