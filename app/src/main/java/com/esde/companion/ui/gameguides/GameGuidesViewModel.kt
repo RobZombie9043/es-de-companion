@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.time.Clock
@@ -137,6 +138,10 @@ class GameGuidesViewModel(
      * see [loadPage]'s kdoc. */
     private var pageLoadJob: Job? = null
 
+    /** Tracks [saveCurrentGuide]'s in-flight coroutine so [cancelDownload] can stop it - see
+     * [cancelDownload]'s kdoc. */
+    private var downloadJob: Job? = null
+
     /** Reopens to the Library for whichever game is current right now - called when the FAB
      * is tapped, when a FAB-opened Viewer is closed (back to that game's Library), and after
      * deleting a guide/importing one. */
@@ -207,33 +212,63 @@ class GameGuidesViewModel(
     ) {
         val browsing = _uiState.value as? GameGuidesUiState.Browsing ?: return
         _uiState.value = browsing.copy(downloadProgress = GuideDownloadProgress.LoadingPage(1, 1))
-        viewModelScope.launch {
-            // GameFaqsBrowserBridge bounds its own slow steps (each chapter-page navigation,
-            // image embedding) with timeouts, but this still needs a hard guarantee that the
-            // Save dialog clears even if something else in this block throws - otherwise
-            // downloadProgress is stuck non-null forever with no way for the UI to recover.
-            val deps =
-                GuideDownloadDeps(
-                    browserBridge = browserBridge,
-                    saveGameGuide = useCases.saveGameGuide,
-                    resolveMediaDirectory = useCases.resolveGameGuideMediaDirectory,
-                    clock = clock,
-                )
-            try {
-                downloadAndSaveGuide(
-                    deps = deps,
-                    webView = webView,
-                    sourceUrl = sourceUrl,
-                    target = GuideSaveTarget(browsing.gameReference, browsing.gameName),
-                    onProgress = { progress ->
+        downloadJob =
+            viewModelScope.launch {
+                // GameFaqsBrowserBridge bounds its own slow steps (each chapter-page
+                // navigation, image embedding) with timeouts, but this still needs a hard
+                // guarantee that the Save dialog clears even if something else in this block
+                // throws - otherwise downloadProgress is stuck non-null forever with no way
+                // for the UI to recover.
+                val deps =
+                    GuideDownloadDeps(
+                        browserBridge = browserBridge,
+                        saveGameGuide = useCases.saveGameGuide,
+                        resolveMediaDirectory = useCases.resolveGameGuideMediaDirectory,
+                        clock = clock,
+                    )
+                try {
+                    downloadAndSaveGuide(
+                        deps = deps,
+                        webView = webView,
+                        sourceUrl = sourceUrl,
+                        target = GuideSaveTarget(browsing.gameReference, browsing.gameName),
+                        onProgress = { progress ->
+                            (_uiState.value as? GameGuidesUiState.Browsing)?.let { current ->
+                                _uiState.value = current.copy(downloadProgress = progress)
+                            }
+                        },
+                    )
+                } finally {
+                    // isActive is already false here when this coroutine got here via
+                    // cancelDownload() rather than downloadAndSaveGuide finishing/throwing on
+                    // its own - libraryStateFor is a suspend call (disk reads), which would
+                    // itself immediately throw CancellationException in that case and never
+                    // actually clear downloadProgress, so this branches to a plain synchronous
+                    // reset back to Browsing instead (cancelDownload's own reset already did
+                    // this once, for instant feedback - this is the guaranteed-correct backstop
+                    // in case a stray onProgress update above raced it and won).
+                    if (isActive) {
+                        _uiState.value = libraryStateFor(useCases, browsing.gameReference, browsing.gameName)
+                    } else {
                         (_uiState.value as? GameGuidesUiState.Browsing)?.let { current ->
-                            _uiState.value = current.copy(downloadProgress = progress)
+                            _uiState.value = current.copy(downloadProgress = null)
                         }
-                    },
-                )
-            } finally {
-                _uiState.value = libraryStateFor(useCases, browsing.gameReference, browsing.gameName)
+                    }
+                }
             }
+    }
+
+    /** Settings > Game Guides FAB > Browse GameFAQs > "Downloading guide" dialog's Cancel
+     * button - stops [saveCurrentGuide]'s in-flight download and drops straight back to the
+     * Browsing screen the user was already on (never the Library, since nothing was actually
+     * saved to show there). Resets [GameGuidesUiState.Browsing.downloadProgress] immediately,
+     * for instant feedback, rather than waiting on [downloadJob] to actually unwind - see
+     * [saveCurrentGuide]'s own `finally` block for the guaranteed-correct backstop that covers
+     * the gap between this call and that cancellation actually being observed. */
+    fun cancelDownload() {
+        downloadJob?.cancel()
+        (_uiState.value as? GameGuidesUiState.Browsing)?.let { current ->
+            if (current.downloadProgress != null) _uiState.value = current.copy(downloadProgress = null)
         }
     }
 

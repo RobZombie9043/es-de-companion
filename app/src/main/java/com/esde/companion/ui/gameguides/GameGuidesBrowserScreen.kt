@@ -35,11 +35,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.esde.companion.domain.gameguides.GuideDownloadProgress
 
 private const val GAMEFAQS_HOST = "gamefaqs.gamespot.com"
+
+/** Bundles [GameGuidesBrowserScreen]'s callbacks into one, keeping that function under
+ * detekt's LongParameterList threshold - same reasoning as `GuideManualFallback`. */
+data class GameGuidesBrowserActions(
+    val onPageLoaded: (WebView) -> Unit,
+    val onSave: (WebView, String) -> Unit,
+    val onClose: () -> Unit,
+    val onCancelDownload: () -> Unit,
+)
 
 /**
  * Embedded GameFAQs browser (Game Guides FAB, when no guides are downloaded yet, or the
@@ -53,9 +63,7 @@ private const val GAMEFAQS_HOST = "gamefaqs.gamespot.com"
 @Composable
 fun GameGuidesBrowserScreen(
     state: GameGuidesUiState.Browsing,
-    onPageLoaded: (WebView) -> Unit,
-    onSave: (WebView, String) -> Unit,
-    onClose: () -> Unit,
+    actions: GameGuidesBrowserActions,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -79,7 +87,7 @@ fun GameGuidesBrowserScreen(
                             view: WebView,
                             url: String?,
                         ) {
-                            onPageLoaded(view)
+                            actions.onPageLoaded(view)
                         }
                     }
             }
@@ -98,7 +106,7 @@ fun GameGuidesBrowserScreen(
     // Disabled while saving - back navigation would change webView's live URL/DOM out from
     // under the in-flight download, which reads both.
     BackHandler(enabled = !state.isSaving) {
-        if (webView.canGoBack()) webView.goBack() else onClose()
+        if (webView.canGoBack()) webView.goBack() else actions.onClose()
     }
 
     // A real header section pushing the WebView down below it, not a translucent overlay
@@ -121,7 +129,7 @@ fun GameGuidesBrowserScreen(
                 }
                 if (state.currentPageIsGuide && !state.isSaving) {
                     TextButton(
-                        onClick = { onSave(webView, webView.url.orEmpty()) },
+                        onClick = { actions.onSave(webView, webView.url.orEmpty()) },
                         modifier = Modifier.align(Alignment.Center),
                     ) {
                         Icon(Icons.Filled.Download, contentDescription = null)
@@ -130,7 +138,7 @@ fun GameGuidesBrowserScreen(
                     }
                 }
                 IconButton(
-                    onClick = onClose,
+                    onClick = actions.onClose,
                     enabled = !state.isSaving,
                     modifier = Modifier.align(Alignment.CenterEnd),
                 ) {
@@ -143,22 +151,28 @@ fun GameGuidesBrowserScreen(
     }
 
     state.downloadProgress?.let { progress ->
-        DownloadProgressDialog(progress)
+        DownloadProgressDialog(progress, actions.onCancelDownload)
     }
 }
 
 /**
- * Non-dismissable while a download is in flight. [progress] reports real per-chapter counts
- * for a multi-page in-line HTML guide (see [GameFaqsBrowserBridge.walkHtmlChapters]); the
+ * Not dismissable by tapping outside or the system back button while a download is in
+ * flight - only the explicit Cancel button below stops it, via [onCancel]
+ * ([GameGuidesViewModel.cancelDownload]). [progress] reports real per-chapter counts for a
+ * multi-page in-line HTML guide (see [GameFaqsBrowserBridge.walkHtmlChapters]); the
  * image-embedding pass that can follow it has no discrete steps to count, so that phase shows
  * as indeterminate instead of a fake percentage.
  */
 @Composable
-private fun DownloadProgressDialog(progress: GuideDownloadProgress) {
+private fun DownloadProgressDialog(
+    progress: GuideDownloadProgress,
+    onCancel: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = {},
         confirmButton = {},
-        title = { Text("Downloading guide") },
+        dismissButton = { TextButton(onClick = onCancel) { Text("Cancel") } },
+        title = { Text("Downloading guide", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),

@@ -87,6 +87,7 @@ import com.esde.companion.ui.gameguides.GameGuideLibraryActions
 import com.esde.companion.ui.gameguides.GameGuideLibraryScreen
 import com.esde.companion.ui.gameguides.GameGuidePdfViewerScreen
 import com.esde.companion.ui.gameguides.GameGuideViewerScreen
+import com.esde.companion.ui.gameguides.GameGuidesBrowserActions
 import com.esde.companion.ui.gameguides.GameGuidesBrowserScreen
 import com.esde.companion.ui.gameguides.GameGuidesOverlayState
 import com.esde.companion.ui.gameguides.GameGuidesUiState
@@ -178,11 +179,12 @@ private val MUSIC_OVERLAY_GAP = 12.dp
 // bit more room inside the 56dp CornerFab, same reasoning as AppDock's larger dock icons.
 private val CUSTOM_APP_ICON_SIZE = 32.dp
 
-// How strongly the widget backdrop/MainScreen chrome blurs behind the long-press menu -
-// see longPressMenuOpen below. Modifier.blur() only actually renders a blur on API 31+
-// (backed by RenderEffect); on this app's minSdk 29/30 it's a harmless no-op, so those
-// devices simply don't get the blur rather than crashing or looking broken.
-private val LONG_PRESS_MENU_BLUR_RADIUS = 4.dp
+// How strongly the widget backdrop/MainScreen chrome blurs behind a full-screen modal -
+// the long-press menu, and the Game Guides browser's download-progress dialog - see
+// modalBlurRadius below. Modifier.blur() only actually renders a blur on API 31+ (backed by
+// RenderEffect); on this app's minSdk 29/30 it's a harmless no-op, so those devices simply
+// don't get the blur rather than crashing or looking broken.
+private val MODAL_BLUR_RADIUS = 4.dp
 
 // Settings > Other Settings: "Launch ES-DE on Companion App Start". ES-DE's package name
 // isn't referenced anywhere else in this codebase (apps are identified via the installed
@@ -811,17 +813,27 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
+                            // True only while GameGuidesBrowserScreen's own "Downloading
+                            // guide" AlertDialog is showing (see GameGuidesUiState.Browsing.
+                            // isSaving) - folded into modalBlurRadius below the same way
+                            // longPressMenuOpen is, since that dialog is likewise a genuine
+                            // separate platform window this Box's blur can never affect.
+                            val guideDownloadDialogShowing =
+                                (gameGuides.uiState as? GameGuidesUiState.Browsing)?.isSaving == true
+
                             // Blurs everything behind the long-press menu (the widget
-                            // backdrop, and MainScreen's own dock/corner buttons) while it's
-                            // open - animated rather than snapping, so it settles in step
-                            // with the menu's own entrance animation. The menu itself is
-                            // unaffected: Popup renders in its own platform window, entirely
-                            // outside this Box's render tree, so blurring this Box can never
-                            // blur it too. Deliberately not applied while a folder is open -
-                            // see folderOpen's kdoc above.
-                            val longPressMenuBlurRadius by animateDpAsState(
-                                targetValue = if (longPressMenuOpen) LONG_PRESS_MENU_BLUR_RADIUS else 0.dp,
-                                label = "longPressMenuBlur",
+                            // backdrop, and MainScreen's own dock/corner buttons) or the Game
+                            // Guides download-progress dialog while either is open - animated
+                            // rather than snapping, so it settles in step with the menu's own
+                            // entrance animation. Both are unaffected themselves: a Popup/
+                            // AlertDialog renders in its own platform window, entirely outside
+                            // this Box's render tree, so blurring this Box can never blur them
+                            // too. Deliberately not applied while a folder is open - see
+                            // folderOpen's kdoc above.
+                            val modalOpen = longPressMenuOpen || guideDownloadDialogShowing
+                            val modalBlurRadius by animateDpAsState(
+                                targetValue = if (modalOpen) MODAL_BLUR_RADIUS else 0.dp,
+                                label = "modalBlur",
                             )
 
                             // Shared by both WidgetOverlay's ordinary canvas-layer video
@@ -845,7 +857,7 @@ class MainActivity : ComponentActivity() {
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
-                                        .blur(longPressMenuBlurRadius),
+                                        .blur(modalBlurRadius),
                             ) {
                                 WidgetOverlay(
                                     viewModel = widgetsViewModel,
@@ -1301,24 +1313,26 @@ private fun GameGuidesOverlayContent(
     modifier: Modifier = Modifier,
 ) {
     when (val state = gameGuides.uiState) {
-        is GameGuidesUiState.Browsing ->
-            GameGuidesBrowserScreen(
-                state = state,
-                onPageLoaded = gameGuides.viewModel::onBrowserPageLoaded,
-                onSave = gameGuides.viewModel::saveCurrentGuide,
-                onClose = {
-                    // openedDirectly is only ever true for Browsing via Settings > Game
-                    // Guides > Add Guide > GameFAQs (see GameGuidesOverlayState's kdoc) -
-                    // onCloseBrowsing() drops back to the Library for the ordinary
-                    // FAB-opened case, or exits the overlay entirely here, in which case
-                    // this reopens the settings popup back on the Add Guide page instead
-                    // of leaving the user stranded on the plain main screen.
-                    val wasOpenedDirectly = gameGuides.openedDirectly
-                    gameGuides.actions.onCloseBrowsing()
-                    if (wasOpenedDirectly) onBrowserClosedWithPendingAddGuideReturn()
-                },
-                modifier = modifier,
-            )
+        is GameGuidesUiState.Browsing -> {
+            val browserActions =
+                GameGuidesBrowserActions(
+                    onPageLoaded = gameGuides.viewModel::onBrowserPageLoaded,
+                    onSave = gameGuides.viewModel::saveCurrentGuide,
+                    onClose = {
+                        // openedDirectly is only ever true for Browsing via Settings > Game
+                        // Guides > Add Guide > GameFAQs (see GameGuidesOverlayState's kdoc) -
+                        // onCloseBrowsing() drops back to the Library for the ordinary
+                        // FAB-opened case, or exits the overlay entirely here, in which case
+                        // this reopens the settings popup back on the Add Guide page instead
+                        // of leaving the user stranded on the plain main screen.
+                        val wasOpenedDirectly = gameGuides.openedDirectly
+                        gameGuides.actions.onCloseBrowsing()
+                        if (wasOpenedDirectly) onBrowserClosedWithPendingAddGuideReturn()
+                    },
+                    onCancelDownload = gameGuides.viewModel::cancelDownload,
+                )
+            GameGuidesBrowserScreen(state = state, actions = browserActions, modifier = modifier)
+        }
         is GameGuidesUiState.Library ->
             GameGuideLibraryScreen(
                 state = state,
