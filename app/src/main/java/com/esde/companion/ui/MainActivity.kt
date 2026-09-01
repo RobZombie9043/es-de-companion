@@ -685,6 +685,26 @@ class MainActivity : ComponentActivity() {
                                         ),
                                 )
 
+                            // pendingAddGuideReturnTarget is only meant to survive across a
+                            // Browsing session that closes without saving anything (see its
+                            // own kdoc) - once a download actually succeeds (or fails; either
+                            // way saveCurrentGuide's finally moves uiState off Browsing), the
+                            // user has moved on to a real guide/Library, and closing that later
+                            // (onCloseViewer/GameGuideLibraryActions.onClose) doesn't route
+                            // through onBrowserClosedWithPendingAddGuideReturn at all - so
+                            // without this, a stale target would sit here and wrongly hijack
+                            // the next, completely unrelated Settings open (FAB tap, long-press
+                            // gesture) into resuming on this game's Add Guide page instead of
+                            // Home. uiState only stays Browsing across a cancelDownload() (see
+                            // GameGuidesViewModel.saveCurrentGuide's own finally block), so this
+                            // never fires mid-cancel.
+                            LaunchedEffect(gameGuides.uiState) {
+                                val stillBrowsing = gameGuides.uiState is GameGuidesUiState.Browsing
+                                if (pendingAddGuideReturnTarget != null && !stillBrowsing) {
+                                    pendingAddGuideReturnTarget = null
+                                }
+                            }
+
                             // Fed into GameGuidesViewModel.onOverlayVisibilityChanged so its own
                             // screensaver-hold/live-follow logic (resolveScreensaverAwareGame)
                             // only acts while the Library screen - not the Viewer or Browser -
