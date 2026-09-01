@@ -30,17 +30,28 @@ import kotlin.coroutines.resume
  * GameFAQs FAQ id 81836) that a nested list can instead hold real *sub-chapters* - each its own
  * separate page (a plain, fragment-free href, exactly like a top-level chapter link), just
  * grouped for readability under a parent heading like "Walkthrough" rather than listed flat.
- * [extract] tells the two apart the only way that's actually reliable: a link's own href, not
- * its DOM nesting depth - `#fragment` present means "a position on the current page" (reuses
- * that page's index, [GuideTocEntry.anchorId] is the literal fragment - see below for why no id
- * needs inventing), `#fragment` absent means "a distinct page" (advances to a new page index,
- * `anchorId` null) regardless of how deeply nested the link is. Depth is still recorded
- * separately, straight from DOM nesting, purely for the table of contents' own indentation -
- * it's cosmetic once the paging story above is right, whether an entry addresses a new page or
- * a position within one. A first version of this only recognized subsection-style nested lists,
- * silently dropping every real sub-chapter in a guide shaped like Metroid Prime's - most of that
- * guide's pages ended up with zero real entries and fell back to the old per-page heading
- * detection, reproducing the exact over-generated table of contents this feature exists to fix.
+ * [extract] tells the two apart by each link's own *pre-fragment* href (its [TocOutlineEntryDto.pageKey],
+ * everything before a literal `#` if present, the whole href otherwise) changing from the
+ * previous entry's - not, as an earlier version of this assumed, by whether the link carries a
+ * `#fragment` at all. That assumption broke on a fourth real guide (NieR: Automata, GameFAQs FAQ
+ * id 75141) whose real top-level chapter links, not just their subsections, each carry their own
+ * page's first-heading fragment too (`?page=4#*Chapter 01`, not a bare `?page=4`) - every single
+ * `.ftoc` entry in that guide has a fragment, so the old "fragment present -> same page" rule
+ * left `currentPageIndex` at 0 for the entire guide, and every table-of-contents tap silently
+ * failed to navigate (tried to scroll to an id that only existed on some other, never-loaded
+ * page). Comparing the fragment-stripped href instead still groups Persona 4 Golden's own
+ * subsections correctly (each shares its parent chapter's exact fragment-free href) and still
+ * treats each of Metroid Prime's fragment-free sub-chapter hrefs as its own new page (each
+ * genuinely differs), while also handling NieR's shape, where every entry - chapter or
+ * subsection - reuses the SAME pre-fragment href within one real page and changes it for the
+ * next. [GuideTocEntry.anchorId] is still the literal fragment as-is (nullable - see below for
+ * why no id needs inventing), regardless of which rule decided the page transition. Depth is
+ * still recorded separately, straight from DOM nesting, purely for the table of contents' own
+ * indentation - it's cosmetic once the paging story above is right. A first version of this only
+ * recognized subsection-style nested lists, silently dropping every real sub-chapter in a guide
+ * shaped like Metroid Prime's - most of that guide's pages ended up with zero real entries and
+ * fell back to the old per-page heading detection, reproducing the exact over-generated table of
+ * contents this feature exists to fix.
  *
  * An in-page anchor's fragment (e.g. `guide-checklist` from `100-guide#guide-checklist`) is
  * used as-is for [GuideTocEntry.anchorId], not a synthesized id - confirmed on a real chapter
@@ -61,20 +72,23 @@ import kotlin.coroutines.resume
 class GuideTocOutlineExtractor {
     /**
      * Assigns each raw outline entry its real page index positionally - see this class's own
-     * kdoc for why that's driven by fragment presence, not DOM nesting depth. This relies on
-     * the walk visiting pages in the exact order `.ftoc` itself lists them, which holds since
-     * both are derived from the same site-defined sequence (the walk just follows each page's
-     * own "Next: <title>" link, one hop at a time, rather than reading `.ftoc`'s order
-     * directly) - confirmed on two real guides (Persona 4 Golden, GameFAQs FAQ id 76145: 13
-     * chapters, 147 subsections; Metroid Prime, GameFAQs FAQ id 81836: 3 top-level chapters
-     * plus 18 real sub-chapter pages nested under one of them), both matching
-     * gamefaqs.gamespot.com's own listing exactly.
+     * kdoc for why that's driven by each entry's pre-fragment href changing, not DOM nesting
+     * depth or fragment presence. This relies on the walk visiting pages in the exact order
+     * `.ftoc` itself lists them, which holds since both are derived from the same site-defined
+     * sequence (the walk just follows each page's own "Next: <title>" link, one hop at a time,
+     * rather than reading `.ftoc`'s order directly) - confirmed on three real guides (Persona 4
+     * Golden, GameFAQs FAQ id 76145: 13 chapters, 147 subsections; Metroid Prime, GameFAQs FAQ
+     * id 81836: 3 top-level chapters plus 18 real sub-chapter pages nested under one of them;
+     * NieR: Automata, GameFAQs FAQ id 75141: ~20 chapters, every entry fragment-bearing), all
+     * matching gamefaqs.gamespot.com's own listing exactly.
      */
     suspend fun extract(webView: WebView): List<GuideTocEntry> {
         val outline = evaluateOutline(webView)
         var currentPageIndex = -1
+        var previousPageKey: String? = null
         return outline.map { entry ->
-            if (entry.fragment == null) currentPageIndex++
+            if (entry.pageKey != previousPageKey) currentPageIndex++
+            previousPageKey = entry.pageKey
             GuideTocEntry(
                 title = entry.title,
                 anchorId = entry.fragment,
@@ -106,6 +120,10 @@ class GuideTocOutlineExtractor {
                     var i = href.indexOf('#');
                     return i === -1 ? null : href.slice(i + 1);
                 }
+                function pageKeyOf(href) {
+                    var i = href.indexOf('#');
+                    return i === -1 ? href : href.slice(0, i);
+                }
                 // A real chapter/subsection link always has SOME href, even a bare "#" one -
                 // an <a> with none at all is a decorative JS control, not a navigation target.
                 // Confirmed on a real guide (Tomb Raider, GameFAQs FAQ id 66644): a "show
@@ -128,6 +146,7 @@ class GuideTocOutlineExtractor {
                         entries.push({
                             title: (a.textContent || '').trim(),
                             fragment: fragmentOf(a.getAttribute('href') || ''),
+                            pageKey: pageKeyOf(a.getAttribute('href') || ''),
                             depth: 0
                         });
                     } else if (child.tagName === 'OL' || child.tagName === 'UL') {
@@ -143,6 +162,7 @@ class GuideTocOutlineExtractor {
                             entries.push({
                                 title: (subA.textContent || '').trim(),
                                 fragment: fragmentOf(subA.getAttribute('href') || ''),
+                                pageKey: pageKeyOf(subA.getAttribute('href') || ''),
                                 depth: 1
                             });
                         });
@@ -163,5 +183,6 @@ private data class TocOutlineDto(
 private data class TocOutlineEntryDto(
     val title: String,
     val fragment: String? = null,
+    val pageKey: String = "",
     val depth: Int = 0,
 )

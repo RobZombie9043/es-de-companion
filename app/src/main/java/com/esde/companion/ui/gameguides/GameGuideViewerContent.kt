@@ -106,6 +106,7 @@ data class GuideContentActions(
     val onScrollToAnchorHandled: () -> Unit,
     val onScrollToCharOffsetHandled: () -> Unit,
     val onToggleChrome: () -> Unit,
+    val onInternalAnchorTapped: (fragment: String) -> Unit,
 )
 
 internal fun buildGuideContentState(
@@ -133,6 +134,7 @@ internal fun buildGuideContentState(
 internal fun buildGuideContentActions(
     uiState: GuideViewerUiState,
     onScrollFractionChanged: (pageIndex: Int, fraction: Float) -> Unit,
+    onInternalAnchorTapped: (fragment: String) -> Unit,
 ): GuideContentActions =
     GuideContentActions(
         onScrollFractionChanged = { fraction -> onScrollFractionChanged(uiState.currentPageIndex, fraction) },
@@ -143,6 +145,7 @@ internal fun buildGuideContentActions(
         onScrollToAnchorHandled = { uiState.scrollToAnchorId = null },
         onScrollToCharOffsetHandled = { uiState.scrollToCharOffsetRequest = null },
         onToggleChrome = { uiState.chromeVisible = !uiState.chromeVisible },
+        onInternalAnchorTapped = onInternalAnchorTapped,
     )
 
 @Composable
@@ -185,6 +188,7 @@ fun GuideContentArea(
                     onScrollToAnchorHandled = actions.onScrollToAnchorHandled,
                     onScrollFractionChanged = actions.onScrollFractionChanged,
                     onTap = actions.onToggleChrome,
+                    onInternalAnchorTapped = actions.onInternalAnchorTapped,
                 )
             HtmlGuideContent(config = htmlConfig, callbacks = htmlCallbacks)
         } else {

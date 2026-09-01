@@ -88,6 +88,33 @@ private fun buildHeaderActions(
     )
 }
 
+/**
+ * Resolves a tapped in-content link's [fragment] (see [HtmlViewerCallbacks.onInternalAnchorTapped])
+ * against the guide's own [GuideTocEntry] list, whose `anchorId` is that exact fragment text for
+ * an HTML guide (see [GuideTocOutlineExtractor]'s kdoc) - the same lookup a table-of-contents
+ * dialog tap already gets for free from [GuideTocEntry.pageIndex] directly. No match (an in-body
+ * cross-reference the `.ftoc` outline never listed) falls back to treating it as same-page - a
+ * safe no-op via `scrollToAnchorId`'s own `?.` if no element on the current page actually has
+ * that id.
+ */
+private fun onInternalAnchorTapped(
+    fragment: String,
+    state: GameGuidesUiState.Viewing,
+    uiState: GuideViewerUiState,
+    lastPageIndex: Int,
+) {
+    val targetPageIndex =
+        state.guide.tocEntries.firstOrNull { it.anchorId == fragment }
+            ?.pageIndex
+            ?.coerceIn(0, lastPageIndex)
+    if (targetPageIndex == null || targetPageIndex == uiState.currentPageIndex) {
+        uiState.scrollToAnchorId = fragment
+    } else {
+        uiState.pendingAnchorId = fragment
+        uiState.currentPageIndex = targetPageIndex
+    }
+}
+
 private fun jumpToMatch(
     derived: ViewerDerivedState,
     uiState: GuideViewerUiState,
@@ -242,7 +269,10 @@ fun GameGuideViewerScreen(
     val headerActions =
         buildHeaderActions(state, uiState, derived, actions.onDisplayPreferencesChanged, actions.onClose)
     val contentState = buildGuideContentState(state, uiState)
-    val contentActions = buildGuideContentActions(uiState, actions.onScrollFractionChanged)
+    val contentActions =
+        buildGuideContentActions(uiState, actions.onScrollFractionChanged) { fragment ->
+            onInternalAnchorTapped(fragment, state, uiState, lastPageIndex)
+        }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {

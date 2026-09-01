@@ -62,13 +62,23 @@ data class HtmlViewerCallbacks(
     val onScrollToAnchorHandled: () -> Unit,
     val onScrollFractionChanged: (Float) -> Unit,
     val onTap: () -> Unit,
+    val onInternalAnchorTapped: (fragment: String) -> Unit,
 )
 
 /**
  * Renders a saved [com.esde.companion.domain.model.GameGuideFormat.Html] guide in a
- * sandboxed offline WebView. Every link tap is blocked rather than navigating this WebView
- * out to gamefaqs.gamespot.com, since this is meant to read as an offline saved document,
- * not turn into a live browser. Find-in-page ([HtmlViewerConfig.searchQuery]/
+ * sandboxed offline WebView. A link tap never navigates this WebView out to
+ * gamefaqs.gamespot.com (see [buildGuideWebView]'s `shouldOverrideUrlLoading`), since this is
+ * meant to read as an offline saved document, not turn into a live browser - but a tap on one
+ * of the guide's own in-content chapter/table-of-contents links (every one seen in practice
+ * carries a `#fragment`, e.g. `?page=3#Boss Fight`) is handled locally instead of silently
+ * doing nothing: [HtmlViewerCallbacks.onInternalAnchorTapped] reports the fragment back up to
+ * [GameGuideViewerScreen], which resolves it against the guide's own [GuideTocEntry] list (its
+ * `anchorId` is that exact fragment text - see [GuideTocOutlineExtractor]'s kdoc) the same way
+ * a table-of-contents dialog tap already does, switching page + [HtmlViewerConfig.scrollToAnchorId]
+ * as needed. A fragment with no matching entry (an in-body cross-reference the `.ftoc` outline
+ * never listed) falls back to a same-page scroll attempt, a safe no-op if it doesn't resolve to
+ * a real element on the current page. Find-in-page ([HtmlViewerConfig.searchQuery]/
  * [findNextRequestId]), table-of-contents jumps ([HtmlViewerConfig.scrollToAnchorId], via
  * `scrollIntoView()`), restoring [HtmlViewerConfig.initialScrollFraction], and periodically
  * reading the live scroll position back for [HtmlViewerCallbacks.onScrollFractionChanged]
@@ -306,10 +316,19 @@ private fun buildGuideWebView(
         settings.javaScriptEnabled = true
         webViewClient =
             object : WebViewClient() {
+                // Every navigation attempt is blocked (this never turns into a live browser -
+                // see this file's own kdoc), but a fragment carried on the tapped link (the
+                // common case for this guide's own in-content chapter/TOC links) is reported
+                // back to the host via onInternalAnchorTapped rather than just discarded, so
+                // GameGuideViewerScreen can resolve it against the guide's real GuideTocEntry
+                // list and jump there itself.
                 override fun shouldOverrideUrlLoading(
                     view: WebView,
                     request: WebResourceRequest,
-                ): Boolean = true
+                ): Boolean {
+                    request.url.fragment?.let(callbacks.onInternalAnchorTapped)
+                    return true
+                }
 
                 override fun shouldInterceptRequest(
                     view: WebView,
