@@ -212,9 +212,16 @@ class GameGuidesViewModel(
             // image embedding) with timeouts, but this still needs a hard guarantee that the
             // Save dialog clears even if something else in this block throws - otherwise
             // downloadProgress is stuck non-null forever with no way for the UI to recover.
+            val deps =
+                GuideDownloadDeps(
+                    browserBridge = browserBridge,
+                    saveGameGuide = useCases.saveGameGuide,
+                    resolveMediaDirectory = useCases.resolveGameGuideMediaDirectory,
+                    clock = clock,
+                )
             try {
                 downloadAndSaveGuide(
-                    deps = GuideDownloadDeps(browserBridge, useCases.saveGameGuide, clock),
+                    deps = deps,
                     webView = webView,
                     sourceUrl = sourceUrl,
                     target = GuideSaveTarget(browsing.gameReference, browsing.gameName),
@@ -345,8 +352,10 @@ internal suspend fun openingViewingStateFor(
 ): GameGuidesUiState.Viewing {
     val progress = useCases.observeReadingProgress(guide.id).first()
     val preferences = useCases.observeDisplayPreferences().first()
+    val mediaDirectoryPath = useCases.resolveGameGuideMediaDirectory(guide.id)
     return GameGuidesUiState.Viewing(
         guide = guide,
+        mediaDirectoryPath = mediaDirectoryPath,
         currentPageContent = "",
         displayPreferences = preferences,
         initialScrollFraction = progress?.scrollFraction ?: 0f,

@@ -1,5 +1,6 @@
 package com.esde.companion.ui.gameguides
 
+import android.util.Log
 import android.webkit.WebView
 import com.esde.companion.data.gameguides.GameFaqsBrowserBridge
 import com.esde.companion.data.gameguides.GuidePageContentProcessor
@@ -9,6 +10,7 @@ import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.GameGuideFormat
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.repository.GuidePageContent
+import com.esde.companion.domain.usecase.ResolveGameGuideMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.SaveGameGuideUseCase
 import java.time.Clock
 
@@ -30,13 +32,20 @@ internal data class GuideSaveTarget(
 internal data class GuideDownloadDeps(
     val browserBridge: GameFaqsBrowserBridge,
     val saveGameGuide: SaveGameGuideUseCase,
+    val resolveMediaDirectory: ResolveGameGuideMediaDirectoryUseCase,
     val clock: Clock,
     val pageProcessor: GuidePageContentProcessor = GuidePageContentProcessor(),
 )
 
 /**
  * Downloads whatever guide the browser's WebView is currently showing and saves it against
- * [target] - a no-op returning false if the current page doesn't actually look like a guide.
+ * [target] - returns false if the current page doesn't actually look like a guide, or if
+ * [GuideDownloadDeps.saveGameGuide] itself fails (confirmed necessary, not defensive: this used
+ * to unconditionally return true regardless of that call's own `Result`, so a real save failure
+ * - a disk write error, or an exception thrown while embedding a page's images - silently looked
+ * like success to the caller, which then navigated back to the guide list as if the download had
+ * completed. [GuideDownloadDeps.saveGameGuide]'s failure is also logged, since this is otherwise
+ * a dead end for figuring out why a guide never appeared in the library).
  * Pulled out of [GameGuidesViewModel.saveCurrentGuide] to keep that function focused on state
  * transitions rather than the mechanics of building a [DownloadedGameGuide]; [target] carries
  * whichever game the caller is saving against (ES-DE's current one for the FAB, or an
@@ -45,12 +54,13 @@ internal data class GuideDownloadDeps(
  * paths.
  *
  * [GameFaqsBrowserBridge.downloadFullGuide] only walks chapters and returns their raw HTML -
- * embedding (image inlining/heading-tagging, via [GuideDownloadDeps.pageProcessor]) happens
- * here, one page at a time, immediately before [GuideDownloadDeps.saveGameGuide] writes that
- * page to disk. Confirmed necessary: embedding every chapter up front into one in-memory list
- * (the previous design) could reach hundreds of MB for a long, image-heavy guide before a
- * single byte was saved - the same OutOfMemoryError shape already fixed on the viewer's own
- * page-loading path, just unaddressed here until now.
+ * embedding (saving each page's images as real files and heading-tagging, via
+ * [GuideDownloadDeps.pageProcessor] - see its kdoc for why images are saved as files rather
+ * than inlined as base64 text) happens here, one page at a time, immediately before
+ * [GuideDownloadDeps.saveGameGuide] writes that page to disk. Confirmed necessary: embedding
+ * every chapter up front into one in-memory list (the previous design) could reach hundreds of
+ * MB for a long, image-heavy guide before a single byte was saved - the same OutOfMemoryError
+ * shape already fixed on the viewer's own page-loading path, just unaddressed here until now.
  */
 internal suspend fun downloadAndSaveGuide(
     deps: GuideDownloadDeps,
@@ -81,16 +91,19 @@ internal suspend fun downloadAndSaveGuide(
                 downloadedAtMillis = deps.clock.millis(),
                 tocEntries = emptyList(),
             )
+        val mediaDirectoryPath = deps.resolveMediaDirectory(guide.id)
         deps.saveGameGuide(guide) { index ->
             onProgress(GuideDownloadProgress.EmbeddingImages(index + 1, totalPages))
             if (needsEmbedding) {
-                val embedded = deps.pageProcessor.process(webView, page.pages[index], pageIndex = index)
+                val embedded =
+                    deps.pageProcessor.process(webView, page.pages[index], pageIndex = index, mediaDirectoryPath)
                 GuidePageContent(html = embedded.html, tocEntries = embedded.tocEntries)
             } else {
                 GuidePageContent(html = page.pages[index])
             }
-        }
-        true
+        }.onFailure { error ->
+            Log.e("GameGuides", "Failed to save guide '${guide.title}' (${guide.sourceUrl})", error)
+        }.isSuccess
     }
 
 /**

@@ -157,6 +157,29 @@ private fun LoadPageOnChange(
     }
 }
 
+/**
+ * Promotes [GuideViewerUiState.pendingAnchorId] to [GuideViewerUiState.scrollToAnchorId] the
+ * moment [isLoadingContent] goes back to false - i.e. once the page a cross-page TOC jump
+ * navigated to has actually finished loading its content. Declared in this composable (which
+ * survives the isLoadingContent-driven unmount/remount of [GuideContentArea]/[HtmlGuideContent]
+ * below it), not inside [HtmlGuideContent] itself, specifically so it isn't torn down by that
+ * same unmount before it can act - see [GameGuideViewerScreen.onEntrySelected]'s kdoc for the
+ * full race this exists to avoid. A no-op whenever nothing is actually pending (a same-page
+ * entry, or [isLoadingContent] flipping for an unrelated reason).
+ */
+@Composable
+private fun PromotePendingAnchorWhenLoaded(
+    uiState: GuideViewerUiState,
+    isLoadingContent: Boolean,
+) {
+    LaunchedEffect(isLoadingContent) {
+        if (isLoadingContent) return@LaunchedEffect
+        val anchorId = uiState.pendingAnchorId ?: return@LaunchedEffect
+        uiState.pendingAnchorId = null
+        uiState.scrollToAnchorId = anchorId
+    }
+}
+
 /** Bundles [GameGuideViewerScreen]'s own external callbacks into one parameter - same
  * LongParameterList-avoidance reasoning as [HeaderActions]/[GuideContentActions] below,
  * needed once [onPageChanged] joined the other three (see [GameGuidesUiState.Viewing]'s kdoc
@@ -184,12 +207,29 @@ fun GameGuideViewerScreen(
     LaunchedEffect(uiState.searchQuery) { uiState.currentMatchIndex = 0 }
     PersistPageIndexOnChange(uiState, uiState.currentPageIndex, actions.onScrollFractionChanged)
     LoadPageOnChange(uiState, uiState.currentPageIndex, actions.onPageChanged)
+    PromotePendingAnchorWhenLoaded(uiState, state.isLoadingContent)
 
+    // A same-page entry can set scrollToAnchorId directly - HtmlGuideContent's own WebView
+    // already has the right page loaded, so there's nothing to wait for. A cross-page entry
+    // instead stages the anchor in pendingAnchorId and lets currentPageIndex's own change
+    // trigger the real navigation - confirmed on-device (via temporary diagnostic logging) that
+    // setting both here in the same synchronous step raced that navigation and always lost:
+    // currentPageIndex's change only reaches LoadPageOnChange's effect, then this screen's
+    // ViewModel, then (asynchronously) HtmlGuideContent's own page-loading effect, while
+    // scrollToAnchorId's effect - reading state that hadn't moved yet - saw its own target
+    // page's content as "already loaded" (technically true: nothing had changed yet) and ran
+    // immediately, scrolling against whatever page was still actually displayed. See
+    // PromotePendingAnchorWhenLoaded for the other half of this fix.
     fun onEntrySelected(entry: GuideTocEntry) {
         uiState.showToc = false
         if (derived.isHtml) {
-            uiState.currentPageIndex = entry.pageIndex.coerceIn(0, lastPageIndex)
-            uiState.scrollToAnchorId = entry.anchorId
+            val targetPageIndex = entry.pageIndex.coerceIn(0, lastPageIndex)
+            if (targetPageIndex == uiState.currentPageIndex) {
+                uiState.scrollToAnchorId = entry.anchorId
+            } else {
+                uiState.pendingAnchorId = entry.anchorId
+                uiState.currentPageIndex = targetPageIndex
+            }
         } else {
             uiState.scrollToCharOffsetRequest = entry.anchorId.toIntOrNull() ?: 0
         }

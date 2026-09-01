@@ -90,6 +90,7 @@ fun rememberGuideTocEntries(
 
 data class GuideContentState(
     val currentPage: String,
+    val mediaDirectoryPath: String,
     val displayPreferences: GameGuideDisplayPreferences,
     val initialScrollFraction: Float,
     val showSearch: Boolean,
@@ -118,6 +119,7 @@ internal fun buildGuideContentState(
     val initialScrollFraction = if (isResumedPage) state.initialScrollFraction else 0f
     return GuideContentState(
         currentPage = state.currentPageContent,
+        mediaDirectoryPath = state.mediaDirectoryPath,
         initialScrollFraction = initialScrollFraction,
         displayPreferences = state.displayPreferences,
         showSearch = uiState.showSearch,
@@ -169,6 +171,7 @@ fun GuideContentArea(
             val htmlConfig =
                 HtmlViewerConfig(
                     html = state.currentPage,
+                    mediaDirectoryPath = state.mediaDirectoryPath,
                     fontScale = state.displayPreferences.fontScale,
                     isDarkTheme = LocalIsDarkTheme.current,
                     searchQuery = if (state.showSearch) state.searchQuery else "",

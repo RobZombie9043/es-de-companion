@@ -41,6 +41,14 @@ sealed interface GameGuidesUiState {
 
     data class Viewing(
         val guide: DownloadedGameGuide,
+        // This guide's own on-disk directory (absolute path) - only actually used for
+        // GameGuideFormat.Html, whose viewer writes a composed document file there so its
+        // embedded images (real on-disk files under this directory, see
+        // NativeImageDownloader's kdoc) resolve via a plain relative path. Resolved
+        // unconditionally regardless of format for a single, simple code path in
+        // GameGuidesViewModel.openingViewingStateFor - a cheap mkdirs()-and-return-path call,
+        // not worth branching on format for.
+        val mediaDirectoryPath: String,
         // Only the currently-displayed page's saved content - populated for
         // GameGuideFormat.PlainText/Html (empty/meaningless for Pdf/Image, which populate
         // contentFilePath instead - see GameGuidesViewModel.loadedViewingStateFor's format

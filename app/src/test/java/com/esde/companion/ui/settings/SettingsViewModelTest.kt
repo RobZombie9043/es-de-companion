@@ -424,6 +424,8 @@ class SettingsViewModelTest {
 
         override suspend fun binaryContentPath(guideId: String) = error("not used in this test")
 
+        override suspend fun mediaDirectoryPath(guideId: String) = error("not used in this test")
+
         override suspend fun deleteAllGuides() {
             deleteAllCalled = true
         }

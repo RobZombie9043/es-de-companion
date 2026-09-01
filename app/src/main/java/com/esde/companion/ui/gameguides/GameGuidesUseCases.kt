@@ -8,6 +8,7 @@ import com.esde.companion.domain.usecase.LoadGameGuidePageUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuidesUseCase
+import com.esde.companion.domain.usecase.ResolveGameGuideMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.SaveGameGuideUseCase
 import com.esde.companion.domain.usecase.SetGameGuideDisplayPreferencesUseCase
@@ -28,4 +29,5 @@ data class GameGuidesUseCases(
     val observeReadingProgress: ObserveGameGuideReadingProgressUseCase,
     val setReadingProgress: SetGameGuideReadingProgressUseCase,
     val resolveGameMedia: ResolveGameMediaUseCase,
+    val resolveGameGuideMediaDirectory: ResolveGameGuideMediaDirectoryUseCase,
 )

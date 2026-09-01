@@ -26,6 +26,7 @@ class GameGuidesViewModelFactory(
                 observeReadingProgress = appContainer.observeGameGuideReadingProgressUseCase,
                 setReadingProgress = appContainer.setGameGuideReadingProgressUseCase,
                 resolveGameMedia = appContainer.resolveGameMediaUseCase,
+                resolveGameGuideMediaDirectory = appContainer.resolveGameGuideMediaDirectoryUseCase,
             )
         val observeUpdateOnScreensaver = appContainer.observeUpdateGameGuidesOnScreensaverEnabledUseCase
         return GameGuidesViewModel(

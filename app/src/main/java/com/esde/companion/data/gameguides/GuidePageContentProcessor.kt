@@ -15,8 +15,10 @@ private const val MAX_EMBEDDED_IMAGES = 40
 /**
  * Post-processes one already-fetched chapter page's HTML for offline saving: tags every
  * heading with a stable id (for the viewer's table of contents), then makes a best-effort
- * attempt to inline its images as base64 data URIs via [imageDownloader]. Split out of
- * [GameFaqsBrowserBridge] to keep that class focused on browsing/detection/pagination.
+ * attempt to save its images as real files under [mediaDirectoryPath] and rewrite their `src`
+ * to point at them, via [imageDownloader] - see its kdoc for why this saves real files rather
+ * than inlining base64 `data:` URIs. Split out of [GameFaqsBrowserBridge] to keep that class
+ * focused on browsing/detection/pagination.
  *
  * Heading-tagging and image-fetching are deliberately independent steps, not one combined
  * pass: tagging headings is synchronous DOM work with no way to fail slowly, while image
@@ -32,10 +34,16 @@ class GuidePageContentProcessor(
         webView: WebView,
         html: String,
         pageIndex: Int,
+        mediaDirectoryPath: String,
     ): EmbeddedGuideContent {
         val tagged = tagHeadings(webView, html, pageIndex)
         val imageUrls = extractImageUrls(webView, tagged.html)
-        val replacements = if (imageUrls.isEmpty()) emptyMap() else imageDownloader.downloadAsDataUris(imageUrls)
+        val replacements =
+            if (imageUrls.isEmpty()) {
+                emptyMap()
+            } else {
+                imageDownloader.downloadImages(imageUrls, mediaDirectoryPath, pageIndex)
+            }
         if (replacements.isEmpty()) return tagged
         val embeddedHtml = substituteImageSrcs(webView, tagged.html, replacements)
         return tagged.copy(html = embeddedHtml)

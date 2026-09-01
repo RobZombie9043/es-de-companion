@@ -62,24 +62,55 @@ class GameFaqsBrowserBridge {
         onProgress: (GuideDownloadProgress) -> Unit = {},
     ): GameFaqsGuidePage {
         val first = evaluate(webView, DETECT_SCRIPT)
-        return if (first.isGuidePage && first.format == GameGuideFormat.Html) {
-            walkHtmlChapters(webView, first, onProgress)
-        } else {
-            first
+        if (!first.isGuidePage || first.format != GameGuideFormat.Html) return first
+        rewindToFirstPageIfNeeded(webView)
+        return walkHtmlChapters(webView, first, onProgress)
+    }
+
+    /**
+     * Some in-line HTML guides are split across chapter pages (see [walkHtmlChapters]'s kdoc),
+     * others across a plain "Page 1 of N" / "Next Page" scheme for one long document (confirmed
+     * on a real guide, Ori and the Blind Forest FAQ id 71410 - no `.ftoc` at all, just a
+     * `ul.paginate` with First/Previous/Next/Last Page links). Either way, the Download action
+     * is triggered from whatever page the user happened to be browsing when they tapped it -
+     * confirmed on that same guide, whose own page 1 never shows Download at all (see
+     * [DETECT_SCRIPT]'s kdoc), so a real download always starts mid-guide. Without rewinding
+     * first, [walkHtmlChapters] would only walk *forward* from wherever it started, silently
+     * saving a guide missing every page before that one. [FIND_FIRST_PAGE_SCRIPT] is a no-op
+     * (returns null) for guides that don't expose a "First Page" link at all - the chapter-link
+     * style guides, and anything already on page 1 - so this only ever affects the case it's
+     * meant to fix.
+     */
+    private suspend fun rewindToFirstPageIfNeeded(webView: WebView) {
+        val firstPageUrl = findFirstPageUrl(webView) ?: return
+        withTimeoutOrNull(NAVIGATE_TIMEOUT_MILLIS) { navigateAndAwaitLoad(webView, firstPageUrl) }
+    }
+
+    private suspend fun findFirstPageUrl(webView: WebView): String? {
+        val raw = evaluateRaw(webView, FIND_FIRST_PAGE_SCRIPT)
+        if (raw == "null") return null
+        return try {
+            Json.decodeFromString<String>(raw)
+        } catch (
+            @Suppress("SwallowedException") e: SerializationException,
+        ) {
+            null
         }
     }
 
     /**
-     * In-line HTML guides are split across separate page loads by GameFAQs itself (one
-     * chapter per page), each carrying a "Next: <title>" link to the next one and its own
-     * copy of the guide's full `.ftoc` chapter listing (used here only to report
-     * [GuideDownloadProgress.LoadingPage]'s `totalPages` - the walk itself stops on a missing
-     * "Next:" link, not a count). GameFAQs' own `?single=1` query param was tried first as a
-     * simpler alternative to reconstructing this chapter-link structure, but doesn't work for
-     * every guide template - confirmed on a real guide (Metroid Prime, GameFAQs FAQ id 81836)
-     * where it returned an unrelated challenge page instead of the combined guide, silently
-     * truncating every download of that guide to its first chapter. Walking each real
-     * "Next:" link is slower but doesn't depend on an unconfirmed per-guide site feature.
+     * In-line HTML guides are split across separate page loads by GameFAQs itself, each
+     * carrying either a "Next: <title>" chapter link (with its own copy of the guide's full
+     * `.ftoc` chapter listing, used to report [GuideDownloadProgress.LoadingPage]'s
+     * `totalPages`) or, for guides that aren't chaptered at all, a plain "Next Page" link in a
+     * `ul.paginate` block alongside a "Page X of Y" label (used for `totalPages` instead, when
+     * there's no `.ftoc` to count) - see [CHAPTER_EXTRACT_SCRIPT]. Either way the walk itself
+     * stops on a missing next-hop link, not a count. GameFAQs' own `?single=1` query param was
+     * tried first as a simpler alternative to reconstructing this chapter-link structure, but
+     * doesn't work for every guide template - confirmed on a real guide (Metroid Prime, GameFAQs
+     * FAQ id 81836) where it returned an unrelated challenge page instead of the combined guide,
+     * silently truncating every download of that guide to its first chapter. Walking each real
+     * next-hop link is slower but doesn't depend on an unconfirmed per-guide site feature.
      *
      * Each hop navigates via [navigateAndAwaitLoad] under its own [NAVIGATE_TIMEOUT_MILLIS] -
      * [WebView.loadUrl] returns before the new page has actually loaded, so evaluating a
@@ -222,8 +253,20 @@ class GameFaqsBrowserBridge {
                 // block nested directly inside it. Confirmed on a real guide (Persona 4
                 // Golden, GameFAQs FAQ id 64387) that was misdetected as HTML purely because
                 // of this - a real in-line HTML guide's #faqwrap has no such nested
-                // plain-text container.
-                var htmlEl = (faqWrapEl && !faqWrapEl.querySelector('#faqtext, .faqtext, pre')) ? faqWrapEl : null;
+                // plain-text container carrying real text.
+                // Checking for the nested element's mere presence isn't enough, though - a
+                // genuine in-line HTML guide can still contain an empty, purely decorative
+                // <pre></pre> (confirmed on a real guide, Ori and the Blind Forest FAQ id
+                // 71410's own first page) that matched this same selector and wrongly
+                // disqualified it, hiding Download on an otherwise perfectly normal guide
+                // page. Requiring actual text in the nested match keeps the Persona 4 Golden
+                // fix (its nested block is real, substantial plain text) while no longer
+                // being fooled by an empty one.
+                var nestedTextEls = faqWrapEl
+                    ? Array.prototype.slice.call(faqWrapEl.querySelectorAll('#faqtext, .faqtext, pre'))
+                    : [];
+                var hasRealNestedText = nestedTextEls.some(function(el) { return text(el).trim().length > 0; });
+                var htmlEl = (faqWrapEl && !hasRealNestedText) ? faqWrapEl : null;
                 if (htmlEl) {
                     var cleanedHtml = withoutToc(htmlEl);
                     var htmlContent = cleanedHtml.innerHTML || '';
@@ -259,9 +302,14 @@ class GameFaqsBrowserBridge {
 
         // Run on every chapter page of an in-line HTML guide (including the first, before any
         // navigation) - extracts that page's own cleaned #faqwrap content, the absolute URL of
-        // its "Next: <title>" link (null on the last chapter), and the total chapter count
-        // from .ftoc's own link list (every chapter page repeats the same full listing, so
-        // this is stable regardless of which chapter it's read from).
+        // its next-hop link (null on the last page), and the total page count. Two distinct
+        // GameFAQs pagination styles are handled, since a guide only ever uses one of them:
+        // a "Next: <title>" chapter link plus a `.ftoc` chapter-listing block (every chapter
+        // page repeats the same full listing, so counting it is stable regardless of which
+        // chapter it's read from), or a plain "Next Page" link plus a `ul.paginate` "Page X
+        // of Y" label for a guide that's really one long document GameFAQs split up by length
+        // rather than by chapter - confirmed on a real guide (Ori and the Blind Forest,
+        // GameFAQs FAQ id 71410) with no `.ftoc` at all.
         //
         // .ftoc lists every real chapter link (one per separate page GameFAQs will actually
         // serve) AND, nested underneath each, in-page sub-section anchors that jump to a
@@ -284,18 +332,41 @@ class GameFaqsBrowserBridge {
                     if (toc) toc.parentNode.removeChild(toc);
                     html = clone.innerHTML || '';
                 }
-                var nextLink = Array.prototype.slice.call(document.querySelectorAll('ul.paginate a'))
-                    .filter(function(a) { return (a.innerText || a.textContent || '').trim().indexOf('Next:') === 0; })[0];
+                var paginateLinks = Array.prototype.slice.call(document.querySelectorAll('ul.paginate a'));
+                var nextLink = paginateLinks.filter(function(a) {
+                    var t = (a.innerText || a.textContent || '').trim();
+                    return t.indexOf('Next:') === 0 || t === 'Next Page';
+                })[0];
                 var chapterLinks = Array.prototype.slice.call(document.querySelectorAll('.ftoc a'))
                     .filter(function(a) {
                         var href = a.getAttribute('href');
                         return href && href.indexOf('#') === -1;
                     });
+                var totalChapters = chapterLinks.length;
+                if (totalChapters === 0) {
+                    var paginate = document.querySelector('ul.paginate');
+                    var match = paginate ? (paginate.innerText || '').match(/Page\s+\d+\s+of\s+(\d+)/) : null;
+                    if (match) totalChapters = parseInt(match[1], 10);
+                }
                 return {
                     html: html,
                     nextUrl: nextLink ? nextLink.href : null,
-                    totalChapters: chapterLinks.length
+                    totalChapters: totalChapters
                 };
+            })();
+            """.trimIndent()
+
+        // Finds the "First Page" link in a plain "Page X of Y" pagination block (see
+        // CHAPTER_EXTRACT_SCRIPT's kdoc) - absent both for chapter-link-style guides (which
+        // have no such link at all) and for a plain-paginated guide's own actual first page,
+        // so this only ever fires when it needs to. See downloadFullGuide's kdoc for why the
+        // walk must rewind to it before starting.
+        val FIND_FIRST_PAGE_SCRIPT =
+            """
+            (function() {
+                var firstLink = Array.prototype.slice.call(document.querySelectorAll('ul.paginate a'))
+                    .filter(function(a) { return (a.innerText || a.textContent || '').trim() === 'First Page'; })[0];
+                return firstLink ? firstLink.href : null;
             })();
             """.trimIndent()
     }

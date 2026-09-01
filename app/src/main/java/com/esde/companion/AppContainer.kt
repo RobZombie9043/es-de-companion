@@ -198,6 +198,7 @@ import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
+import com.esde.companion.domain.usecase.ResolveGameGuideMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
@@ -751,6 +752,7 @@ class AppContainer(context: Context) {
     val loadGameGuideContentUseCase = LoadGameGuideContentUseCase(gameGuideLibraryRepository)
     val loadGameGuidePageUseCase = LoadGameGuidePageUseCase(gameGuideLibraryRepository)
     val loadGameGuideBinaryPathUseCase = LoadGameGuideBinaryPathUseCase(gameGuideLibraryRepository)
+    val resolveGameGuideMediaDirectoryUseCase = ResolveGameGuideMediaDirectoryUseCase(gameGuideLibraryRepository)
     val deleteGameGuideUseCase = DeleteGameGuideUseCase(gameGuideLibraryRepository)
     val deleteAllGameGuidesUseCase = DeleteAllGameGuidesUseCase(gameGuideLibraryRepository)
     val observeGameGuideDisplayPreferencesUseCase =

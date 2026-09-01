@@ -26,6 +26,7 @@ import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCa
 import com.esde.companion.domain.usecase.ObserveGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.ObserveGameGuidesUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.ResolveGameGuideMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.SaveGameGuideUseCase
 import com.esde.companion.domain.usecase.SetGameGuideDisplayPreferencesUseCase
@@ -131,6 +132,8 @@ class GameGuidesViewModelTest {
 
         override suspend fun binaryContentPath(guideId: String): String? = binaryPathByGuideId[guideId]
 
+        override suspend fun mediaDirectoryPath(guideId: String): String = "/fake/guides/$guideId"
+
         override suspend fun deleteGuide(guideId: String) {
             deletedGuideIds += guideId
             guidesByGame.values.forEach { flow -> flow.value = flow.value.filterNot { it.id == guideId } }
@@ -227,6 +230,7 @@ class GameGuidesViewModelTest {
                 observeReadingProgress = ObserveGameGuideReadingProgressUseCase(settingsRepository),
                 setReadingProgress = SetGameGuideReadingProgressUseCase(settingsRepository),
                 resolveGameMedia = ResolveGameMediaUseCase(gameMediaRepository),
+                resolveGameGuideMediaDirectory = ResolveGameGuideMediaDirectoryUseCase(libraryRepository),
             )
         val observeUpdateOnScreensaver = ObserveUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository)
         val viewModel = GameGuidesViewModel(observeConnectionState, observeUpdateOnScreensaver, useCases)

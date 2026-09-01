@@ -43,35 +43,46 @@ private val GUIDES_INDEX_KEY = stringPreferencesKey("guides_index")
 class FileGameGuideLibraryRepository(
     private val context: Context,
 ) : GameGuideLibraryRepository {
-    // withContext(Dispatchers.IO) - same "don't block the caller's dispatcher" reasoning as
-    // loadContent/loadPage below, now unmissable since this reads each page's content via a
-    // real suspend callback (pageContent) rather than a plain in-memory list.
+    // Each disk operation gets its own withContext(Dispatchers.IO) hop, rather than one hop
+    // wrapping the whole function (the original, simpler shape) - confirmed necessary, not a
+    // style preference. pageContent (for an in-line HTML guide) calls back into
+    // GuidePageContentProcessor, which drives the browser's WebView - and WebView methods must
+    // be called on the thread that created the WebView (the main thread, since
+    // GameGuidesBrowserScreen creates it in a Composable). Wrapping the whole function wrongly
+    // pulled that callback onto an IO dispatcher thread too, which crashed every single-page
+    // in-line HTML download (plain-text guides never call pageContent's WebView-touching path,
+    // which is why this went unnoticed) with "A WebView method was called on thread
+    // 'DefaultDispatcher-worker-N'" - silently, since the caller at the time didn't check this
+    // function's own Result either (see GuideDownloadAndSaveKt.downloadAndSaveGuide's kdoc).
+    // Confirmed via a real on-device logcat capture of that exact exception.
     override suspend fun saveGuide(
         guide: DownloadedGameGuide,
         pageContent: suspend (pageIndex: Int) -> GuidePageContent,
     ): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val dir = guideDirectory(guide.id)
-                dir.mkdirs()
-                var sizeBytes = 0L
-                val tocEntries = mutableListOf<GuideTocEntry>()
-                // One page in memory at a time - the whole point of this being a callback
-                // rather than a List<String> handed in up front. Confirmed necessary: a real
-                // 20+ chapter, image-heavy guide can put ~8MB of base64-embedded HTML per page,
-                // which used to all sit in one list before a single byte reached disk.
-                for (index in 0 until guide.pageCount) {
-                    val page = pageContent(index)
-                    val bytes = page.html.toByteArray(Charsets.UTF_8)
-                    File(dir, "page_$index.txt").writeBytes(bytes)
-                    // Reuses the same encoded bytes just written, rather than re-encoding the
-                    // whole string a second time purely to size it.
-                    sizeBytes += bytes.size
-                    tocEntries += page.tocEntries
-                }
-                val stored = guide.copy(sizeBytes = sizeBytes, tocEntries = tocEntries)
-                writeIndex(readIndex().filterNot { it.id == guide.id } + stored)
+        runCatching {
+            val dir = guideDirectory(guide.id)
+            withContext(Dispatchers.IO) { dir.mkdirs() }
+            val tocEntries = mutableListOf<GuideTocEntry>()
+            // One page in memory at a time - the whole point of this being a callback
+            // rather than a List<String> handed in up front. Confirmed necessary: a real
+            // 20+ chapter, image-heavy guide can put several MB of HTML per page before this
+            // was fixed to reference on-disk image files instead of inlining them as base64
+            // text (see NativeImageDownloader's kdoc) - this per-page-in-memory shape is kept
+            // regardless, since a page's text content still shouldn't all sit in one list
+            // before a single byte reaches disk.
+            for (index in 0 until guide.pageCount) {
+                val page = pageContent(index)
+                val bytes = page.html.toByteArray(Charsets.UTF_8)
+                withContext(Dispatchers.IO) { File(dir, "page_$index.txt").writeBytes(bytes) }
+                tocEntries += page.tocEntries
             }
+            // Walks the whole guide directory rather than summing each page's text bytes as
+            // they're written - an in-line HTML guide's real on-disk footprint now includes
+            // its embedded images (real files under dir/images/, see NativeImageDownloader),
+            // which the old per-page byte count never accounted for.
+            val sizeBytes = withContext(Dispatchers.IO) { dir.walkTopDown().filter(File::isFile).sumOf(File::length) }
+            val stored = guide.copy(sizeBytes = sizeBytes, tocEntries = tocEntries)
+            withContext(Dispatchers.IO) { writeIndex(readIndex().filterNot { it.id == guide.id } + stored) }
         }
 
     // withContext(Dispatchers.IO) - same "don't block the caller's dispatcher" reasoning as
@@ -107,6 +118,11 @@ class FileGameGuideLibraryRepository(
             guideDirectory(guideId).listFiles { file -> file.name.startsWith("content.") }
                 ?.firstOrNull()
                 ?.absolutePath
+        }
+
+    override suspend fun mediaDirectoryPath(guideId: String): String =
+        withContext(Dispatchers.IO) {
+            guideDirectory(guideId).apply { mkdirs() }.absolutePath
         }
 
     override fun observeGuidesFor(gameReference: GameReference): Flow<List<DownloadedGameGuide>> =

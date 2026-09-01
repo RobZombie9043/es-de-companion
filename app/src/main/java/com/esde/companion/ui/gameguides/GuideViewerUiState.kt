@@ -35,6 +35,14 @@ internal class GuideViewerUiState(initialPageIndex: Int) {
     var htmlFindRequestId: Int by mutableIntStateOf(0)
     var scrollToCharOffsetRequest: Int? by mutableStateOf(null)
     var scrollToAnchorId: String? by mutableStateOf(null)
+
+    // A TOC entry on a different page can't set scrollToAnchorId directly the way a same-page
+    // entry does - see GameGuideViewerScreen.onEntrySelected's kdoc for why setting it in the
+    // same synchronous step as currentPageIndex raced the page navigation it triggers. Held
+    // here until GameGuideViewerScreen's own effect (which - unlike HtmlGuideContent - survives
+    // the isLoadingContent-driven unmount/remount the navigation causes) confirms the new page's
+    // content has actually arrived, then promotes it to scrollToAnchorId.
+    var pendingAnchorId: String? by mutableStateOf(null)
     var currentPageIndex: Int by mutableIntStateOf(initialPageIndex)
     var chromeVisible: Boolean by mutableStateOf(true)
 }

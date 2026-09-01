@@ -62,6 +62,14 @@ interface GameGuideLibraryRepository {
      * or was never saved via [saveImportedGuide]. */
     suspend fun binaryContentPath(guideId: String): String?
 
+    /** The directory [guideId]'s own on-disk assets live under (created if it doesn't exist
+     * yet) - used for a [GameGuideFormat.Html] guide's embedded images (saved as real files
+     * rather than inlined base64 text, see `NativeImageDownloader`'s kdoc) and the viewer's
+     * own composed, theme/font-scale-specific document file (see `GameGuideHtmlViewer`'s
+     * kdoc). Callable before the guide itself has ever been saved - a fresh download resolves
+     * this first so it has somewhere to write images to as it embeds each page. */
+    suspend fun mediaDirectoryPath(guideId: String): String
+
     suspend fun deleteGuide(guideId: String)
 
     suspend fun deleteAllGuides()
