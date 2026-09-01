@@ -329,28 +329,28 @@ private val GameLaunchDisplayTarget.label: String
 // see retroAchievementsEnabled()/gameGuidesEnabled()'s kdocs.
 private val TOP_FAB_OPTIONS =
     listOf(
-        FabType.Music,
+        FabType.None,
         FabType.Settings,
-        FabType.GameManual,
         FabType.AppDrawer,
         FabType.CustomApp,
+        FabType.GameGuides,
+        FabType.GameManual,
         FabType.RetroAchievements,
+        FabType.Music,
         FabType.Clock,
         FabType.SystemStatus,
         FabType.ClockAndSystemStatus,
-        FabType.GameGuides,
-        FabType.None,
     ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
         .filter { it != FabType.GameGuides || gameGuidesEnabled() }
 private val BOTTOM_FAB_OPTIONS =
     listOf(
+        FabType.None,
         FabType.Settings,
-        FabType.GameManual,
         FabType.AppDrawer,
         FabType.CustomApp,
-        FabType.RetroAchievements,
         FabType.GameGuides,
-        FabType.None,
+        FabType.GameManual,
+        FabType.RetroAchievements,
     ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
         .filter { it != FabType.GameGuides || gameGuidesEnabled() }
 
