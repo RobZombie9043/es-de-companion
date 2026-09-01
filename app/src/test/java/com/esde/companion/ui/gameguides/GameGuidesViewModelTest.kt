@@ -1,5 +1,6 @@
 package com.esde.companion.ui.gameguides
 
+import com.esde.companion.data.gameguides.GameFaqsBrowserBridge
 import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
@@ -233,7 +234,8 @@ class GameGuidesViewModelTest {
                 resolveGameGuideMediaDirectory = ResolveGameGuideMediaDirectoryUseCase(libraryRepository),
             )
         val observeUpdateOnScreensaver = ObserveUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository)
-        val viewModel = GameGuidesViewModel(observeConnectionState, observeUpdateOnScreensaver, useCases)
+        val viewModel =
+            GameGuidesViewModel(observeConnectionState, observeUpdateOnScreensaver, useCases, GameFaqsBrowserBridge())
         advanceUntilIdle()
         return viewModel
     }

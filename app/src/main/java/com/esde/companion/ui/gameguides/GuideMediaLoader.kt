@@ -29,8 +29,16 @@ internal const val GUIDE_MEDIA_DOCUMENT_URL =
  * inside the registered directory (blocking `../` traversal) before reading it.
  */
 internal class GuideMediaLoader(private val context: Context) {
-    private var directory: String? = null
-    private var loader: WebViewAssetLoader? = null
+    // @Volatile on both - updateDirectory always runs on the main thread (the same thread
+    // that owns this WebView), but intercept() is called from WebViewClient.
+    // shouldInterceptRequest, which the platform is free to invoke on a background thread.
+    // Without a memory barrier there's no guarantee that thread ever observes a loader update
+    // made on the main thread, so a quick guide switch could otherwise leave an in-flight
+    // request on another thread reading a stale (or momentarily null) value indefinitely
+    // rather than just for the instant the switch actually takes.
+    @Volatile private var directory: String? = null
+
+    @Volatile private var loader: WebViewAssetLoader? = null
 
     fun updateDirectory(mediaDirectoryPath: String) {
         if (mediaDirectoryPath == directory) return

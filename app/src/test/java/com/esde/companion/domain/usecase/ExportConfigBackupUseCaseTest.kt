@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
@@ -92,6 +93,13 @@ private class ExportFixture {
             initialCloseAppOnGameEnd = true,
             initialEnabled = false,
         )
+    val guideDisplayPreferences =
+        GameGuideDisplayPreferences(fontScale = 1.5f, reflowEnabled = false, monospaceFont = false)
+    val gameGuideSettings =
+        FakeGameGuideSettingsRepository(
+            displayPreferences = guideDisplayPreferences,
+            manualFallbackOnNoGuideEnabled = true,
+        )
     val repositories =
         BackupRepositories(
             onboarding,
@@ -102,6 +110,7 @@ private class ExportFixture {
             thorSettings,
             gameMatchOverrides,
             gameLaunchApp,
+            gameGuideSettings,
         )
 
     private fun samplePlacedWidget() =
@@ -153,5 +162,7 @@ class ExportConfigBackupUseCaseTest {
             assertEquals(GameLaunchDisplayTarget.OtherScreen, snapshot.gameLaunchDisplayTarget)
             assertTrue(snapshot.closeAppOnGameEndEnabled)
             assertFalse(snapshot.gameLaunchEnabled)
+            assertTrue(snapshot.manualFallbackOnNoGuideEnabled)
+            assertEquals(fixture.guideDisplayPreferences, snapshot.guideDisplayPreferences)
         }
 }

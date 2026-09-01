@@ -10,6 +10,7 @@ import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
 import com.esde.companion.data.gameguides.FileGameGuideLibraryRepository
 import com.esde.companion.data.gameguides.FileGameGuideSettingsRepository
+import com.esde.companion.data.gameguides.GameFaqsBrowserBridge
 import com.esde.companion.data.gamelist.DataStoreGameLaunchAppRepository
 import com.esde.companion.data.gamelist.FileGameDescriptionRepository
 import com.esde.companion.data.gamelist.FileGameRatingRepository
@@ -558,6 +559,15 @@ class AppContainer(context: Context) {
     val observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository)
     val setVolumeSyncModeUseCase = SetVolumeSyncModeUseCase(thorSettingsRepository)
 
+    // Game Guides content/metadata is app-private storage (filesDir + its own DataStore
+    // file). gameGuideLibraryRepository is deliberately excluded from Backup & Restore below -
+    // same reasoning as the RetroAchievements caches above: it's fetched/regenerable content,
+    // not user configuration, and could be large. gameGuideSettingsRepository is different - it
+    // holds actual user settings (the "load manual on no guide" toggle, display preferences),
+    // not fetched content, so it IS included below.
+    private val gameGuideLibraryRepository: GameGuideLibraryRepository = FileGameGuideLibraryRepository(appContext)
+    private val gameGuideSettingsRepository: GameGuideSettingsRepository = FileGameGuideSettingsRepository(appContext)
+
     // Settings > Setup > Backup & Restore. Reaches directly into the settings repositories
     // above (rather than through their narrower per-field use cases) since export/restore
     // needs every field at once - see ExportConfigBackupUseCase/RestoreConfigBackupUseCase.
@@ -574,6 +584,7 @@ class AppContainer(context: Context) {
             thorSettingsRepository = thorSettingsRepository,
             gameMatchOverrideRepository = gameMatchOverrideRepository,
             gameLaunchAppRepository = gameLaunchAppRepository,
+            gameGuideSettingsRepository = gameGuideSettingsRepository,
         )
     val exportConfigBackupUseCase = ExportConfigBackupUseCase(backupRepositories, configBackupRepository)
     val restoreConfigBackupUseCase = RestoreConfigBackupUseCase(backupRepositories, configBackupRepository)
@@ -738,13 +749,16 @@ class AppContainer(context: Context) {
     val getGameLeaderboardsUseCase = GetGameLeaderboardsUseCase(retroAchievementsRepository)
     val getLeaderboardEntriesUseCase = GetLeaderboardEntriesUseCase(retroAchievementsRepository)
 
-    // Game Guides FAB (debug-only for now - see GameGuidesFeatureFlag's kdoc). Downloaded
-    // guide content/metadata is app-private storage (filesDir + its own DataStore file),
-    // deliberately excluded from Backup & Restore - same reasoning as the RetroAchievements
-    // caches above: it's fetched/regenerable content, not user configuration, and could be
-    // large - so these two repositories are never added to BackupRepositories.
-    private val gameGuideLibraryRepository: GameGuideLibraryRepository = FileGameGuideLibraryRepository(appContext)
-    private val gameGuideSettingsRepository: GameGuideSettingsRepository = FileGameGuideSettingsRepository(appContext)
+    // Game Guides FAB (debug-only for now - see GameGuidesFeatureFlag's kdoc).
+    // gameGuideLibraryRepository/gameGuideSettingsRepository are declared earlier, alongside
+    // Backup & Restore's other repositories - see that section's own comment for why one is
+    // excluded from it and the other isn't.
+    //
+    // Shared by GameGuidesViewModelFactory (browsing the WebView) and any download in flight -
+    // a single stateless instance, same as every other narrow data-layer helper here, injected
+    // rather than left to the ViewModel's own default constructor parameter (see
+    // GameGuidesViewModel's kdoc for why that was a layering violation worth fixing).
+    val gameFaqsBrowserBridge = GameFaqsBrowserBridge()
     val observeGameGuidesUseCase = ObserveGameGuidesUseCase(gameGuideLibraryRepository)
     val observeAllGameGuidesUseCase = ObserveAllGameGuidesUseCase(gameGuideLibraryRepository)
     val saveGameGuideUseCase = SaveGameGuideUseCase(gameGuideLibraryRepository)

@@ -70,6 +70,10 @@ class RestoreConfigBackupUseCase(
             setCloseAppOnGameEnd(snapshot.closeAppOnGameEndEnabled)
             setEnabled(snapshot.gameLaunchEnabled)
         }
+        with(repositories.gameGuideSettingsRepository) {
+            setManualFallbackOnNoGuideEnabled(snapshot.manualFallbackOnNoGuideEnabled)
+            setDisplayPreferences(snapshot.guideDisplayPreferences)
+        }
     }
 
     private suspend fun applyOnboardingSettings(snapshot: AppConfigBackup) {

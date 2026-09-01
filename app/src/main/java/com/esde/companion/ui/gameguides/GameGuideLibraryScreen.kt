@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.esde.companion.ui.gameguides
 
 import androidx.activity.compose.BackHandler
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -22,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -199,6 +203,7 @@ private fun GuideRow(
     onDelete: () -> Unit,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     // Surface's own onClick (not a plain Modifier.clickable) so the ripple is clipped to
     // GUIDE_ROW_SHAPE instead of the row's full rectangular bounds - the same shape/onClick
     // pairing SettingsCategoryRow/ToggleSettingRow use.
@@ -235,13 +240,42 @@ private fun GuideRow(
             IconButton(
                 onClick = {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onDelete()
+                    showDeleteConfirmation = true
                 },
             ) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete")
             }
         }
     }
+
+    // Same confirmation Settings > Game Guides > Browse Downloaded Guides already gates its
+    // own per-row delete behind (DeleteGuideConfirmationDialog) - this row sits right next to
+    // the tappable Open row here too, so it gets the same mis-tap protection.
+    if (showDeleteConfirmation) {
+        DeleteGuideConfirmationDialog(
+            guideTitle = guide.title,
+            onConfirm = {
+                showDeleteConfirmation = false
+                onDelete()
+            },
+            onDismiss = { showDeleteConfirmation = false },
+        )
+    }
+}
+
+@Composable
+private fun DeleteGuideConfirmationDialog(
+    guideTitle: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete this guide?") },
+        text = { Text("\"$guideTitle\" will be removed from offline storage. This can't be undone.") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 /** The Game Manual section's row - same shape as [GuideRow] but with no delete affordance

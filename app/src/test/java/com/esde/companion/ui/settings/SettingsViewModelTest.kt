@@ -514,6 +514,7 @@ class SettingsViewModelTest {
                 thorSettingsRepository,
                 FakeGameMatchOverrideRepository(),
                 gameLaunchAppRepository,
+                FakeGameGuideSettingsRepository(),
             )
         val export = ExportConfigBackupUseCase(repositories, configBackupRepository)
         val restore = RestoreConfigBackupUseCase(repositories, configBackupRepository)

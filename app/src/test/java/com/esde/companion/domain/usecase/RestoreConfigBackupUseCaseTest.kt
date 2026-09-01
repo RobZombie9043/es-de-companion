@@ -6,6 +6,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
@@ -73,6 +74,13 @@ private class SourceFixture {
             autoFpsEnabled = true,
             autoFpsTriggerPackages = setOf("org.libretro.retroarch"),
         )
+    val guideDisplayPreferences =
+        GameGuideDisplayPreferences(fontScale = 1.5f, reflowEnabled = false, monospaceFont = false)
+    val gameGuideSettings =
+        FakeGameGuideSettingsRepository(
+            displayPreferences = guideDisplayPreferences,
+            manualFallbackOnNoGuideEnabled = true,
+        )
     val repositories =
         BackupRepositories(
             onboarding,
@@ -83,6 +91,7 @@ private class SourceFixture {
             thorSettings,
             gameMatchOverrides,
             gameLaunchApp,
+            gameGuideSettings,
         )
 
     private fun samplePlacedWidget() =
@@ -113,6 +122,7 @@ class RestoreConfigBackupUseCaseTest {
             val targetThorSettings = FakeThorSettingsRepository()
             val targetGameMatchOverrides = FakeGameMatchOverrideRepository()
             val targetGameLaunchApp = FakeGameLaunchAppRepository()
+            val targetGameGuideSettings = FakeGameGuideSettingsRepository()
             val targetRepositories =
                 BackupRepositories(
                     targetOnboarding,
@@ -123,6 +133,7 @@ class RestoreConfigBackupUseCaseTest {
                     targetThorSettings,
                     targetGameMatchOverrides,
                     targetGameLaunchApp,
+                    targetGameGuideSettings,
                 )
             val restoreUseCase = RestoreConfigBackupUseCase(targetRepositories, configBackupRepository)
 
@@ -157,6 +168,8 @@ class RestoreConfigBackupUseCaseTest {
             assertEquals(GameLaunchDisplayTarget.OtherScreen, targetGameLaunchApp.observeLaunchDisplayTarget().first())
             assertTrue(targetGameLaunchApp.observeCloseAppOnGameEnd().first())
             assertFalse(targetGameLaunchApp.observeEnabled().first())
+            assertTrue(targetGameGuideSettings.observeManualFallbackOnNoGuideEnabled().first())
+            assertEquals(source.guideDisplayPreferences, targetGameGuideSettings.observeDisplayPreferences().first())
         }
 
     @Test
@@ -174,6 +187,7 @@ class RestoreConfigBackupUseCaseTest {
                     FakeThorSettingsRepository(),
                     FakeGameMatchOverrideRepository(),
                     FakeGameLaunchAppRepository(),
+                    FakeGameGuideSettingsRepository(),
                 )
             val useCase = RestoreConfigBackupUseCase(repositories, JsonConfigBackupRepository())
 
@@ -197,6 +211,7 @@ class RestoreConfigBackupUseCaseTest {
                     FakeThorSettingsRepository(),
                     FakeGameMatchOverrideRepository(),
                     FakeGameLaunchAppRepository(),
+                    FakeGameGuideSettingsRepository(),
                 )
             val configBackupRepository = JsonConfigBackupRepository()
             val useCase = RestoreConfigBackupUseCase(repositories, configBackupRepository)

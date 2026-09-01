@@ -3,6 +3,8 @@ package com.esde.companion.domain.usecase
 import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
+import com.esde.companion.domain.model.GameGuideReadingProgress
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
@@ -22,6 +24,7 @@ import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameGuideSettingsRepository
 import com.esde.companion.domain.repository.GameLaunchAppRepository
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.OnboardingRepository
@@ -542,4 +545,32 @@ internal class FakeGameLaunchAppRepository(
         systemShortName: String,
         relativeRomPath: String,
     ) = this.systemShortName == systemShortName && this.relativeRomPath == relativeRomPath
+}
+
+internal class FakeGameGuideSettingsRepository(
+    displayPreferences: GameGuideDisplayPreferences = GameGuideDisplayPreferences(),
+    manualFallbackOnNoGuideEnabled: Boolean = false,
+) : GameGuideSettingsRepository {
+    private val displayPreferencesFlow = MutableStateFlow(displayPreferences)
+    private val manualFallbackOnNoGuideEnabledFlow = MutableStateFlow(manualFallbackOnNoGuideEnabled)
+    private val readingProgressFlows = mutableMapOf<String, MutableStateFlow<GameGuideReadingProgress?>>()
+
+    override suspend fun setDisplayPreferences(preferences: GameGuideDisplayPreferences) {
+        displayPreferencesFlow.value = preferences
+    }
+
+    override fun observeDisplayPreferences(): Flow<GameGuideDisplayPreferences> = displayPreferencesFlow
+
+    override suspend fun setReadingProgress(progress: GameGuideReadingProgress) {
+        readingProgressFlows.getOrPut(progress.guideId) { MutableStateFlow(null) }.value = progress
+    }
+
+    override fun observeReadingProgress(guideId: String): Flow<GameGuideReadingProgress?> =
+        readingProgressFlows.getOrPut(guideId) { MutableStateFlow(null) }
+
+    override suspend fun setManualFallbackOnNoGuideEnabled(enabled: Boolean) {
+        manualFallbackOnNoGuideEnabledFlow.value = enabled
+    }
+
+    override fun observeManualFallbackOnNoGuideEnabled(): Flow<Boolean> = manualFallbackOnNoGuideEnabledFlow
 }

@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabSlot
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
@@ -85,6 +86,10 @@ internal fun AppConfigBackup.toDto(): ConfigBackupDto =
         closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
         gameLaunchEnabled = gameLaunchEnabled,
         updateGameGuidesOnScreensaverEnabled = updateGameGuidesOnScreensaverEnabled,
+        manualFallbackOnNoGuideEnabled = manualFallbackOnNoGuideEnabled,
+        guideDisplayFontScale = guideDisplayPreferences.fontScale,
+        guideDisplayReflowEnabled = guideDisplayPreferences.reflowEnabled,
+        guideDisplayMonospaceFont = guideDisplayPreferences.monospaceFont,
     )
 
 private fun ConfigBackupDto.toFabAssignments() =
@@ -103,9 +108,16 @@ private fun ConfigBackupDto.toHallSensorCalibration() =
         openValue = hallSensorOpenValue,
     )
 
+@Suppress("LongMethod")
 internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
     val fabAssignments = toFabAssignments()
     val hallSensorCalibration = toHallSensorCalibration()
+    val guideDisplayPreferences =
+        GameGuideDisplayPreferences(
+            fontScale = guideDisplayFontScale,
+            reflowEnabled = guideDisplayReflowEnabled,
+            monospaceFont = guideDisplayMonospaceFont,
+        )
     return AppConfigBackup(
         version = version,
         logFolderPath = logFolderPath,
@@ -160,6 +172,8 @@ internal fun ConfigBackupDto.toDomain(): AppConfigBackup {
         closeAppOnGameEndEnabled = closeAppOnGameEndEnabled,
         gameLaunchEnabled = gameLaunchEnabled,
         updateGameGuidesOnScreensaverEnabled = updateGameGuidesOnScreensaverEnabled,
+        manualFallbackOnNoGuideEnabled = manualFallbackOnNoGuideEnabled,
+        guideDisplayPreferences = guideDisplayPreferences,
     )
 }
 

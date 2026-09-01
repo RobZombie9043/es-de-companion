@@ -33,6 +33,7 @@ class GameGuidesViewModelFactory(
             observeConnectionState = appContainer.observeConnectionStateUseCase,
             observeUpdateGameGuidesOnScreensaverEnabled = observeUpdateOnScreensaver,
             useCases = useCases,
+            browserBridge = appContainer.gameFaqsBrowserBridge,
         ) as T
     }
 }

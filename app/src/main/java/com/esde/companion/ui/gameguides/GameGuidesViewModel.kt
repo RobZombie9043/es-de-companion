@@ -62,7 +62,7 @@ class GameGuidesViewModel(
     observeConnectionState: ObserveConnectionStateUseCase,
     observeUpdateGameGuidesOnScreensaverEnabled: ObserveUpdateGameGuidesOnScreensaverEnabledUseCase,
     private val useCases: GameGuidesUseCases,
-    private val browserBridge: GameFaqsBrowserBridge = GameFaqsBrowserBridge(),
+    private val browserBridge: GameFaqsBrowserBridge,
     private val clock: Clock = Clock.systemUTC(),
 ) : ViewModel() {
     // Set by MainActivity via onOverlayVisibilityChanged, reflecting whether the Library

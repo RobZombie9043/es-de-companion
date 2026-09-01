@@ -14,14 +14,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -198,6 +202,7 @@ private fun DownloadedGuideRow(
     onDelete: () -> Unit,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
     Surface(
         onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
@@ -221,13 +226,42 @@ private fun DownloadedGuideRow(
             IconButton(
                 onClick = {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onDelete()
+                    showDeleteConfirmation = true
                 },
             ) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete")
             }
         }
     }
+
+    // Same "sits right next to the tappable row" mis-tap risk the sibling "Clear All
+    // Downloaded Guides" action (ClearAllGuidesConfirmationDialog) is already guarded
+    // against - this row's own delete button gets the same protection.
+    if (showDeleteConfirmation) {
+        DeleteGuideConfirmationDialog(
+            guideTitle = guide.title,
+            onConfirm = {
+                showDeleteConfirmation = false
+                onDelete()
+            },
+            onDismiss = { showDeleteConfirmation = false },
+        )
+    }
+}
+
+@Composable
+private fun DeleteGuideConfirmationDialog(
+    guideTitle: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete this guide?") },
+        text = { Text("\"$guideTitle\" will be removed from offline storage. This can't be undone.") },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Delete") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 /**
