@@ -223,15 +223,18 @@ fun GameGuideViewerScreen(
     fun onEntrySelected(entry: GuideTocEntry) {
         uiState.showToc = false
         if (derived.isHtml) {
+            // entry.anchorId is null for a chapter-level entry (see GuideTocEntry's kdoc) -
+            // switching currentPageIndex (or, for a same-page chapter entry, doing nothing at
+            // all) is the whole jump then, with no in-page position to also scroll to.
             val targetPageIndex = entry.pageIndex.coerceIn(0, lastPageIndex)
             if (targetPageIndex == uiState.currentPageIndex) {
-                uiState.scrollToAnchorId = entry.anchorId
+                entry.anchorId?.let { uiState.scrollToAnchorId = it }
             } else {
-                uiState.pendingAnchorId = entry.anchorId
+                entry.anchorId?.let { uiState.pendingAnchorId = it }
                 uiState.currentPageIndex = targetPageIndex
             }
         } else {
-            uiState.scrollToCharOffsetRequest = entry.anchorId.toIntOrNull() ?: 0
+            uiState.scrollToCharOffsetRequest = entry.anchorId?.toIntOrNull() ?: 0
         }
     }
 

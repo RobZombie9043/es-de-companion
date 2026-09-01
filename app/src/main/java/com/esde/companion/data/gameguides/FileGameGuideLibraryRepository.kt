@@ -210,8 +210,13 @@ private data class DownloadedGameGuideDto(
 @Serializable
 private data class GuideTocEntryDto(
     val title: String,
-    val anchorId: String,
+    val anchorId: String? = null,
     val pageIndex: Int = 0,
+    // Default-valued for the same reason sizeBytes/tocEntries are on the guide DTO above - a
+    // guide saved before this field existed (every HTML entry was flat, depth 0, until
+    // FTOC_EXTRACT_SCRIPT started producing real chapter/subsection hierarchy) still decodes
+    // fine, just without the indentation a re-download would now capture.
+    val depth: Int = 0,
 )
 
 private fun DownloadedGameGuide.toDto() =
@@ -226,7 +231,7 @@ private fun DownloadedGameGuide.toDto() =
         pageCount = pageCount,
         downloadedAtMillis = downloadedAtMillis,
         sizeBytes = sizeBytes,
-        tocEntries = tocEntries.map { GuideTocEntryDto(it.title, it.anchorId, it.pageIndex) },
+        tocEntries = tocEntries.map { GuideTocEntryDto(it.title, it.anchorId, it.pageIndex, it.depth) },
     )
 
 private fun DownloadedGameGuideDto.toDomain() =
@@ -239,5 +244,5 @@ private fun DownloadedGameGuideDto.toDomain() =
         pageCount = pageCount,
         downloadedAtMillis = downloadedAtMillis,
         sizeBytes = sizeBytes,
-        tocEntries = tocEntries.map { GuideTocEntry(it.title, it.anchorId, it.pageIndex) },
+        tocEntries = tocEntries.map { GuideTocEntry(it.title, it.anchorId, it.pageIndex, it.depth) },
     )

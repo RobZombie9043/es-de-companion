@@ -97,7 +97,15 @@ internal suspend fun downloadAndSaveGuide(
             if (needsEmbedding) {
                 val embedded =
                     deps.pageProcessor.process(webView, page.pages[index], pageIndex = index, mediaDirectoryPath)
-                GuidePageContent(html = embedded.html, tocEntries = embedded.tocEntries)
+                // page.tocEntries (from the walk's own real .ftoc read, covering every page at
+                // once - see GameFaqsGuidePage's kdoc) wins over embedded.tocEntries (this one
+                // page's in-content heading-tagging fallback) whenever it's actually present -
+                // filtered down to this page's own share of it, since saveGameGuide's own loop
+                // accumulates every page's returned tocEntries across the whole guide.
+                val tocEntries =
+                    page.tocEntries.filter { it.pageIndex == index }
+                        .ifEmpty { embedded.tocEntries }
+                GuidePageContent(html = embedded.html, tocEntries = tocEntries)
             } else {
                 GuidePageContent(html = page.pages[index])
             }

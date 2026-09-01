@@ -165,7 +165,7 @@ class PlainTextGuideTocParserTest {
 
         val entries = PlainTextGuideTocParser.parse(text)
 
-        entries.forEach { entry -> assertTrue(entry.anchorId.toInt() >= tocBlockLength) }
+        entries.forEach { entry -> assertTrue(checkNotNull(entry.anchorId).toInt() >= tocBlockLength) }
         assertEquals(listOf("Intro", "Gameplay", "Story", "Walkthrough"), entries.map { it.title })
     }
 

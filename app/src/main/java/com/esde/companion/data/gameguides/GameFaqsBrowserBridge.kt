@@ -5,6 +5,7 @@ import android.webkit.WebViewClient
 import com.esde.companion.domain.gameguides.GameFaqsGuidePage
 import com.esde.companion.domain.gameguides.GuideDownloadProgress
 import com.esde.companion.domain.model.GameGuideFormat
+import com.esde.companion.domain.model.GuideTocEntry
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
@@ -42,7 +43,9 @@ private const val MAX_CHAPTERS = 200
  * Save action instead of crashing or saving garbage - same resilience principle as
  * `com.esde.companion.data.thor.PrivilegedShell`'s "degrade, never crash" contract.
  */
-class GameFaqsBrowserBridge {
+class GameFaqsBrowserBridge(
+    private val tocOutlineExtractor: GuideTocOutlineExtractor = GuideTocOutlineExtractor(),
+) {
     suspend fun detectGuidePage(webView: WebView): GameFaqsGuidePage = evaluate(webView, DETECT_SCRIPT)
 
     /**
@@ -126,12 +129,21 @@ class GameFaqsBrowserBridge {
     ): GameFaqsGuidePage {
         val pages = mutableListOf<String>()
         var totalPages = 1
+        var tocEntries = emptyList<GuideTocEntry>()
         var page = 0
         var nextUrl: String?
         do {
             page++
             val chapter = evaluateChapter(webView)
-            if (page == 1) totalPages = chapter.totalChapters.coerceAtLeast(1)
+            if (page == 1) {
+                totalPages = chapter.totalChapters.coerceAtLeast(1)
+                // Read once, from the true first page (walkHtmlChapters always starts there -
+                // see downloadFullGuide's rewind step) - every chapter page repeats the same
+                // full .ftoc listing (same assumption CHAPTER_EXTRACT_SCRIPT's own totalChapters
+                // count already relies on), so there's nothing more to gain reading it again on
+                // later pages, only more work.
+                tocEntries = tocOutlineExtractor.extract(webView)
+            }
             pages += chapter.html
             onProgress(GuideDownloadProgress.LoadingPage(page, totalPages))
             val urlToLoad = chapter.nextUrl
@@ -149,6 +161,7 @@ class GameFaqsBrowserBridge {
             title = first.title,
             format = GameGuideFormat.Html,
             pages = pages,
+            tocEntries = tocEntries,
         )
     }
 
