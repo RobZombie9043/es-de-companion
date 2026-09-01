@@ -16,12 +16,13 @@ import com.esde.companion.domain.model.ScreenBehavior
  * to decide whether it's showing and what to do when it closes - pulled out of MainActivity
  * itself (which was tipping detekt's LargeClass threshold) rather than left as loose
  * `remember`ed state scattered through its composable body. [GameGuidesOverlayActions.onOpen]/
- * [GameGuidesOverlayActions.onClose] cover the Browsing/Library screens, which always fully
- * close the overlay; the Viewing screen needs [GameGuidesOverlayActions.onCloseViewer]
- * instead, since a guide opened by the Game Playing Screen Behavior auto-trigger should exit
- * the overlay entirely on close (same as dismissing the GameManual cover), while one opened
- * via the Game Guides FAB should drop back to the Library ([GameGuidesViewModel.open])
- * instead.
+ * [GameGuidesOverlayActions.onClose] cover the Library screen, which always fully closes the
+ * overlay; the Viewing screen needs [GameGuidesOverlayActions.onCloseViewer] instead, since a
+ * guide opened by the Game Playing Screen Behavior auto-trigger should exit the overlay
+ * entirely on close (same as dismissing the GameManual cover), while one opened via the Game
+ * Guides FAB should drop back to the Library ([GameGuidesViewModel.open]) instead. The
+ * Browsing screen needs [GameGuidesOverlayActions.onCloseBrowsing] for the same "drop back to
+ * the Library, unless there's no Library to drop back into" reasoning - see its own kdoc.
  *
  * [GameGuidesOverlayActions.onOpenDirectly] is the third way in, alongside the FAB
  * ([onOpen]) and the Game Playing Screen Behavior auto-trigger: Settings > Game Guides
@@ -30,12 +31,23 @@ import com.esde.companion.domain.model.ScreenBehavior
  * [GameGuidesViewModel.openBrowserFor]) to set up the exact state it wants, then
  * [onOpenDirectly] to reveal *this* full-screen overlay showing it - the same one the FAB
  * opens - rather than rendering a second, Settings-popup-sized copy of the browser/viewer.
- * Closing a directly-opened guide/browser exits the whole overlay, same as the auto-trigger,
- * since there's no "current game" Library it would make sense to fall back into.
+ * Closing a directly-opened *guide* (Viewing) exits the whole overlay, same as the
+ * auto-trigger, since there's no "current game" Library it would make sense to fall back
+ * into. A directly-opened *browser* (Browsing) is different - see [onCloseBrowsing].
  */
 data class GameGuidesOverlayActions(
     val onOpen: () -> Unit,
     val onClose: () -> Unit,
+    // Add Guide's "browse for this game" (the only caller that reaches Browsing via
+    // onOpenDirectly - see the kdoc above) came from a specific Settings page, not a
+    // "current game" Library, so closing it can't fall back into one the way the ordinary
+    // FAB-opened Browsing (reached via the Library's own "+" dropdown) does. Rather than
+    // exit to the plain main screen either way, MainActivity's GameGuidesOverlayContent
+    // reads [GameGuidesOverlayState.openedDirectly] itself right before calling this to
+    // decide whether to reopen the settings popup back on that page afterwards - this
+    // action only ever needs to know "was this reached directly", handled identically to
+    // [onCloseViewer]'s own openedDirectly branch.
+    val onCloseBrowsing: () -> Unit,
     val onCloseViewer: () -> Unit,
     val onOpenDirectly: () -> Unit,
 )
@@ -172,6 +184,14 @@ private fun buildOverlayActions(
             guideAutoOpened.value = false
             guideOpenedDirectly.value = false
             showOverlay.value = false
+        },
+        onCloseBrowsing = {
+            if (guideOpenedDirectly.value) {
+                guideOpenedDirectly.value = false
+                showOverlay.value = false
+            } else {
+                viewModel.open()
+            }
         },
         onCloseViewer = {
             when {

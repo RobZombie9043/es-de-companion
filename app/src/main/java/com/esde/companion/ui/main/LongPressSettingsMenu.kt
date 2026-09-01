@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -232,6 +233,41 @@ private sealed interface MenuPage {
     ) : MenuPage
 }
 
+/**
+ * Opaque, public stand-in for [MenuPage.AddGuideMethod] - [MenuPage] itself is `private` to
+ * this file, so a caller outside it (MainActivity, across the Game Guides FAB's full-screen
+ * browser) can't reference that page directly. Lets [LongPressSettingsMenu] be asked to
+ * resume exactly on the Add Guide page the user left via "Browse GameFAQs", once the browser
+ * they opened from it closes without downloading anything - see [LongPressSettingsMenu]'s
+ * `addGuideBrowserReturn` parameter ([AddGuideBrowserReturn]) and MainActivity's
+ * `pendingAddGuideReturnTarget`.
+ */
+data class AddGuideReturnTarget(
+    val fromCategory: SettingsCategory,
+    val systemShortName: String,
+    val romPath: String,
+    val gameName: String,
+)
+
+private fun AddGuideReturnTarget.toMenuPage(): MenuPage {
+    return MenuPage.AddGuideMethod(fromCategory, systemShortName, romPath, gameName)
+}
+
+/**
+ * Bundles [LongPressSettingsMenu]'s Add-Guide-browser-return parameters into one, same
+ * reasoning as [GuideManualFallback] - keeps the function under detekt's LongParameterList
+ * threshold. [initialTarget] is read once, on this popup's first composition, to resume on
+ * that page instead of [MenuPage.Home] - see [LongPressSettingsMenu]'s own kdoc.
+ * [onOpened] fires when the user picks "Browse GameFAQs" for a game, capturing the page to
+ * resume on; [onInitialTargetConsumed] fires once [initialTarget] has actually been read, so
+ * a later ordinary Settings open doesn't keep resuming on a stale page.
+ */
+data class AddGuideBrowserReturn(
+    val initialTarget: AddGuideReturnTarget?,
+    val onOpened: (AddGuideReturnTarget) -> Unit,
+    val onInitialTargetConsumed: () -> Unit,
+)
+
 /** Home = 0, a Category subpage = 1, ManageApps/AutoFpsTriggerApps/TaskKillerExcludedApps = 2 -
  * used purely to pick the [AnimatedContent] slide direction below (drilling deeper slides in
  * from the right, stepping back slides in from the left), the same "how many levels deep"
@@ -262,7 +298,8 @@ private val MenuPage.depth: Int
  * the terminal "back" step instead of leaving a full-screen destination. [MenuPage] is
  * plain `remember`, not `rememberSaveable`: this composable is only ever part of
  * composition while the popup is open, so it's naturally torn down (and its state reset to
- * [MenuPage.Home]) every time the popup closes and reopens.
+ * [MenuPage.Home], or to [AddGuideBrowserReturn.initialTarget]'s page when one is pending -
+ * see [addGuideBrowserReturn]) every time the popup closes and reopens.
  */
 @Composable
 fun LongPressSettingsMenu(
@@ -274,6 +311,7 @@ fun LongPressSettingsMenu(
     downloadedGuidesViewModel: DownloadedGuidesViewModel,
     gameGuides: GameGuidesOverlayState,
     updateViewModel: UpdateViewModel,
+    addGuideBrowserReturn: AddGuideBrowserReturn,
     onEditWidgetsClick: () -> Unit,
     onQuitClick: () -> Unit,
     onDismiss: () -> Unit,
@@ -309,7 +347,12 @@ fun LongPressSettingsMenu(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var page by remember { mutableStateOf<MenuPage>(MenuPage.Home) }
+    var page by remember {
+        mutableStateOf(addGuideBrowserReturn.initialTarget?.toMenuPage() ?: MenuPage.Home)
+    }
+    LaunchedEffect(Unit) {
+        if (addGuideBrowserReturn.initialTarget != null) addGuideBrowserReturn.onInitialTargetConsumed()
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -514,6 +557,14 @@ fun LongPressSettingsMenu(
                                     val reference = GameReference(targetPage.systemShortName, targetPage.romPath)
                                     gameGuides.viewModel.openBrowserFor(reference, targetPage.gameName)
                                     gameGuides.actions.onOpenDirectly()
+                                    addGuideBrowserReturn.onOpened(
+                                        AddGuideReturnTarget(
+                                            fromCategory = targetPage.fromCategory,
+                                            systemShortName = targetPage.systemShortName,
+                                            romPath = targetPage.romPath,
+                                            gameName = targetPage.gameName,
+                                        ),
+                                    )
                                     onDismiss()
                                 },
                                 onImportSelected =

@@ -126,6 +126,7 @@ fun MainScreen(
     onLongPressMenuOpenChanged: (Boolean) -> Unit = {},
     onFolderOpenChanged: (Boolean) -> Unit = {},
     openSettingsMenuRequest: Int = 0,
+    addGuideBrowserReturn: AddGuideBrowserReturn = AddGuideBrowserReturn(null, {}, {}),
     swipeToOpenDrawerEnabled: Boolean = true,
     topStartOverlay: @Composable BoxScope.() -> Unit = {},
     topEndOverlay: @Composable BoxScope.() -> Unit = {},
@@ -152,6 +153,7 @@ fun MainScreen(
         onLongPressMenuOpenChanged = onLongPressMenuOpenChanged,
         onFolderOpenChanged = onFolderOpenChanged,
         openSettingsMenuRequest = openSettingsMenuRequest,
+        addGuideBrowserReturn = addGuideBrowserReturn,
         swipeToOpenDrawerEnabled = swipeToOpenDrawerEnabled,
         topStartOverlay = topStartOverlay,
         topEndOverlay = topEndOverlay,
@@ -190,6 +192,7 @@ private fun MainScreenContent(
     onLongPressMenuOpenChanged: (Boolean) -> Unit,
     onFolderOpenChanged: (Boolean) -> Unit,
     openSettingsMenuRequest: Int,
+    addGuideBrowserReturn: AddGuideBrowserReturn,
     swipeToOpenDrawerEnabled: Boolean,
     topStartOverlay: @Composable BoxScope.() -> Unit,
     topEndOverlay: @Composable BoxScope.() -> Unit,
@@ -502,6 +505,7 @@ private fun MainScreenContent(
                             downloadedGuidesViewModel = downloadedGuidesViewModel,
                             gameGuides = gameGuides,
                             updateViewModel = updateViewModel,
+                            addGuideBrowserReturn = addGuideBrowserReturn,
                             onEditWidgetsClick = {
                                 setLongPressMenuOpen(false)
                                 onOpenEditWidgets()

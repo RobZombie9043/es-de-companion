@@ -93,6 +93,8 @@ import com.esde.companion.ui.gameguides.GameGuidesUiState
 import com.esde.companion.ui.gameguides.GuideManualFallback
 import com.esde.companion.ui.gameguides.GuideViewerActions
 import com.esde.companion.ui.gameguides.rememberGameGuidesOverlayState
+import com.esde.companion.ui.main.AddGuideBrowserReturn
+import com.esde.companion.ui.main.AddGuideReturnTarget
 import com.esde.companion.ui.main.MainScreen
 import com.esde.companion.ui.main.MainViewModel
 import com.esde.companion.ui.main.MainViewModelFactory
@@ -319,6 +321,20 @@ class MainActivity : ComponentActivity() {
                             // Settings FAB does. Passed down as openSettingsMenuRequest;
                             // MainScreen opens its menu on every new (unconsumed) increment.
                             var openSettingsMenuRequest by remember { mutableIntStateOf(0) }
+
+                            // Set right before opening the Game Guides FAB's full-screen
+                            // browser from Settings > Game Guides > Add Guide > GameFAQs (see
+                            // AddGuideBrowserReturn.onOpened below), so closing that browser
+                            // without downloading anything can reopen the settings popup back
+                            // on this exact page instead of dropping the user all the way out
+                            // to the plain main screen (see GameGuidesOverlayContent's
+                            // onBrowserClosedWithPendingAddGuideReturn). Cleared once
+                            // LongPressSettingsMenu actually resumes on it
+                            // (onInitialTargetConsumed), so a later ordinary Settings open
+                            // (FAB tap, long-press gesture) starts at Home again.
+                            var pendingAddGuideReturnTarget by remember {
+                                mutableStateOf<AddGuideReturnTarget?>(null)
+                            }
 
                             // Reported by MainScreen (via AppDrawer) through
                             // onFolderOpenChanged - folded into mainScreenActive below so
@@ -872,6 +888,12 @@ class MainActivity : ComponentActivity() {
                                             onLongPressMenuOpenChanged = { longPressMenuOpen = it },
                                             onFolderOpenChanged = { folderOpen = it },
                                             openSettingsMenuRequest = openSettingsMenuRequest,
+                                            addGuideBrowserReturn =
+                                                AddGuideBrowserReturn(
+                                                    initialTarget = pendingAddGuideReturnTarget,
+                                                    onOpened = { target -> pendingAddGuideReturnTarget = target },
+                                                    onInitialTargetConsumed = { pendingAddGuideReturnTarget = null },
+                                                ),
                                             // Otherwise a swipe meant to scroll a Game Guides
                                             // page can also open the App Drawer underneath -
                                             // see MainScreen's swipeToOpenDrawerEnabled kdoc.
@@ -1037,6 +1059,9 @@ class MainActivity : ComponentActivity() {
                                         onOpenManual = {
                                             manualViewerOpenedViaFab = true
                                             gameGuides.actions.onClose()
+                                        },
+                                        onBrowserClosedWithPendingAddGuideReturn = {
+                                            if (pendingAddGuideReturnTarget != null) openSettingsMenuRequest++
                                         },
                                         modifier = Modifier.fillMaxSize(),
                                     )
@@ -1264,12 +1289,15 @@ private fun BoxScope.GameGuidesFabContent(context: GameGuidesFabContext) {
  * [gameGuides]'s live [GameGuidesOverlayState.uiState] - pulled out of MainActivity's own
  * composable body (which was tipping detekt's LargeClass threshold) purely to keep the class
  * itself smaller; none of this needs anything MainActivity-specific beyond [onOpenManual]
- * (setting `manualViewerOpenedViaFab`, which only MainActivity owns).
+ * (setting `manualViewerOpenedViaFab`, which only MainActivity owns) and
+ * [onBrowserClosedWithPendingAddGuideReturn] (reopening the settings popup via
+ * `openSettingsMenuRequest`, likewise only reachable from MainActivity).
  */
 @Composable
 private fun GameGuidesOverlayContent(
     gameGuides: GameGuidesOverlayState,
     onOpenManual: () -> Unit,
+    onBrowserClosedWithPendingAddGuideReturn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (val state = gameGuides.uiState) {
@@ -1278,7 +1306,17 @@ private fun GameGuidesOverlayContent(
                 state = state,
                 onPageLoaded = gameGuides.viewModel::onBrowserPageLoaded,
                 onSave = gameGuides.viewModel::saveCurrentGuide,
-                onClose = gameGuides.actions.onClose,
+                onClose = {
+                    // openedDirectly is only ever true for Browsing via Settings > Game
+                    // Guides > Add Guide > GameFAQs (see GameGuidesOverlayState's kdoc) -
+                    // onCloseBrowsing() drops back to the Library for the ordinary
+                    // FAB-opened case, or exits the overlay entirely here, in which case
+                    // this reopens the settings popup back on the Add Guide page instead
+                    // of leaving the user stranded on the plain main screen.
+                    val wasOpenedDirectly = gameGuides.openedDirectly
+                    gameGuides.actions.onCloseBrowsing()
+                    if (wasOpenedDirectly) onBrowserClosedWithPendingAddGuideReturn()
+                },
                 modifier = modifier,
             )
         is GameGuidesUiState.Library ->
