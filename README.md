@@ -8,7 +8,7 @@
   >
 </a>
 
-![Version](https://img.shields.io/badge/version-1.0.7-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![Android](https://img.shields.io/badge/Android-10%2B-green)
 
 ES-DE Companion is a companion application for [ES-DE](https://es-de.org) that enhances your gaming experience by transforming dual-screen Android devices into immersive retro gaming setups. The app displays beautiful game artwork, videos, and customizable overlay widgets on a secondary screen while you browse and play games in ES-DE.
@@ -93,6 +93,17 @@ _Automatically launch a specific app whenever ES-DE starts playing a game — a 
 - A single This Screen/Other Screen choice controls which display the launched app opens on
 - Input focus automatically returns to the game once the launched app appears, so it doesn't get stuck on the wrong screen (Thor devices only)
 - Optional "Close App on Game End" toggle force-stops the launched app once the game ends (Thor devices only)
+
+### Game Guides
+
+_Browse, download, and read GameFAQs guides for offline use — right on the secondary screen while you play._
+
+**Game Guides Features:**
+- Pick a system and game, then either import a file (`.txt`, single-page `.html`, `.pdf`, or an image) already on the device, or browse GameFAQs in-app to find and download a guide for offline reading
+- Reads plain-text, HTML, PDF, and image guides — plain-text and HTML guides get chapter/table-of-contents navigation, in-guide search with match highlighting, and adjustable text size; PDF/image guides get pinch-zoom, and PDF guides also get page turning
+- A "Game Playing Screen Behavior" option shows the current game's most recently viewed guide automatically when a game starts, resuming at its last read position — with an optional fallback to the game's manual when no guide has been downloaded yet
+- Downloaded guides are organized per-game alongside the Game Manual, reachable from a dedicated Game Guides floating action button
+- The Game Guides toggles and text-size preference are covered by Backup & Restore; the downloaded guide library itself is not — it's re-downloadable/re-importable content, not a setting
 
 ### Thor Settings (AYN Thor)
 

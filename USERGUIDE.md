@@ -14,14 +14,15 @@ This comprehensive guide covers everything you need to know about ES-DE Companio
 6. [App Drawer](#app-drawer)
 7. [App Dock](#app-dock)
 8. [Game Launch Override](#game-launch-override)
-9. [Thor Settings](#thor-settings)
-10. [Video & Music](#video--music)
-11. [Settings Reference](#settings-reference)
-12. [File Structure](#file-structure)
-13. [How Log Events Work](#how-log-events-work)
-14. [In-App Updates](#in-app-updates)
-15. [Backup & Restore](#backup--restore)
-16. [Advanced Topics](#advanced-topics)
+9. [Game Guides](#game-guides)
+10. [Thor Settings](#thor-settings)
+11. [Video & Music](#video--music)
+12. [Settings Reference](#settings-reference)
+13. [File Structure](#file-structure)
+14. [How Log Events Work](#how-log-events-work)
+15. [In-App Updates](#in-app-updates)
+16. [Backup & Restore](#backup--restore)
+17. [Advanced Topics](#advanced-topics)
 
 ---
 
@@ -174,6 +175,7 @@ ES-DE Companion can show up to four small floating buttons on the main screen �
 | **Music** | Toggles the floating music controls panel (title, play/pause, skip). Only offered for the two *top* corners — see [Music Placement](#music-placement) — and only actually shown once a track is loaded. |
 | **Settings** | Opens the same long-press Settings/Widgets popup described in [Screen Gestures](#screen-gestures). |
 | **Manual** | Shown whenever the game currently playing, browsing, or displayed by the screensaver has a scanned manual PDF. Tapping opens it in the manual viewer — the same viewer the "Manual" Game Playing Screen Behavior option (see [Settings Reference](#settings-reference)) shows automatically, but on demand and independent of that setting. |
+| **Game Guides** | Shown whenever there's a current game (regardless of whether a guide has been downloaded for it yet). Tapping opens that game's guide library — see [Game Guides](#game-guides). |
 | **App Drawer** | Opens the [App Drawer](#app-drawer), the same as swiping up. |
 | **App** | Launches a specific app you choose. See [Launching a Custom App](#launching-a-custom-app) below. |
 | **Clock** | Display-only — shows the current time, ticking every second, using your device's own 12h/24h format preference. Top corners only. |
@@ -401,6 +403,49 @@ Automatically launch a specific app whenever ES-DE starts playing a game — use
 
 ---
 
+## Game Guides
+
+Browse, download, and read GameFAQs guides for offline use, without leaving Companion's own screen.
+
+### Adding a Guide
+
+Reachable from **Settings → Game Guides → Add Guide**, or from the Game Guides FAB's own "+" menu once you're already looking at a game's guide library:
+
+1. Pick a system, then a game (a `gamelist.xml`-backed browser, same source the Description widget reads from).
+2. Choose how to add the guide:
+   - **Import a File** — pick a `.txt`, single-page `.html`, `.pdf`, or image (`.png`/`.jpg`/`.jpeg`/`.webp`/`.gif`/`.bmp`) file already on the device.
+   - **Search GameFAQs** — an in-app browser for GameFAQs itself; find the guide you want and save it for offline reading.
+
+### Guide Library
+
+Each game has its own library, reachable via the Game Guides FAB (or Settings → Game Guides → Browse Downloaded Guides, which lets you jump to any game's library rather than just the current one):
+
+- Shows every downloaded/imported guide for that game, alongside its Game Manual (if one exists) in the same list.
+- Tapping a guide reopens it at its last-read position.
+- A guide can be deleted individually; **Settings → Game Guides → Clear Storage** removes every downloaded guide across every game at once, behind a confirmation prompt.
+- The library screen still shows both sections even when one is empty, rather than skipping straight to a browser — an empty section just says so.
+
+### Reading a Guide
+
+What's available depends on the guide's format:
+
+- **Plain-text and HTML guides** get chapter/table-of-contents navigation (a button opens a jump-to list derived from the guide's own structure), in-guide search with match highlighting and a next/previous match counter, and adjustable text size (persisted, same size used for every guide).
+- **PDF guides** are rendered page-by-page (the same renderer Game Manual uses), with pinch-to-zoom and page turning.
+- **Image guides** are a single pinch-to-zoom image.
+- Tapping the guide area toggles the header/footer chrome in and out of view — including while a guide is still loading.
+
+### Auto-Opening a Guide
+
+**Settings → UI Settings → Game Playing Screen Behavior → Guide** automatically shows the current game's most recently viewed downloaded guide when that game starts, resumed at its last read position — the same way the **Manual** option shows the game's manual PDF. If you'd rather see the manual when no guide has been downloaded yet for that game, turn on **Settings → Game Guides → "Load game manual on game start when no guide is available"**.
+
+**Settings → Game Guides → "Update on Screensaver"** switches an already-open guide library over to whichever game the screensaver is currently showing, so it stays in sync rather than showing whatever game was last browsed before the screensaver started.
+
+### Backup & Restore
+
+The Game Guides toggles above and the reading text-size preference are included in Backup & Restore. The downloaded guide library itself isn't — it's re-downloadable/re-importable content, not a setting, so it isn't part of an export.
+
+---
+
 ## Thor Settings
 
 Four extra settings panels, visible only when the app detects it's running on an AYN Thor device — reachable via **Settings → Thor Settings**. Each one needs the app's Accessibility Service permission granted (a "Grant" link appears inline in the panel whenever it isn't), since that's how these features detect BACK-button holds, foreground-app changes, and volume-key presses. Two of the four (Auto FPS Mode and Task Killer) also depend on a privileged settings service being present on the device's firmware — if it isn't, the panel says so and the feature is unavailable rather than silently doing nothing. All four are included in Backup & Restore.
@@ -499,14 +544,14 @@ Tapping this category in the Settings popup jumps straight to the widget editor 
 |---|---|---|---|
 | Theme | Segmented control | Auto / Light / Dark | Auto |
 | Overlay Opacity | Slider | 0-100% | 80% — applies to the App Drawer, App Dock, and other overlay surfaces |
-| Floating Action Buttons | Four dropdowns, one per corner | Music / Settings / Manual / App Drawer / App / Clock / System Status / Clock & System Status / None (Music/Clock/System Status/Clock & System Status offered only in the top corners) | Top Left: Music, Top Right: Settings, Bottom Left: None, Bottom Right: Manual |
+| Floating Action Buttons | Four dropdowns, one per corner | Music / Settings / Manual / Game Guides / App Drawer / App / Clock / System Status / Clock & System Status / None (Music/Clock/System Status/Clock & System Status offered only in the top corners) | Top Left: Music, Top Right: Settings, Bottom Left: None, Bottom Right: Manual |
 | Screensaver Screen Behavior | Dropdown | On / Dim / Off | On |
 | Screensaver Dimming Amount | Slider (shown only when Screensaver Screen Behavior is Dim) | 0-100% | 50% |
-| Game Playing Screen Behavior | Segmented control | On / Dim / Off / Manual | On |
+| Game Playing Screen Behavior | Dropdown (5 options) | On / Dim / Off / Manual / Guide | On |
 | Game Playing Dimming Amount | Slider (shown only when Game Playing Screen Behavior is Dim) | 0-100% | 50% |
 | Game Launch Override | Opens the system/game browser, plus a This Screen/Other Screen display picker | See [Game Launch Override](#game-launch-override) | This Screen |
 
-`Screen Behavior` options: **On** leaves the screen as normal; **Dim** overlays a translucent black scrim (touches still pass through), with its darkness set independently by the matching Dimming Amount slider; **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead.
+`Screen Behavior` options: **On** leaves the screen as normal; **Dim** overlays a translucent black scrim (touches still pass through), with its darkness set independently by the matching Dimming Amount slider; **Off** shows an opaque black cover and blocks touches except a double-tap to restore (the same cover the manual double-tap-to-blank gesture uses — see [Screen Gestures](#screen-gestures)); **Manual** (Game Playing only) shows the game's manual PDF instead; **Guide** (Game Playing only) shows the current game's most recently viewed downloaded guide, resumed at its last position — see [Game Guides](#game-guides).
 
 Image/logo transitions, Logo Glint, and Pan & Zoom are no longer set here — they're configured per widget from the Configure Widget dialog. See [Per-Widget Configuration](#per-widget-configuration).
 
@@ -527,6 +572,18 @@ See [Floating Action Buttons](#floating-action-buttons) for what each corner opt
 `Sort folders on top of apps`: when on, folders are grouped ahead of all ungrouped apps; when off, folders and apps are interleaved into one alphabetical list by name/label. See [Folders](#folders).
 
 `Show Search Bar`: shows or hides the search field and Android/App Settings shortcut buttons above the drawer grid. Turning it off clears any in-progress search query. See [Using the App Drawer](#using-the-app-drawer).
+
+### Game Guides
+
+| Setting | Control | Default |
+|---|---|---|
+| Add Guide | Opens the system/game picker, then Import a File or Search GameFAQs | n/a |
+| Load game manual on game start when no guide is available | Toggle | Off |
+| Update on Screensaver | Toggle | Off |
+| Browse Downloaded Guides | Opens a system/game picker over every game with a downloaded guide | n/a |
+| Clear Storage | Deletes every downloaded guide, across all games, behind a confirmation prompt | n/a |
+
+See [Game Guides](#game-guides) for the full add/read/auto-open flow.
 
 ### Background Music
 
@@ -679,10 +736,11 @@ Everything this app persists as a user setting:
 - Other Settings (Close Companion App on ES-DE Quit, Launch ES-DE on Companion App Start, Debug Logging)
 - App Drawer and Dock settings — hidden apps, grid columns, other-screen launch preferences, folders, and Dock configuration
 - Game Launch Override — system defaults, per-game overrides, the This Screen/Other Screen display target, and the Close App on Game End toggle
+- Game Guides toggles and reading text-size preference (not the downloaded guide library itself — see [Game Guides](#game-guides))
 - Both widget canvases (System View and Game View), including every placed widget and its per-widget configuration
 - Thor Settings, on supported hardware (AYN Thor)
 
-Not included: the onboarding-complete flag, the "what's new" last-seen-version marker, and other purely internal bookkeeping that isn't really a user setting.
+Not included: the onboarding-complete flag, the "what's new" last-seen-version marker, downloaded/imported Game Guides content, and other purely internal bookkeeping that isn't really a user setting.
 
 ### Exporting
 
