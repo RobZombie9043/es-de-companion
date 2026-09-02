@@ -1,5 +1,6 @@
 package com.esde.companion.ui.settings
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.esde.companion.domain.parser.GamelistGameEntry
 
 /**
  * Settings > Game Guides > "Add Guide" > one system's games - reuses
@@ -40,30 +42,50 @@ fun AddGuideGamesScreen(
     LaunchedEffect(systemShortName) { viewModel.onSystemSelected(systemShortName) }
 
     val games = remember(uiState.currentSystemGames) { uiState.currentSystemGames.sortedBy { it.name.lowercase() } }
-
-    if (uiState.isLoadingGames && games.isEmpty()) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+    val screenState =
+        when {
+            uiState.isLoadingGames && games.isEmpty() -> AddGuideGamesScreenState.Loading
+            games.isEmpty() -> AddGuideGamesScreenState.Empty
+            else -> AddGuideGamesScreenState.Loaded(games)
         }
-        return
-    }
 
-    if (games.isEmpty()) {
-        EmptyMessage("No games found for this system.", modifier.fillMaxSize())
-        return
-    }
-
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        items(games, key = { it.relativeRomPath }) { game ->
-            DrillDownRow(
-                title = game.name,
-                subtitle = game.relativeRomPath,
-                onClick = { onGameSelected(game.relativeRomPath, game.name) },
-            )
+    // Crossfade (not a plain if/return chain) - a hard cut between the loading spinner, the
+    // empty message, and the games list reads jarringly for a same-slot content swap, same
+    // reasoning as MainActivity's own Crossfade(showEditWidgets) usage.
+    Crossfade(targetState = screenState, modifier = modifier.fillMaxSize(), label = "addGuideGames") { state ->
+        when (state) {
+            AddGuideGamesScreenState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            AddGuideGamesScreenState.Empty -> {
+                EmptyMessage("No games found for this system.", Modifier.fillMaxSize())
+            }
+            is AddGuideGamesScreenState.Loaded -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(state.games, key = { it.relativeRomPath }) { game ->
+                        DrillDownRow(
+                            title = game.name,
+                            subtitle = game.relativeRomPath,
+                            onClick = { onGameSelected(game.relativeRomPath, game.name) },
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+private sealed interface AddGuideGamesScreenState {
+    data object Loading : AddGuideGamesScreenState
+
+    data object Empty : AddGuideGamesScreenState
+
+    data class Loaded(val games: List<GamelistGameEntry>) : AddGuideGamesScreenState
 }

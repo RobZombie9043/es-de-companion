@@ -83,6 +83,7 @@ fun DownloadedGuidesSystemsScreen(
                 title = systemShortName,
                 subtitle = guideCountLabel(guideCount),
                 onClick = { onSystemSelected(systemShortName) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -123,6 +124,7 @@ fun DownloadedGuidesGamesScreen(
                 title = displayName,
                 subtitle = guideCountLabel(guideCount),
                 onClick = { onGameSelected(romPath) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -164,6 +166,7 @@ fun DownloadedGuidesListScreen(
                 guide = guide,
                 onOpen = { onOpenGuide(guide) },
                 onDelete = { viewModel.onDeleteGuide(guide.id) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -174,10 +177,11 @@ internal fun DrillDownRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = SettingsItemShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {
@@ -200,12 +204,13 @@ private fun DownloadedGuideRow(
     guide: DownloadedGameGuide,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     Surface(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = SettingsItemShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = SETTINGS_PANEL_ALPHA),
     ) {

@@ -1,6 +1,9 @@
 package com.esde.companion.ui.gameguides
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -288,9 +291,18 @@ fun GameGuideViewerScreen(
     // it - previously that second phase showed nothing at all on an image-heavy page.
     val showLoadingIndicator = state.isLoadingContent || (derived.isHtml && !htmlContentVisible)
 
+    // AnimatedVisibility, not a plain if - the underlying reliability issue that motivated
+    // *not* animating this (see git history: overlay/layer-toggle attempts, all reverted) has
+    // since been root-caused to a stale-callback bug (HtmlGuideContent's WebView listeners
+    // capturing the pre-swap GuideViewerUiState via a keyless remember - see that file's kdoc),
+    // now fixed via rememberUpdatedState - not the WebView resize/repaint theory those attempts
+    // were chasing. Column siblings still resize the content area (unchanged, proven behavior),
+    // just gradually over the animation instead of instantly.
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
-            if (uiState.chromeVisible) GuideHeader(config = headerConfig, actions = headerActions)
+            AnimatedVisibility(visible = uiState.chromeVisible, enter = fadeIn(), exit = fadeOut()) {
+                GuideHeader(config = headerConfig, actions = headerActions)
+            }
             GuideContentWithLoadingOverlay(
                 derived = derived,
                 contentState = contentState,
@@ -298,7 +310,11 @@ fun GameGuideViewerScreen(
                 showLoadingIndicator = showLoadingIndicator,
                 modifier = Modifier.weight(1f),
             )
-            if (uiState.chromeVisible && headerConfig.pageNav.totalPages > 1) {
+            AnimatedVisibility(
+                visible = uiState.chromeVisible && headerConfig.pageNav.totalPages > 1,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
                 GuideFooter(
                     pageNav = headerConfig.pageNav,
                     onPreviousPage = headerActions.onPreviousPage,
@@ -342,7 +358,9 @@ private fun GuideContentWithLoadingOverlay(
             actions = contentActions,
             modifier = Modifier.fillMaxSize(),
         )
-        if (showLoadingIndicator) {
+        // A pure Compose overlay Box - never touches the WebView's own bounds/sizing, so
+        // (unlike the chrome header/footer toggle) fading it carries none of that risk.
+        AnimatedVisibility(visible = showLoadingIndicator, enter = fadeIn(), exit = fadeOut()) {
             Box(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center,

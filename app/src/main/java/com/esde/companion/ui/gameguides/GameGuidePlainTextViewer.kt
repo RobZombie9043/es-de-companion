@@ -30,10 +30,12 @@ import kotlinx.coroutines.flow.first
 private const val BASE_FONT_SIZE_SP = 14
 private const val SCROLL_DEBOUNCE_MILLIS = 500L
 private const val HIGHLIGHT_COLOR = 0xFFFFEB3B
+private const val CURRENT_MATCH_HIGHLIGHT_COLOR = 0xFFFF9800
 
 data class PlainTextViewerConfig(
     val text: String,
     val matches: List<IntRange>,
+    val currentMatchIndex: Int,
     val displayPreferences: GameGuideDisplayPreferences,
 )
 
@@ -63,11 +65,11 @@ fun PlainTextGuideContent(
     val textLayoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
 
     val annotatedText =
-        remember(config.text, config.matches) {
+        remember(config.text, config.matches, config.currentMatchIndex) {
             if (config.matches.isEmpty()) {
                 AnnotatedString(config.text)
             } else {
-                highlightMatches(config.text, config.matches)
+                highlightMatches(config.text, config.matches, config.currentMatchIndex)
             }
         }
 
@@ -138,7 +140,10 @@ private suspend fun awaitTextLayout(
         .first { it.layoutInput.text == expectedText }
 
 /** Scrolls to the top of the line [charOffset] falls on, using [layout]'s own measured line
- * positions - exact, unlike [scrollToFraction]'s density-based approximation. */
+ * positions - exact, unlike [scrollToFraction]'s density-based approximation. Animated (unlike
+ * [scrollToFraction]'s instant jump for the initial open-time position restore) - this is
+ * always a live, user-triggered jump (a table-of-contents entry or a "next match" search jump),
+ * so it should read as navigating there, not teleporting. */
 private suspend fun scrollToCharOffset(
     listState: LazyListState,
     layout: TextLayoutResult,
@@ -148,7 +153,7 @@ private suspend fun scrollToCharOffset(
     val clampedOffset = charOffset.coerceIn(0, layout.layoutInput.text.length)
     val lineTop = layout.getLineTop(layout.getLineForOffset(clampedOffset))
     val scrollableRange = (item.size - listState.layoutInfo.viewportSize.height).coerceAtLeast(0)
-    listState.scrollToItem(0, lineTop.toInt().coerceIn(0, scrollableRange))
+    listState.animateScrollToItem(0, lineTop.toInt().coerceIn(0, scrollableRange))
 }
 
 /**
@@ -182,10 +187,12 @@ fun findAllMatches(
 private fun highlightMatches(
     text: String,
     matches: List<IntRange>,
+    currentMatchIndex: Int,
 ): AnnotatedString =
     buildAnnotatedString {
         append(text)
-        matches.forEach { range ->
-            addStyle(SpanStyle(background = Color(HIGHLIGHT_COLOR), color = Color.Black), range.first, range.last + 1)
+        matches.forEachIndexed { index, range ->
+            val color = if (index == currentMatchIndex) CURRENT_MATCH_HIGHLIGHT_COLOR else HIGHLIGHT_COLOR
+            addStyle(SpanStyle(background = Color(color), color = Color.Black), range.first, range.last + 1)
         }
     }

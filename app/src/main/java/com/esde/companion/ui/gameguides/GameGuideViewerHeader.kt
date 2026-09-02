@@ -1,5 +1,7 @@
 package com.esde.companion.ui.gameguides
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
@@ -38,6 +41,9 @@ import com.esde.companion.domain.model.GameGuideDisplayPreferences
 private const val FONT_SCALE_STEP = 0.1f
 private const val MIN_FONT_SCALE = 0.6f
 private const val MAX_FONT_SCALE = 2.5f
+
+// Same small-element-fade duration as EditWidgetsOverlay.kt's options-button alpha.
+private const val MATCH_COUNTER_FADE_MILLIS = 150
 
 /** [totalPages] > 1 is what actually gates showing [PageNavRow] - a single-page guide
  * (every plain-text guide, or a one-chapter HTML one) always reports 1. */
@@ -257,9 +263,17 @@ private fun SearchBarRow(
             singleLine = true,
             placeholder = { Text("Find in guide") },
         )
+        // "0/0" isn't a meaningful count before the user has typed anything - fade it in only
+        // once there's a real query, same small-element-fade idiom as
+        // EditWidgetsOverlay.kt's options-button alpha (animateFloatAsState + tween(150)).
+        val matchCounterAlpha by
+            animateFloatAsState(
+                targetValue = if (query.isNotEmpty()) 1f else 0f,
+                animationSpec = tween(MATCH_COUNTER_FADE_MILLIS),
+            )
         Text(
             text = if (matchTotal > 0) "${currentMatchIndex + 1}/$matchTotal" else "0/0",
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp).alpha(matchCounterAlpha),
         )
         IconButton(onClick = onNext, enabled = matchTotal > 0) {
             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Next match")

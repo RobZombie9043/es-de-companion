@@ -165,12 +165,13 @@ private fun GuideLibraryList(
                     readingProgressFraction = state.readingProgressByGuideId[guide.id] ?: 0f,
                     onOpen = { actions.onOpenGuide(guide) },
                     onDelete = { actions.onDeleteGuide(guide) },
+                    modifier = Modifier.animateItem(),
                 )
             }
         }
         item { SectionHeader("Game Manual") }
         if (state.manualPdfPath != null) {
-            item { ManualRow(onOpen = actions.onOpenManual) }
+            item { ManualRow(pdfPath = state.manualPdfPath, onOpen = actions.onOpenManual) }
         } else {
             item { GuideSectionEmptyNote("No manual available for this game") }
         }
@@ -201,15 +202,18 @@ private fun GuideRow(
     readingProgressFraction: Float,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     // Surface's own onClick (not a plain Modifier.clickable) so the ripple is clipped to
     // GUIDE_ROW_SHAPE instead of the row's full rectangular bounds - the same shape/onClick
-    // pairing SettingsCategoryRow/ToggleSettingRow use.
+    // pairing SettingsCategoryRow/ToggleSettingRow use. [modifier] carries LazyItemScope's own
+    // Modifier.animateItem() from the caller, so a delete animates the row out instead of
+    // cutting it away instantly.
     Surface(
         onClick = onOpen,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = GUIDE_ROW_SHAPE,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
@@ -280,9 +284,14 @@ private fun DeleteGuideConfirmationDialog(
 
 /** The Game Manual section's row - same shape as [GuideRow] but with no delete affordance
  * (a manual isn't something this screen can remove) and disabled ([Surface.onClick] omitted)
- * when [onOpen] is null - see [GameGuideLibraryActions]'s kdoc for when that happens. */
+ * when [onOpen] is null - see [GameGuideLibraryActions]'s kdoc for when that happens. Shows
+ * [pdfPath]'s own filename rather than a generic "Game Manual" label, so a game with more than
+ * one manual variant (e.g. a region- or revision-specific PDF) is actually distinguishable. */
 @Composable
-private fun ManualRow(onOpen: (() -> Unit)?) {
+private fun ManualRow(
+    pdfPath: String,
+    onOpen: (() -> Unit)?,
+) {
     Surface(
         onClick = onOpen ?: {},
         enabled = onOpen != null,
@@ -295,7 +304,7 @@ private fun ManualRow(onOpen: (() -> Unit)?) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Game Manual",
+                text = pdfPath.substringAfterLast('/'),
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

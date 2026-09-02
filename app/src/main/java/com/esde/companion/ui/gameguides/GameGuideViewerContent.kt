@@ -98,6 +98,7 @@ data class GuideContentState(
     val htmlFindRequestId: Int,
     val scrollToAnchorId: String?,
     val scrollToCharOffsetRequest: Int?,
+    val currentMatchIndex: Int,
 )
 
 data class GuideContentActions(
@@ -129,6 +130,7 @@ internal fun buildGuideContentState(
         htmlFindRequestId = uiState.htmlFindRequestId,
         scrollToAnchorId = uiState.scrollToAnchorId,
         scrollToCharOffsetRequest = uiState.scrollToCharOffsetRequest,
+        currentMatchIndex = uiState.currentMatchIndex,
     )
 }
 
@@ -160,19 +162,22 @@ fun GuideContentArea(
 ) {
     val listState = rememberLazyListState()
     // A tap anywhere on the guide content (header/footer chrome excluded, since those are
-    // siblings outside this Box) toggles chromeVisible. Works for the plain-text branch via
-    // this ordinary Compose gesture detector - detectTapGestures only claims a tap that isn't
-    // also a drag, so LazyColumn's own scroll gesture is unaffected. The embedded WebView in
-    // the HTML branch fully owns its own native touch dispatch and would never let a tap
-    // reach this Compose-level detector, so that branch instead wires the identical
-    // [GuideContentActions.onToggleChrome] callback straight into a native
-    // GestureDetector.onSingleTapConfirmed on the WebView itself - see
-    // [HtmlViewerCallbacks.onTap].
-    val tapModifier =
-        modifier.fillMaxSize().pointerInput(Unit) {
-            detectTapGestures(onTap = { actions.onToggleChrome() })
-        }
-    Box(modifier = tapModifier) {
+    // siblings outside this Box) toggles chromeVisible. The plain-text branch gets this
+    // ordinary Compose gesture detector - detectTapGestures only claims a tap that isn't also
+    // a drag, so LazyColumn's own scroll gesture is unaffected. The HTML branch deliberately
+    // does NOT also get this modifier: an embedded WebView owns its own native touch dispatch,
+    // so that branch instead wires the identical [GuideContentActions.onToggleChrome] callback
+    // into a JS `document.body` click listener baked into the loaded document itself (see
+    // [HtmlViewerCallbacks.onTap] and GuideHtmlDocumentBuilder's TAP_TOGGLE_SCRIPT) rather than
+    // a second, Android-level touch detector here - applying both was tried first, on the
+    // assumption a WebView-consumed tap would never also reach this ancestor pointerInput, but
+    // Compose's AndroidView touch interop doesn't actually guarantee that: confirmed on-device
+    // as the chrome toggle sometimes doing nothing at all (both handlers firing for the same
+    // physical tap, netting an even number of toggles). A follow-up attempt keeping only a
+    // native `GestureDetector` on the WebView itself (no Compose-level detector at all) was
+    // *also* confirmed intermittently unreliable on its own - see GameGuideHtmlViewer's
+    // buildGuideWebView kdoc for why a JS click listener replaced it instead.
+    Box(modifier = modifier.fillMaxSize()) {
         if (derived.isHtml) {
             val htmlConfig =
                 HtmlViewerConfig(
@@ -200,6 +205,7 @@ fun GuideContentArea(
                 PlainTextViewerConfig(
                     text = derived.displayedText,
                     matches = derived.plainTextMatches,
+                    currentMatchIndex = state.currentMatchIndex,
                     displayPreferences = state.displayPreferences,
                 )
             val scrollControl =
@@ -209,11 +215,17 @@ fun GuideContentArea(
                     scrollToCharOffsetRequest = state.scrollToCharOffsetRequest,
                     onScrollToCharOffsetHandled = actions.onScrollToCharOffsetHandled,
                 )
-            PlainTextGuideContent(
-                config = plainTextConfig,
-                scroll = scrollControl,
-                onScrollFractionChanged = actions.onScrollFractionChanged,
-            )
+            val plainTextTapModifier =
+                Modifier.fillMaxSize().pointerInput(Unit) {
+                    detectTapGestures(onTap = { actions.onToggleChrome() })
+                }
+            Box(modifier = plainTextTapModifier) {
+                PlainTextGuideContent(
+                    config = plainTextConfig,
+                    scroll = scrollControl,
+                    onScrollFractionChanged = actions.onScrollFractionChanged,
+                )
+            }
         }
     }
 }
