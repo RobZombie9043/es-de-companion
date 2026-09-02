@@ -18,9 +18,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
+import com.esde.companion.ui.main.CrossfadeAsyncImage
 
 /**
  * The manual correction picker - opened from [RetroAchievementsScreen]'s top bar kebab
@@ -72,7 +73,12 @@ private fun CandidateRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        AsyncImage(model = candidate.iconUrl, contentDescription = null, modifier = Modifier.size(CANDIDATE_ICON_SIZE))
+        CrossfadeAsyncImage(
+            model = candidate.iconUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(CANDIDATE_ICON_SIZE),
+        )
         Text(text = candidate.title, style = MaterialTheme.typography.bodyMedium)
     }
 }

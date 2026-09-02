@@ -2,7 +2,10 @@ package com.esde.companion.ui.pdf
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.AnimationVector2D
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,7 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,12 +52,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import com.esde.companion.ui.PinchZoomBounds
+import com.esde.companion.ui.detectPinchZoomWithSnapBack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private const val MIN_SCALE = 1f
 private const val MAX_SCALE = 4f
+
+// How far past MIN_SCALE/MAX_SCALE a live pinch may stretch before the release-time spring
+// pulls it back - see detectPinchZoomWithSnapBack's PinchZoomBounds kdoc.
+private const val SCALE_OVERSCROLL = 0.5f
 private const val SWIPE_THRESHOLD_PX = 120f
 private const val CONTROLS_AUTO_HIDE_MS = 4_000L
 
@@ -161,8 +170,8 @@ fun PdfPageViewer(
 /** [scale]/[offset]/[scope] bundled into one, keeping [PdfPageImage] under detekt's
  * LongParameterList threshold. */
 private data class PdfPageZoomState(
-    val scale: Animatable<Float, *>,
-    val offset: Animatable<Offset, *>,
+    val scale: Animatable<Float, AnimationVector1D>,
+    val offset: Animatable<Offset, AnimationVector2D>,
     val scope: CoroutineScope,
 )
 
@@ -178,7 +187,6 @@ private fun PdfPageImage(
 ) {
     val (scale, offset, scope) = zoom
     val hapticFeedback = LocalHapticFeedback.current
-    val bitmap = state.currentBitmap ?: return
     var dragTotal = 0f
     val pageDescription = "${state.contentDescriptionLabel}, page ${state.currentPage + 1} of ${state.pageCount}"
     val imageModifier =
@@ -190,14 +198,13 @@ private fun PdfPageImage(
                 translationX = offset.value.x
                 translationY = offset.value.y
             }
+            // Custom gesture loop (not detectTransformGestures), shared with
+            // GameGuideImageViewerScreen.kt - see detectPinchZoomWithSnapBack's own kdoc for
+            // why: a release-time spring bounce back into [MIN_SCALE, MAX_SCALE] needs a
+            // gesture-end hook detectTransformGestures's callback doesn't provide.
             .pointerInput(state.currentPage) {
-                detectTransformGestures { _, pan, zoomDelta, _ ->
-                    scope.launch {
-                        val newScale = (scale.value * zoomDelta).coerceIn(MIN_SCALE, MAX_SCALE)
-                        scale.snapTo(newScale)
-                        offset.snapTo(if (newScale > MIN_SCALE) offset.value + pan else Offset.Zero)
-                    }
-                }
+                val bounds = PinchZoomBounds(minScale = MIN_SCALE, maxScale = MAX_SCALE, overscroll = SCALE_OVERSCROLL)
+                detectPinchZoomWithSnapBack(scale, offset, scope, bounds)
             }
             .pointerInput(state.currentPage, scale.value) {
                 // Swipe-to-turn-page only while unzoomed - otherwise a pinched-in
@@ -227,12 +234,28 @@ private fun PdfPageImage(
                     },
                 )
             }
-    Image(
-        bitmap = bitmap,
-        contentDescription = pageDescription,
-        contentScale = ContentScale.Fit,
-        modifier = imageModifier,
-    )
+    // Gesture-handling modifiers (pinch/pan/swipe/tap) live on this one stable Box, not inside
+    // Crossfade's own content lambda below - Crossfade composes both the outgoing and incoming
+    // layers simultaneously during a transition, so gesture detectors placed inside it would be
+    // briefly duplicated (two live pointerInput instances racing for the same touch) rather than
+    // living on a single stable node.
+    Box(modifier = imageModifier, contentAlignment = Alignment.Center) {
+        val bitmap = state.currentBitmap
+        if (bitmap == null) {
+            // Previously this whole composable rendered nothing at all (a plain early return)
+            // until the first page bitmap arrived - a blank background with zero feedback.
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
+        } else {
+            Crossfade(targetState = bitmap, label = "pdfPage") { currentBitmap ->
+                Image(
+                    bitmap = currentBitmap,
+                    contentDescription = pageDescription,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+    }
 }
 
 /** The tap-to-reveal page-counter/exit controls - pulled out of [PdfPageViewer] for the same

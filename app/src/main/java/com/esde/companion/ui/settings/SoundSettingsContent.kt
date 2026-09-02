@@ -60,29 +60,31 @@ internal fun SoundSettingsContent(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         MusicEnabledSetting(enabled = musicEnabled, onEnabledChanged = onMusicEnabledChanged)
-        if (musicEnabled) {
-            ToggleSettingRow(
-                icon = Icons.Filled.Devices,
-                title = "Play while browsing systems",
-                description = null,
-                enabled = musicPlayWhileBrowsingSystems,
-                onEnabledChanged = onMusicPlayWhileBrowsingSystemsChanged,
-            )
-            ToggleSettingRow(
-                icon = Icons.Filled.SportsEsports,
-                title = "Play while browsing games",
-                description = null,
-                enabled = musicPlayWhileBrowsingGames,
-                onEnabledChanged = onMusicPlayWhileBrowsingGamesChanged,
-            )
-            ToggleSettingRow(
-                icon = Icons.Filled.Nightlight,
-                title = "Play during screensaver",
-                description = null,
-                enabled = musicPlayDuringScreensaver,
-                onEnabledChanged = onMusicPlayDuringScreensaverChanged,
-            )
-            MusicDuckingModeSetting(selected = musicDuckingMode, onSelected = onMusicDuckingModeChanged)
+        SettingsRowVisibility(visible = musicEnabled) {
+            Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                ToggleSettingRow(
+                    icon = Icons.Filled.Devices,
+                    title = "Play while browsing systems",
+                    description = null,
+                    enabled = musicPlayWhileBrowsingSystems,
+                    onEnabledChanged = onMusicPlayWhileBrowsingSystemsChanged,
+                )
+                ToggleSettingRow(
+                    icon = Icons.Filled.SportsEsports,
+                    title = "Play while browsing games",
+                    description = null,
+                    enabled = musicPlayWhileBrowsingGames,
+                    onEnabledChanged = onMusicPlayWhileBrowsingGamesChanged,
+                )
+                ToggleSettingRow(
+                    icon = Icons.Filled.Nightlight,
+                    title = "Play during screensaver",
+                    description = null,
+                    enabled = musicPlayDuringScreensaver,
+                    onEnabledChanged = onMusicPlayDuringScreensaverChanged,
+                )
+                MusicDuckingModeSetting(selected = musicDuckingMode, onSelected = onMusicDuckingModeChanged)
+            }
         }
     }
 }

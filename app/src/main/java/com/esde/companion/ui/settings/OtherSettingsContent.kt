@@ -1,5 +1,6 @@
 package com.esde.companion.ui.settings
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -89,10 +90,26 @@ internal fun CheckForUpdatesRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsLabel(icon = Icons.Filled.SystemUpdate, text = "Check for Updates")
-            when {
-                isChecking -> CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                checkResult != null -> Text(text = checkResult.statusText(), style = MaterialTheme.typography.bodySmall)
-            }
+            CheckForUpdatesStatus(checkResult = checkResult, isChecking = isChecking)
+        }
+    }
+}
+
+/**
+ * A standalone composable (not inlined into [Row]'s own content lambda) so its `AnimatedContent`
+ * call has no ambient `RowScope` receiver in lexical scope - the same overload-ambiguity compile
+ * error already hit and fixed this way elsewhere in this app (see `GameGuidesBrowserScreen.kt`'s
+ * `DownloadButton`).
+ */
+@Composable
+private fun CheckForUpdatesStatus(
+    checkResult: UpdateCheckResult?,
+    isChecking: Boolean,
+) {
+    AnimatedContent(targetState = isChecking to checkResult, label = "checkForUpdatesStatus") { (checking, result) ->
+        when {
+            checking -> CircularProgressIndicator(modifier = Modifier.size(20.dp))
+            result != null -> Text(text = result.statusText(), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

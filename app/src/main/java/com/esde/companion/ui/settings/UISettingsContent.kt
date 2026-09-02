@@ -218,22 +218,25 @@ private fun GameLaunchOverrideSetting(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             GameLaunchOverrideHeader(enabled = state.enabled, onEnabledChanged = actions.onEnabledChanged)
-            if (!state.enabled) return@Column
-            FabRowSurface(onClick = actions.onManageClick) {
-                Text(text = "Manage Systems & Games", style = MaterialTheme.typography.bodyMedium)
-                Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
+            SettingsRowVisibility(visible = state.enabled) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    FabRowSurface(onClick = actions.onManageClick) {
+                        Text(text = "Manage Systems & Games", style = MaterialTheme.typography.bodyMedium)
+                        Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
+                    }
+                    LaunchDisplayTargetPicker(
+                        selected = state.launchDisplayTarget,
+                        onSelected = actions.onLaunchDisplayTargetChanged,
+                    )
+                    ToggleSettingRow(
+                        icon = Icons.Filled.Close,
+                        title = "Close App on Game End",
+                        description = "Force-stop the launched app once the game ends (Thor devices only)",
+                        enabled = state.closeAppOnGameEndEnabled,
+                        onEnabledChanged = actions.onCloseAppOnGameEndEnabledChanged,
+                    )
+                }
             }
-            LaunchDisplayTargetPicker(
-                selected = state.launchDisplayTarget,
-                onSelected = actions.onLaunchDisplayTargetChanged,
-            )
-            ToggleSettingRow(
-                icon = Icons.Filled.Close,
-                title = "Close App on Game End",
-                description = "Force-stop the launched app once the game ends (Thor devices only)",
-                enabled = state.closeAppOnGameEndEnabled,
-                onEnabledChanged = actions.onCloseAppOnGameEndEnabledChanged,
-            )
         }
     }
 }
@@ -435,7 +438,7 @@ private fun ScreenBehaviorPicker(
                     }
                 }
             }
-            if (selected == ScreenBehavior.Dim) {
+            SettingsRowVisibility(visible = selected == ScreenBehavior.Dim) {
                 DimAmountSlider(percent = dimAmount.percent, onPercentChanged = dimAmount.onPercentChanged)
             }
         }
@@ -618,14 +621,15 @@ private fun FabPositionRow(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(text = title, style = MaterialTheme.typography.labelLarge)
         FabTypeDropdown(options = options, selected = slot.type, onSelected = onTypeSelected)
-        if (slot.type == FabType.CustomApp) {
+        SettingsRowVisibility(visible = slot.type == FabType.CustomApp) {
             val selectedApp = installedApps.firstOrNull { it.packageName == slot.customAppPackageName }
             FabRowSurface(onClick = { showAppPicker = true }) {
                 Text(text = selectedApp?.label ?: "Select App", style = MaterialTheme.typography.bodyMedium)
                 Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = null)
             }
         }
-        if (slot.type == FabType.SystemStatus || slot.type == FabType.ClockAndSystemStatus) {
+        val isSystemStatusFab = slot.type == FabType.SystemStatus || slot.type == FabType.ClockAndSystemStatus
+        SettingsRowVisibility(visible = isSystemStatusFab) {
             BluetoothPermissionRow(onRequested = onBluetoothPermissionRequested)
         }
     }

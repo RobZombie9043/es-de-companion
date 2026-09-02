@@ -83,9 +83,11 @@ internal fun AppDrawerSettingsContent(
             enabled = dockEnabled,
             onEnabledChanged = onDockEnabledChanged,
         )
-        if (dockEnabled) {
-            DockMaxAppsSetting(maxApps = dockMaxApps, onMaxAppsChanged = onDockMaxAppsChanged)
-            DockSizeSetting(size = dockSize, onSizeChanged = onDockSizeChanged)
+        SettingsRowVisibility(visible = dockEnabled) {
+            Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                DockMaxAppsSetting(maxApps = dockMaxApps, onMaxAppsChanged = onDockMaxAppsChanged)
+                DockSizeSetting(size = dockSize, onSizeChanged = onDockSizeChanged)
+            }
         }
     }
 }

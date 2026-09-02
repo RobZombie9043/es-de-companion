@@ -1280,13 +1280,14 @@ private fun BoxScope.GameManualFabContent(
     overlayOpacityPercent: Int,
     onClick: () -> Unit,
 ) {
-    if (!visible) return
-    CornerFab(
-        onClick = onClick,
-        opacityPercent = overlayOpacityPercent,
-        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
-    ) {
-        Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+    FabAnimatedVisibility(visible = visible, modifier = Modifier.align(position.toAlignment())) {
+        CornerFab(
+            onClick = onClick,
+            opacityPercent = overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+        }
     }
 }
 
@@ -1306,13 +1307,14 @@ private data class GameGuidesFabContext(
  */
 @Composable
 private fun BoxScope.GameGuidesFabContent(context: GameGuidesFabContext) {
-    if (!context.visible) return
-    CornerFab(
-        onClick = context.onClick,
-        opacityPercent = context.overlayOpacityPercent,
-        modifier = Modifier.align(context.position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
-    ) {
-        Icon(imageVector = Icons.Filled.LibraryBooks, contentDescription = "Game Guides")
+    FabAnimatedVisibility(visible = context.visible, modifier = Modifier.align(context.position.toAlignment())) {
+        CornerFab(
+            onClick = context.onClick,
+            opacityPercent = context.overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            Icon(imageVector = Icons.Filled.LibraryBooks, contentDescription = "Game Guides")
+        }
     }
 }
 
@@ -1510,13 +1512,14 @@ private fun BoxScope.RetroAchievementsFabContent(
     overlayOpacityPercent: Int,
     onClick: () -> Unit,
 ) {
-    if (!visible) return
-    CornerFab(
-        onClick = onClick,
-        opacityPercent = overlayOpacityPercent,
-        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
-    ) {
-        Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = "RetroAchievements")
+    FabAnimatedVisibility(visible = visible, modifier = Modifier.align(position.toAlignment())) {
+        CornerFab(
+            onClick = onClick,
+            opacityPercent = overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = "RetroAchievements")
+        }
     }
 }
 
@@ -1549,37 +1552,46 @@ private fun BoxScope.CustomAppFabContent(
         value = AppIconLoader.loadIcon(context, packageName)
     }
     val isOtherScreenPreferred = packageName in otherScreenLaunchApps
-    CornerFab(
-        onClick = {
-            val displayId = if (isOtherScreenPreferred) SecondaryDisplayResolver.secondaryDisplayId(context) else null
-            AppLauncher.launch(context, packageName, displayId = displayId)
-        },
-        onDoubleClick = {
-            if (isOtherScreenPreferred) {
-                onRecordLaunchLocation(packageName, LaunchLocation.ThisScreen)
-                AppLauncher.launch(context, packageName)
-            } else {
-                val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
-                if (secondaryDisplayId != null) {
-                    onRecordLaunchLocation(packageName, LaunchLocation.OtherScreen)
+    // Entrance fade only (not a full FabAnimatedVisibility(visible = ...) wrap like the
+    // simpler FABs above) - the early returns above depend on resolved app/icon data, not
+    // just a plain boolean, so keeping this composed through an exit transition risks it
+    // re-running with stale/null app data mid-animation. A smooth fade-in still replaces the
+    // previous instant snap for the common case (this FAB newly becoming relevant); exit
+    // stays an instant disappearance, same as before.
+    FabAnimatedVisibility(visible = true, modifier = Modifier.align(position.toAlignment())) {
+        CornerFab(
+            onClick = {
+                val displayId =
+                    if (isOtherScreenPreferred) SecondaryDisplayResolver.secondaryDisplayId(context) else null
+                AppLauncher.launch(context, packageName, displayId = displayId)
+            },
+            onDoubleClick = {
+                if (isOtherScreenPreferred) {
+                    onRecordLaunchLocation(packageName, LaunchLocation.ThisScreen)
+                    AppLauncher.launch(context, packageName)
+                } else {
+                    val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
+                    if (secondaryDisplayId != null) {
+                        onRecordLaunchLocation(packageName, LaunchLocation.OtherScreen)
+                    }
+                    AppLauncher.launch(context, packageName, displayId = secondaryDisplayId)
                 }
-                AppLauncher.launch(context, packageName, displayId = secondaryDisplayId)
-            }
-        },
-        opacityPercent = overlayOpacityPercent,
-        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
-    ) {
-        // Same indicator dot (size/color/placement) as AppDock's FilledDockSlot, so an
-        // app's other-screen preference reads identically wherever it's shown.
-        Box(contentAlignment = Alignment.Center) {
-            AsyncImage(model = icon, contentDescription = app.label, modifier = Modifier.size(CUSTOM_APP_ICON_SIZE))
-            if (isOtherScreenPreferred) {
-                val dotModifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(10.dp)
-                        .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
-                Box(modifier = dotModifier)
+            },
+            opacityPercent = overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            // Same indicator dot (size/color/placement) as AppDock's FilledDockSlot, so an
+            // app's other-screen preference reads identically wherever it's shown.
+            Box(contentAlignment = Alignment.Center) {
+                AsyncImage(model = icon, contentDescription = app.label, modifier = Modifier.size(CUSTOM_APP_ICON_SIZE))
+                if (isOtherScreenPreferred) {
+                    val dotModifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(10.dp)
+                            .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+                    Box(modifier = dotModifier)
+                }
             }
         }
     }

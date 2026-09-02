@@ -1,5 +1,6 @@
 package com.esde.companion.ui.widgets
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -10,7 +11,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -24,6 +27,7 @@ private const val PAUSE_AT_BOTTOM_MS = 7_000L
 private const val PIXELS_PER_SECOND = 35f
 private const val MIN_SCROLL_DURATION_MS = 600
 private const val MILLIS_PER_SECOND = 1000
+private const val TEXT_FADE_IN_MS = 250
 
 /**
  * Renders [text] wrapped to the available width. If the wrapped content is taller than
@@ -54,6 +58,7 @@ fun ScrollingText(
     userScrollEnabled: Boolean = true,
 ) {
     val scrollState = rememberScrollState()
+    val alpha = remember { Animatable(1f) }
 
     Box(modifier = modifier.clipToBounds()) {
         Text(
@@ -64,9 +69,21 @@ fun ScrollingText(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .alpha(alpha.value)
                     .verticalScroll(scrollState, enabled = userScrollEnabled)
                     .padding(TEXT_PADDING),
         )
+    }
+
+    // Fades the new text in rather than the previous hard cut on a game/system change. Only
+    // one direction (fade in, not a true crossfade) - the old content is already gone by the
+    // time recomposition delivers the new `text`, and deliberately not duplicated via
+    // Crossfade to fake a two-layer transition: two Text instances briefly sharing the same
+    // scrollState would fight over its maxValue/position based on their own (likely
+    // different) content heights.
+    LaunchedEffect(text) {
+        alpha.snapTo(0f)
+        alpha.animateTo(1f, animationSpec = tween(TEXT_FADE_IN_MS))
     }
 
     LaunchedEffect(text, scrollState.maxValue) {

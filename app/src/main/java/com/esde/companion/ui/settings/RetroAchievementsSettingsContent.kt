@@ -1,5 +1,6 @@
 package com.esde.companion.ui.settings
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -163,26 +164,44 @@ private fun RetroAchievementsCredentialsForm(
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
-            if (connectStatus.connectError != null) {
+            SettingsRowVisibility(visible = connectStatus.connectError != null) {
                 Text(
-                    text = connectStatus.connectError,
+                    text = connectStatus.connectError.orEmpty(),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Button(
-                onClick = connectStatus.onConnectClicked,
+            ConnectButton(
+                isConnecting = connectStatus.isConnecting,
                 enabled = !connectStatus.isConnecting && input.username.isNotBlank() && input.webApiKey.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (connectStatus.isConnecting) {
-                    val spinnerColor = MaterialTheme.colorScheme.onPrimary
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = spinnerColor)
-                } else {
-                    Text("Connect")
-                }
-            }
+                onClick = connectStatus.onConnectClicked,
+            )
             GetWebApiKeyRow()
+        }
+    }
+}
+
+/**
+ * A standalone composable (not inlined into [Button]'s own content lambda) so its
+ * `AnimatedContent` call has no ambient `RowScope` receiver in lexical scope - `Button`'s
+ * content lambda is itself `@Composable RowScope.() -> Unit`, so calling `AnimatedContent`
+ * directly inside it would be ambiguous between the plain top-level overload and
+ * `RowScope.AnimatedContent`, the same compile error already hit and fixed this way elsewhere
+ * in this app (see `GameGuidesBrowserScreen.kt`'s `DownloadButton`).
+ */
+@Composable
+private fun ConnectButton(
+    isConnecting: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        AnimatedContent(targetState = isConnecting, label = "connectButtonContent") { connecting ->
+            if (connecting) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                Text("Connect")
+            }
         }
     }
 }

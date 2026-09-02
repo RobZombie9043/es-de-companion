@@ -2,17 +2,19 @@ package com.esde.companion.ui.update
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -106,6 +109,8 @@ fun UpdateAvailableDialog(
     )
 }
 
+private const val DOWNLOAD_PERCENT_MAX = 100
+
 @Composable
 private fun DownloadAndInstallButton(
     downloadState: DownloadState?,
@@ -114,18 +119,35 @@ private fun DownloadAndInstallButton(
 ) {
     val isDownloading = downloadState is DownloadState.Progress
     Button(onClick = onClick, enabled = !isDownloading) {
-        if (isDownloading) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Downloading... ${(downloadState as DownloadState.Progress).percent}%")
-        } else {
-            Text(
-                when {
-                    !permissionGranted -> "Grant permission"
-                    downloadState is DownloadState.Failed -> "Retry"
-                    else -> "Download & Install"
-                },
-            )
+        // AnimatedContent (not a plain if/else) - the label<->progress swap otherwise cuts
+        // abruptly, same reasoning as GameGuidesBrowserScreen's DownloadProgressDialog.
+        AnimatedContent(targetState = isDownloading, label = "downloadButtonContent") { downloading ->
+            if (downloading) {
+                val percent = (downloadState as DownloadState.Progress).percent
+                val fraction = percent.toFloat() / DOWNLOAD_PERCENT_MAX
+                // LinearProgressIndicator + animateFloatAsState - the same determinate-progress
+                // pattern GameGuidesBrowserScreen's DownloadProgressDialog uses, since real
+                // byte-progress data already reaches this button (unlike an indeterminate spinner
+                // that used to sit here).
+                val animatedFraction by animateFloatAsState(targetValue = fraction, label = "updateDownloadProgress")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LinearProgressIndicator(
+                        progress = { animatedFraction },
+                        modifier = Modifier.width(64.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("$percent%")
+                }
+            } else {
+                Text(
+                    when {
+                        !permissionGranted -> "Grant permission"
+                        downloadState is DownloadState.Failed -> "Retry"
+                        else -> "Download & Install"
+                    },
+                )
+            }
         }
     }
 }

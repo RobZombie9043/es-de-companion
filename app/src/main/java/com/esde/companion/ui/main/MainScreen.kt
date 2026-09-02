@@ -1,9 +1,13 @@
 package com.esde.companion.ui.main
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -409,33 +413,41 @@ private fun MainScreenContent(
             // Settings opens the same popup the long-press gesture does, not a separate
             // full-screen Settings destination - there is no such destination anymore.
             FabPosition.entries.forEach { position ->
-                when (fabAssignments[position].type) {
-                    FabType.Settings ->
-                        CornerFab(
-                            onClick = { setLongPressMenuOpen(true) },
-                            opacityPercent = overlayOpacityPercent,
-                            modifier =
-                                Modifier
-                                    .align(position.toAlignment())
-                                    .padding(CORNER_BUTTON_EDGE_PADDING),
-                        ) {
-                            Icon(imageVector = Icons.Filled.Menu, contentDescription = "Main Menu")
-                        }
-                    FabType.AppDrawer ->
-                        CornerFab(
-                            onClick = { openDrawer() },
-                            opacityPercent = overlayOpacityPercent,
-                            modifier =
-                                Modifier
-                                    .align(position.toAlignment())
-                                    .padding(CORNER_BUTTON_EDGE_PADDING),
-                        ) {
-                            Icon(imageVector = Icons.Filled.Apps, contentDescription = "App Drawer")
-                        }
-                    FabType.Music, FabType.GameManual, FabType.CustomApp, FabType.RetroAchievements,
-                    FabType.Clock, FabType.SystemStatus, FabType.ClockAndSystemStatus, FabType.GameGuides,
-                    FabType.None,
-                    -> {}
+                // Modifier.align() goes on AnimatedContent's own modifier, not on CornerFab
+                // inside its content lambda - a Box only reads BoxScope.align() from its direct
+                // child, which here is AnimatedContent itself (see this project's CLAUDE.md
+                // Known Gotchas). A plain crossfade (not AnimatedContent's default
+                // fade+expand/shrink) since the FAB container itself is always the same fixed
+                // size regardless of FabType - only the icon inside it changes when a
+                // reassignment happens, previously an instant snap.
+                AnimatedContent(
+                    targetState = fabAssignments[position].type,
+                    modifier = Modifier.align(position.toAlignment()),
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "cornerFab",
+                ) { fabType ->
+                    when (fabType) {
+                        FabType.Settings ->
+                            CornerFab(
+                                onClick = { setLongPressMenuOpen(true) },
+                                opacityPercent = overlayOpacityPercent,
+                                modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+                            ) {
+                                Icon(imageVector = Icons.Filled.Menu, contentDescription = "Main Menu")
+                            }
+                        FabType.AppDrawer ->
+                            CornerFab(
+                                onClick = { openDrawer() },
+                                opacityPercent = overlayOpacityPercent,
+                                modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+                            ) {
+                                Icon(imageVector = Icons.Filled.Apps, contentDescription = "App Drawer")
+                            }
+                        FabType.Music, FabType.GameManual, FabType.CustomApp, FabType.RetroAchievements,
+                        FabType.Clock, FabType.SystemStatus, FabType.ClockAndSystemStatus, FabType.GameGuides,
+                        FabType.None,
+                        -> {}
+                    }
                 }
             }
 

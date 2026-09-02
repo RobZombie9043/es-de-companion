@@ -197,7 +197,7 @@ private fun LidWakeGuardSetting(state: LidWakeGuardSettingsState) {
             }
             val statusText = calibrationStatusText(state.calibration, autoCalibrating)
             Text(text = statusText, style = MaterialTheme.typography.bodySmall)
-            if (!state.accessibilityGranted) {
+            SettingsRowVisibility(visible = !state.accessibilityGranted) {
                 AccessibilityGrantRow(
                     text = "Accessibility service not granted - required to lock the screen",
                     onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
@@ -287,13 +287,13 @@ private fun AutoFpsSetting(state: AutoFpsSettingsState) {
                     },
                 )
             }
-            if (!state.accessibilityGranted) {
+            SettingsRowVisibility(visible = !state.accessibilityGranted) {
                 AccessibilityGrantRow(
                     text = "Accessibility service not granted - required to detect the foreground app",
                     onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
                 )
             }
-            if (!state.privilegedServiceAvailable) {
+            SettingsRowVisibility(visible = !state.privilegedServiceAvailable) {
                 Text(
                     text = "Privileged settings service not found on this firmware - Auto FPS Mode is unavailable",
                     style = MaterialTheme.typography.bodySmall,
@@ -338,13 +338,13 @@ private fun TaskKillerSetting(state: TaskKillerSettingsState) {
                     },
                 )
             }
-            if (!state.accessibilityGranted) {
+            SettingsRowVisibility(visible = !state.accessibilityGranted) {
                 AccessibilityGrantRow(
                     text = "Accessibility service not granted - required to detect the BACK button",
                     onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
                 )
             }
-            if (!state.privilegedServiceAvailable) {
+            SettingsRowVisibility(visible = !state.privilegedServiceAvailable) {
                 Text(
                     text = "Privileged settings service not found on this firmware - Task Killer is unavailable",
                     style = MaterialTheme.typography.bodySmall,
@@ -444,18 +444,25 @@ private fun VolumeSyncSetting(state: VolumeSyncSettingsState) {
                     }
                 },
             )
-            if (!state.accessibilityGranted) {
+            SettingsRowVisibility(visible = !state.accessibilityGranted) {
                 AccessibilityGrantRow(
                     text = "Accessibility service not granted - required to intercept the volume buttons",
                     onClick = { context.startActivity(ThorAccessibilityPermission.requestIntent(context)) },
                 )
             }
-            if (!state.privilegedServiceAvailable) {
+            // Two separate SettingsRowVisibility calls (not one dynamic-text row) rather than
+            // combining the mutually-exclusive condition into a single nullable message - keeps
+            // each row's content statically fixed, so there's no stale/blank text risk during
+            // AnimatedVisibility's exit transition (which keeps rendering the last composed
+            // content while fading out).
+            SettingsRowVisibility(visible = !state.privilegedServiceAvailable) {
                 Text(
                     text = "Privileged settings service not found on this firmware - Volume Control is unavailable",
                     style = MaterialTheme.typography.bodySmall,
                 )
-            } else if (!state.secondarySettingPresent) {
+            }
+            val secondarySettingMissing = state.privilegedServiceAvailable && !state.secondarySettingPresent
+            SettingsRowVisibility(visible = secondarySettingMissing) {
                 Text(
                     text = "This firmware doesn't expose a bottom-screen volume setting",
                     style = MaterialTheme.typography.bodySmall,

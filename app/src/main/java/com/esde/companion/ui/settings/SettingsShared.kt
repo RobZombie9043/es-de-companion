@@ -1,5 +1,8 @@
 package com.esde.companion.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,6 +52,25 @@ internal val SettingsItemShape = RoundedCornerShape(16.dp)
 
 /** Shared opacity for every settings item's background - fully opaque, not translucent. */
 internal const val SETTINGS_PANEL_ALPHA = 1f
+
+/**
+ * Fades a conditional settings row in/out instead of the instant pop a plain
+ * `if (condition) { Row(...) }` gives. A standalone composable (not inlined at each Column/Row-
+ * receiver call site) so its `AnimatedVisibility` call has no ambient scope receiver in lexical
+ * scope - avoids the overload-ambiguity compile error already hit for `ColumnScope`/`RowScope`/
+ * `BoxScope` cases elsewhere in this app (see `GameGuidesBrowserScreen.kt`'s `DownloadButton`,
+ * `SystemStatusIcons.kt`'s `StatusIcon`, `CornerButtonMetrics.kt`'s `FabAnimatedVisibility`).
+ */
+@Composable
+internal fun SettingsRowVisibility(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    AnimatedVisibility(visible = visible, modifier = modifier, enter = fadeIn(), exit = fadeOut()) {
+        content()
+    }
+}
 
 /** Corner radius of the accent-colored square drawn behind each [SettingsLabel] icon. */
 private val SettingsLabelIconShape = RoundedCornerShape(8.dp)
