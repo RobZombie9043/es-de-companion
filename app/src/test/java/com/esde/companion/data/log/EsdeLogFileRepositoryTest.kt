@@ -255,7 +255,7 @@ class EsdeLogFileRepositoryTest {
         }
 
     @Test
-    fun `a non-directional button press clears a prior direction, reproducing the real log excerpt's b-triggered system-select`() =
+    fun `a non-directional button press clears a prior direction, per the b-triggered system-select log excerpt`() =
         runTest {
             val logFile = tempFolder.newFile("es_log.txt")
             logFile.writeText(

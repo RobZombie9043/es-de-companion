@@ -24,45 +24,6 @@
     <ID>EmptyFunctionBlock:SettingsViewModelTest.kt$SettingsViewModelTest.FakeAppDrawerSettingsRepository${}</ID>
     <ID>EmptyFunctionBlock:SettingsViewModelTest.kt$SettingsViewModelTest.FakeDockSettingsRepository${}</ID>
     <ID>EmptyFunctionBlock:SettingsViewModelTest.kt$SettingsViewModelTest.FakeOnboardingRepository${}</ID>
-    <ID>Indentation:AnimatedLogoImage.kt$ </ID>
-    <ID>Indentation:AppDock.kt$ </ID>
-    <ID>Indentation:AppDrawer.kt$ </ID>
-    <ID>Indentation:AppDrawerHandle.kt$ </ID>
-    <ID>Indentation:AppDrawerSettingsContent.kt$ </ID>
-    <ID>Indentation:CornerButtonMetrics.kt$ </ID>
-    <ID>Indentation:CrossfadeAsyncImage.kt$ </ID>
-    <ID>Indentation:DefaultWidgetLayouts.kt$ </ID>
-    <ID>Indentation:EditWidgetsOverlay.kt$ </ID>
-    <ID>Indentation:EditWidgetsViewModel.kt$EditWidgetsViewModel$ </ID>
-    <ID>Indentation:FileEsdeInstallationRepository.kt$FileEsdeInstallationRepository$ </ID>
-    <ID>Indentation:FolderContentsPopup.kt$ </ID>
-    <ID>Indentation:GameManualScreen.kt$ </ID>
-    <ID>Indentation:LongPressSettingsMenu.kt$ </ID>
-    <ID>Indentation:MainActivity.kt$MainActivity$ </ID>
-    <ID>Indentation:MainScreen.kt$ </ID>
-    <ID>Indentation:ManageAppsScreen.kt$ </ID>
-    <ID>Indentation:ManageAppsViewModelTest.kt$ManageAppsViewModelTest$ </ID>
-    <ID>Indentation:MusicPlaybackCoordinatorTest.kt$MusicPlaybackCoordinatorTest$ </ID>
-    <ID>Indentation:OnboardingScreen.kt$ </ID>
-    <ID>Indentation:OtherSettingsContent.kt$ </ID>
-    <ID>Indentation:PanZoomImage.kt$ </ID>
-    <ID>Indentation:ScrollingText.kt$ </ID>
-    <ID>Indentation:SettingsShared.kt$ </ID>
-    <ID>Indentation:SettingsViewModelTest.kt$SettingsViewModelTest$ </ID>
-    <ID>Indentation:SetupSettingsContent.kt$ </ID>
-    <ID>Indentation:SoundSettingsContent.kt$ </ID>
-    <ID>Indentation:ThorSettingsContent.kt$ </ID>
-    <ID>Indentation:Type.kt$ </ID>
-    <ID>Indentation:UISettingsContent.kt$ </ID>
-    <ID>Indentation:VideoPlaybackSettingsContent.kt$ </ID>
-    <ID>Indentation:WidgetCanvas.kt$ </ID>
-    <ID>Indentation:WidgetColorConfig.kt$ </ID>
-    <ID>Indentation:WidgetContentResolverTest.kt$WidgetContentResolverTest$ </ID>
-    <ID>Indentation:WidgetResizeGeometry.kt$ </ID>
-    <ID>Indentation:WidgetTextConfigControls.kt$ </ID>
-    <ID>Indentation:WidgetTypeDialogs.kt$ </ID>
-    <ID>Indentation:WidgetsSettingsContent.kt$ </ID>
-    <ID>Indentation:WidgetsViewModel.kt$WidgetsViewModel$ </ID>
     <ID>LongMethod:AnimatedLogoImage.kt$@Composable fun AnimatedLogoImage( model: Any?, contentDescription: String?, contentScale: ContentScale, mode: LogoTransitionMode, direction: NavigationDirection? = null, glintEnabled: Boolean = false, modifier: Modifier = Modifier, durationMillis: Int = 500, )</ID>
     <ID>LongMethod:AppDock.kt$@Composable fun AppDock( viewModel: AppDockViewModel, onOpenAppDrawer: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppDock.kt$@Composable private fun DockItemMenu( expanded: Boolean, appLabel: String, isAppDrawerShortcut: Boolean, isOtherScreenPreferred: Boolean, isLeftmost: Boolean, isRightmost: Boolean, onDismiss: () -&gt; Unit, onLaunchThisScreen: () -&gt; Unit, onLaunchOtherScreen: () -&gt; Unit, onAppInfo: () -&gt; Unit, onMoveLeft: () -&gt; Unit, onMoveRight: () -&gt; Unit, onRemove: () -&gt; Unit, )</ID>
@@ -131,9 +92,6 @@
     <ID>LongParameterList:WidgetContentResolverTest.kt$WidgetContentResolverTest$( widgetType: WidgetType, systemLogoAssetPath: () -&gt; String? = { null }, customSystemLogoLookup: () -&gt; String? = { null }, customSystemImageLookup: () -&gt; String? = { null }, systemMediaLookup: (MediaType) -&gt; String? = { null }, gameMediaLookup: (MediaType) -&gt; String? = { null }, gameDescriptionLookup: () -&gt; String? = { null }, gameRatingLookup: () -&gt; Float? = { null }, fallbackBackgroundAssetPath: String? = "fallback.webp", systemNameLookup: () -&gt; String? = { null }, gameNameLookup: () -&gt; String? = { null }, videoLookup: () -&gt; String? = { null }, )</ID>
     <ID>LongParameterList:WidgetResizeGeometry.kt$( edge: ResizeEdge, widget: PlacedWidget, grid: GridDimensions, cellWidth: Dp, cellHeight: Dp, onResize: (widgetId: String, gridColumn: Int, gridRow: Int, columnSpan: Int, rowSpan: Int) -&gt; Unit, onDragStateChanged: (Boolean) -&gt; Unit, onDragEnd: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:WidgetsViewModel.kt$WidgetsViewModel$( observeConnectionState: ObserveConnectionStateUseCase, private val observeWidgetCanvas: ObserveWidgetCanvasUseCase, private val resolveGameMedia: ResolveGameMediaUseCase, private val resolveRandomSystemMedia: ResolveRandomSystemMediaUseCase, private val resolveGameDescription: ResolveGameDescriptionUseCase, private val resolveGameRating: ResolveGameRatingUseCase, private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase, private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase, private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase, )</ID>
-    <ID>LoopWithTooManyJumpStatements:GameListParser.kt$GameListParser$for</ID>
-    <ID>MaxLineLength:EsdeLogFileRepositoryTest.kt$EsdeLogFileRepositoryTest$fun</ID>
-    <ID>MaximumLineLength:EsdeLogFileRepositoryTest.kt$EsdeLogFileRepositoryTest$ </ID>
     <ID>NestedBlockDepth:EsdeLogFileRepository.kt$EsdeLogFileRepository$private fun findEventsSinceLastAnchor( file: File, directionTracker: NavigationDirectionTracker, ): List&lt;EsdeEvent&gt;</ID>
     <ID>ReturnCount:EsdeEventParser.kt$EsdeEventParser$fun parseLine(rawLine: String): EsdeEvent?</ID>
     <ID>ReturnCount:EsdeLogFileRepository.kt$EsdeLogFileRepository$private fun findEventsSinceLastAnchor( file: File, directionTracker: NavigationDirectionTracker, ): List&lt;EsdeEvent&gt;</ID>
