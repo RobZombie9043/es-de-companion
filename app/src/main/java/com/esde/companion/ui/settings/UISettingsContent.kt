@@ -72,7 +72,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.esde.companion.data.gameguides.gameGuidesEnabled
 import com.esde.companion.data.retroachievements.retroAchievementsEnabled
 import com.esde.companion.data.systemstatus.BluetoothConnectPermission
 import com.esde.companion.domain.model.FabAssignments
@@ -143,12 +142,12 @@ internal fun UISettingsContent(
             title = "Game Playing Screen Behavior",
             icon = Icons.Filled.SportsEsports,
             options =
-                listOfNotNull(
+                listOf(
                     ScreenBehavior.Nothing,
                     ScreenBehavior.Dim,
                     ScreenBehavior.Black,
                     ScreenBehavior.GameManual,
-                    ScreenBehavior.GameGuide.takeIf { gameGuidesEnabled() },
+                    ScreenBehavior.GameGuide,
                 ),
             selected = gamePlayingBehavior,
             onSelected = onGamePlayingBehaviorChanged,
@@ -328,8 +327,8 @@ private val GameLaunchDisplayTarget.label: String
 // Bottom corners never offer Music - it can only occupy one of the two top corners (see
 // FabAssignments.with) - so the picker itself simply never presents the option there
 // rather than needing runtime validation to reject an invalid selection. RetroAchievements
-// and GameGuides are filtered out entirely while their respective feature flags are false -
-// see retroAchievementsEnabled()/gameGuidesEnabled()'s kdocs.
+// is filtered out entirely while its own feature flag is false - see
+// retroAchievementsEnabled()'s kdoc.
 private val TOP_FAB_OPTIONS =
     listOf(
         FabType.None,
@@ -344,7 +343,6 @@ private val TOP_FAB_OPTIONS =
         FabType.SystemStatus,
         FabType.ClockAndSystemStatus,
     ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
-        .filter { it != FabType.GameGuides || gameGuidesEnabled() }
 private val BOTTOM_FAB_OPTIONS =
     listOf(
         FabType.None,
@@ -355,7 +353,6 @@ private val BOTTOM_FAB_OPTIONS =
         FabType.GameManual,
         FabType.RetroAchievements,
     ).filter { it != FabType.RetroAchievements || retroAchievementsEnabled() }
-        .filter { it != FabType.GameGuides || gameGuidesEnabled() }
 
 /**
  * Master background opacity for every translucent overlay surface - the App Drawer, the

@@ -749,7 +749,7 @@ class AppContainer(context: Context) {
     val getGameLeaderboardsUseCase = GetGameLeaderboardsUseCase(retroAchievementsRepository)
     val getLeaderboardEntriesUseCase = GetLeaderboardEntriesUseCase(retroAchievementsRepository)
 
-    // Game Guides FAB (debug-only for now - see GameGuidesFeatureFlag's kdoc).
+    // Game Guides FAB.
     // gameGuideLibraryRepository/gameGuideSettingsRepository are declared earlier, alongside
     // Backup & Restore's other repositories - see that section's own comment for why one is
     // excluded from it and the other isn't.
