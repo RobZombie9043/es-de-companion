@@ -4,8 +4,6 @@ package com.esde.companion.ui.gameguides
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.view.GestureDetector
-import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -14,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -129,7 +128,20 @@ fun HtmlGuideContent(
 ) {
     val context = LocalContext.current
     val mediaLoader = remember { GuideMediaLoader(context) }
-    val webView = remember { buildGuideWebView(context, callbacks, config.isDarkTheme, mediaLoader) }
+    // Read via this State, not the callbacks parameter directly, inside buildGuideWebView's own
+    // listeners below - that WebView is built exactly once (a keyless remember, since it's a
+    // single persistent instance for this composable's whole lifetime - see this file's own
+    // kdoc), so a closure capturing callbacks directly would freeze to whatever HtmlViewerCallbacks
+    // (and transitively whatever GuideViewerUiState) was current at that one build moment.
+    // Confirmed on-device as the actual cause of the guide search counter reporting "0/0" despite
+    // real matches being found and highlighted: GameGuideViewerScreen's own uiState instance gets
+    // recreated once early on (see rememberGuideViewerUiState's kdoc - the transient
+    // initialPageIndex 0 settling to the real resumed page), and this WebView's find-result
+    // listener kept writing into the abandoned pre-swap uiState forever after, while the header
+    // rendered from the new one - two different GuideViewerUiState identities, verified via
+    // System.identityHashCode in a live capture.
+    val latestCallbacks = rememberUpdatedState(callbacks)
+    val webView = remember { buildGuideWebView(context, latestCallbacks, config.isDarkTheme, mediaLoader) }
     var contentVisible by remember { mutableStateOf(false) }
     var loadedHtml by remember { mutableStateOf<String?>(null) }
 
@@ -147,7 +159,7 @@ fun HtmlGuideContent(
         val isFirstReveal = loadedHtml == null
         if (!isSamePage) contentVisible = false
         val liveFraction = if (isSamePage) evaluateNumber(webView, SCROLL_FRACTION_EXPRESSION) else null
-        loadPageIntoWebView(webView, mediaLoader, config, liveFraction)
+        loadPageIntoWebView(webView, mediaLoader, config, liveFraction, latestCallbacks)
         loadedHtml = config.html
         webView.revealOnFirstFrameLayer(isFirstReveal) { contentVisible = true }
     }
@@ -230,6 +242,7 @@ private suspend fun loadPageIntoWebView(
     mediaLoader: GuideMediaLoader,
     config: HtmlViewerConfig,
     liveFraction: Float?,
+    callbacks: State<HtmlViewerCallbacks>,
 ) {
     // Set before the new document loads (not left for the CSS background to establish once
     // rendered) so a theme change while a guide is already open doesn't itself produce the
@@ -241,7 +254,7 @@ private suspend fun loadPageIntoWebView(
     // plain sibling files once served back out through mediaLoader.
     mediaLoader.updateDirectory(config.mediaDirectoryPath)
     writeViewerDocument(config.mediaDirectoryPath, document)
-    loadAndAwaitFinished(webView, GUIDE_MEDIA_DOCUMENT_URL, mediaLoader)
+    loadAndAwaitFinished(webView, GUIDE_MEDIA_DOCUMENT_URL, mediaLoader, callbacks)
     awaitScrollableLayout(webView)
     val targetFraction = liveFraction ?: config.initialScrollFraction
     restoreScrollFraction(webView, targetFraction)
@@ -298,10 +311,10 @@ private fun WebView.revealOnFirstFrameLayer(
     if (isFirstReveal) post { setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null) }
 }
 
-@SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
+@SuppressLint("SetJavaScriptEnabled")
 private fun buildGuideWebView(
     context: Context,
-    callbacks: HtmlViewerCallbacks,
+    callbacks: State<HtmlViewerCallbacks>,
     isDarkTheme: Boolean,
     mediaLoader: GuideMediaLoader,
 ): WebView =
@@ -337,6 +350,12 @@ private fun buildGuideWebView(
         // frame, with nothing to flash past.
         setBackgroundColor(backgroundColorInt(isDarkTheme))
         settings.javaScriptEnabled = true
+        // Font size is already controlled by GameGuideDisplayPreferences.fontScale, so
+        // WebView's own pinch/double-tap-zoom gestures aren't an intentional feature here -
+        // disabling zoom support outright avoids a stray pinch/double-tap being misread as
+        // content interaction.
+        settings.setSupportZoom(false)
+        settings.builtInZoomControls = false
         webViewClient =
             object : WebViewClient() {
                 // Every navigation attempt is blocked (this never turns into a live browser -
@@ -349,7 +368,11 @@ private fun buildGuideWebView(
                     view: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
-                    request.url.fragment?.let(callbacks.onInternalAnchorTapped)
+                    if (request.url.toString() == TAP_TOGGLE_URL) {
+                        callbacks.value.onTap()
+                        return true
+                    }
+                    request.url.fragment?.let(callbacks.value.onInternalAnchorTapped)
                     return true
                 }
 
@@ -359,28 +382,18 @@ private fun buildGuideWebView(
                 ): WebResourceResponse? = mediaLoader.intercept(request)
             }
         setFindListener { activeMatchOrdinal, numberOfMatches, _ ->
-            callbacks.onFindResult(activeMatchOrdinal, numberOfMatches)
+            callbacks.value.onFindResult(activeMatchOrdinal, numberOfMatches)
         }
-        // A WebView fully owns its own native touch dispatch (needed for its own
-        // scrolling/zooming), so a Compose-level pointerInput sibling never sees a tap that
-        // lands on it - see GuideContentArea's own tap detector, which handles the plain-text
-        // branch instead. onSingleTapConfirmed (not onSingleTapUp) waits out the double-tap
-        // timeout first, so this doesn't fire once per tap of a genuine double-tap-to-zoom
-        // gesture.
-        val tapDetector =
-            GestureDetector(
-                context,
-                object : GestureDetector.SimpleOnGestureListener() {
-                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                        callbacks.onTap()
-                        return false
-                    }
-                },
-            )
-        setOnTouchListener { _, event ->
-            tapDetector.onTouchEvent(event)
-            false
-        }
+        // Chrome-toggle taps are handled by a JS `document.body` click listener baked into
+        // every loaded page (see GuideHtmlDocumentBuilder's TAP_TOGGLE_SCRIPT) navigating to
+        // TAP_TOGGLE_URL, caught above in shouldOverrideUrlLoading - not a native Android
+        // GestureDetector layered on top of this WebView's own touch handling. That was tried
+        // first and proved intermittently unreliable across two separate fix attempts (a raw
+        // MotionEvent-level detector racing the WebView's own internal touch/gesture
+        // recognition on the same event stream); see this function's git history for both.
+        // A JS `click` only fires once Chromium's own touch-to-gesture recognition has already
+        // ruled out a scroll/drag, so this reuses that same disambiguation instead of
+        // re-implementing it at the Android layer.
     }
 
 /**
@@ -413,16 +426,32 @@ private suspend fun loadAndAwaitFinished(
     webView: WebView,
     url: String,
     mediaLoader: GuideMediaLoader,
+    callbacks: State<HtmlViewerCallbacks>,
 ) {
     val originalClient = webView.webViewClient
     try {
         suspendCancellableCoroutine { continuation ->
             webView.webViewClient =
                 object : WebViewClient() {
+                    // Every other navigation is still unconditionally blocked (this temporary
+                    // client's whole job while a page is mid-load), but TAP_TOGGLE_URL must be
+                    // recognized here too, the same way the permanent client does once loaded -
+                    // otherwise a chrome-toggle tap made while a large/slow page is still
+                    // loading gets silently swallowed by this client's own blanket "return
+                    // true" for the entire duration of that load, no matter how early the tap-
+                    // toggle script itself attaches in the document. Confirmed on-device as the
+                    // actual cause of "tap to toggle doesn't work while the page is still
+                    // loading" surviving an earlier fix that only moved the script earlier in
+                    // the document - the script attaching earlier never mattered, since this
+                    // client (not the permanent one with the real TAP_TOGGLE_URL handling) is
+                    // what's installed for the entire load regardless.
                     override fun shouldOverrideUrlLoading(
                         view: WebView,
                         request: WebResourceRequest,
-                    ): Boolean = true
+                    ): Boolean {
+                        if (request.url.toString() == TAP_TOGGLE_URL) callbacks.value.onTap()
+                        return true
+                    }
 
                     override fun shouldInterceptRequest(
                         view: WebView,

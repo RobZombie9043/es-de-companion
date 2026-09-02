@@ -4,6 +4,42 @@ internal const val BASE_FONT_SIZE_PX = 16
 internal const val DARK_BACKGROUND_HEX = "#000000"
 internal const val LIGHT_BACKGROUND_HEX = "#ffffff"
 
+// A fake, never-real navigation target: shouldOverrideUrlLoading already blocks every
+// navigation unconditionally (see GameGuideHtmlViewer's kdoc), so this scheme never actually
+// loads anything - it exists purely so the tap-toggle script below has some URL to navigate to
+// that shouldOverrideUrlLoading can recognize and treat as "toggle chrome" rather than "an
+// in-content anchor link".
+internal const val TAP_TOGGLE_URL = "esdeguidetap://toggle"
+
+// A `document.body` click listener, not a native Android GestureDetector - see
+// GameGuideHtmlViewer's buildGuideWebView kdoc for why a from-scratch attempt at the latter,
+// racing the WebView's own internal touch/gesture handling on the same raw MotionEvent stream,
+// proved intermittently unreliable (confirmed on-device across two separate fix attempts).
+// A JS `click` event, by contrast, is exactly the mechanism this viewer's existing in-content
+// anchor-link jump feature already relies on (via shouldOverrideUrlLoading) and which has never
+// itself been reported flaky - Chromium only synthesizes `click` once its own touch-to-gesture
+// recognition has already ruled out a scroll/drag, so this reuses that same disambiguation
+// instead of re-implementing it. Taps on an actual link are excluded (closest('a') check) so a
+// link tap only ever triggers its own anchor-jump handling, not also a chrome toggle.
+//
+// Placed in the document BEFORE bodyHtml (see buildGuideHtmlDocument below), not after - this
+// only needs document.body to exist, not any of the guide's own content inside it, so it can
+// safely run first. A large/slow-loading guide's bodyHtml (megabytes of markup/images for a
+// long chapter) can take a real, user-visible amount of time for the browser to parse; placing
+// this script after that content meant the click listener didn't attach until parsing had
+// already gotten all the way through it, so tapping to toggle chrome silently did nothing for
+// as long as the page was still loading. Running first attaches the listener essentially
+// immediately regardless of how slow the rest of the page is to parse/render.
+private const val TAP_TOGGLE_SCRIPT =
+    """
+    <script>
+    document.body.addEventListener('click', function(e) {
+        if (e.target.closest('a')) return;
+        window.location.href = '$TAP_TOGGLE_URL';
+    });
+    </script>
+    """
+
 /**
  * Wraps a saved in-line HTML guide's bare content markup (just the body of `#faqwrap`, no
  * `<html>`/`<head>`/stylesheet of its own - GameFAQs' own CSS never shipped with it) in a
@@ -37,7 +73,8 @@ internal fun buildGuideHtmlDocument(
         pre { white-space: pre-wrap; }
         """.trimIndent()
     val colorFixScript = buildClashingInlineColorFixScript(isDarkTheme, foreground)
-    return "<html><head><meta charset=\"utf-8\"><style>$css</style></head><body>$bodyHtml$colorFixScript</body></html>"
+    return "<html><head><meta charset=\"utf-8\"><style>$css</style></head>" +
+        "<body>${TAP_TOGGLE_SCRIPT.trimIndent()}$bodyHtml$colorFixScript</body></html>"
 }
 
 private const val CLASH_PATTERN_BLACK = """^rgba?\(0,\s*0,\s*0(,\s*1)?\)$"""
