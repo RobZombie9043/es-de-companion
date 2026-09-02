@@ -55,13 +55,14 @@ object GameListParser {
         val document = GamelistXml.parseGameListDocument(content) ?: return null
 
         val gameNodes = document.getElementsByTagName("game")
-        for (index in 0 until gameNodes.length) {
-            val gameElement = gameNodes.item(index) as? Element ?: continue
-            val path = gameElement.firstTextOf("path") ?: continue
-            if (!romPath.matchesGamelistPath(path)) continue
-            return gameElement.firstTextOf(tagName)?.takeIf { it.isNotBlank() }
-        }
-        return null
+        return (0 until gameNodes.length).asSequence()
+            .mapNotNull { gameNodes.item(it) as? Element }
+            .firstOrNull { element ->
+                val path = element.firstTextOf("path")
+                path != null && romPath.matchesGamelistPath(path)
+            }
+            ?.firstTextOf(tagName)
+            ?.takeIf { it.isNotBlank() }
     }
 
     private const val DESCRIPTION_TAG = "desc"

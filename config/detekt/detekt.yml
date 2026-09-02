@@ -1,3 +1,13 @@
 naming:
   FunctionNaming:
     ignoreAnnotated: ['Composable']
+
+formatting:
+  # Redundant with ktlintCheck, which is this project's actual formatting
+  # authority (see CLAUDE.md tech stack). The two disagree on continuation-line
+  # indentation for some wrapped Compose calls with no single config fix -
+  # ktlintFormat leaves these lines untouched, confirming ktlint already
+  # considers them correctly formatted. Not worth hand-reformatting files away
+  # from ktlint's accepted style just to satisfy a second, disagreeing rule.
+  Indentation:
+    active: false
