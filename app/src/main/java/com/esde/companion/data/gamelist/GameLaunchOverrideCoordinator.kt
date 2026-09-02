@@ -22,13 +22,13 @@ import kotlinx.coroutines.launch
  * [resolveGameLaunchPackage]) and, if one is configured, launches it on the display selected by
  * the global [GameLaunchDisplayTarget] setting (Settings > UI Settings > Game Launch Override) -
  * Companion's own screen by default, or the other screen (ES-DE/the game's own display) via
- * [SecondaryDisplayResolver]. No enable/disable gate is needed - an unconfigured system/game
- * already resolves to null (nothing launches), the same implicit-off shape `FabType.None` uses,
- * so this is unconditionally safe to keep running.
+ * [SecondaryDisplayResolver]. Gated by the feature's own master enable toggle (Settings > UI
+ * Settings > Game Launch Override, defaults on) - [onGameStarted] no-ops entirely while it's
+ * off, regardless of any configured system defaults/game overrides.
  *
  * Modeled on [com.esde.companion.data.thor.AutoFpsCoordinator]'s shape: independent collectors
- * keep the latest system-defaults/game-overrides/display-target/close-on-end snapshots in
- * `@Volatile` fields, and one more reacts to the actual [AppState] stream. No
+ * keep the latest system-defaults/game-overrides/display-target/close-on-end/enabled snapshots
+ * in `@Volatile` fields, and one more reacts to the actual [AppState] stream. No
  * `distinctUntilChanged` is needed on the `AppState` collection - it's a `StateFlow`, which
  * already conflates truly-consecutive-identical emissions, and any real replay of the same game
  * has a non-[AppState.PlayingGame] state in between (quitting to a menu, browsing away), so it
@@ -79,6 +79,9 @@ class GameLaunchOverrideCoordinator(
     @Volatile
     private var closeAppOnGameEnd: Boolean = false
 
+    @Volatile
+    private var enabled: Boolean = true
+
     // Only ever read/written from the single observeAppState collector below, so no
     // synchronization beyond @Volatile's visibility guarantee is needed.
     @Volatile
@@ -103,6 +106,9 @@ class GameLaunchOverrideCoordinator(
             settings.observeCloseAppOnGameEnd().collect { closeAppOnGameEnd = it }
         }
         applicationScope.launch {
+            settings.observeEnabled().collect { enabled = it }
+        }
+        applicationScope.launch {
             observeAppState().collect { state ->
                 if (state is AppState.PlayingGame) onGameStarted(appContext, state) else onGameEnded()
             }
@@ -113,6 +119,7 @@ class GameLaunchOverrideCoordinator(
         context: Context,
         state: AppState.PlayingGame,
     ) {
+        if (!enabled) return
         val packageName =
             resolveGameLaunchPackage(
                 systemShortName = state.systemShortName,

@@ -40,12 +40,12 @@ class RetroAchievementsScreensaverFreezeTest {
     private val screensaverWithNoGame =
         AppState.Screensaver(mode = "video", currentGame = null, previousState = browsingSystem)
 
-    // resolveAchievementsGame
+    // resolveScreensaverAwareGame
 
     @Test
-    fun `resolveAchievementsGame with toggle on switches to the screensaver's game`() {
+    fun `resolveScreensaverAwareGame with toggle on switches to the screensaver's game`() {
         val result =
-            resolveAchievementsGame(
+            resolveScreensaverAwareGame(
                 screensaverWithOtherGame,
                 browsingGameReference,
                 updateOnScreensaver = true,
@@ -56,9 +56,9 @@ class RetroAchievementsScreensaverFreezeTest {
     }
 
     @Test
-    fun `resolveAchievementsGame with toggle on and no screensaver game resolves to null`() {
+    fun `resolveScreensaverAwareGame with toggle on and no screensaver game resolves to null`() {
         val result =
-            resolveAchievementsGame(
+            resolveScreensaverAwareGame(
                 screensaverWithNoGame,
                 browsingGameReference,
                 updateOnScreensaver = true,
@@ -69,9 +69,9 @@ class RetroAchievementsScreensaverFreezeTest {
     }
 
     @Test
-    fun `resolveAchievementsGame with toggle off and visible holds the previous game during a screensaver`() {
+    fun `resolveScreensaverAwareGame with toggle off and visible holds the previous game during a screensaver`() {
         val result =
-            resolveAchievementsGame(
+            resolveScreensaverAwareGame(
                 screensaverWithOtherGame,
                 browsingGameReference,
                 updateOnScreensaver = false,
@@ -82,27 +82,28 @@ class RetroAchievementsScreensaverFreezeTest {
     }
 
     @Test
-    fun `resolveAchievementsGame with no previous game falls back to the screensaver's game when visible`() {
+    fun `resolveScreensaverAwareGame with no previous game falls back to the screensaver's game when visible`() {
         val result =
-            resolveAchievementsGame(screensaverWithOtherGame, null, updateOnScreensaver = false, visible = true)
+            resolveScreensaverAwareGame(screensaverWithOtherGame, null, updateOnScreensaver = false, visible = true)
 
         assertEquals(screensaverGameReference, result)
     }
 
     @Test
-    fun `resolveAchievementsGame with no previous game and no screensaver game resolves to null`() {
-        val result = resolveAchievementsGame(screensaverWithNoGame, null, updateOnScreensaver = false, visible = true)
+    fun `resolveScreensaverAwareGame with no previous game and no screensaver game resolves to null`() {
+        val result =
+            resolveScreensaverAwareGame(screensaverWithNoGame, null, updateOnScreensaver = false, visible = true)
 
         assertNull(result)
     }
 
     @Test
-    fun `resolveAchievementsGame not visible ignores a stale previous game and tracks the screensaver`() {
+    fun `resolveScreensaverAwareGame not visible ignores a stale previous game and tracks the screensaver`() {
         // Simulates opening the achievements page while a screensaver is already playing: the
         // page was not visible before now, so whatever it holds from before the screensaver
         // started must not surface - it should show the game the screensaver is showing right now.
         val result =
-            resolveAchievementsGame(
+            resolveScreensaverAwareGame(
                 screensaverWithOtherGame,
                 browsingGameReference,
                 updateOnScreensaver = false,
@@ -113,22 +114,28 @@ class RetroAchievementsScreensaverFreezeTest {
     }
 
     @Test
-    fun `resolveAchievementsGame with toggle off passes through a non-screensaver state regardless of visibility`() {
+    fun `resolveScreensaverAwareGame with toggle off passes through a non-screensaver state regardless of visible`() {
         assertEquals(
             browsingGameReference,
-            resolveAchievementsGame(browsingGame, null, updateOnScreensaver = false, visible = true),
+            resolveScreensaverAwareGame(browsingGame, null, updateOnScreensaver = false, visible = true),
         )
         assertEquals(
             browsingGameReference,
-            resolveAchievementsGame(browsingGame, null, updateOnScreensaver = false, visible = false),
+            resolveScreensaverAwareGame(browsingGame, null, updateOnScreensaver = false, visible = false),
         )
     }
 
     @Test
-    fun `resolveAchievementsGame resolves to null when disconnected regardless of toggle or visibility`() {
-        assertNull(resolveAchievementsGame(null, browsingGameReference, updateOnScreensaver = true, visible = true))
-        assertNull(resolveAchievementsGame(null, browsingGameReference, updateOnScreensaver = false, visible = true))
-        assertNull(resolveAchievementsGame(null, browsingGameReference, updateOnScreensaver = false, visible = false))
+    fun `resolveScreensaverAwareGame resolves to null when disconnected regardless of toggle or visibility`() {
+        assertNull(
+            resolveScreensaverAwareGame(null, browsingGameReference, updateOnScreensaver = true, visible = true),
+        )
+        assertNull(
+            resolveScreensaverAwareGame(null, browsingGameReference, updateOnScreensaver = false, visible = true),
+        )
+        assertNull(
+            resolveScreensaverAwareGame(null, browsingGameReference, updateOnScreensaver = false, visible = false),
+        )
     }
 
     // resolveAchievementsSystem

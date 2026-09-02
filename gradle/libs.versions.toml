@@ -17,6 +17,7 @@ ktlint = "12.1.2"
 detekt = "1.23.7"
 securityCrypto = "1.1.0"
 retroachievementsApiKotlin = "2.0.0"
+webkit = "1.12.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -48,6 +49,7 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 retroachievements-api-kotlin = { group = "com.github.RetroAchievements", name = "api-kotlin", version.ref = "retroachievementsApiKotlin" }
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

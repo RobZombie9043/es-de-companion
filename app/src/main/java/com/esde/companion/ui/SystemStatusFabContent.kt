@@ -4,20 +4,10 @@ import android.content.Context
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Battery1Bar
-import androidx.compose.material.icons.filled.Battery3Bar
-import androidx.compose.material.icons.filled.Battery5Bar
-import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.BatteryFull
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,16 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.esde.companion.data.systemstatus.BluetoothConnectPermission
-import com.esde.companion.domain.model.BatteryStatus
-import com.esde.companion.domain.model.BatteryTier
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.SystemStatus
 import kotlinx.coroutines.delay
@@ -89,7 +75,21 @@ internal fun BoxScope.ClockFabContent(context: WideFabContext) {
         opacityPercent = context.overlayOpacityPercent,
         modifier = wideFabModifier(context),
     ) {
-        Text(text = timeText, style = MaterialTheme.typography.bodyMedium)
+        TickingClockText(timeText)
+    }
+}
+
+/**
+ * A standalone composable (not inlined into [WideCornerFab]'s own `RowScope` content lambda) so
+ * its `AnimatedContent` call has no ambient `RowScope` receiver in lexical scope - the same
+ * overload-ambiguity compile error already hit and fixed this way elsewhere in this app (see
+ * `GameGuidesBrowserScreen.kt`'s `DownloadButton`). Crossfades each tick instead of the
+ * previous hard cut.
+ */
+@Composable
+private fun TickingClockText(timeText: String) {
+    AnimatedContent(targetState = timeText, label = "clockTick") { text ->
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -167,51 +167,6 @@ private fun rememberTickingTimeText(): String {
 }
 
 private fun currentTimeText(context: Context): String = DateFormat.getTimeFormat(context).format(Date())
-
-private val STATUS_ICON_SIZE = 20.dp
-
-@Composable
-private fun RowScope.SystemStatusIcons(systemStatus: SystemStatus) {
-    if (systemStatus.wifiConnected) {
-        Icon(
-            imageVector = Icons.Filled.Wifi,
-            contentDescription = "Wifi connected",
-            modifier = Modifier.size(STATUS_ICON_SIZE),
-        )
-    }
-    if (systemStatus.bluetoothConnected) {
-        Icon(
-            imageVector = Icons.Filled.Bluetooth,
-            contentDescription = "Bluetooth connected",
-            modifier = Modifier.size(STATUS_ICON_SIZE),
-        )
-    }
-    Icon(
-        imageVector = batteryIconFor(systemStatus.battery),
-        contentDescription = batteryContentDescription(systemStatus.battery),
-        modifier = Modifier.size(STATUS_ICON_SIZE),
-    )
-}
-
-// Compose's Material Icons Extended has only one charging glyph (BatteryChargingFull) - no
-// tier-aware BatteryCharging20/50/80 equivalents like the plain (non-charging) Battery1Bar/
-// 3Bar/5Bar/Full set has. So charging always shows this one icon regardless of actual tier,
-// a deliberate simplicity-over-precision tradeoff (confirmed with the user) rather than
-// pairing a separate charging indicator with the real tier icon.
-private fun batteryIconFor(battery: BatteryStatus): ImageVector =
-    if (battery.isCharging) {
-        Icons.Filled.BatteryChargingFull
-    } else {
-        when (battery.tier) {
-            BatteryTier.Low -> Icons.Filled.Battery1Bar
-            BatteryTier.Medium -> Icons.Filled.Battery3Bar
-            BatteryTier.High -> Icons.Filled.Battery5Bar
-            BatteryTier.Full -> Icons.Filled.BatteryFull
-        }
-    }
-
-private fun batteryContentDescription(battery: BatteryStatus): String =
-    if (battery.isCharging) "Battery charging" else "Battery: ${battery.tier}"
 
 /**
  * The first runtime-dangerous-permission request flow in this codebase (see

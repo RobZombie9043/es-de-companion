@@ -8,6 +8,9 @@ import com.esde.companion.data.apps.PackageManagerAppsRepository
 import com.esde.companion.data.backup.JsonConfigBackupRepository
 import com.esde.companion.data.context.FileLastKnownContextRepository
 import com.esde.companion.data.debug.DebugFileLogger
+import com.esde.companion.data.gameguides.FileGameGuideLibraryRepository
+import com.esde.companion.data.gameguides.FileGameGuideSettingsRepository
+import com.esde.companion.data.gameguides.GameFaqsBrowserBridge
 import com.esde.companion.data.gamelist.DataStoreGameLaunchAppRepository
 import com.esde.companion.data.gamelist.FileGameDescriptionRepository
 import com.esde.companion.data.gamelist.FileGameRatingRepository
@@ -81,6 +84,8 @@ import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.EsdeInstallationRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
+import com.esde.companion.domain.repository.GameGuideLibraryRepository
+import com.esde.companion.domain.repository.GameGuideSettingsRepository
 import com.esde.companion.domain.repository.GameLaunchAppRepository
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
@@ -107,6 +112,8 @@ import com.esde.companion.domain.usecase.CheckForUpdateUseCase
 import com.esde.companion.domain.usecase.ClearGameLaunchOverrideUseCase
 import com.esde.companion.domain.usecase.ClearRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.CompleteOnboardingUseCase
+import com.esde.companion.domain.usecase.DeleteAllGameGuidesUseCase
+import com.esde.companion.domain.usecase.DeleteGameGuideUseCase
 import com.esde.companion.domain.usecase.DeleteLegacyScriptFilesUseCase
 import com.esde.companion.domain.usecase.DownloadApkUseCase
 import com.esde.companion.domain.usecase.ExportConfigBackupUseCase
@@ -119,8 +126,13 @@ import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
 import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.GetRetroAchievementsSystemGamesUseCase
 import com.esde.companion.domain.usecase.GetUserGameProgressUseCase
+import com.esde.companion.domain.usecase.ImportGameGuideUseCase
 import com.esde.companion.domain.usecase.ListGamelistGamesUseCase
 import com.esde.companion.domain.usecase.ListGamelistSystemsUseCase
+import com.esde.companion.domain.usecase.LoadGameGuideBinaryPathUseCase
+import com.esde.companion.domain.usecase.LoadGameGuideContentUseCase
+import com.esde.companion.domain.usecase.LoadGameGuidePageUseCase
+import com.esde.companion.domain.usecase.ObserveAllGameGuidesUseCase
 import com.esde.companion.domain.usecase.ObserveAppFoldersUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveAutoFpsEnabledUseCase
@@ -138,7 +150,11 @@ import com.esde.companion.domain.usecase.ObserveEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeLogActivityUseCase
 import com.esde.companion.domain.usecase.ObserveEsdeQuitEventUseCase
 import com.esde.companion.domain.usecase.ObserveFabAssignmentsUseCase
+import com.esde.companion.domain.usecase.ObserveGameGuideDisplayPreferencesUseCase
+import com.esde.companion.domain.usecase.ObserveGameGuideReadingProgressUseCase
+import com.esde.companion.domain.usecase.ObserveGameGuidesUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.ObserveGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchOverridesUseCase
 import com.esde.companion.domain.usecase.ObserveGameLaunchSystemDefaultsUseCase
 import com.esde.companion.domain.usecase.ObserveGamePlayingBehaviorUseCase
@@ -152,6 +168,7 @@ import com.esde.companion.domain.usecase.ObserveLastSeenChangelogVersionCodeUseC
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.ObserveMusicEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveMusicPlayDuringScreensaverUseCase
@@ -172,6 +189,7 @@ import com.esde.companion.domain.usecase.ObserveTaskKillerExcludedPackagesUseCas
 import com.esde.companion.domain.usecase.ObserveTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.ObserveThemePreferenceUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
@@ -181,11 +199,13 @@ import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
+import com.esde.companion.domain.usecase.ResolveGameGuideMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.RestoreConfigBackupUseCase
+import com.esde.companion.domain.usecase.SaveGameGuideUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.SearchRetroAchievementsGamesUseCase
 import com.esde.companion.domain.usecase.SetAppFoldersUseCase
@@ -200,7 +220,10 @@ import com.esde.companion.domain.usecase.SetDockEnabledUseCase
 import com.esde.companion.domain.usecase.SetDockMaxAppsUseCase
 import com.esde.companion.domain.usecase.SetDockSizeUseCase
 import com.esde.companion.domain.usecase.SetFabAssignmentUseCase
+import com.esde.companion.domain.usecase.SetGameGuideDisplayPreferencesUseCase
+import com.esde.companion.domain.usecase.SetGameGuideReadingProgressUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchDisplayTargetUseCase
+import com.esde.companion.domain.usecase.SetGameLaunchEnabledUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchOverrideUseCase
 import com.esde.companion.domain.usecase.SetGameLaunchSystemDefaultUseCase
 import com.esde.companion.domain.usecase.SetGameMatchOverrideUseCase
@@ -214,6 +237,7 @@ import com.esde.companion.domain.usecase.SetLastSeenChangelogVersionCodeUseCase
 import com.esde.companion.domain.usecase.SetLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.SetLaunchEsdeOnStartEnabledUseCase
 import com.esde.companion.domain.usecase.SetLidWakeGuardEnabledUseCase
+import com.esde.companion.domain.usecase.SetManualFallbackOnNoGuideEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicDuckingModeUseCase
 import com.esde.companion.domain.usecase.SetMusicEnabledUseCase
 import com.esde.companion.domain.usecase.SetMusicPlayDuringScreensaverUseCase
@@ -231,6 +255,7 @@ import com.esde.companion.domain.usecase.SetTaskKillerExcludedPackagesUseCase
 import com.esde.companion.domain.usecase.SetTaskKillerTargetUseCase
 import com.esde.companion.domain.usecase.SetThemePreferenceUseCase
 import com.esde.companion.domain.usecase.SetUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.SetUpdateGameGuidesOnScreensaverEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.SetVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ValidateEsdeLogFolderUseCase
@@ -412,6 +437,8 @@ class AppContainer(context: Context) {
     val setGameLaunchDisplayTargetUseCase = SetGameLaunchDisplayTargetUseCase(gameLaunchAppRepository)
     val observeCloseAppOnGameEndUseCase = ObserveCloseAppOnGameEndUseCase(gameLaunchAppRepository)
     val setCloseAppOnGameEndUseCase = SetCloseAppOnGameEndUseCase(gameLaunchAppRepository)
+    val observeGameLaunchEnabledUseCase = ObserveGameLaunchEnabledUseCase(gameLaunchAppRepository)
+    val setGameLaunchEnabledUseCase = SetGameLaunchEnabledUseCase(gameLaunchAppRepository)
 
     private val systemMediaRepository: SystemMediaRepository =
         ReactiveSystemMediaRepository(mediaFolderPath = onboardingRepository.observeMediaFolderPath())
@@ -532,6 +559,15 @@ class AppContainer(context: Context) {
     val observeVolumeSyncModeUseCase = ObserveVolumeSyncModeUseCase(thorSettingsRepository)
     val setVolumeSyncModeUseCase = SetVolumeSyncModeUseCase(thorSettingsRepository)
 
+    // Game Guides content/metadata is app-private storage (filesDir + its own DataStore
+    // file). gameGuideLibraryRepository is deliberately excluded from Backup & Restore below -
+    // same reasoning as the RetroAchievements caches above: it's fetched/regenerable content,
+    // not user configuration, and could be large. gameGuideSettingsRepository is different - it
+    // holds actual user settings (the "load manual on no guide" toggle, display preferences),
+    // not fetched content, so it IS included below.
+    private val gameGuideLibraryRepository: GameGuideLibraryRepository = FileGameGuideLibraryRepository(appContext)
+    private val gameGuideSettingsRepository: GameGuideSettingsRepository = FileGameGuideSettingsRepository(appContext)
+
     // Settings > Setup > Backup & Restore. Reaches directly into the settings repositories
     // above (rather than through their narrower per-field use cases) since export/restore
     // needs every field at once - see ExportConfigBackupUseCase/RestoreConfigBackupUseCase.
@@ -548,6 +584,7 @@ class AppContainer(context: Context) {
             thorSettingsRepository = thorSettingsRepository,
             gameMatchOverrideRepository = gameMatchOverrideRepository,
             gameLaunchAppRepository = gameLaunchAppRepository,
+            gameGuideSettingsRepository = gameGuideSettingsRepository,
         )
     val exportConfigBackupUseCase = ExportConfigBackupUseCase(backupRepositories, configBackupRepository)
     val restoreConfigBackupUseCase = RestoreConfigBackupUseCase(backupRepositories, configBackupRepository)
@@ -627,6 +664,14 @@ class AppContainer(context: Context) {
     val setUpdateAchievementsOnScreensaverEnabledUseCase =
         SetUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
 
+    // Settings > Game Guides: whether the Library screen follows ES-DE's screensaver to
+    // whatever game it's showing, or freezes on the pre-screensaver game instead. Defaults
+    // off, unlike the achievements toggle above - see OnboardingRepository's kdoc.
+    val observeUpdateGameGuidesOnScreensaverEnabledUseCase =
+        ObserveUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository)
+    val setUpdateGameGuidesOnScreensaverEnabledUseCase =
+        SetUpdateGameGuidesOnScreensaverEnabledUseCase(onboardingRepository)
+
     // The achievement screens' Playtime Stats line's Casual/Hardcore toggle - global, not
     // per-game, see OnboardingRepository.observePlaytimeStatsHardcoreModeEnabled's kdoc.
     val observePlaytimeStatsHardcoreModeEnabledUseCase =
@@ -704,6 +749,36 @@ class AppContainer(context: Context) {
     val getGameLeaderboardsUseCase = GetGameLeaderboardsUseCase(retroAchievementsRepository)
     val getLeaderboardEntriesUseCase = GetLeaderboardEntriesUseCase(retroAchievementsRepository)
 
+    // Game Guides FAB.
+    // gameGuideLibraryRepository/gameGuideSettingsRepository are declared earlier, alongside
+    // Backup & Restore's other repositories - see that section's own comment for why one is
+    // excluded from it and the other isn't.
+    //
+    // Shared by GameGuidesViewModelFactory (browsing the WebView) and any download in flight -
+    // a single stateless instance, same as every other narrow data-layer helper here, injected
+    // rather than left to the ViewModel's own default constructor parameter (see
+    // GameGuidesViewModel's kdoc for why that was a layering violation worth fixing).
+    val gameFaqsBrowserBridge = GameFaqsBrowserBridge()
+    val observeGameGuidesUseCase = ObserveGameGuidesUseCase(gameGuideLibraryRepository)
+    val observeAllGameGuidesUseCase = ObserveAllGameGuidesUseCase(gameGuideLibraryRepository)
+    val saveGameGuideUseCase = SaveGameGuideUseCase(gameGuideLibraryRepository)
+    val importGameGuideUseCase = ImportGameGuideUseCase(gameGuideLibraryRepository)
+    val loadGameGuideContentUseCase = LoadGameGuideContentUseCase(gameGuideLibraryRepository)
+    val loadGameGuidePageUseCase = LoadGameGuidePageUseCase(gameGuideLibraryRepository)
+    val loadGameGuideBinaryPathUseCase = LoadGameGuideBinaryPathUseCase(gameGuideLibraryRepository)
+    val resolveGameGuideMediaDirectoryUseCase = ResolveGameGuideMediaDirectoryUseCase(gameGuideLibraryRepository)
+    val deleteGameGuideUseCase = DeleteGameGuideUseCase(gameGuideLibraryRepository)
+    val deleteAllGameGuidesUseCase = DeleteAllGameGuidesUseCase(gameGuideLibraryRepository)
+    val observeGameGuideDisplayPreferencesUseCase =
+        ObserveGameGuideDisplayPreferencesUseCase(gameGuideSettingsRepository)
+    val setGameGuideDisplayPreferencesUseCase = SetGameGuideDisplayPreferencesUseCase(gameGuideSettingsRepository)
+    val observeGameGuideReadingProgressUseCase = ObserveGameGuideReadingProgressUseCase(gameGuideSettingsRepository)
+    val setGameGuideReadingProgressUseCase = SetGameGuideReadingProgressUseCase(gameGuideSettingsRepository)
+    val observeManualFallbackOnNoGuideEnabledUseCase =
+        ObserveManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository)
+    val setManualFallbackOnNoGuideEnabledUseCase =
+        SetManualFallbackOnNoGuideEnabledUseCase(gameGuideSettingsRepository)
+
     // Constructed unconditionally (cheap - same as the self-healing directory watchers above),
     // but each coordinator's *internal* listeners/receivers stay gated behind its own
     // DataStore-persisted enabled flag - see LidWakeGuardCoordinator/AutoFpsCoordinator's kdoc
@@ -748,10 +823,9 @@ class AppContainer(context: Context) {
             observeOverrides = observeGameLaunchOverridesUseCase,
             observeDisplayTarget = observeGameLaunchDisplayTargetUseCase,
             observeCloseAppOnGameEnd = observeCloseAppOnGameEndUseCase,
+            observeEnabled = observeGameLaunchEnabledUseCase,
         )
 
-    // No enable/disable gate, unlike the coordinators above - see GameLaunchOverrideCoordinator's
-    // kdoc for why an unconfigured system/game already resolves to "launch nothing."
     private val gameLaunchOverrideCoordinator =
         GameLaunchOverrideCoordinator(
             observeAppState = observeAppStateUseCase,

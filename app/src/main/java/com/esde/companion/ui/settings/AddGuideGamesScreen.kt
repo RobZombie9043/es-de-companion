@@ -1,0 +1,91 @@
+package com.esde.companion.ui.settings
+
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.esde.companion.domain.parser.GamelistGameEntry
+
+/**
+ * Settings > Game Guides > "Add Guide" > one system's games - reuses
+ * [GameLaunchOverrideViewModel]'s own systems/games listing (the exact "Launch App on Game
+ * Start" > "Manage Systems & Games" mechanism this feature was asked to mirror) purely for
+ * its gamelist.xml scan, not for anything launch-override-specific: this screen only needs a
+ * plain "tap a game to pick it" row, unlike [GameLaunchOverrideGamesScreen]'s per-game app
+ * picker. [onGameSelected] carries both the game's ES-DE-relative ROM path (see
+ * [com.esde.companion.domain.model.identifies]'s kdoc for why that's enough to key a
+ * downloaded guide by) and its scraped display name (for the GameFAQs search query and the
+ * guide's own title-cleaning). The caller drills one level deeper still into
+ * `MenuPage.AddGuideMethod` on selection, rather than acting on it directly here.
+ */
+@Composable
+fun AddGuideGamesScreen(
+    viewModel: GameLaunchOverrideViewModel,
+    systemShortName: String,
+    onGameSelected: (relativeRomPath: String, gameName: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(systemShortName) { viewModel.onSystemSelected(systemShortName) }
+
+    val games = remember(uiState.currentSystemGames) { uiState.currentSystemGames.sortedBy { it.name.lowercase() } }
+    val screenState =
+        when {
+            uiState.isLoadingGames && games.isEmpty() -> AddGuideGamesScreenState.Loading
+            games.isEmpty() -> AddGuideGamesScreenState.Empty
+            else -> AddGuideGamesScreenState.Loaded(games)
+        }
+
+    // Crossfade (not a plain if/return chain) - a hard cut between the loading spinner, the
+    // empty message, and the games list reads jarringly for a same-slot content swap, same
+    // reasoning as MainActivity's own Crossfade(showEditWidgets) usage.
+    Crossfade(targetState = screenState, modifier = modifier.fillMaxSize(), label = "addGuideGames") { state ->
+        when (state) {
+            AddGuideGamesScreenState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            AddGuideGamesScreenState.Empty -> {
+                EmptyMessage("No games found for this system.", Modifier.fillMaxSize())
+            }
+            is AddGuideGamesScreenState.Loaded -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(state.games, key = { it.relativeRomPath }) { game ->
+                        DrillDownRow(
+                            title = game.name,
+                            subtitle = game.relativeRomPath,
+                            onClick = { onGameSelected(game.relativeRomPath, game.name) },
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private sealed interface AddGuideGamesScreenState {
+    data object Loading : AddGuideGamesScreenState
+
+    data object Empty : AddGuideGamesScreenState
+
+    data class Loaded(val games: List<GamelistGameEntry>) : AddGuideGamesScreenState
+}

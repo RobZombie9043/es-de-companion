@@ -1,5 +1,6 @@
 package com.esde.companion.ui.widgets
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -208,13 +210,17 @@ internal fun WidgetContentView(
     when (content) {
         WidgetContent.Empty -> Unit
 
-        is WidgetContent.Color ->
+        is WidgetContent.Color -> {
+            // Animated - a color/alpha change previously snapped instantly.
+            val targetColor = Color(content.colorArgb).copy(alpha = content.alpha)
+            val animatedColor by animateColorAsState(targetValue = targetColor, label = "widgetColor")
             Box(
                 modifier =
                     modifier
                         .applyCornerRadius(widgetType.cornerRadius)
-                        .background(Color(content.colorArgb).copy(alpha = content.alpha)),
+                        .background(animatedColor),
             )
+        }
 
         is WidgetContent.Image ->
             Box(modifier = modifier.applyCornerRadius(widgetType.cornerRadius)) {

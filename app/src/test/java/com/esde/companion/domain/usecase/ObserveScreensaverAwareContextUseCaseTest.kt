@@ -138,6 +138,10 @@ class ObserveScreensaverAwareContextUseCaseTest {
 
         override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> = updateOnScreensaver
 
+        override suspend fun setUpdateGameGuidesOnScreensaverEnabled(enabled: Boolean) {}
+
+        override fun observeUpdateGameGuidesOnScreensaverEnabled(): Flow<Boolean> = flowOf(false)
+
         override suspend fun setPlaytimeStatsHardcoreModeEnabled(enabled: Boolean) {}
 
         override fun observePlaytimeStatsHardcoreModeEnabled(): Flow<Boolean> = flowOf(false)
@@ -160,7 +164,7 @@ class ObserveScreensaverAwareContextUseCaseTest {
         val observeUpdateOnScreensaver = ObserveUpdateAchievementsOnScreensaverEnabledUseCase(onboardingRepository)
         return ObserveScreensaverAwareContextUseCase(
             observeConnectionState,
-            observeUpdateOnScreensaver,
+            observeUpdateOnScreensaver::invoke,
             { visible },
             resolve,
         )

@@ -1,5 +1,6 @@
 package com.esde.companion.ui.widgets
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,7 +40,9 @@ fun RatingStars(
     outlineColorArgb: Long,
     modifier: Modifier = Modifier,
 ) {
-    val filledStars = starCount.roundToInt().coerceIn(0, STAR_COUNT)
+    // Animated - a game/system change used to jump the fill count straight to its new value.
+    val animatedStarCount by animateFloatAsState(targetValue = starCount, label = "ratingStarCount")
+    val filledStars = animatedStarCount.roundToInt().coerceIn(0, STAR_COUNT)
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         val availableWidthPerStar = (maxWidth - STAR_PADDING * 2 * STAR_COUNT) / STAR_COUNT
         val starSize = minOf(maxHeight, availableWidthPerStar).coerceAtLeast(0.dp)

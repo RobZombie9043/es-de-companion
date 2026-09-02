@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -35,6 +36,16 @@ enum class SettingsCategory(val title: String, val description: String, val icon
         description = "Visible apps, grid columns, dock",
         icon = Icons.Filled.Apps,
     ),
+    GameGuides(
+        title = "Game Guides",
+        description = "Downloaded guide storage",
+        icon = Icons.Filled.LibraryBooks,
+    ),
+    RetroAchievements(
+        title = "RetroAchievements",
+        description = "Sign in and manage the RetroAchievements connection",
+        icon = Icons.Filled.EmojiEvents,
+    ),
     Sound(
         title = "Background Music",
         description = "Background music and video-playback ducking",
@@ -49,11 +60,6 @@ enum class SettingsCategory(val title: String, val description: String, val icon
         title = "Setup",
         description = "ES-DE and media folder locations",
         icon = Icons.Filled.Folder,
-    ),
-    RetroAchievements(
-        title = "RetroAchievements",
-        description = "Sign in and manage the RetroAchievements connection",
-        icon = Icons.Filled.EmojiEvents,
     ),
     Thor(
         title = "Thor Settings",

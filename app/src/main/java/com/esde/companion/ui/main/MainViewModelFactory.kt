@@ -18,6 +18,7 @@ class MainViewModelFactory(
             observeGamePlayingDimPercent = appContainer.observeGamePlayingDimPercentUseCase,
             observeScreensaverBehavior = appContainer.observeScreensaverBehaviorUseCase,
             observeScreensaverDimPercent = appContainer.observeScreensaverDimPercentUseCase,
+            observeManualFallbackOnNoGuideEnabled = appContainer.observeManualFallbackOnNoGuideEnabledUseCase,
         ) as T
     }
 }

@@ -9,14 +9,16 @@ import kotlinx.coroutines.flow.scan
 
 /**
  * Folds a screensaver-freeze resolver (e.g.
- * [com.esde.companion.domain.model.resolveAchievementsGame]/
+ * [com.esde.companion.domain.model.resolveScreensaverAwareGame]/
  * [com.esde.companion.domain.model.resolveAchievementsSystem]) over ES-DE's live [AppState],
- * the "Update on Screensaver" setting, and whether the caller's own screen is actually visible
+ * an "Update on Screensaver" setting, and whether the caller's own screen is actually visible
  * right now, via [Flow.scan] - shared by
- * [com.esde.companion.ui.retroachievements.RetroAchievementsViewModel] and
- * [com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesViewModel], which
- * previously duplicated this combine/scan construction with only the resolver function
- * differing. Construct one instance per resolved shape [T], passing the matching resolver.
+ * [com.esde.companion.ui.retroachievements.RetroAchievementsViewModel],
+ * [com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesViewModel], and
+ * [com.esde.companion.ui.gameguides.GameGuidesViewModel], each of which has its own
+ * "Update on Screensaver" toggle/repository field - hence [observeUpdateOnScreensaverEnabled]
+ * being a plain supplier rather than one specific use case type. Construct one instance per
+ * resolved shape [T], passing the matching resolver and toggle.
  *
  * [observeVisible] exists because the freeze-during-screensaver behavior only makes sense while
  * a person is actually looking at the page - see the resolver kdocs for why holding [T] with
@@ -24,14 +26,14 @@ import kotlinx.coroutines.flow.scan
  */
 class ObserveScreensaverAwareContextUseCase<T>(
     private val observeConnectionState: ObserveConnectionStateUseCase,
-    private val observeUpdateAchievementsOnScreensaverEnabled: ObserveUpdateAchievementsOnScreensaverEnabledUseCase,
+    private val observeUpdateOnScreensaverEnabled: () -> Flow<Boolean>,
     private val observeVisible: () -> Flow<Boolean>,
     private val resolve: (AppState?, T?, Boolean, Boolean) -> T?,
 ) {
     operator fun invoke(): Flow<T?> =
         combine(
             observeConnectionState().map { connection -> (connection as? EsdeConnectionState.Connected)?.appState },
-            observeUpdateAchievementsOnScreensaverEnabled(),
+            observeUpdateOnScreensaverEnabled(),
             observeVisible(),
         ) { appState, updateOnScreensaver, visible -> Triple(appState, updateOnScreensaver, visible) }
             .scan(null as T?) { previous, (appState, updateOnScreensaver, visible) ->

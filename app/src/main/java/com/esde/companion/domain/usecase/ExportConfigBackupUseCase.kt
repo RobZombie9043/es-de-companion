@@ -1,6 +1,7 @@
 package com.esde.companion.domain.usecase
 
 import com.esde.companion.domain.model.AppConfigBackup
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.repository.BackupRepositories
@@ -25,13 +26,28 @@ class ExportConfigBackupUseCase(
             }
         val updateAchievementsOnScreensaverEnabled =
             repositories.onboardingRepository.observeUpdateAchievementsOnScreensaverEnabled().first()
-        val snapshot = buildSnapshot(widgetCanvases, updateAchievementsOnScreensaverEnabled)
+        val updateGameGuidesOnScreensaverEnabled =
+            repositories.onboardingRepository.observeUpdateGameGuidesOnScreensaverEnabled().first()
+        val manualFallbackOnNoGuideEnabled =
+            repositories.gameGuideSettingsRepository.observeManualFallbackOnNoGuideEnabled().first()
+        val guideDisplayPreferences = repositories.gameGuideSettingsRepository.observeDisplayPreferences().first()
+        val snapshot =
+            buildSnapshot(
+                widgetCanvases,
+                updateAchievementsOnScreensaverEnabled,
+                updateGameGuidesOnScreensaverEnabled,
+                manualFallbackOnNoGuideEnabled,
+                guideDisplayPreferences,
+            )
         return configBackupRepository.serialize(snapshot)
     }
 
     private suspend fun buildSnapshot(
         widgetCanvases: Map<StateGroup, SavedWidgetCanvas>,
         updateAchievementsOnScreensaverEnabled: Boolean,
+        updateGameGuidesOnScreensaverEnabled: Boolean,
+        manualFallbackOnNoGuideEnabled: Boolean,
+        guideDisplayPreferences: GameGuideDisplayPreferences,
     ): AppConfigBackup =
         with(repositories) {
             AppConfigBackup(
@@ -81,6 +97,10 @@ class ExportConfigBackupUseCase(
                 gameLaunchOverrides = gameLaunchAppRepository.observeGameOverrides().first(),
                 gameLaunchDisplayTarget = gameLaunchAppRepository.observeLaunchDisplayTarget().first(),
                 closeAppOnGameEndEnabled = gameLaunchAppRepository.observeCloseAppOnGameEnd().first(),
+                gameLaunchEnabled = gameLaunchAppRepository.observeEnabled().first(),
+                updateGameGuidesOnScreensaverEnabled = updateGameGuidesOnScreensaverEnabled,
+                manualFallbackOnNoGuideEnabled = manualFallbackOnNoGuideEnabled,
+                guideDisplayPreferences = guideDisplayPreferences,
             )
         }
 }

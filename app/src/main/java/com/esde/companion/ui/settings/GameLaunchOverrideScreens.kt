@@ -324,7 +324,7 @@ private fun LoadingIndicator(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun EmptyMessage(
+internal fun EmptyMessage(
     text: String,
     modifier: Modifier = Modifier,
 ) {

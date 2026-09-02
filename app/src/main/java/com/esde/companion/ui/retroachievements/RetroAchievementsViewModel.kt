@@ -10,7 +10,7 @@ import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.LeaderboardSortOrder
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
-import com.esde.companion.domain.model.resolveAchievementsGame
+import com.esde.companion.domain.model.resolveScreensaverAwareGame
 import com.esde.companion.domain.usecase.GetAchievementCommentsUseCase
 import com.esde.companion.domain.usecase.GetLeaderboardEntriesUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
@@ -62,7 +62,7 @@ private const val STATE_STOP_TIMEOUT_MILLIS = 5_000L
  * both need "which game/system is currently showing", which only this ViewModel already
  * tracks (see [lastKnownGame]).
  *
- * [currentGame] is folded through [com.esde.companion.domain.model.resolveAchievementsGame]
+ * [currentGame] is folded through [com.esde.companion.domain.model.resolveScreensaverAwareGame]
  * rather than a plain `map`, so that when Settings > RetroAchievements > "Update on
  * Screensaver" is off, a screensaver starting on a different game holds the previously
  * displayed game instead of redirecting to it - see that function's kdoc.
@@ -89,16 +89,16 @@ class RetroAchievementsViewModel(
 ) : ViewModel() {
     // Set by MainActivity via onOverlayVisibilityChanged, reflecting whether this screen is
     // actually on screen right now (its AnimatedVisibility condition) - see
-    // resolveAchievementsGame's kdoc for why the screensaver-hold logic needs this rather than
-    // just tracking [currentGame]'s previous value.
+    // resolveScreensaverAwareGame's kdoc for why the screensaver-hold logic needs this rather
+    // than just tracking [currentGame]'s previous value.
     private val overlayVisible = MutableStateFlow(false)
 
     private val currentGameContext =
         ObserveScreensaverAwareContextUseCase(
             observeConnectionState,
-            observeUpdateAchievementsOnScreensaverEnabled,
+            observeUpdateAchievementsOnScreensaverEnabled::invoke,
             { overlayVisible },
-            ::resolveAchievementsGame,
+            ::resolveScreensaverAwareGame,
         )
 
     private val currentGame =

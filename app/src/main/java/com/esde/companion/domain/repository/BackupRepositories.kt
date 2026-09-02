@@ -19,4 +19,5 @@ class BackupRepositories(
     val thorSettingsRepository: ThorSettingsRepository,
     val gameMatchOverrideRepository: GameMatchOverrideRepository,
     val gameLaunchAppRepository: GameLaunchAppRepository,
+    val gameGuideSettingsRepository: GameGuideSettingsRepository,
 )

@@ -12,6 +12,10 @@ class SettingsViewModelFactory(
         require(modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             "Unknown ViewModel class: $modelClass"
         }
+        // Hoisted to sidestep ktlintFormat/detekt disagreeing on continuation indentation for
+        // an `arg =` value that doesn't fit on one line (see CLAUDE.md's ktlint/detekt gotcha).
+        val observeUpdateGameGuidesOnScreensaver = appContainer.observeUpdateGameGuidesOnScreensaverEnabledUseCase
+        val setUpdateGameGuidesOnScreensaver = appContainer.setUpdateGameGuidesOnScreensaverEnabledUseCase
         return SettingsViewModel(
             onboardingRepository = appContainer.onboardingRepository,
             validateLogFolderUseCase = appContainer.validateEsdeLogFolderUseCase,
@@ -86,6 +90,13 @@ class SettingsViewModelFactory(
             setGameLaunchDisplayTargetUseCase = appContainer.setGameLaunchDisplayTargetUseCase,
             observeCloseAppOnGameEndUseCase = appContainer.observeCloseAppOnGameEndUseCase,
             setCloseAppOnGameEndUseCase = appContainer.setCloseAppOnGameEndUseCase,
+            observeGameLaunchEnabledUseCase = appContainer.observeGameLaunchEnabledUseCase,
+            setGameLaunchEnabledUseCase = appContainer.setGameLaunchEnabledUseCase,
+            deleteAllGameGuidesUseCase = appContainer.deleteAllGameGuidesUseCase,
+            observeManualFallbackOnNoGuideEnabledUseCase = appContainer.observeManualFallbackOnNoGuideEnabledUseCase,
+            setManualFallbackOnNoGuideEnabledUseCase = appContainer.setManualFallbackOnNoGuideEnabledUseCase,
+            observeUpdateGameGuidesOnScreensaverEnabledUseCase = observeUpdateGameGuidesOnScreensaver,
+            setUpdateGameGuidesOnScreensaverEnabledUseCase = setUpdateGameGuidesOnScreensaver,
             volumeSyncSecondarySettingPresent = appContainer.volumeSyncSecondarySettingPresent,
         ) as T
     }

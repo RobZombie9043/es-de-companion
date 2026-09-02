@@ -185,6 +185,19 @@ interface OnboardingRepository {
     fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean>
 
     /**
+     * Settings > Game Guides: whether the Game Guides overlay's Library screen switches to
+     * whatever ES-DE's screensaver is showing while it's active. Defaults to false - unlike
+     * [setUpdateAchievementsOnScreensaverEnabled], this is a new opt-in toggle rather than one
+     * matching pre-existing behavior, so it starts off. Turning it on makes the Library follow
+     * the screensaver's own game, the same way it already follows ordinary game-to-game
+     * browsing; leaving it off freezes the Library on whatever game it was showing immediately
+     * before the screensaver started.
+     */
+    suspend fun setUpdateGameGuidesOnScreensaverEnabled(enabled: Boolean)
+
+    fun observeUpdateGameGuidesOnScreensaverEnabled(): Flow<Boolean>
+
+    /**
      * Whether the achievement screens' "Playtime Stats" line (see `GamePlaytimeStatsRow`) is
      * currently showing the hardcore medians (`true`) or the softcore/"Casual" ones (`false`).
      * Global, not per-game - toggling it while looking at one game affects every other game's

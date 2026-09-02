@@ -1,6 +1,7 @@
 package com.esde.companion.ui.retroachievements
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -321,6 +322,12 @@ private fun OptionsMenu(actions: OptionsMenuActions) {
     }
 }
 
+/**
+ * [AnimatedContent.contentKey] is the resolution state's own class - a live [Found] emission
+ * that only updates `method` (e.g. a manual correction landing on a different match confidence)
+ * shouldn't retrigger the crossfade, only a genuine transition between resolution variants -
+ * same reasoning as [RetroAchievementsFetchBody]'s own `contentKey`.
+ */
 @Composable
 private fun RetroAchievementsBody(
     resolution: RetroAchievementsResolutionState,
@@ -329,30 +336,37 @@ private fun RetroAchievementsBody(
     leaderboards: LeaderboardModeContent,
     modifier: Modifier,
 ) {
-    when (resolution) {
-        RetroAchievementsResolutionState.NotSignedIn -> {
-            val message = "Sign in to RetroAchievements (Settings > RetroAchievements) to see achievements."
-            RetroAchievementsMessage(message, modifier)
-        }
-        RetroAchievementsResolutionState.NoGame ->
-            RetroAchievementsMessage("No game is currently selected.", modifier)
-        RetroAchievementsResolutionState.UnsupportedSystem ->
-            RetroAchievementsMessage("RetroAchievements doesn't support this system.", modifier)
-        RetroAchievementsResolutionState.NoMatch ->
-            RetroAchievementsMessage("No RetroAchievements entry found for this game.", modifier)
-        is RetroAchievementsResolutionState.Found -> {
-            val hashMatchIndicator =
-                if (resolution.method == MatchMethod.RomHash) {
-                    HashMatchIndicator.Matched
-                } else {
-                    HashMatchIndicator.TitleOnly
-                }
-            RetroAchievementsModeBody(
-                modeSelection = modeSelection,
-                achievements = achievements.copy(hashMatchIndicator = hashMatchIndicator),
-                leaderboards = leaderboards,
-                modifier = modifier,
-            )
+    AnimatedContent(
+        targetState = resolution,
+        contentKey = { it::class },
+        label = "retroAchievementsResolution",
+        modifier = modifier,
+    ) { targetResolution ->
+        when (targetResolution) {
+            RetroAchievementsResolutionState.NotSignedIn -> {
+                val message = "Sign in to RetroAchievements (Settings > RetroAchievements) to see achievements."
+                RetroAchievementsMessage(message, Modifier.fillMaxSize())
+            }
+            RetroAchievementsResolutionState.NoGame ->
+                RetroAchievementsMessage("No game is currently selected.", Modifier.fillMaxSize())
+            RetroAchievementsResolutionState.UnsupportedSystem ->
+                RetroAchievementsMessage("RetroAchievements doesn't support this system.", Modifier.fillMaxSize())
+            RetroAchievementsResolutionState.NoMatch ->
+                RetroAchievementsMessage("No RetroAchievements entry found for this game.", Modifier.fillMaxSize())
+            is RetroAchievementsResolutionState.Found -> {
+                val hashMatchIndicator =
+                    if (targetResolution.method == MatchMethod.RomHash) {
+                        HashMatchIndicator.Matched
+                    } else {
+                        HashMatchIndicator.TitleOnly
+                    }
+                RetroAchievementsModeBody(
+                    modeSelection = modeSelection,
+                    achievements = achievements.copy(hashMatchIndicator = hashMatchIndicator),
+                    leaderboards = leaderboards,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }

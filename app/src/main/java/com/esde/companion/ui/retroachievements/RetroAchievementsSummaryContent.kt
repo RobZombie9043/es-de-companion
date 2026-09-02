@@ -3,7 +3,9 @@
 
 package com.esde.companion.ui.retroachievements
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,10 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.esde.companion.domain.model.AchievementComment
 import com.esde.companion.domain.model.AchievementDisplayField
 import com.esde.companion.domain.model.AchievementFilterOption
@@ -43,6 +45,7 @@ import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.filteredByAchievementFilters
 import com.esde.companion.domain.model.sortedByAchievementOrder
 import com.esde.companion.domain.model.valueFor
+import com.esde.companion.ui.main.CrossfadeAsyncImage
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -82,6 +85,12 @@ internal data class AchievementExpansionState(
     val onTap: (Long) -> Unit,
 )
 
+/**
+ * [AnimatedContent.contentKey] is the fetch state's own class rather than [fetch] itself - a
+ * [RetroAchievementsFetchState.Loaded] emission that only updates its `summary` (e.g. a
+ * newly-unlocked achievement arriving) shouldn't retrigger the crossfade on every such update,
+ * only a genuine transition between Loading/Loaded/NotFound/NetworkError variants.
+ */
 @Composable
 internal fun RetroAchievementsFetchBody(
     fetch: RetroAchievementsFetchState,
@@ -89,20 +98,32 @@ internal fun RetroAchievementsFetchBody(
     expansion: AchievementExpansionState,
     modifier: Modifier,
 ) {
-    when (fetch) {
-        RetroAchievementsFetchState.Idle, RetroAchievementsFetchState.Loading ->
-            Box(modifier = modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        is RetroAchievementsFetchState.Loaded ->
-            AchievementSummaryList(
-                summary = fetch.summary,
-                listControls = listControls,
-                expansion = expansion,
-                modifier = modifier,
-            )
-        RetroAchievementsFetchState.NotFound ->
-            RetroAchievementsMessage("This game's RetroAchievements entry couldn't be found.", modifier)
-        is RetroAchievementsFetchState.NetworkError ->
-            RetroAchievementsMessage("Couldn't load achievements: ${fetch.message}", modifier)
+    AnimatedContent(
+        targetState = fetch,
+        contentKey = { it::class },
+        label = "retroAchievementsFetch",
+        modifier = modifier,
+    ) { targetFetch ->
+        when (targetFetch) {
+            RetroAchievementsFetchState.Idle, RetroAchievementsFetchState.Loading ->
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            is RetroAchievementsFetchState.Loaded ->
+                AchievementSummaryList(
+                    summary = targetFetch.summary,
+                    listControls = listControls,
+                    expansion = expansion,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            RetroAchievementsFetchState.NotFound ->
+                RetroAchievementsMessage(
+                    "This game's RetroAchievements entry couldn't be found.",
+                    Modifier.fillMaxSize(),
+                )
+            is RetroAchievementsFetchState.NetworkError ->
+                RetroAchievementsMessage("Couldn't load achievements: ${targetFetch.message}", Modifier.fillMaxSize())
+        }
     }
 }
 
@@ -240,9 +261,10 @@ internal fun AchievementRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            AsyncImage(
+            CrossfadeAsyncImage(
                 model = achievement.badgeUrl,
                 contentDescription = null,
+                contentScale = ContentScale.Fit,
                 modifier = Modifier.size(ACHIEVEMENT_BADGE_SIZE),
             )
             Column(modifier = Modifier.weight(1f)) {
@@ -267,29 +289,33 @@ internal fun AchievementRow(
 @Composable
 private fun AchievementCommentsSection(comments: CommentsFetchState) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
-        when (comments) {
-            CommentsFetchState.Loading ->
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(modifier = Modifier.size(COMMENTS_PROGRESS_SIZE))
-                }
-            is CommentsFetchState.Loaded ->
-                if (comments.comments.isEmpty()) {
+        // The containing AchievementRow tile already carries animateContentSize() - this
+        // Crossfade smooths the loading/loaded/error content swap within that resize.
+        Crossfade(targetState = comments, label = "achievementComments") { targetComments ->
+            when (targetComments) {
+                CommentsFetchState.Loading ->
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(COMMENTS_PROGRESS_SIZE))
+                    }
+                is CommentsFetchState.Loaded ->
+                    if (targetComments.comments.isEmpty()) {
+                        Text(
+                            text = "No comments yet.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = LocalContentColor.current.copy(alpha = UNLOCK_DATE_ALPHA),
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            targetComments.comments.forEach { comment -> AchievementCommentRow(comment) }
+                        }
+                    }
+                is CommentsFetchState.NetworkError ->
                     Text(
-                        text = "No comments yet.",
+                        text = "Couldn't load comments: ${targetComments.message}",
                         style = MaterialTheme.typography.labelSmall,
                         color = LocalContentColor.current.copy(alpha = UNLOCK_DATE_ALPHA),
                     )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        comments.comments.forEach { comment -> AchievementCommentRow(comment) }
-                    }
-                }
-            is CommentsFetchState.NetworkError ->
-                Text(
-                    text = "Couldn't load comments: ${comments.message}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = LocalContentColor.current.copy(alpha = UNLOCK_DATE_ALPHA),
-                )
+            }
         }
     }
 }

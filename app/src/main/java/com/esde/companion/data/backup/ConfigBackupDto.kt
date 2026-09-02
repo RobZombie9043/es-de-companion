@@ -78,6 +78,12 @@ internal data class ConfigBackupDto(
     val gameLaunchOverrides: List<GameLaunchOverrideDto> = emptyList(),
     val gameLaunchDisplayTarget: String = "ThisScreen",
     val closeAppOnGameEndEnabled: Boolean = false,
+    val gameLaunchEnabled: Boolean = true,
+    val updateGameGuidesOnScreensaverEnabled: Boolean = false,
+    val manualFallbackOnNoGuideEnabled: Boolean = false,
+    val guideDisplayFontScale: Float = 1.0f,
+    val guideDisplayReflowEnabled: Boolean = true,
+    val guideDisplayMonospaceFont: Boolean = true,
 )
 
 @Serializable

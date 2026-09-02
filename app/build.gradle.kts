@@ -109,6 +109,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.security.crypto)
     implementation(libs.retroachievements.api.kotlin)
+    implementation(libs.androidx.webkit)
     debugImplementation(libs.androidx.ui.tooling)
 
     // Local unit tests: app/src/test/

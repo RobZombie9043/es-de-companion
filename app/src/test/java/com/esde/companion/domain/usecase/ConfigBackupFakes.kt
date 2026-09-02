@@ -3,6 +3,8 @@ package com.esde.companion.domain.usecase
 import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.GameGuideDisplayPreferences
+import com.esde.companion.domain.model.GameGuideReadingProgress
 import com.esde.companion.domain.model.GameLaunchDisplayTarget
 import com.esde.companion.domain.model.GameLaunchOverride
 import com.esde.companion.domain.model.GameMatchOverride
@@ -22,6 +24,7 @@ import com.esde.companion.domain.model.VolumeSyncMode
 import com.esde.companion.domain.repository.AppDrawerSettingsRepository
 import com.esde.companion.domain.repository.AppFolderRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
+import com.esde.companion.domain.repository.GameGuideSettingsRepository
 import com.esde.companion.domain.repository.GameLaunchAppRepository
 import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.OnboardingRepository
@@ -60,6 +63,7 @@ internal class FakeOnboardingRepository(
     launchEsdeOnStartEnabled: Boolean = false,
     debugLoggingEnabled: Boolean = false,
     updateAchievementsOnScreensaverEnabled: Boolean = true,
+    updateGameGuidesOnScreensaverEnabled: Boolean = false,
 ) : OnboardingRepository {
     private val logFolderPathFlow = MutableStateFlow(logFolderPath)
     private val mediaFolderPathFlow = MutableStateFlow(mediaFolderPath)
@@ -82,6 +86,7 @@ internal class FakeOnboardingRepository(
     private val launchEsdeOnStartEnabledFlow = MutableStateFlow(launchEsdeOnStartEnabled)
     private val debugLoggingEnabledFlow = MutableStateFlow(debugLoggingEnabled)
     private val updateAchievementsOnScreensaverEnabledFlow = MutableStateFlow(updateAchievementsOnScreensaverEnabled)
+    private val updateGameGuidesOnScreensaverEnabledFlow = MutableStateFlow(updateGameGuidesOnScreensaverEnabled)
 
     override fun defaultLogFolderPath() = "/storage/emulated/0/ES-DE"
 
@@ -233,6 +238,14 @@ internal class FakeOnboardingRepository(
 
     override fun observeUpdateAchievementsOnScreensaverEnabled(): Flow<Boolean> {
         return updateAchievementsOnScreensaverEnabledFlow
+    }
+
+    override suspend fun setUpdateGameGuidesOnScreensaverEnabled(enabled: Boolean) {
+        updateGameGuidesOnScreensaverEnabledFlow.value = enabled
+    }
+
+    override fun observeUpdateGameGuidesOnScreensaverEnabled(): Flow<Boolean> {
+        return updateGameGuidesOnScreensaverEnabledFlow
     }
 
     // Deliberately not part of this fake's constructor params, same as the RetroAchievements
@@ -469,11 +482,13 @@ internal class FakeGameLaunchAppRepository(
     initialGameOverrides: List<GameLaunchOverride> = emptyList(),
     initialLaunchDisplayTarget: GameLaunchDisplayTarget = GameLaunchDisplayTarget.ThisScreen,
     initialCloseAppOnGameEnd: Boolean = false,
+    initialEnabled: Boolean = true,
 ) : GameLaunchAppRepository {
     private val systemDefaultsFlow = MutableStateFlow(initialSystemDefaults)
     private val gameOverridesFlow = MutableStateFlow(initialGameOverrides)
     private val launchDisplayTargetFlow = MutableStateFlow(initialLaunchDisplayTarget)
     private val closeAppOnGameEndFlow = MutableStateFlow(initialCloseAppOnGameEnd)
+    private val enabledFlow = MutableStateFlow(initialEnabled)
 
     override fun observeSystemDefaults(): Flow<Map<String, String>> = systemDefaultsFlow
 
@@ -520,8 +535,42 @@ internal class FakeGameLaunchAppRepository(
         closeAppOnGameEndFlow.value = enabled
     }
 
+    override fun observeEnabled(): Flow<Boolean> = enabledFlow
+
+    override suspend fun setEnabled(enabled: Boolean) {
+        enabledFlow.value = enabled
+    }
+
     private fun GameLaunchOverride.matches(
         systemShortName: String,
         relativeRomPath: String,
     ) = this.systemShortName == systemShortName && this.relativeRomPath == relativeRomPath
+}
+
+internal class FakeGameGuideSettingsRepository(
+    displayPreferences: GameGuideDisplayPreferences = GameGuideDisplayPreferences(),
+    manualFallbackOnNoGuideEnabled: Boolean = false,
+) : GameGuideSettingsRepository {
+    private val displayPreferencesFlow = MutableStateFlow(displayPreferences)
+    private val manualFallbackOnNoGuideEnabledFlow = MutableStateFlow(manualFallbackOnNoGuideEnabled)
+    private val readingProgressFlows = mutableMapOf<String, MutableStateFlow<GameGuideReadingProgress?>>()
+
+    override suspend fun setDisplayPreferences(preferences: GameGuideDisplayPreferences) {
+        displayPreferencesFlow.value = preferences
+    }
+
+    override fun observeDisplayPreferences(): Flow<GameGuideDisplayPreferences> = displayPreferencesFlow
+
+    override suspend fun setReadingProgress(progress: GameGuideReadingProgress) {
+        readingProgressFlows.getOrPut(progress.guideId) { MutableStateFlow(null) }.value = progress
+    }
+
+    override fun observeReadingProgress(guideId: String): Flow<GameGuideReadingProgress?> =
+        readingProgressFlows.getOrPut(guideId) { MutableStateFlow(null) }
+
+    override suspend fun setManualFallbackOnNoGuideEnabled(enabled: Boolean) {
+        manualFallbackOnNoGuideEnabledFlow.value = enabled
+    }
+
+    override fun observeManualFallbackOnNoGuideEnabled(): Flow<Boolean> = manualFallbackOnNoGuideEnabledFlow
 }

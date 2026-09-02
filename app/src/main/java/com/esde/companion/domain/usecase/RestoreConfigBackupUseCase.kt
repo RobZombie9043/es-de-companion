@@ -68,6 +68,11 @@ class RestoreConfigBackupUseCase(
             }
             setLaunchDisplayTarget(snapshot.gameLaunchDisplayTarget)
             setCloseAppOnGameEnd(snapshot.closeAppOnGameEndEnabled)
+            setEnabled(snapshot.gameLaunchEnabled)
+        }
+        with(repositories.gameGuideSettingsRepository) {
+            setManualFallbackOnNoGuideEnabled(snapshot.manualFallbackOnNoGuideEnabled)
+            setDisplayPreferences(snapshot.guideDisplayPreferences)
         }
     }
 
@@ -106,6 +111,7 @@ class RestoreConfigBackupUseCase(
             setLaunchEsdeOnStartEnabled(snapshot.launchEsdeOnStartEnabled)
             setDebugLoggingEnabled(snapshot.debugLoggingEnabled)
             setUpdateAchievementsOnScreensaverEnabled(snapshot.updateAchievementsOnScreensaverEnabled)
+            setUpdateGameGuidesOnScreensaverEnabled(snapshot.updateGameGuidesOnScreensaverEnabled)
         }
     }
 }

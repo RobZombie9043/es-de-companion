@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -24,8 +26,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -68,6 +73,7 @@ import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.FabAssignments
 import com.esde.companion.domain.model.FabPosition
 import com.esde.companion.domain.model.FabType
+import com.esde.companion.domain.model.GameGuideFormat
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
 import com.esde.companion.domain.model.MusicPlaybackState
@@ -80,6 +86,20 @@ import com.esde.companion.ui.dock.AppDockViewModel
 import com.esde.companion.ui.dock.AppDockViewModelFactory
 import com.esde.companion.ui.drawer.AppDrawerViewModel
 import com.esde.companion.ui.drawer.AppDrawerViewModelFactory
+import com.esde.companion.ui.gameguides.GameGuideImageViewerScreen
+import com.esde.companion.ui.gameguides.GameGuideLibraryActions
+import com.esde.companion.ui.gameguides.GameGuideLibraryScreen
+import com.esde.companion.ui.gameguides.GameGuidePdfViewerScreen
+import com.esde.companion.ui.gameguides.GameGuideViewerScreen
+import com.esde.companion.ui.gameguides.GameGuidesBrowserActions
+import com.esde.companion.ui.gameguides.GameGuidesBrowserScreen
+import com.esde.companion.ui.gameguides.GameGuidesOverlayState
+import com.esde.companion.ui.gameguides.GameGuidesUiState
+import com.esde.companion.ui.gameguides.GuideManualFallback
+import com.esde.companion.ui.gameguides.GuideViewerActions
+import com.esde.companion.ui.gameguides.rememberGameGuidesOverlayState
+import com.esde.companion.ui.main.AddGuideBrowserReturn
+import com.esde.companion.ui.main.AddGuideReturnTarget
 import com.esde.companion.ui.main.MainScreen
 import com.esde.companion.ui.main.MainViewModel
 import com.esde.companion.ui.main.MainViewModelFactory
@@ -100,6 +120,8 @@ import com.esde.companion.ui.retroachievements.RetroAchievementsSystemGamesViewM
 import com.esde.companion.ui.retroachievements.RetroAchievementsViewModel
 import com.esde.companion.ui.retroachievements.RetroAchievementsViewModelFactory
 import com.esde.companion.ui.retroachievements.SystemGamesUiState
+import com.esde.companion.ui.settings.DownloadedGuidesViewModel
+import com.esde.companion.ui.settings.DownloadedGuidesViewModelFactory
 import com.esde.companion.ui.settings.GameLaunchOverrideViewModel
 import com.esde.companion.ui.settings.GameLaunchOverrideViewModelFactory
 import com.esde.companion.ui.settings.ManageAppsViewModel
@@ -161,11 +183,12 @@ private val MUSIC_OVERLAY_GAP = 12.dp
 // bit more room inside the 56dp CornerFab, same reasoning as AppDock's larger dock icons.
 private val CUSTOM_APP_ICON_SIZE = 32.dp
 
-// How strongly the widget backdrop/MainScreen chrome blurs behind the long-press menu -
-// see longPressMenuOpen below. Modifier.blur() only actually renders a blur on API 31+
-// (backed by RenderEffect); on this app's minSdk 29/30 it's a harmless no-op, so those
-// devices simply don't get the blur rather than crashing or looking broken.
-private val LONG_PRESS_MENU_BLUR_RADIUS = 4.dp
+// How strongly the widget backdrop/MainScreen chrome blurs behind a full-screen modal -
+// the long-press menu, and the Game Guides browser's download-progress dialog - see
+// modalBlurRadius below. Modifier.blur() only actually renders a blur on API 31+ (backed by
+// RenderEffect); on this app's minSdk 29/30 it's a harmless no-op, so those devices simply
+// don't get the blur rather than crashing or looking broken.
+private val MODAL_BLUR_RADIUS = 4.dp
 
 // Settings > Other Settings: "Launch ES-DE on Companion App Start". ES-DE's package name
 // isn't referenced anywhere else in this codebase (apps are identified via the installed
@@ -252,6 +275,8 @@ class MainActivity : ComponentActivity() {
                                 viewModel(factory = TaskKillerExcludedAppsViewModelFactory(appContainer))
                             val gameLaunchOverrideViewModel: GameLaunchOverrideViewModel =
                                 viewModel(factory = GameLaunchOverrideViewModelFactory(appContainer))
+                            val downloadedGuidesViewModel: DownloadedGuidesViewModel =
+                                viewModel(factory = DownloadedGuidesViewModelFactory(appContainer))
                             val updateViewModel: UpdateViewModel =
                                 viewModel(factory = UpdateViewModelFactory(appContainer))
                             val updateUiState by updateViewModel.uiState.collectAsStateWithLifecycle()
@@ -303,6 +328,20 @@ class MainActivity : ComponentActivity() {
                             // MainScreen opens its menu on every new (unconsumed) increment.
                             var openSettingsMenuRequest by remember { mutableIntStateOf(0) }
 
+                            // Set right before opening the Game Guides FAB's full-screen
+                            // browser from Settings > Game Guides > Add Guide > GameFAQs (see
+                            // AddGuideBrowserReturn.onOpened below), so closing that browser
+                            // without downloading anything can reopen the settings popup back
+                            // on this exact page instead of dropping the user all the way out
+                            // to the plain main screen (see GameGuidesOverlayContent's
+                            // onBrowserClosedWithPendingAddGuideReturn). Cleared once
+                            // LongPressSettingsMenu actually resumes on it
+                            // (onInitialTargetConsumed), so a later ordinary Settings open
+                            // (FAB tap, long-press gesture) starts at Home again.
+                            var pendingAddGuideReturnTarget by remember {
+                                mutableStateOf<AddGuideReturnTarget?>(null)
+                            }
+
                             // Reported by MainScreen (via AppDrawer) through
                             // onFolderOpenChanged - folded into mainScreenActive below so
                             // the automatic Dim/Black cover never shows over an open App
@@ -320,6 +359,8 @@ class MainActivity : ComponentActivity() {
                             val screensaverBehavior by viewModel.screensaverBehavior.collectAsStateWithLifecycle()
                             val gamePlayingDimPercent by viewModel.gamePlayingDimPercent.collectAsStateWithLifecycle()
                             val screensaverDimPercent by viewModel.screensaverDimPercent.collectAsStateWithLifecycle()
+                            val manualFallbackOnNoGuideEnabled by
+                                viewModel.manualFallbackOnNoGuideEnabled.collectAsStateWithLifecycle()
 
                             val widgetsViewModel: WidgetsViewModel =
                                 viewModel(factory = WidgetsViewModelFactory(appContainer))
@@ -338,8 +379,22 @@ class MainActivity : ComponentActivity() {
                             // Set by tapping the Game Manual FAB (FAB Control) - opens the
                             // same GameManualScreen the automatic Game Playing Behavior >
                             // Manual setting does, independent of that setting. Reset
-                            // together with manualDismissed below.
+                            // together with manualDismissed below. Deliberately independent of
+                            // isPlayingGame (a FAB-opened manual stays open across playing
+                            // ending, since the user opened it themselves) - contrast
+                            // manualShownAsGuideFallback below, which needs the opposite.
                             var manualViewerOpenedViaFab by rememberSaveable { mutableStateOf(false) }
+
+                            // Set by GameGuidesOverlayState's manual fallback (Settings > Game
+                            // Guides > "Load game manual on game start when no guide is
+                            // available") - unlike manualViewerOpenedViaFab, this is an
+                            // *automatic* substitute for the Guide behavior's own auto-show,
+                            // which always closes when PlayingGame ends (see
+                            // GameGuidesOverlayState's isPlayingGame LaunchedEffect) - so this
+                            // needs the same closes-on-game-end lifecycle, reset below whenever
+                            // isPlayingGame goes false, rather than manualViewerOpenedViaFab's
+                            // stays-open-until-dismissed one.
+                            var manualShownAsGuideFallback by rememberSaveable { mutableStateOf(false) }
 
                             val retroAchievementsViewModel: RetroAchievementsViewModel =
                                 viewModel(factory = RetroAchievementsViewModelFactory(appContainer))
@@ -352,6 +407,7 @@ class MainActivity : ComponentActivity() {
                             val systemGamesViewModel: RetroAchievementsSystemGamesViewModel =
                                 viewModel(factory = RetroAchievementsSystemGamesViewModelFactory(appContainer))
                             val systemGamesState by systemGamesViewModel.state.collectAsStateWithLifecycle()
+
                             // True for every state that means "signed in and browsing an
                             // actual system" - not just Loaded. Loading is included since
                             // RetroAchievementsSystemGamesViewModel only ever enters it once
@@ -372,29 +428,20 @@ class MainActivity : ComponentActivity() {
                                     systemGamesState is SystemGamesUiState.Loaded ||
                                     systemGamesState is SystemGamesUiState.UnsupportedSystem
 
-                            // One FAB, contextually aware of what ES-DE is currently
-                            // showing rather than a separate FAB type per screen: whichever
-                            // of the game-achievements/system-games ViewModels currently has
-                            // content wins (the two are naturally mutually exclusive - RA-DE
-                            // is either browsing a system or a game/screensaver at once, so
-                            // at most one of the two "has content" flags above is ever true).
-                            // Read live (not just at FAB-tap time) below so the open overlay
-                            // itself flips between the two screens if the browsed system/game
-                            // changes while it's still showing, rather than staying stuck on
-                            // whichever one was open when the FAB was tapped.
-                            val retroAchievementsFabMode =
-                                when {
-                                    retroAchievementsHasContent -> RetroAchievementsFabMode.Game
-                                    systemGamesHasContent -> RetroAchievementsFabMode.System
-                                    else -> RetroAchievementsFabMode.None
-                                }
-                            // See rememberHeldRetroAchievementsFabMode's kdoc: retroAchievementsFabMode
-                            // genuinely is None for one or more frames during a live system<->game
-                            // navigation, since the two source ViewModels resolve independently and
-                            // asynchronously - this holds the previous mode through that gap rather
-                            // than reacting to a momentary None.
+                            // One FAB, contextually aware of what ES-DE is currently showing
+                            // rather than a separate FAB type per screen. Read live (not just at
+                            // FAB-tap time) below so the open overlay itself flips between the two
+                            // screens if the browsed system/game changes while it's still showing,
+                            // rather than staying stuck on whichever one was open when the FAB was
+                            // tapped. See rememberRetroAchievementsFabMode's kdoc: sticks to whichever mode
+                            // is already showing as long as it still has content, rather than
+                            // always preferring Game - otherwise a screensaver starting while the
+                            // System page is open (with "Update on Screensaver" off, holding
+                            // systemGamesHasContent true) would get preempted by the
+                            // still-live-tracking Game ViewModel picking up the screensaver's own
+                            // game and forcing a switch to the Game screen.
                             val heldRetroAchievementsFabMode =
-                                rememberHeldRetroAchievementsFabMode(retroAchievementsFabMode)
+                                rememberRetroAchievementsFabMode(retroAchievementsHasContent, systemGamesHasContent)
 
                             // Set by tapping the RetroAchievements FAB (FAB Control); closed
                             // via either screen's own close button. No automatic open-on-launch
@@ -417,7 +464,7 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // Fed into each ViewModel's onOverlayVisibilityChanged below so its
-                            // own screensaver-hold logic (resolveAchievementsGame/System) only
+                            // own screensaver-hold logic (resolveScreensaverAwareGame/resolveAchievementsSystem) only
                             // freezes the displayed game/system while that exact screen is
                             // genuinely on screen, matching these AnimatedVisibility conditions.
                             val retroAchievementsGameVisible =
@@ -591,20 +638,35 @@ class MainActivity : ComponentActivity() {
                                     else -> 0
                                 }
 
-                            // Shows either because Game Playing Behavior is set to Manual
-                            // (and the user hasn't dismissed it for this game), or because
-                            // the Game Manual FAB was tapped - either way, only if a manual
-                            // actually resolved for the current game. Resets below
+                            val isPlayingGame =
+                                (connectionState as? EsdeConnectionState.Connected)?.appState is AppState.PlayingGame
+
+                            // Shows because Game Playing Behavior is set to Manual (and the
+                            // user hasn't dismissed it for this game), because the Game Manual
+                            // FAB was tapped, or because the Game Guides fallback (Settings >
+                            // Game Guides > "Load game manual...") kicked in - either way, only
+                            // if a manual actually resolved for the current game. Resets below
                             // (LaunchedEffect(manualPdfPath)) whenever the resolved manual
                             // itself changes.
                             val autoShowGameManual =
                                 activeScreenBehavior == ScreenBehavior.GameManual && !manualDismissed
                             val showGameManual =
-                                (autoShowGameManual || manualViewerOpenedViaFab) && manualPdfPath != null
+                                (autoShowGameManual || manualViewerOpenedViaFab || manualShownAsGuideFallback) &&
+                                    manualPdfPath != null
 
                             LaunchedEffect(manualPdfPath) {
                                 manualDismissed = false
                                 manualViewerOpenedViaFab = false
+                            }
+
+                            // manualShownAsGuideFallback is deliberately NOT reset by the
+                            // manualPdfPath effect above (unlike the other two flags) - it
+                            // needs to close specifically when playing ends, same as the Guide
+                            // auto-show trigger it's substituting for (see
+                            // GameGuidesOverlayState's own isPlayingGame LaunchedEffect), not
+                            // merely when the resolved manual changes.
+                            LaunchedEffect(isPlayingGame) {
+                                if (!isPlayingGame) manualShownAsGuideFallback = false
                             }
 
                             val autoBlackTrigger = activeScreenBehavior == ScreenBehavior.Black && !showGameManual
@@ -612,6 +674,57 @@ class MainActivity : ComponentActivity() {
 
                             LaunchedEffect(autoBlackTrigger) {
                                 isBlanked = autoBlackTrigger
+                            }
+
+                            val gameGuides =
+                                rememberGameGuidesOverlayState(
+                                    appContainer = appContainer,
+                                    activeScreenBehavior = activeScreenBehavior,
+                                    isPlayingGame = isPlayingGame,
+                                    manualFallback =
+                                        GuideManualFallback(
+                                            manualPdfPath = manualPdfPath,
+                                            manualFallbackEnabled = manualFallbackOnNoGuideEnabled,
+                                            onFallbackToManual = { manualShownAsGuideFallback = true },
+                                        ),
+                                )
+
+                            // pendingAddGuideReturnTarget is only meant to survive across a
+                            // Browsing session that closes without saving anything (see its
+                            // own kdoc) - once a download actually succeeds (or fails; either
+                            // way saveCurrentGuide's finally moves uiState off Browsing), the
+                            // user has moved on to a real guide/Library, and closing that later
+                            // (onCloseViewer/GameGuideLibraryActions.onClose) doesn't route
+                            // through onBrowserClosedWithPendingAddGuideReturn at all - so
+                            // without this, a stale target would sit here and wrongly hijack
+                            // the next, completely unrelated Settings open (FAB tap, long-press
+                            // gesture) into resuming on this game's Add Guide page instead of
+                            // Home. uiState only stays Browsing across a cancelDownload() (see
+                            // GameGuidesViewModel.saveCurrentGuide's own finally block), so this
+                            // never fires mid-cancel.
+                            LaunchedEffect(gameGuides.uiState) {
+                                val stillBrowsing = gameGuides.uiState is GameGuidesUiState.Browsing
+                                if (pendingAddGuideReturnTarget != null && !stillBrowsing) {
+                                    pendingAddGuideReturnTarget = null
+                                }
+                            }
+
+                            // Fed into GameGuidesViewModel.onOverlayVisibilityChanged so its own
+                            // screensaver-hold/live-follow logic (resolveScreensaverAwareGame)
+                            // only acts while the Library screen - not the Viewer or Browser -
+                            // is genuinely on screen, same reasoning as
+                            // retroAchievementsGameVisible/retroAchievementsSystemVisible above.
+                            // Excludes gameGuides.openedDirectly the same way the overlay's own
+                            // reopen-on-FAB-tap effect does (see GameGuidesOverlayState) - a
+                            // Library shown via Settings > Game Guides > Add Guide can be for an
+                            // explicitly-picked game that isn't ES-DE's live current one, so it
+                            // must never be silently swapped out for whatever game ES-DE is
+                            // showing live.
+                            val gameGuidesLibraryVisible =
+                                gameGuides.isShowing && mainScreenActive && !gameGuides.openedDirectly &&
+                                    gameGuides.uiState is GameGuidesUiState.Library
+                            LaunchedEffect(gameGuidesLibraryVisible) {
+                                gameGuides.viewModel.onOverlayVisibilityChanged(gameGuidesLibraryVisible)
                             }
 
                             // Extracted so each corner's content can be handed to
@@ -653,6 +766,14 @@ class MainActivity : ComponentActivity() {
                                     overlayOpacityPercent = overlayOpacityPercent,
                                     onWidthMeasured = { px -> measuredFabWidthsPx[position] = px },
                                     onClick = { openSettingsMenuRequest++ },
+                                )
+
+                            fun gameGuidesFabContext(position: FabPosition) =
+                                GameGuidesFabContext(
+                                    position = position,
+                                    visible = !isBlanked && isActivityVisible && gameGuides.hasCurrentGame,
+                                    overlayOpacityPercent = overlayOpacityPercent,
+                                    onClick = gameGuides.actions.onOpen,
                                 )
 
                             fun fabSlotContent(position: FabPosition): @Composable BoxScope.() -> Unit =
@@ -698,6 +819,7 @@ class MainActivity : ComponentActivity() {
                                                 overlayOpacityPercent = overlayOpacityPercent,
                                                 onClick = { showRetroAchievementsOverlay = true },
                                             )
+                                        FabType.GameGuides -> GameGuidesFabContent(gameGuidesFabContext(position))
                                         FabType.Clock -> ClockFabContent(wideFabContext(position))
                                         FabType.SystemStatus ->
                                             SystemStatusFabContent(
@@ -715,17 +837,27 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
 
+                            // True only while GameGuidesBrowserScreen's own "Downloading
+                            // guide" AlertDialog is showing (see GameGuidesUiState.Browsing.
+                            // isSaving) - folded into modalBlurRadius below the same way
+                            // longPressMenuOpen is, since that dialog is likewise a genuine
+                            // separate platform window this Box's blur can never affect.
+                            val guideDownloadDialogShowing =
+                                (gameGuides.uiState as? GameGuidesUiState.Browsing)?.isSaving == true
+
                             // Blurs everything behind the long-press menu (the widget
-                            // backdrop, and MainScreen's own dock/corner buttons) while it's
-                            // open - animated rather than snapping, so it settles in step
-                            // with the menu's own entrance animation. The menu itself is
-                            // unaffected: Popup renders in its own platform window, entirely
-                            // outside this Box's render tree, so blurring this Box can never
-                            // blur it too. Deliberately not applied while a folder is open -
-                            // see folderOpen's kdoc above.
-                            val longPressMenuBlurRadius by animateDpAsState(
-                                targetValue = if (longPressMenuOpen) LONG_PRESS_MENU_BLUR_RADIUS else 0.dp,
-                                label = "longPressMenuBlur",
+                            // backdrop, and MainScreen's own dock/corner buttons) or the Game
+                            // Guides download-progress dialog while either is open - animated
+                            // rather than snapping, so it settles in step with the menu's own
+                            // entrance animation. Both are unaffected themselves: a Popup/
+                            // AlertDialog renders in its own platform window, entirely outside
+                            // this Box's render tree, so blurring this Box can never blur them
+                            // too. Deliberately not applied while a folder is open - see
+                            // folderOpen's kdoc above.
+                            val modalOpen = longPressMenuOpen || guideDownloadDialogShowing
+                            val modalBlurRadius by animateDpAsState(
+                                targetValue = if (modalOpen) MODAL_BLUR_RADIUS else 0.dp,
+                                label = "modalBlur",
                             )
 
                             // Shared by both WidgetOverlay's ordinary canvas-layer video
@@ -749,7 +881,7 @@ class MainActivity : ComponentActivity() {
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
-                                        .blur(longPressMenuBlurRadius),
+                                        .blur(modalBlurRadius),
                             ) {
                                 WidgetOverlay(
                                     viewModel = widgetsViewModel,
@@ -780,6 +912,8 @@ class MainActivity : ComponentActivity() {
                                             autoFpsTriggerAppsViewModel = autoFpsTriggerAppsViewModel,
                                             taskKillerExcludedAppsViewModel = taskKillerExcludedAppsViewModel,
                                             gameLaunchOverrideViewModel = gameLaunchOverrideViewModel,
+                                            downloadedGuidesViewModel = downloadedGuidesViewModel,
+                                            gameGuides = gameGuides,
                                             updateViewModel = updateViewModel,
                                             fabAssignments = fabAssignments,
                                             overlayOpacityPercent = overlayOpacityPercent,
@@ -790,6 +924,16 @@ class MainActivity : ComponentActivity() {
                                             onLongPressMenuOpenChanged = { longPressMenuOpen = it },
                                             onFolderOpenChanged = { folderOpen = it },
                                             openSettingsMenuRequest = openSettingsMenuRequest,
+                                            addGuideBrowserReturn =
+                                                AddGuideBrowserReturn(
+                                                    initialTarget = pendingAddGuideReturnTarget,
+                                                    onOpened = { target -> pendingAddGuideReturnTarget = target },
+                                                    onInitialTargetConsumed = { pendingAddGuideReturnTarget = null },
+                                                ),
+                                            // Otherwise a swipe meant to scroll a Game Guides
+                                            // page can also open the App Drawer underneath -
+                                            // see MainScreen's swipeToOpenDrawerEnabled kdoc.
+                                            swipeToOpenDrawerEnabled = !(gameGuides.isShowing && mainScreenActive),
                                             topStartOverlay = fabSlotContent(FabPosition.TopStart),
                                             topEndOverlay = fabSlotContent(FabPosition.TopEnd),
                                             bottomStartOverlay = fabSlotContent(FabPosition.BottomStart),
@@ -868,6 +1012,7 @@ class MainActivity : ComponentActivity() {
                                         onExit = {
                                             manualDismissed = true
                                             manualViewerOpenedViaFab = false
+                                            manualShownAsGuideFallback = false
                                         },
                                         modifier = Modifier.fillMaxSize(),
                                     )
@@ -932,6 +1077,28 @@ class MainActivity : ComponentActivity() {
                                         viewModel = systemGamesViewModel,
                                         overlayOpacityPercent = overlayOpacityPercent,
                                         onExit = { showRetroAchievementsOverlay = false },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+
+                                // Game Guides (Game Guides FAB) - same placement/guard as
+                                // GameManual/RetroAchievements above. Which of Browsing/
+                                // Library/Viewing renders is decided live by
+                                // gameGuides.uiState, not frozen at tap time.
+                                AnimatedVisibility(
+                                    visible = gameGuides.isShowing && mainScreenActive,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    GameGuidesOverlayContent(
+                                        gameGuides = gameGuides,
+                                        onOpenManual = {
+                                            manualViewerOpenedViaFab = true
+                                            gameGuides.actions.onClose()
+                                        },
+                                        onBrowserClosedWithPendingAddGuideReturn = {
+                                            if (pendingAddGuideReturnTarget != null) openSettingsMenuRequest++
+                                        },
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
@@ -1065,7 +1232,7 @@ private fun BoxScope.MusicFabContent(
             opacityPercent = overlayOpacityPercent,
             modifier = Modifier.align(alignment).padding(CORNER_BUTTON_EDGE_PADDING),
         ) {
-            Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
+            MusicFabIcon(controlsRevealed = controlsRevealed)
         }
 
         val overlayMaxWidth = maxWidth - expansionGap - reservedWidth
@@ -1105,6 +1272,35 @@ private fun BoxScope.MusicFabContent(
     }
 }
 
+private const val MUSIC_FAB_ICON_REVEALED_SCALE = 1.15f
+private const val MUSIC_FAB_ICON_COLLAPSED_SCALE = 1f
+
+/**
+ * The Music FAB's icon - tints toward the theme's primary color and scales up slightly while
+ * [controlsRevealed] is true, so the FAB itself visibly reads as "active" instead of the panel's
+ * own fade being the only cue. A standalone composable so this stays a single reusable spot for
+ * the transition rather than duplicating it inline in [MusicFabContent].
+ */
+@Composable
+private fun MusicFabIcon(controlsRevealed: Boolean) {
+    val tint by
+        animateColorAsState(
+            targetValue = if (controlsRevealed) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+            label = "musicFabIconTint",
+        )
+    val scale by
+        animateFloatAsState(
+            targetValue = if (controlsRevealed) MUSIC_FAB_ICON_REVEALED_SCALE else MUSIC_FAB_ICON_COLLAPSED_SCALE,
+            label = "musicFabIconScale",
+        )
+    Icon(
+        imageVector = Icons.Filled.MusicNote,
+        contentDescription = "Music controls",
+        tint = tint,
+        modifier = Modifier.scale(scale),
+    )
+}
+
 /**
  * Content for a corner assigned [FabType.GameManual] (see MainActivity's fabSlotContent) -
  * a FAB shown whenever the current game has a resolved manual, opening the Game Manual
@@ -1117,13 +1313,142 @@ private fun BoxScope.GameManualFabContent(
     overlayOpacityPercent: Int,
     onClick: () -> Unit,
 ) {
-    if (!visible) return
-    CornerFab(
-        onClick = onClick,
-        opacityPercent = overlayOpacityPercent,
-        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
-    ) {
-        Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+    FabAnimatedVisibility(visible = visible, modifier = Modifier.align(position.toAlignment())) {
+        CornerFab(
+            onClick = onClick,
+            opacityPercent = overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Game Manual")
+        }
+    }
+}
+
+/** Bundles [GameGuidesFabContent]'s parameters into one, same reasoning as [WideFabContext]. */
+private data class GameGuidesFabContext(
+    val position: FabPosition,
+    val visible: Boolean,
+    val overlayOpacityPercent: Int,
+    val onClick: () -> Unit,
+)
+
+/**
+ * Content for a corner assigned [FabType.GameGuides] (see MainActivity's fabSlotContent) -
+ * a FAB shown whenever there's a current game (regardless of whether a guide has been
+ * downloaded for it yet - the first-run flow is search-then-download), opening the Game
+ * Guides overlay on tap (see MainActivity's rememberGameGuidesOverlayState).
+ */
+@Composable
+private fun BoxScope.GameGuidesFabContent(context: GameGuidesFabContext) {
+    FabAnimatedVisibility(visible = context.visible, modifier = Modifier.align(context.position.toAlignment())) {
+        CornerFab(
+            onClick = context.onClick,
+            opacityPercent = context.overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            Icon(imageVector = Icons.Filled.LibraryBooks, contentDescription = "Game Guides")
+        }
+    }
+}
+
+/**
+ * Full-screen Game Guides content (Browsing/Library/Viewing), dispatched from
+ * [gameGuides]'s live [GameGuidesOverlayState.uiState] - pulled out of MainActivity's own
+ * composable body (which was tipping detekt's LargeClass threshold) purely to keep the class
+ * itself smaller; none of this needs anything MainActivity-specific beyond [onOpenManual]
+ * (setting `manualViewerOpenedViaFab`, which only MainActivity owns) and
+ * [onBrowserClosedWithPendingAddGuideReturn] (reopening the settings popup via
+ * `openSettingsMenuRequest`, likewise only reachable from MainActivity).
+ */
+@Composable
+private fun GameGuidesOverlayContent(
+    gameGuides: GameGuidesOverlayState,
+    onOpenManual: () -> Unit,
+    onBrowserClosedWithPendingAddGuideReturn: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (val state = gameGuides.uiState) {
+        is GameGuidesUiState.Browsing -> {
+            val browserActions =
+                GameGuidesBrowserActions(
+                    onPageLoaded = gameGuides.viewModel::onBrowserPageLoaded,
+                    onSave = gameGuides.viewModel::saveCurrentGuide,
+                    onClose = {
+                        // openedDirectly is only ever true for Browsing via Settings > Game
+                        // Guides > Add Guide > GameFAQs (see GameGuidesOverlayState's kdoc) -
+                        // onCloseBrowsing() drops back to the Library for the ordinary
+                        // FAB-opened case, or exits the overlay entirely here, in which case
+                        // this reopens the settings popup back on the Add Guide page instead
+                        // of leaving the user stranded on the plain main screen.
+                        val wasOpenedDirectly = gameGuides.openedDirectly
+                        gameGuides.actions.onCloseBrowsing()
+                        if (wasOpenedDirectly) onBrowserClosedWithPendingAddGuideReturn()
+                    },
+                    onCancelDownload = gameGuides.viewModel::cancelDownload,
+                )
+            GameGuidesBrowserScreen(state = state, actions = browserActions, modifier = modifier)
+        }
+        is GameGuidesUiState.Library ->
+            GameGuideLibraryScreen(
+                state = state,
+                actions = buildGameGuideLibraryActions(gameGuides, state, onOpenManual),
+                modifier = modifier,
+            )
+        is GameGuidesUiState.Viewing -> GameGuidesViewingContent(state, gameGuides, modifier)
+        GameGuidesUiState.NoGame -> {}
+    }
+}
+
+/** [onOpenManual] is only ever wired when [GameGuidesOverlayState.openedDirectly] is false -
+ * see [GameGuideLibraryActions]'s own kdoc for why a directly-opened Library (an explicitly-
+ * picked game, not necessarily ES-DE's live current one) disables the Game Manual row instead. */
+private fun buildGameGuideLibraryActions(
+    gameGuides: GameGuidesOverlayState,
+    state: GameGuidesUiState.Library,
+    onOpenManual: () -> Unit,
+): GameGuideLibraryActions =
+    GameGuideLibraryActions(
+        onOpenGuide = gameGuides.viewModel::openGuide,
+        onDeleteGuide = { guide -> gameGuides.viewModel.deleteGuide(guide.id) },
+        onBrowseGameFaqs = { gameGuides.viewModel.openBrowser() },
+        onImportGuide = { bytes, fileName, format ->
+            gameGuides.viewModel.importGuideFor(state.gameReference, state.gameName, bytes, fileName, format)
+        },
+        onOpenManual = if (gameGuides.openedDirectly) null else onOpenManual,
+        onClose = gameGuides.actions.onClose,
+    )
+
+/** The Viewing branch of [GameGuidesOverlayContent] - an exhaustive dispatch on
+ * [DownloadedGameGuide.format] across the three guide viewer implementations. */
+@Composable
+private fun GameGuidesViewingContent(
+    state: GameGuidesUiState.Viewing,
+    gameGuides: GameGuidesOverlayState,
+    modifier: Modifier,
+) {
+    val guideId = state.guide.id
+    when (state.guide.format) {
+        GameGuideFormat.PlainText, GameGuideFormat.Html -> {
+            val viewerActions =
+                GuideViewerActions(
+                    onScrollFractionChanged = { pageIndex, fraction ->
+                        gameGuides.viewModel.onReadingPositionChanged(guideId, pageIndex, fraction)
+                    },
+                    onDisplayPreferencesChanged = gameGuides.viewModel::onDisplayPreferencesChanged,
+                    onPageChanged = gameGuides.viewModel::loadPage,
+                    onClose = gameGuides.actions.onCloseViewer,
+                )
+            GameGuideViewerScreen(state = state, actions = viewerActions, modifier = modifier)
+        }
+        GameGuideFormat.Pdf ->
+            GameGuidePdfViewerScreen(
+                state = state,
+                onPageChanged = { pageIndex -> gameGuides.viewModel.onReadingPositionChanged(guideId, pageIndex, 0f) },
+                onClose = gameGuides.actions.onCloseViewer,
+                modifier = modifier,
+            )
+        GameGuideFormat.Image ->
+            GameGuideImageViewerScreen(state = state, onClose = gameGuides.actions.onCloseViewer, modifier = modifier)
     }
 }
 
@@ -1132,50 +1457,75 @@ private fun BoxScope.GameManualFabContent(
  * currently points at - [Game] while browsing a game/screensaver/playing (see
  * RetroAchievementsViewModel.resolution), [System] while browsing a system's game list (see
  * RetroAchievementsSystemGamesViewModel.state), [None] when neither has anything to show
- * (e.g. signed out, or Idle). The two source states are naturally mutually exclusive - ES-DE
- * is never simultaneously "browsing a system" and "browsing/playing a game" - so this is a
- * plain priority pick, not a merge of overlapping signals. Note that mutually exclusive
- * *states* doesn't mean atomic *transitions* between them - see
- * [rememberHeldRetroAchievementsFabMode].
+ * (e.g. signed out, or Idle). See [rememberRetroAchievementsFabMode] for how the two source
+ * signals get turned into this.
  */
 private enum class RetroAchievementsFabMode { Game, System, None }
 
 /**
- * Holds the previous non-[RetroAchievementsFabMode.None] mode for
- * [RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS] before actually reporting
- * [RetroAchievementsFabMode.None], rather than propagating a momentary None straight
- * through to the UI.
+ * Picks which of the two RetroAchievements screens is showing, sticking to whichever one is
+ * already displayed as long as it still has content rather than always preferring
+ * [RetroAchievementsFabMode.Game] when both signals happen to be true at once.
  *
- * `RetroAchievementsViewModel` and `RetroAchievementsSystemGamesViewModel` are independent,
- * each resolving asynchronously (a candidate-list/ROM-hash lookup, or a system's cached game
- * list) - on a live system<->game navigation, the side losing context drops to "no content"
+ * The two source states aren't as mutually exclusive as they look. Ordinarily ES-DE is never
+ * simultaneously "browsing a system" and "browsing/playing a game", so [gameHasContent] and
+ * [systemHasContent] are naturally exclusive too - except when "Update on Screensaver" is off:
+ * `RetroAchievementsSystemGamesViewModel` then *holds* [systemHasContent] true through a
+ * screensaver (see `resolveAchievementsSystem`), but `RetroAchievementsViewModel` only holds
+ * its own resolution while the Game screen is the one actually on screen - while the System
+ * screen is showing instead, it keeps live-tracking `AppState` in the background (by design,
+ * so opening the Game screen later shows the right thing) and picks up the screensaver's own
+ * game, making [gameHasContent] true too. A plain "Game always wins" priority pick would then
+ * yank the already-open System screen over to Game the instant a screensaver starts - the
+ * sticky rule here means System stays showing as long as it still has content, exactly the
+ * "held" system the toggle was asking for.
+ *
+ * Also holds the previous non-[RetroAchievementsFabMode.None] mode for
+ * [RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS] before actually reporting
+ * [RetroAchievementsFabMode.None], rather than propagating a momentary None straight through
+ * to the UI. `RetroAchievementsViewModel` and `RetroAchievementsSystemGamesViewModel` each
+ * resolve asynchronously (a candidate-list/ROM-hash lookup, or a system's cached game list) -
+ * on a live system<->game navigation, the side losing context drops to "no content"
  * synchronously (its ViewModel sees the game/system disappear from AppState) while the side
- * gaining context is still mid-resolve, so [target] genuinely is
- * [RetroAchievementsFabMode.None] for one or more frames even though the transition is
- * expected to land on a real mode shortly after. Without this hold, that frame both hides
- * both RetroAchievements screens (MainActivity's two `AnimatedVisibility` blocks require a
- * mode match) and permanently auto-dismisses the overlay (see MainActivity's
- * `LaunchedEffect` keyed on this value) - exposing the widget canvas underneath and
- * requiring the FAB to be tapped again to reopen. Confirmed on-device: the backdrop-image
- * flash this was mistaken for during a WidgetOverlay fix turned out to be this instead, once
- * that fix didn't resolve it.
+ * gaining context is still mid-resolve, so both signals genuinely are false for one or more
+ * frames even though the transition is expected to land on a real mode shortly after. Without
+ * this hold, that frame both hides both RetroAchievements screens (MainActivity's two
+ * `AnimatedVisibility` blocks require a mode match) and permanently auto-dismisses the
+ * overlay (see MainActivity's `LaunchedEffect` keyed on this value) - exposing the widget
+ * canvas underneath and requiring the FAB to be tapped again to reopen. Confirmed on-device:
+ * the backdrop-image flash this was mistaken for during a WidgetOverlay fix turned out to be
+ * this instead, once that fix didn't resolve it.
  *
  * A genuine "nothing to show" (signed out, Idle, both screens truly inapplicable) still
- * resolves to [RetroAchievementsFabMode.None] once the grace period elapses with no
- * non-None [target] having arrived.
+ * resolves to [RetroAchievementsFabMode.None] once the grace period elapses with neither
+ * signal having come back true.
  */
 @Composable
-private fun rememberHeldRetroAchievementsFabMode(target: RetroAchievementsFabMode): RetroAchievementsFabMode {
-    var held by remember { mutableStateOf(target) }
-    LaunchedEffect(target) {
-        if (target != RetroAchievementsFabMode.None) {
-            held = target
+private fun rememberRetroAchievementsFabMode(
+    gameHasContent: Boolean,
+    systemHasContent: Boolean,
+): RetroAchievementsFabMode {
+    var mode by remember { mutableStateOf(RetroAchievementsFabMode.None) }
+    LaunchedEffect(gameHasContent, systemHasContent) {
+        val sticky =
+            when {
+                mode == RetroAchievementsFabMode.Game && gameHasContent -> RetroAchievementsFabMode.Game
+                mode == RetroAchievementsFabMode.System && systemHasContent -> RetroAchievementsFabMode.System
+                gameHasContent -> RetroAchievementsFabMode.Game
+                systemHasContent -> RetroAchievementsFabMode.System
+                else -> null
+            }
+        if (sticky != null) {
+            mode = sticky
             return@LaunchedEffect
         }
+        // A key change (either signal flipping) cancels/restarts this coroutine, so if content
+        // arrives during the delay below, this call is already cancelled before it can write
+        // RetroAchievementsFabMode.None - only a genuine, sustained gap falls through.
         delay(RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS)
-        held = RetroAchievementsFabMode.None
+        mode = RetroAchievementsFabMode.None
     }
-    return held
+    return mode
 }
 
 private const val RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS = 500L
@@ -1186,7 +1536,7 @@ private const val RETRO_ACHIEVEMENTS_FAB_MODE_NONE_GRACE_PERIOD_MILLIS = 500L
  * [RetroAchievementsScreen] for the current game or [RetroAchievementsSystemGamesScreen]
  * for the current system, whichever currently applies. Same trophy icon in both contexts -
  * the FAB doesn't hint at which screen a tap opens, since that already flips live once the
- * screen itself is open (see MainActivity's `retroAchievementsFabMode` usage below).
+ * screen itself is open (see MainActivity's `heldRetroAchievementsFabMode` usage below).
  */
 @Composable
 private fun BoxScope.RetroAchievementsFabContent(
@@ -1195,13 +1545,14 @@ private fun BoxScope.RetroAchievementsFabContent(
     overlayOpacityPercent: Int,
     onClick: () -> Unit,
 ) {
-    if (!visible) return
-    CornerFab(
-        onClick = onClick,
-        opacityPercent = overlayOpacityPercent,
-        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
-    ) {
-        Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = "RetroAchievements")
+    FabAnimatedVisibility(visible = visible, modifier = Modifier.align(position.toAlignment())) {
+        CornerFab(
+            onClick = onClick,
+            opacityPercent = overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            Icon(imageVector = Icons.Filled.EmojiEvents, contentDescription = "RetroAchievements")
+        }
     }
 }
 
@@ -1234,37 +1585,46 @@ private fun BoxScope.CustomAppFabContent(
         value = AppIconLoader.loadIcon(context, packageName)
     }
     val isOtherScreenPreferred = packageName in otherScreenLaunchApps
-    CornerFab(
-        onClick = {
-            val displayId = if (isOtherScreenPreferred) SecondaryDisplayResolver.secondaryDisplayId(context) else null
-            AppLauncher.launch(context, packageName, displayId = displayId)
-        },
-        onDoubleClick = {
-            if (isOtherScreenPreferred) {
-                onRecordLaunchLocation(packageName, LaunchLocation.ThisScreen)
-                AppLauncher.launch(context, packageName)
-            } else {
-                val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
-                if (secondaryDisplayId != null) {
-                    onRecordLaunchLocation(packageName, LaunchLocation.OtherScreen)
+    // Entrance fade only (not a full FabAnimatedVisibility(visible = ...) wrap like the
+    // simpler FABs above) - the early returns above depend on resolved app/icon data, not
+    // just a plain boolean, so keeping this composed through an exit transition risks it
+    // re-running with stale/null app data mid-animation. A smooth fade-in still replaces the
+    // previous instant snap for the common case (this FAB newly becoming relevant); exit
+    // stays an instant disappearance, same as before.
+    FabAnimatedVisibility(visible = true, modifier = Modifier.align(position.toAlignment())) {
+        CornerFab(
+            onClick = {
+                val displayId =
+                    if (isOtherScreenPreferred) SecondaryDisplayResolver.secondaryDisplayId(context) else null
+                AppLauncher.launch(context, packageName, displayId = displayId)
+            },
+            onDoubleClick = {
+                if (isOtherScreenPreferred) {
+                    onRecordLaunchLocation(packageName, LaunchLocation.ThisScreen)
+                    AppLauncher.launch(context, packageName)
+                } else {
+                    val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
+                    if (secondaryDisplayId != null) {
+                        onRecordLaunchLocation(packageName, LaunchLocation.OtherScreen)
+                    }
+                    AppLauncher.launch(context, packageName, displayId = secondaryDisplayId)
                 }
-                AppLauncher.launch(context, packageName, displayId = secondaryDisplayId)
-            }
-        },
-        opacityPercent = overlayOpacityPercent,
-        modifier = Modifier.align(position.toAlignment()).padding(CORNER_BUTTON_EDGE_PADDING),
-    ) {
-        // Same indicator dot (size/color/placement) as AppDock's FilledDockSlot, so an
-        // app's other-screen preference reads identically wherever it's shown.
-        Box(contentAlignment = Alignment.Center) {
-            AsyncImage(model = icon, contentDescription = app.label, modifier = Modifier.size(CUSTOM_APP_ICON_SIZE))
-            if (isOtherScreenPreferred) {
-                val dotModifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(10.dp)
-                        .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
-                Box(modifier = dotModifier)
+            },
+            opacityPercent = overlayOpacityPercent,
+            modifier = Modifier.padding(CORNER_BUTTON_EDGE_PADDING),
+        ) {
+            // Same indicator dot (size/color/placement) as AppDock's FilledDockSlot, so an
+            // app's other-screen preference reads identically wherever it's shown.
+            Box(contentAlignment = Alignment.Center) {
+                AsyncImage(model = icon, contentDescription = app.label, modifier = Modifier.size(CUSTOM_APP_ICON_SIZE))
+                if (isOtherScreenPreferred) {
+                    val dotModifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(10.dp)
+                            .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+                    Box(modifier = dotModifier)
+                }
             }
         }
     }

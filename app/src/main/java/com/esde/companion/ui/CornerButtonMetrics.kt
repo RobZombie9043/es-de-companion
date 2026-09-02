@@ -1,5 +1,9 @@
 package com.esde.companion.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -89,6 +93,27 @@ fun CornerFab(
 }
 
 /**
+ * Fades a corner FAB in/out instead of the instant snap a plain `if (visible) { CornerFab(...) }`
+ * would give. A standalone composable (not inlined at each `BoxScope`-receiver call site) so its
+ * `AnimatedVisibility` call has no ambient `BoxScope` receiver in lexical scope - avoids the same
+ * overload-ambiguity compile error already hit for `ColumnScope`/`RowScope` cases elsewhere in
+ * this app (see `GameGuidesBrowserScreen.kt`'s `DownloadButton`, `SystemStatusIcons.kt`'s
+ * `StatusIcon`). [modifier] carries the caller's own `Modifier.align(...)` - passed to
+ * `AnimatedVisibility`'s own modifier, not to content inside it, per this project's CLAUDE.md
+ * Known Gotchas on `Modifier.align()` + `AnimatedVisibility`/`AnimatedContent`.
+ */
+@Composable
+fun FabAnimatedVisibility(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    AnimatedVisibility(visible = visible, modifier = modifier, enter = fadeIn(), exit = fadeOut()) {
+        content()
+    }
+}
+
+/**
  * Same theming/shape as [CornerFab] but fixed height / wrap-content width instead of a fixed
  * square - for FAB content whose width varies with what it displays (Clock's time text,
  * SystemStatus's icon row). Used by ClockFabContent/SystemStatusFabContent/
@@ -110,6 +135,12 @@ fun WideCornerFab(
                 .height(CORNER_BUTTON_SIZE)
                 .widthIn(min = CORNER_BUTTON_SIZE)
                 .wrapContentWidth()
+                // Content whose natural width varies (SystemStatusIcons' connectivity icons
+                // appearing/disappearing, the Clock's ticking digits) used to make this FAB's
+                // own width jump instantly - animateContentSize() smooths that transition.
+                // Placed before clip/background so those paint at the animated intermediate
+                // size each frame, not just the final one.
+                .animateContentSize()
                 .clip(CORNER_BUTTON_SHAPE)
                 .background(backgroundColor.copy(alpha = opacityPercent / 100f))
                 .combinedClickable(onClick = onClick)
