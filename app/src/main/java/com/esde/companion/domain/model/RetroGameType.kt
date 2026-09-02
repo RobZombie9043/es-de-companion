@@ -27,7 +27,7 @@ fun String.retroGameTypes(): Set<RetroGameType> {
     val matched =
         RetroGameType.entries
             .filter { it.titleTag != null }
-            .filter { type -> contains(type.titleTag!!, ignoreCase = true) }
+            .filter { type -> type.titleTag?.let { tag -> contains(tag, ignoreCase = true) } == true }
             .toSet()
     return matched.ifEmpty { setOf(RetroGameType.Retail) }
 }
