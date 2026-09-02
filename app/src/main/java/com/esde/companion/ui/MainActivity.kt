@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -1228,7 +1232,7 @@ private fun BoxScope.MusicFabContent(
             opacityPercent = overlayOpacityPercent,
             modifier = Modifier.align(alignment).padding(CORNER_BUTTON_EDGE_PADDING),
         ) {
-            Icon(imageVector = Icons.Filled.MusicNote, contentDescription = "Music controls")
+            MusicFabIcon(controlsRevealed = controlsRevealed)
         }
 
         val overlayMaxWidth = maxWidth - expansionGap - reservedWidth
@@ -1266,6 +1270,35 @@ private fun BoxScope.MusicFabContent(
             )
         }
     }
+}
+
+private const val MUSIC_FAB_ICON_REVEALED_SCALE = 1.15f
+private const val MUSIC_FAB_ICON_COLLAPSED_SCALE = 1f
+
+/**
+ * The Music FAB's icon - tints toward the theme's primary color and scales up slightly while
+ * [controlsRevealed] is true, so the FAB itself visibly reads as "active" instead of the panel's
+ * own fade being the only cue. A standalone composable so this stays a single reusable spot for
+ * the transition rather than duplicating it inline in [MusicFabContent].
+ */
+@Composable
+private fun MusicFabIcon(controlsRevealed: Boolean) {
+    val tint by
+        animateColorAsState(
+            targetValue = if (controlsRevealed) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+            label = "musicFabIconTint",
+        )
+    val scale by
+        animateFloatAsState(
+            targetValue = if (controlsRevealed) MUSIC_FAB_ICON_REVEALED_SCALE else MUSIC_FAB_ICON_COLLAPSED_SCALE,
+            label = "musicFabIconScale",
+        )
+    Icon(
+        imageVector = Icons.Filled.MusicNote,
+        contentDescription = "Music controls",
+        tint = tint,
+        modifier = Modifier.scale(scale),
+    )
 }
 
 /**
