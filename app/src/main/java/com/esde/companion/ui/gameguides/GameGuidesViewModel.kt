@@ -143,6 +143,49 @@ class GameGuidesViewModel(
      * [cancelDownload]'s kdoc. */
     private var downloadJob: Job? = null
 
+    /** Tracks [prefetchNextPage]'s in-flight coroutine - same "an earlier-requested load could
+     * otherwise land after a later one" reasoning as [pageLoadJob]. */
+    private var prefetchJob: Job? = null
+    private var prefetchedPageIndex: Int? = null
+    private var prefetchedContent: String? = null
+
+    /**
+     * Speculatively loads [pageIndex] + 1's content in the background - called once after
+     * every successful page display ([loadPage]'s success path, and after [openGuide]/
+     * [autoOpenLastViewedGuideForCurrentGame] finish resolving [loadedViewingStateFor]) - so
+     * [loadPage]'s own fast path below can skip a second disk read for the common
+     * read-forward-one-page-at-a-time case. A no-op (clearing any previous prefetch) past the
+     * guide's last page.
+     */
+    private fun prefetchNextPage(
+        guideId: String,
+        pageIndex: Int,
+        pageCount: Int,
+    ) {
+        prefetchJob?.cancel()
+        val nextIndex = pageIndex + 1
+        if (nextIndex >= pageCount) {
+            prefetchedPageIndex = null
+            prefetchedContent = null
+            return
+        }
+        prefetchJob =
+            viewModelScope.launch {
+                val content = useCases.loadGameGuidePage(guideId, nextIndex) ?: return@launch
+                prefetchedPageIndex = nextIndex
+                prefetchedContent = content
+            }
+    }
+
+    /** Clears any prefetch left over from a previous guide/page - called whenever a fresh
+     * guide is opened, since a stale prefetch (a different guide's page) must never be reused
+     * by [loadPage]'s fast path. */
+    private fun clearPrefetch() {
+        prefetchJob?.cancel()
+        prefetchedPageIndex = null
+        prefetchedContent = null
+    }
+
     /** Reopens to the Library for whichever game is current right now - called when the FAB
      * is tapped, when a FAB-opened Viewer is closed (back to that game's Library), and after
      * deleting a guide/importing one. */
@@ -290,10 +333,13 @@ class GameGuidesViewModel(
      */
     fun openGuide(guide: DownloadedGameGuide) {
         pageLoadJob?.cancel()
+        clearPrefetch()
         viewModelScope.launch {
             val opening = openingViewingStateFor(useCases, guide)
             _uiState.value = opening
-            _uiState.value = loadedViewingStateFor(useCases, opening, clock)
+            val loaded = loadedViewingStateFor(useCases, opening, clock)
+            _uiState.value = loaded
+            prefetchNextPage(loaded.guide.id, loaded.initialPageIndex, loaded.guide.pageCount)
         }
     }
 
@@ -310,9 +356,12 @@ class GameGuidesViewModel(
         val mostRecent = reference?.let { mostRecentlyViewedGuide(useCases, it) }
         if (mostRecent != null) {
             pageLoadJob?.cancel()
+            clearPrefetch()
             val opening = openingViewingStateFor(useCases, mostRecent)
             _uiState.value = opening
-            _uiState.value = loadedViewingStateFor(useCases, opening, clock)
+            val loaded = loadedViewingStateFor(useCases, opening, clock)
+            _uiState.value = loaded
+            prefetchNextPage(loaded.guide.id, loaded.initialPageIndex, loaded.guide.pageCount)
         }
         return mostRecent != null
     }
@@ -339,14 +388,20 @@ class GameGuidesViewModel(
         val viewing = _uiState.value as? GameGuidesUiState.Viewing ?: return
         _uiState.value = viewing.copy(isLoadingContent = true)
         pageLoadJob?.cancel()
+        // Reuses prefetchNextPage's result instead of a second disk read when it's ready for
+        // exactly this page - the common case once a guide has been read forward past its
+        // first page. A miss (previous page, an arbitrary TOC jump, or the prefetch hasn't
+        // finished yet) falls back to the normal load, same as before this existed.
+        val cachedContent = prefetchedContent.takeIf { pageIndex == prefetchedPageIndex }
         pageLoadJob =
             viewModelScope.launch {
-                val content = useCases.loadGameGuidePage(viewing.guide.id, pageIndex) ?: ""
+                val content = cachedContent ?: (useCases.loadGameGuidePage(viewing.guide.id, pageIndex) ?: "")
                 (_uiState.value as? GameGuidesUiState.Viewing)
                     ?.takeIf { it.guide.id == viewing.guide.id }
                     ?.let { current ->
                         _uiState.value = current.copy(currentPageContent = content, isLoadingContent = false)
                     }
+                prefetchNextPage(viewing.guide.id, pageIndex, viewing.guide.pageCount)
             }
     }
 

@@ -403,7 +403,7 @@ class GameGuidesViewModelTest {
         }
 
     @Test
-    fun `openGuide loads only the resumed page's content, not every page`() =
+    fun `openGuide loads only the resumed page's content plus its own next-page prefetch, not every page`() =
         runTest(testDispatcher) {
             val reference = GameReference("snes", "/roms/snes/a.sfc", null)
             val libraryRepository = FakeGameGuideLibraryRepository()
@@ -417,7 +417,9 @@ class GameGuidesViewModelTest {
             viewModel.openGuide(guide)
             advanceUntilIdle()
 
-            assertEquals(listOf("g1" to 1), libraryRepository.loadPageCalls)
+            // The resumed page (1), plus prefetchNextPage's own background load of page 2 -
+            // never page 0, and never every page.
+            assertEquals(listOf("g1" to 1, "g1" to 2), libraryRepository.loadPageCalls)
             val state = viewModel.uiState.value
             check(state is GameGuidesUiState.Viewing)
             assertEquals("page two", state.currentPageContent)
@@ -428,20 +430,24 @@ class GameGuidesViewModelTest {
         runTest(testDispatcher) {
             val reference = GameReference("snes", "/roms/snes/a.sfc", null)
             val libraryRepository = FakeGameGuideLibraryRepository()
-            val guide = downloadedGuide(reference, id = "g1", pageCount = 2)
-            libraryRepository.seedGuide(guide, listOf("page one", "page two"))
+            // pageCount 3, not 2 - openGuide resumes at page 0 and its own prefetch already
+            // covers page 1 (see the dedicated prefetch tests below), so this deliberately
+            // requests page 2 - a genuine cache miss - to keep testing a real disk-read load,
+            // not prefetch's cache-hit fast path.
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 3)
+            libraryRepository.seedGuide(guide, listOf("page one", "page two", "page three"))
             val viewModel = buildViewModel(libraryRepository = libraryRepository)
             viewModel.openGuide(guide)
             advanceUntilIdle()
             libraryRepository.loadPageCalls.clear()
 
-            viewModel.loadPage(1)
+            viewModel.loadPage(2)
             advanceUntilIdle()
 
-            assertEquals(listOf("g1" to 1), libraryRepository.loadPageCalls)
+            assertEquals(listOf("g1" to 2), libraryRepository.loadPageCalls)
             val state = viewModel.uiState.value
             check(state is GameGuidesUiState.Viewing)
-            assertEquals("page two", state.currentPageContent)
+            assertEquals("page three", state.currentPageContent)
             assertFalse(state.isLoadingContent)
         }
 
@@ -467,6 +473,81 @@ class GameGuidesViewModelTest {
             check(state is GameGuidesUiState.Viewing)
             assertEquals("page two", state.currentPageContent)
             assertFalse(state.isLoadingContent)
+        }
+
+    // --- next-page prefetch ---------------------------------------------------------------
+
+    @Test
+    fun `loadPage reuses prefetched content instead of a second disk read`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 2)
+            libraryRepository.seedGuide(guide, listOf("page one", "page two"))
+            val viewModel = buildViewModel(libraryRepository = libraryRepository)
+            // openGuide resumes at page 0 and its own prefetch step already loads page 1 in
+            // the background - confirmed by the dedicated "openGuide...prefetch" test above.
+            viewModel.openGuide(guide)
+            advanceUntilIdle()
+            libraryRepository.loadPageCalls.clear()
+
+            viewModel.loadPage(1)
+            advanceUntilIdle()
+
+            // No new disk read for page 1 - it was already prefetched.
+            assertEquals(emptyList<Pair<String, Int>>(), libraryRepository.loadPageCalls)
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Viewing)
+            assertEquals("page two", state.currentPageContent)
+            assertFalse(state.isLoadingContent)
+        }
+
+    @Test
+    fun `prefetch follows the reader forward one page at a time`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 4)
+            libraryRepository.seedGuide(guide, listOf("page one", "page two", "page three", "page four"))
+            val viewModel = buildViewModel(libraryRepository = libraryRepository)
+            viewModel.openGuide(guide)
+            advanceUntilIdle()
+            libraryRepository.loadPageCalls.clear()
+
+            // page 1 is already prefetched (reused, no disk read - see the dedicated test
+            // above), but its own success path should kick off prefetching page 2 next.
+            viewModel.loadPage(1)
+            advanceUntilIdle()
+            libraryRepository.loadPageCalls.clear()
+
+            viewModel.loadPage(2)
+            advanceUntilIdle()
+
+            // Page 2 was itself prefetched while page 1 was showing - reused, no read for it -
+            // but its own success path now kicks off prefetching page 3 in turn.
+            assertEquals(listOf("g1" to 3), libraryRepository.loadPageCalls)
+            val state = viewModel.uiState.value
+            check(state is GameGuidesUiState.Viewing)
+            assertEquals("page three", state.currentPageContent)
+        }
+
+    @Test
+    fun `prefetch does nothing past the guide's last page`() =
+        runTest(testDispatcher) {
+            val reference = GameReference("snes", "/roms/snes/a.sfc", null)
+            val libraryRepository = FakeGameGuideLibraryRepository()
+            val guide = downloadedGuide(reference, id = "g1", pageCount = 2)
+            libraryRepository.seedGuide(guide, listOf("page one", "page two"))
+            val settingsRepository = FakeGameGuideSettingsRepository()
+            settingsRepository.setReadingProgress(GameGuideReadingProgress("g1", 0f, 123L, pageIndex = 1))
+            val viewModel =
+                buildViewModel(libraryRepository = libraryRepository, settingsRepository = settingsRepository)
+
+            // Resumes on the last page (index 1 of 2) - nothing to prefetch past it.
+            viewModel.openGuide(guide)
+            advanceUntilIdle()
+
+            assertEquals(listOf("g1" to 1), libraryRepository.loadPageCalls)
         }
 
     @Test

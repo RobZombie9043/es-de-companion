@@ -12,12 +12,13 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
@@ -70,6 +71,13 @@ data class HtmlViewerCallbacks(
     val onScrollFractionChanged: (Float) -> Unit,
     val onTap: () -> Unit,
     val onInternalAnchorTapped: (fragment: String) -> Unit,
+    // Reports every change to this composable's own `contentVisible` state - lets the caller
+    // (GameGuideViewerScreen) keep showing a loading indicator through the WebView's own render
+    // phase (document write, load, scroll restore) instead of just the disk-read phase it
+    // already covered - on an image-heavy page that render phase, not the disk read, is where
+    // the real time goes, and it previously showed nothing at all: the WebView just sat at
+    // alpha 0 with no feedback.
+    val onContentVisibleChanged: (Boolean) -> Unit = {},
 )
 
 /**
@@ -104,6 +112,14 @@ data class HtmlViewerCallbacks(
  * sanitizes user-submitted guide content, so this is a defense-in-depth measure, not a response
  * to a known issue) has no real origin's cookies/session to reach and no real network endpoint
  * to call.
+ *
+ * One persistent WebView per composable instance (never rebuilt across recompositions, only
+ * reloaded in place - see the page effect below); a two-WebView double-buffered prefetch was
+ * tried and reverted (see git history) after it produced two separate, hard-to-fully-rule-out
+ * concurrency bugs (a fixed-z-order touch-swallowing issue, then a stale-slot-reference race
+ * between the promotion and prefetch effects) - not worth the complexity for this app's actual
+ * bottleneck, which [GameGuidesViewModel]'s own next-page disk-read cache already addresses
+ * (see its `prefetchNextPage`/`loadPage`) without touching this WebView at all.
  */
 @OptIn(FlowPreview::class)
 @Composable
@@ -114,27 +130,32 @@ fun HtmlGuideContent(
     val context = LocalContext.current
     val mediaLoader = remember { GuideMediaLoader(context) }
     val webView = remember { buildGuideWebView(context, callbacks, config.isDarkTheme, mediaLoader) }
+    var contentVisible by remember { mutableStateOf(false) }
+    var loadedHtml by remember { mutableStateOf<String?>(null) }
 
-    // Keyed on fontScale/isDarkTheme too, not just html - a font-size or theme change has to
-    // rebuild the whole document (the CSS is baked into it, see buildGuideHtmlDocument), so
-    // this effect also fires for those, not only a genuine page navigation. It used to always
-    // restore config.initialScrollFraction regardless of *why* it fired - correct the one time
-    // this is a real navigation to a new/resumed page, but wrong for a same-page reload
-    // triggered by adjusting font size or the system theme changing: that silently snapped
-    // the reader back to wherever the guide was originally opened, discarding any scrolling
-    // done since - confirmed on-device as "changing font size reloads the page from the top."
-    // lastLoadedHtml tracks which page is actually currently loaded so a same-page reload can
-    // capture the live scroll position first and restore that instead.
-    val lastLoadedHtml = remember { mutableStateOf<String?>(null) }
-    // Gates the WebView's own visibility (not Compose's, see the AndroidView call below) so a
-    // genuine page navigation renders fully scrolled-into-position before it's ever shown,
-    // rather than flashing the top of the page first and then visibly jumping once the
-    // restore script runs. Left true across a same-page reload (font/theme change) - that
-    // path already re-restores the live scroll fraction it just captured, so there's nothing
-    // to hide.
-    val contentVisible = remember { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        onDispose { webView.destroy() }
+    }
+
+    // The page effect: reloads this WebView in place whenever the page itself changes, or the
+    // font/theme does for the same page. isSamePage compares against the html actually last
+    // loaded (not e.g. a page index) - a genuine page change always changes this string, while a
+    // font/theme-only change on the same page doesn't, letting that case preserve the reader's
+    // live scroll position instead of falling back to initialScrollFraction.
     LaunchedEffect(config.html, config.fontScale, config.isDarkTheme) {
-        loadAndRevealPage(webView, config, mediaLoader, lastLoadedHtml, contentVisible)
+        val isSamePage = loadedHtml == config.html
+        val isFirstReveal = loadedHtml == null
+        if (!isSamePage) contentVisible = false
+        val liveFraction = if (isSamePage) evaluateNumber(webView, SCROLL_FRACTION_EXPRESSION) else null
+        loadPageIntoWebView(webView, mediaLoader, config, liveFraction)
+        loadedHtml = config.html
+        webView.revealOnFirstFrameLayer(isFirstReveal) { contentVisible = true }
+    }
+
+    // Single reporting point for every contentVisible change - see HtmlViewerCallbacks'
+    // onContentVisibleChanged kdoc.
+    LaunchedEffect(contentVisible) {
+        callbacks.onContentVisibleChanged(contentVisible)
     }
 
     LaunchedEffect(config.searchQuery) {
@@ -148,34 +169,25 @@ fun HtmlGuideContent(
     // A TOC entry on a different page (see GameGuideViewerScreen.onEntrySelected) sets
     // currentPageIndex and scrollToAnchorId in the same synchronous update - the former only
     // reaches this composable later, once the page content it triggers has actually loaded and
-    // propagated into config.html, restarting the OTHER LaunchedEffect above to load it into
-    // the WebView. Firing this scroll immediately raced that navigation: it evaluated against
-    // whatever page was STILL loaded (the old one), where the target id doesn't exist, silently
-    // no-oping via the `?.` - confirmed on-device as a cross-page TOC jump always landing on the
-    // new page's top instead of the entry's real location, while a same-page entry (no
-    // navigation to race) worked fine. latestConfig - not config directly - since this
-    // coroutine's own closure is frozen to whatever config was current when it last (re)started,
-    // and it must see config.html actually change over its wait without itself restarting (this
-    // effect's key, scrollToAnchorId, isn't what changes during that wait).
+    // propagated into config.html, restarting the page effect above to load it. Firing this
+    // scroll immediately raced that navigation: it evaluated against whatever page was STILL
+    // displayed (the old one), where the target id doesn't exist, silently no-oping via the
+    // `?.` - confirmed on-device as a cross-page TOC jump always landing on the new page's top
+    // instead of the entry's real location, while a same-page entry (no navigation to race)
+    // worked fine. latestConfig - not config directly - since this coroutine's own closure is
+    // frozen to whatever config was current when it last (re)started, and it must see
+    // config.html actually change over its wait without itself restarting (this effect's key,
+    // scrollToAnchorId, isn't what changes during that wait).
     val latestConfig = rememberUpdatedState(config)
     LaunchedEffect(config.scrollToAnchorId) {
         val id = config.scrollToAnchorId ?: return@LaunchedEffect
-        scrollToAnchorWhenReady(id, webView, latestConfig, lastLoadedHtml, contentVisible)
+        scrollToAnchorWhenReady(id, webView) { loadedHtml == latestConfig.value.html && contentVisible }
         callbacks.onScrollToAnchorHandled()
     }
 
-    // Keyed on config.html, NOT webView - webView is the same stable instance for the whole
-    // viewer session, but each page navigation needs its OWN lastReported baseline (that
-    // page's own initialScrollFraction: the real resumed fraction on the page the guide was
-    // opened to, 0f on any other). A webView-keyed effect never restarts across navigation,
-    // so it kept comparing a newly-loaded page's fraction against a stale baseline left over
-    // from whichever page the guide happened to open on - confirmed on-device as "remembers
-    // which page, but not the scroll position on it" once page-index persistence itself was
-    // fixed separately.
-    //
     // Waits out SCROLL_INITIAL_SETTLE_MILLIS before its first evaluation - this effect starts
-    // concurrently with the OTHER effect above that loads the page and restores
-    // initialScrollFraction (loadDataWithBaseURL -> awaitScrollableLayout, up to
+    // concurrently with the page effect above that loads the page and restores
+    // initialScrollFraction (loadAndAwaitFinished -> awaitScrollableLayout, up to
     // SCROLL_LAYOUT_POLL_ATTEMPTS * SCROLL_LAYOUT_POLL_INTERVAL_MILLIS -> the actual restore
     // script). Evaluating immediately raced that restore: it read the still-loading (or
     // previous) page's near-zero scroll position and reported it right away, silently
@@ -183,10 +195,10 @@ fun HtmlGuideContent(
     // regression than the dead-zone-on-quick-close problem it was meant to fix.
     //
     // Driven by webViewScrollEvents (a real native scroll callback), not a fixed-interval
-    // poll - the previous `while (true) { ...; delay(SCROLL_POLL_INTERVAL_MILLIS) }` shape
-    // kept evaluating this JS expression twice a second for as long as any HTML guide page
-    // was open, on this always-on kiosk app, even while the user wasn't scrolling at all.
-    // debounce means the actual evaluate-and-report only runs once scrolling has paused for
+    // poll - a `while (true) { ...; delay(SCROLL_POLL_INTERVAL_MILLIS) }` shape would keep
+    // evaluating this JS expression twice a second for as long as any HTML guide page was
+    // open, on this always-on kiosk app, even while the user wasn't scrolling at all. debounce
+    // means the actual evaluate-and-report only runs once scrolling has paused for
     // SCROLL_POLL_INTERVAL_MILLIS, same idiom PlainTextGuideContent already uses for its own
     // (Compose-state-driven) scroll position.
     LaunchedEffect(config.html) {
@@ -201,46 +213,28 @@ fun HtmlGuideContent(
         }
     }
 
-    AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize().alpha(if (contentVisible.value) 1f else 0f))
+    AndroidView(
+        factory = { webView },
+        modifier = Modifier.fillMaxSize().alpha(if (contentVisible) 1f else 0f),
+    )
 }
 
 /**
- * Bridges [webView]'s native scroll callback (a real Android [View.OnScrollChangeListener],
- * fired by both a user drag/fling and a JS `window.scrollTo()` - both move the same underlying
- * View scroll position) into a [Flow], the same callbackFlow-wraps-a-callback-API idiom
- * `AndroidSystemStatusRepository` already uses. This exists purely so [HtmlGuideContent]'s
- * scroll-position effect can react to actual scrolling instead of polling on a fixed interval
- * regardless of whether anything moved.
+ * The body of [HtmlGuideContent]'s page effect - writes [config]'s document to disk, loads it
+ * into [webView], and restores either [liveFraction] (a same-page font/theme reload) or
+ * [HtmlViewerConfig.initialScrollFraction]. Pulled out purely to keep that composable under
+ * detekt's length/complexity thresholds.
  */
-private fun webViewScrollEvents(webView: WebView): Flow<Unit> =
-    callbackFlow {
-        webView.setOnScrollChangeListener { _, _, _, _, _ -> trySend(Unit) }
-        awaitClose { webView.setOnScrollChangeListener(null) }
-    }
-
-/**
- * The body of [HtmlGuideContent]'s page-loading effect - pulled out purely to keep that
- * composable under detekt's length/complexity thresholds, not for reuse elsewhere.
- */
-private suspend fun loadAndRevealPage(
+private suspend fun loadPageIntoWebView(
     webView: WebView,
-    config: HtmlViewerConfig,
     mediaLoader: GuideMediaLoader,
-    lastLoadedHtml: MutableState<String?>,
-    contentVisible: MutableState<Boolean>,
+    config: HtmlViewerConfig,
+    liveFraction: Float?,
 ) {
     // Set before the new document loads (not left for the CSS background to establish once
     // rendered) so a theme change while a guide is already open doesn't itself produce the
     // same white-flash-before-the-real-background gap this is fixing.
     webView.setBackgroundColor(backgroundColorInt(config.isDarkTheme))
-    val isSamePage = config.html == lastLoadedHtml.value
-    // Only the very first page this WebView instance ever shows needs the software-layer trick
-    // below - see buildGuideWebView's kdoc for why that race exists at all. By the second
-    // navigation the WebView is already a stable, already-composited part of the hierarchy;
-    // there's nothing left to race against.
-    val isFirstReveal = lastLoadedHtml.value == null
-    if (!isSamePage) contentVisible.value = false
-    val liveFraction = if (isSamePage) evaluateNumber(webView, SCROLL_FRACTION_EXPRESSION) else null
     val document = buildGuideHtmlDocument(config.html, config.isDarkTheme, config.fontScale)
     // Pointed at this guide's own directory (not a generic cache/temp location) before the
     // write, so its relative image references (see NativeImageDownloader's kdoc) resolve as
@@ -248,11 +242,9 @@ private suspend fun loadAndRevealPage(
     mediaLoader.updateDirectory(config.mediaDirectoryPath)
     writeViewerDocument(config.mediaDirectoryPath, document)
     loadAndAwaitFinished(webView, GUIDE_MEDIA_DOCUMENT_URL, mediaLoader)
-    lastLoadedHtml.value = config.html
     awaitScrollableLayout(webView)
     val targetFraction = liveFraction ?: config.initialScrollFraction
     restoreScrollFraction(webView, targetFraction)
-    webView.revealOnFirstFrameLayer(isFirstReveal) { contentVisible.value = true }
 }
 
 /**
@@ -260,27 +252,19 @@ private suspend fun loadAndRevealPage(
  * composable under detekt's length/complexity thresholds, not for reuse elsewhere.
  *
  * A same-page entry (see [GameGuideViewerScreen.onEntrySelected]) never needs this wait at all -
- * [webView] already has the right page loaded, so [latestConfig]'s html already matches
- * [lastLoadedHtml] and [contentVisible] is already true. A cross-page entry, by contrast, always
- * arrives here on a *freshly mounted* [HtmlGuideContent] instance (a page change flips
- * `GameGuidesUiState.Viewing.isLoadingContent` true then false, which unmounts/remounts
- * [GuideContentArea] - see [PromotePendingAnchorWhenLoaded]'s kdoc for why `scrollToAnchorId`
- * itself is only ever set on this fresh mount, once its target page's content is confirmed
- * loaded), where `lastLoadedHtml` genuinely starts null and only catches up once the OTHER
- * loading effect finishes writing/loading/laying out that page - this wait is what keeps this
- * effect from evaluating `getElementById` before that element exists in the DOM yet.
+ * [webView] already has the right page loaded, so [isReady] is already true. A cross-page entry,
+ * by contrast, races the page effect that's still loading the new page's content - this wait is
+ * what keeps this effect from evaluating `getElementById` before that element exists in the DOM
+ * yet. [isReady] is polled fresh (not captured once) so it correctly observes the page effect's
+ * own state changes as they happen.
  */
 private suspend fun scrollToAnchorWhenReady(
     id: String,
     webView: WebView,
-    latestConfig: State<HtmlViewerConfig>,
-    lastLoadedHtml: MutableState<String?>,
-    contentVisible: MutableState<Boolean>,
+    isReady: () -> Boolean,
 ) {
     var attempts = 0
-    while ((latestConfig.value.html != lastLoadedHtml.value || !contentVisible.value) &&
-        attempts < ANCHOR_WAIT_POLL_ATTEMPTS
-    ) {
+    while (attempts < ANCHOR_WAIT_POLL_ATTEMPTS && !isReady()) {
         delay(ANCHOR_WAIT_POLL_INTERVAL_MILLIS)
         attempts++
     }
@@ -299,11 +283,11 @@ private suspend fun scrollToAnchorWhenReady(
 }
 
 /**
- * Runs [reveal] (setting `contentVisible.value = true`) bracketed by a brief software layer
- * type for [isFirstReveal] only, restored to hardware right after - see [buildGuideWebView]'s
- * kdoc for why this WebView needs that for its very first frame, and only that one. Extracted
- * out of [HtmlGuideContent]'s own loading effect purely to keep that composable's cyclomatic
- * complexity down - these two conditionals contribute nothing to that function's own logic.
+ * Runs [reveal] (setting `contentVisible = true`) bracketed by a brief software layer type for
+ * [isFirstReveal] only, restored to hardware right after - see [buildGuideWebView]'s kdoc for
+ * why this WebView needs that for its very first frame, and only that one. Extracted out of
+ * [loadPageIntoWebView]'s call site purely to keep that composable's cyclomatic complexity
+ * down - these two conditionals contribute nothing to its own logic.
  */
 private fun WebView.revealOnFirstFrameLayer(
     isFirstReveal: Boolean,
@@ -334,8 +318,8 @@ private fun buildGuideWebView(
         // full window redraw has flushed everything else, so the surrounding Compose chrome
         // (already composed, just not yet painted) visibly lags behind it by up to roughly a
         // second on first open. This WebView is deliberately left on the platform default
-        // (hardware-backed) layer type here, not forced to software - HtmlGuideContent's own
-        // loading effect briefly forces software for just the one frame where content first
+        // (hardware-backed) layer type here, not forced to software - loadPageIntoWebView's own
+        // reveal step briefly forces software for just the one frame where content first
         // becomes visible (see its isFirstReveal handling), immediately restoring hardware
         // afterward. An earlier version forced software for this WebView's entire lifetime
         // instead: confirmed on-device as measurably slower page loads (software rasterization
@@ -412,7 +396,7 @@ private fun buildGuideWebView(
  * exactly this reason.
  *
  * `loadUrl` against [mediaLoader]'s virtual origin, not [WebView.loadDataWithBaseURL] (this
- * composable's previous mechanism) or a real `file://` path (briefly tried in between - see
+ * viewer's previous mechanism) or a real `file://` path (briefly tried in between - see
  * [writeViewerDocument]'s kdoc for why that failed outright with `net::ERR_ACCESS_DENIED`).
  * `loadDataWithBaseURL` base64-encodes the whole document string internally before handing it
  * to Chromium, which for a real image-heavy guide page (confirmed on-device) can be tens of MB
@@ -483,8 +467,22 @@ private suspend fun evaluateNumber(
     }
 
 /**
+ * Bridges [webView]'s native scroll callback (a real Android [android.view.View.OnScrollChangeListener],
+ * fired by both a user drag/fling and a JS `window.scrollTo()` - both move the same underlying
+ * View scroll position) into a [Flow], the same callbackFlow-wraps-a-callback-API idiom
+ * `AndroidSystemStatusRepository` already uses. This exists purely so [HtmlGuideContent]'s
+ * scroll-position effect can react to actual scrolling instead of polling on a fixed interval
+ * regardless of whether anything moved.
+ */
+private fun webViewScrollEvents(webView: WebView): Flow<Unit> =
+    callbackFlow {
+        webView.setOnScrollChangeListener { _, _, _, _, _ -> trySend(Unit) }
+        awaitClose { webView.setOnScrollChangeListener(null) }
+    }
+
+/**
  * Awaits the restore script's own completion callback rather than firing it and moving on -
- * [HtmlGuideContent] only reveals the WebView once this returns, so it's never shown mid-scroll.
+ * [loadPageIntoWebView] only reveals the WebView once this returns, so it's never shown mid-scroll.
  */
 private suspend fun restoreScrollFraction(
     webView: WebView,

@@ -1,6 +1,7 @@
 package com.esde.companion.ui.gameguides
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,8 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
@@ -269,26 +272,32 @@ fun GameGuideViewerScreen(
     val headerActions =
         buildHeaderActions(state, uiState, derived, actions.onDisplayPreferencesChanged, actions.onClose)
     val contentState = buildGuideContentState(state, uiState)
+    // Resets to "not yet visible" on every genuine page change (keyed on currentPageIndex),
+    // but survives a same-page font/theme reload - HtmlGuideContent itself never drops
+    // contentVisible for that case either (see its own kdoc), so there's nothing to hide.
+    var htmlContentVisible by remember(uiState.currentPageIndex) { mutableStateOf(false) }
     val contentActions =
-        buildGuideContentActions(uiState, actions.onScrollFractionChanged) { fragment ->
-            onInternalAnchorTapped(fragment, state, uiState, lastPageIndex)
-        }
+        buildGuideContentActions(
+            uiState = uiState,
+            onScrollFractionChanged = actions.onScrollFractionChanged,
+            onInternalAnchorTapped = { fragment -> onInternalAnchorTapped(fragment, state, uiState, lastPageIndex) },
+            onContentVisibleChanged = { htmlContentVisible = it },
+        )
+    // Covers both loading phases: the disk read (state.isLoadingContent) and, for an HTML
+    // guide, the WebView's own render phase (document write/load/scroll-restore) that follows
+    // it - previously that second phase showed nothing at all on an image-heavy page.
+    val showLoadingIndicator = state.isLoadingContent || (derived.isHtml && !htmlContentVisible)
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (uiState.chromeVisible) GuideHeader(config = headerConfig, actions = headerActions)
-            if (state.isLoadingContent) {
-                Box(modifier = Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                GuideContentArea(
-                    derived = derived,
-                    state = contentState,
-                    actions = contentActions,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            GuideContentWithLoadingOverlay(
+                derived = derived,
+                contentState = contentState,
+                contentActions = contentActions,
+                showLoadingIndicator = showLoadingIndicator,
+                modifier = Modifier.weight(1f),
+            )
             if (uiState.chromeVisible && headerConfig.pageNav.totalPages > 1) {
                 GuideFooter(
                     pageNav = headerConfig.pageNav,
@@ -306,5 +315,40 @@ fun GameGuideViewerScreen(
             onEntrySelected = ::onEntrySelected,
             onDismiss = { uiState.showToc = false },
         )
+    }
+}
+
+/**
+ * [GuideContentArea] stays mounted regardless of [showLoadingIndicator] (rather than being
+ * swapped out while true) so [HtmlGuideContent]'s own content-visible effect can actually run
+ * and report back once ready - see [GameGuideViewerScreen]'s `htmlContentVisible`/
+ * `showLoadingIndicator` kdoc for why. The spinner overlay just covers whatever's underneath
+ * (a blank first page, or the previous page for the one frame before its own `contentVisible`
+ * drops back to false) with a solid background until then, extracted here purely to keep
+ * [GameGuideViewerScreen] itself under detekt's length/complexity thresholds.
+ */
+@Composable
+private fun GuideContentWithLoadingOverlay(
+    derived: ViewerDerivedState,
+    contentState: GuideContentState,
+    contentActions: GuideContentActions,
+    showLoadingIndicator: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        GuideContentArea(
+            derived = derived,
+            state = contentState,
+            actions = contentActions,
+            modifier = Modifier.fillMaxSize(),
+        )
+        if (showLoadingIndicator) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
     }
 }
