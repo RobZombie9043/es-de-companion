@@ -64,6 +64,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -74,7 +75,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.apps.AppLauncher
 import com.esde.companion.data.apps.SecondaryDisplayResolver
@@ -82,6 +82,7 @@ import com.esde.companion.domain.model.AppFolder
 import com.esde.companion.domain.model.DrawerItem
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.isDarkSurface
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
@@ -366,6 +367,7 @@ fun AppDrawer(
                                     onRemoveFromFolder = {
                                         containingFolder?.let { viewModel.removeAppFromFolder(it.id, app.packageName) }
                                     },
+                                    modifier = Modifier.animateItem(),
                                 )
                             }
                             is DrawerItem.Folder -> {
@@ -377,6 +379,7 @@ fun AppDrawer(
                                     visible = item.folder.id != openFolderId,
                                     enter = fadeIn(),
                                     exit = fadeOut(),
+                                    modifier = Modifier.animateItem(),
                                 ) {
                                     FolderDrawerItem(
                                         folder = item.folder,
@@ -500,6 +503,27 @@ fun AppDrawer(
     }
 }
 
+/**
+ * Fades [content] in/out on [visible] changes - the small other-screen-preferred dot and
+ * hidden-"H" badge in [AppDrawerItem]. A standalone composable (not inlined at its `Box`-scoped
+ * call sites) so its `AnimatedVisibility` call has no ambient `ColumnScope` receiver in lexical
+ * scope - [AppDrawerItem]'s outer `Column` stays in the implicit-receiver chain even inside a
+ * nested `Box`, so calling `AnimatedVisibility` directly there hits the same
+ * `ColumnScope`/`RowScope` overload-ambiguity compile error already fixed this way elsewhere in
+ * this app (see `CornerButtonMetrics.kt`'s `FabAnimatedVisibility`, `SettingsShared.kt`'s
+ * `SettingsRowVisibility`).
+ */
+@Composable
+private fun DrawerBadgeVisibility(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    AnimatedVisibility(visible = visible, modifier = modifier, enter = fadeIn(), exit = fadeOut()) {
+        content()
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AppDrawerItem(
@@ -516,6 +540,7 @@ internal fun AppDrawerItem(
     onToggleHidden: () -> Unit,
     onAddToFolder: () -> Unit,
     onRemoveFromFolder: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
@@ -525,7 +550,7 @@ internal fun AppDrawerItem(
     val hapticFeedback = LocalHapticFeedback.current
 
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
@@ -544,16 +569,19 @@ internal fun AppDrawerItem(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Box {
-                AsyncImage(
+                CrossfadeAsyncImage(
                     model = icon,
                     contentDescription = app.label,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.size(56.dp),
                 )
-                if (isOtherScreenPreferred) {
+                DrawerBadgeVisibility(
+                    visible = isOtherScreenPreferred,
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                ) {
                     Box(
                         modifier =
                             Modifier
-                                .align(Alignment.BottomEnd)
                                 .size(10.dp)
                                 .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                     )
@@ -561,10 +589,12 @@ internal fun AppDrawerItem(
                 // Only ever true for a search result - the normal grid already filters
                 // hidden apps out entirely (see buildDrawerItems), so this is how a
                 // hidden app found via search is distinguished from a visible one.
-                if (isHidden) {
+                DrawerBadgeVisibility(
+                    visible = isHidden,
+                    modifier = Modifier.align(Alignment.TopEnd),
+                ) {
                     Text(
                         text = "H",
-                        modifier = Modifier.align(Alignment.TopEnd),
                         color = MaterialTheme.colorScheme.primary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -819,7 +849,12 @@ private fun FolderMosaicMemberIcon(app: InstalledApp) {
     val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
         value = AppIconLoader.loadIcon(context, app.packageName)
     }
-    AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(FOLDER_MOSAIC_CELL_SIZE))
+    CrossfadeAsyncImage(
+        model = icon,
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.size(FOLDER_MOSAIC_CELL_SIZE),
+    )
 }
 
 @Composable

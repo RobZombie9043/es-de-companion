@@ -1,5 +1,8 @@
 package com.esde.companion.ui.dock
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,13 +50,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
 import com.esde.companion.data.apps.AppIconLoader
 import com.esde.companion.data.apps.AppLauncher
 import com.esde.companion.data.apps.SecondaryDisplayResolver
@@ -60,6 +64,7 @@ import com.esde.companion.domain.model.APP_DRAWER_SHORTCUT_PACKAGE_NAME
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LaunchLocation
+import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.isDarkSurface
 
 private val MENU_SHAPE = RoundedCornerShape(16.dp)
@@ -120,6 +125,42 @@ private fun DockSize.iconDp(): Dp =
 fun dockBarHeight(size: DockSize): Dp = size.iconDp() + VERTICAL_PADDING * 2
 
 /**
+ * One slot in the live dock's fixed [AppDockViewModel.maxApps]-length layout - either a pinned
+ * app or an empty placeholder - each with a stable key so [LazyRow]'s `items(dockSlots, key = ...)`
+ * can animate reorder/pin/unpin via `Modifier.animateItem()` instead of an instant snap. Built
+ * fresh each recomposition from [AppDockViewModel.dockItems]/`maxApps` rather than derived in the
+ * ViewModel - it's pure rendering-layout data with no reason to leave `ui/dock`.
+ */
+private sealed interface DockSlot {
+    data class Filled(
+        val app: InstalledApp,
+        val isLeftmost: Boolean,
+        val isRightmost: Boolean,
+    ) : DockSlot
+
+    data class Empty(val index: Int) : DockSlot
+}
+
+private fun dockSlotKey(slot: DockSlot): String =
+    when (slot) {
+        is DockSlot.Filled -> slot.app.packageName
+        is DockSlot.Empty -> "empty_${slot.index}"
+    }
+
+private fun buildDockSlots(
+    dockItems: List<InstalledApp>,
+    maxApps: Int,
+): List<DockSlot> =
+    (0 until maxApps).map { index ->
+        val app = dockItems.getOrNull(index)
+        if (app == null) {
+            DockSlot.Empty(index)
+        } else {
+            DockSlot.Filled(app, isLeftmost = index == 0, isRightmost = index == dockItems.lastIndex)
+        }
+    }
+
+/**
  * The always-available row of pinned apps at the bottom of the main screen - see
  * MainScreen for how it's anchored to slide with the App Drawer sheet. Renders nothing
  * if the dock is disabled (Settings > App Drawer and Dock).
@@ -172,78 +213,92 @@ fun AppDock(
                     onClick = {},
                 ),
     ) {
-        Row(
+        val dockSlots = buildDockSlots(dockItems, maxApps)
+        LazyRow(
             modifier = Modifier.padding(horizontal = HORIZONTAL_PADDING, vertical = VERTICAL_PADDING),
             horizontalArrangement = Arrangement.spacedBy(SLOT_SPACING),
             verticalAlignment = Alignment.CenterVertically,
+            // Always exactly maxApps fixed slots (see AppDock's kdoc) - a LazyRow only for its
+            // per-item animateItem() reorder/pin/unpin motion, not for scrolling.
+            userScrollEnabled = false,
         ) {
-            repeat(maxApps) { index ->
-                val app = dockItems.getOrNull(index)
-                if (app == null) {
-                    EmptyDockSlot(iconDp = iconDp, onAddApp = { showAddAppDialog = true })
-                } else if (app.packageName == APP_DRAWER_SHORTCUT_PACKAGE_NAME) {
-                    FilledDockSlot(
-                        app = app,
-                        iconDp = iconDp,
-                        isAppDrawerShortcut = true,
-                        isOtherScreenPreferred = false,
-                        isLeftmost = index == 0,
-                        isRightmost = index == dockItems.lastIndex,
-                        onClick = onOpenAppDrawer,
-                        onDoubleClick = onOpenAppDrawer,
-                        onLaunchThisScreen = onOpenAppDrawer,
-                        onLaunchOtherScreen = onOpenAppDrawer,
-                        onAppInfo = {},
-                        onMoveLeft = { viewModel.moveLeft(app.packageName) },
-                        onMoveRight = { viewModel.moveRight(app.packageName) },
-                        onRemove = { viewModel.removeFromDock(app.packageName) },
-                    )
-                } else {
-                    FilledDockSlot(
-                        app = app,
-                        iconDp = iconDp,
-                        isAppDrawerShortcut = false,
-                        isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName),
-                        isLeftmost = index == 0,
-                        isRightmost = index == dockItems.lastIndex,
-                        onClick = {
-                            val displayId =
-                                if (otherScreenLaunchApps.contains(app.packageName)) {
-                                    SecondaryDisplayResolver.secondaryDisplayId(context)
-                                } else {
-                                    null
-                                }
-                            AppLauncher.launch(context, app.packageName, displayId = displayId)
-                        },
-                        onDoubleClick = {
-                            if (otherScreenLaunchApps.contains(app.packageName)) {
-                                viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
-                                AppLauncher.launch(context, app.packageName)
-                            } else {
-                                val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
-                                if (secondaryDisplayId != null) {
-                                    viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
-                                }
-                                AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
-                            }
-                        },
-                        onLaunchThisScreen = {
-                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
-                            AppLauncher.launch(context, app.packageName)
-                        },
-                        onLaunchOtherScreen = {
-                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
-                            AppLauncher.launch(
-                                context,
-                                app.packageName,
-                                displayId = SecondaryDisplayResolver.secondaryDisplayId(context),
+            items(dockSlots, key = ::dockSlotKey) { slot ->
+                when (slot) {
+                    is DockSlot.Empty ->
+                        EmptyDockSlot(
+                            iconDp = iconDp,
+                            onAddApp = { showAddAppDialog = true },
+                            modifier = Modifier.animateItem(),
+                        )
+                    is DockSlot.Filled -> {
+                        val app = slot.app
+                        if (app.packageName == APP_DRAWER_SHORTCUT_PACKAGE_NAME) {
+                            FilledDockSlot(
+                                app = app,
+                                iconDp = iconDp,
+                                isAppDrawerShortcut = true,
+                                isOtherScreenPreferred = false,
+                                isLeftmost = slot.isLeftmost,
+                                isRightmost = slot.isRightmost,
+                                onClick = onOpenAppDrawer,
+                                onDoubleClick = onOpenAppDrawer,
+                                onLaunchThisScreen = onOpenAppDrawer,
+                                onLaunchOtherScreen = onOpenAppDrawer,
+                                onAppInfo = {},
+                                onMoveLeft = { viewModel.moveLeft(app.packageName) },
+                                onMoveRight = { viewModel.moveRight(app.packageName) },
+                                onRemove = { viewModel.removeFromDock(app.packageName) },
+                                modifier = Modifier.animateItem(),
                             )
-                        },
-                        onAppInfo = { AppLauncher.openAppInfo(context, app.packageName) },
-                        onMoveLeft = { viewModel.moveLeft(app.packageName) },
-                        onMoveRight = { viewModel.moveRight(app.packageName) },
-                        onRemove = { viewModel.removeFromDock(app.packageName) },
-                    )
+                        } else {
+                            FilledDockSlot(
+                                app = app,
+                                iconDp = iconDp,
+                                isAppDrawerShortcut = false,
+                                isOtherScreenPreferred = otherScreenLaunchApps.contains(app.packageName),
+                                isLeftmost = slot.isLeftmost,
+                                isRightmost = slot.isRightmost,
+                                onClick = {
+                                    val displayId =
+                                        if (otherScreenLaunchApps.contains(app.packageName)) {
+                                            SecondaryDisplayResolver.secondaryDisplayId(context)
+                                        } else {
+                                            null
+                                        }
+                                    AppLauncher.launch(context, app.packageName, displayId = displayId)
+                                },
+                                onDoubleClick = {
+                                    if (otherScreenLaunchApps.contains(app.packageName)) {
+                                        viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
+                                        AppLauncher.launch(context, app.packageName)
+                                    } else {
+                                        val secondaryDisplayId = SecondaryDisplayResolver.secondaryDisplayId(context)
+                                        if (secondaryDisplayId != null) {
+                                            viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
+                                        }
+                                        AppLauncher.launch(context, app.packageName, displayId = secondaryDisplayId)
+                                    }
+                                },
+                                onLaunchThisScreen = {
+                                    viewModel.recordLaunchLocation(app.packageName, LaunchLocation.ThisScreen)
+                                    AppLauncher.launch(context, app.packageName)
+                                },
+                                onLaunchOtherScreen = {
+                                    viewModel.recordLaunchLocation(app.packageName, LaunchLocation.OtherScreen)
+                                    AppLauncher.launch(
+                                        context,
+                                        app.packageName,
+                                        displayId = SecondaryDisplayResolver.secondaryDisplayId(context),
+                                    )
+                                },
+                                onAppInfo = { AppLauncher.openAppInfo(context, app.packageName) },
+                                onMoveLeft = { viewModel.moveLeft(app.packageName) },
+                                onMoveRight = { viewModel.moveRight(app.packageName) },
+                                onRemove = { viewModel.removeFromDock(app.packageName) },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -327,7 +382,12 @@ private fun FilledDockSlotPreview(
     val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
         value = AppIconLoader.loadIcon(context, app.packageName)
     }
-    AsyncImage(model = icon, contentDescription = app.label, modifier = Modifier.size(iconDp))
+    CrossfadeAsyncImage(
+        model = icon,
+        contentDescription = app.label,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.size(iconDp),
+    )
 }
 
 @Composable
@@ -365,11 +425,12 @@ private fun FilledDockSlot(
     onMoveLeft: () -> Unit,
     onMoveRight: () -> Unit,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
 
-    Box(contentAlignment = Alignment.Center) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Box(
             modifier =
                 Modifier
@@ -395,17 +456,22 @@ private fun FilledDockSlot(
                 val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
                     value = AppIconLoader.loadIcon(context, app.packageName)
                 }
-                AsyncImage(
+                CrossfadeAsyncImage(
                     model = icon,
                     contentDescription = app.label,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier.size(iconDp),
                 )
             }
-            if (isOtherScreenPreferred) {
+            AnimatedVisibility(
+                visible = isOtherScreenPreferred,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomEnd),
+            ) {
                 Box(
                     modifier =
                         Modifier
-                            .align(Alignment.BottomEnd)
                             .size(10.dp)
                             .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape),
                 )
@@ -435,12 +501,13 @@ private fun FilledDockSlot(
 private fun EmptyDockSlot(
     iconDp: Dp,
     onAddApp: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val tint = dockContentColor()
     val hapticFeedback = LocalHapticFeedback.current
     Box(
         modifier =
-            Modifier
+            modifier
                 .size(iconDp)
                 .border(width = 1.dp, color = tint, shape = CircleShape)
                 .combinedClickable(
@@ -626,7 +693,12 @@ private fun AddAppRow(
             val icon by produceState<Any?>(initialValue = null, key1 = app.packageName) {
                 value = AppIconLoader.loadIcon(context, app.packageName)
             }
-            AsyncImage(model = icon, contentDescription = null, modifier = Modifier.size(40.dp))
+            CrossfadeAsyncImage(
+                model = icon,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(40.dp),
+            )
         }
         Text(
             text = app.label,
