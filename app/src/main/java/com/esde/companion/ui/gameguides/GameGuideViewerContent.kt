@@ -1,5 +1,6 @@
 package com.esde.companion.ui.gameguides
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.gameguides.GuideTextReflow
@@ -273,8 +275,14 @@ fun GuideContentArea(
                     scrollToCharOffsetRequest = state.scrollToCharOffsetRequest,
                     onScrollToCharOffsetHandled = actions.onScrollToCharOffsetHandled,
                 )
+            // Matches HtmlGuideContent's own pure black/white background (GuideHtmlDocumentBuilder's
+            // DARK_BACKGROUND_HEX/LIGHT_BACKGROUND_HEX, set via the WebView's own CSS) - without
+            // this, a plain-text guide just showed through to the outer Surface's ordinary
+            // MaterialTheme.colorScheme.background (Material3's default dark scheme, not pure
+            // black), an inconsistency between the two guide formats confirmed on-device.
+            val plainTextBackground = if (LocalIsDarkTheme.current) Color.Black else Color.White
             val plainTextTapModifier =
-                Modifier.fillMaxSize().pointerInput(Unit) {
+                Modifier.fillMaxSize().background(plainTextBackground).pointerInput(Unit) {
                     detectTapGestures(onTap = { actions.onToggleChrome() })
                 }
             Box(modifier = plainTextTapModifier) {
