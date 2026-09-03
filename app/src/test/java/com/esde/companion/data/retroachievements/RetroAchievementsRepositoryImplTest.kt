@@ -207,6 +207,23 @@ class RetroAchievementsRepositoryImplTest {
         ) = Unit
     }
 
+    private class FakeAchievementSummaryCacheStore : AchievementSummaryCacheStore {
+        var stored: CachedAchievementSummary? = null
+
+        override suspend fun read(
+            username: String,
+            gameId: Long,
+        ): CachedAchievementSummary? = stored
+
+        override suspend fun write(
+            username: String,
+            gameId: Long,
+            cached: CachedAchievementSummary,
+        ) {
+            stored = cached
+        }
+    }
+
     private class FakeCredentialsRepository(
         private val credentials: RetroAchievementsCredentials?,
     ) : RetroAchievementsCredentialsRepository {
@@ -227,7 +244,7 @@ class RetroAchievementsRepositoryImplTest {
             RetroAchievementsCaches(
                 gameList = GameListCache(FakeGameListCacheStore()),
                 userProgress = UserProgressCache(FakeUserProgressCacheStore()),
-                achievementSummary = AchievementSummaryCache(),
+                achievementSummary = AchievementSummaryCache(FakeAchievementSummaryCacheStore()),
                 achievementComments = AchievementCommentsCache(),
                 gameLeaderboards = GameLeaderboardsCache(),
                 leaderboardEntries = LeaderboardEntriesCache(),
@@ -370,6 +387,41 @@ class RetroAchievementsRepositoryImplTest {
             repository.getAchievementSummary(gameId = 1L, forceRefresh = true)
 
             assertEquals(2, fakeApi.callCount)
+        }
+
+    @Test
+    fun `peekAchievementSummary returns null when nobody is signed in`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi(), signedInAs = null)
+
+            val result = repository.peekAchievementSummary(gameId = 1L)
+
+            assertEquals(null, result)
+        }
+
+    @Test
+    fun `peekAchievementSummary returns null when nothing has been fetched yet`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi())
+
+            val result = repository.peekAchievementSummary(gameId = 1L)
+
+            assertEquals(null, result)
+        }
+
+    @Test
+    fun `peekAchievementSummary returns a prior fetch without querying the api`() =
+        runTest {
+            val summary = GameAchievementSummary(1L, "Chrono Trigger", 100, 0, 0f, achievements = emptyList())
+            val fakeApi = CountingGameInfoApi(RetroAchievementsApiResult.Success(summary))
+            val repository = repositoryWith(fakeApi)
+            repository.getAchievementSummary(gameId = 1L)
+
+            val result = repository.peekAchievementSummary(gameId = 1L)
+
+            assertEquals(summary, result?.summary)
+            assertEquals(false, result?.isStale)
+            assertEquals(1, fakeApi.callCount)
         }
 
     @Test

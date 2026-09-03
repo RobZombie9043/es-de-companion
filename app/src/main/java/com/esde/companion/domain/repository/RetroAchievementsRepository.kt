@@ -2,6 +2,7 @@ package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
+import com.esde.companion.domain.model.AchievementSummaryPeek
 import com.esde.companion.domain.model.LeaderboardEntriesFetchResult
 import com.esde.companion.domain.model.LeaderboardsFetchResult
 import com.esde.companion.domain.model.RetroAchievementsAuthState
@@ -38,6 +39,13 @@ interface RetroAchievementsRepository {
         gameId: Long,
         forceRefresh: Boolean = false,
     ): AchievementSummaryFetchResult
+
+    /**
+     * A cache-only peek at [gameId]'s achievement summary - never triggers a network fetch,
+     * `null` if nothing is cached (signed out, or never fetched/persisted). See
+     * [AchievementSummaryPeek]'s kdoc.
+     */
+    suspend fun peekAchievementSummary(gameId: Long): AchievementSummaryPeek?
 
     /**
      * The signed-in user's cross-console completion progress, keyed by RA gameId. Returns

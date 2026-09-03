@@ -268,17 +268,27 @@ class RetroAchievementsViewModel(
             is RetroAchievementsGameMatch.Found -> {
                 lastGameId = match.gameId
                 _resolution.value = RetroAchievementsResolutionState.Found(match.method)
-                _fetch.value = RetroAchievementsFetchState.Loading
-                _leaderboardsFetch.value = LeaderboardsFetchState.Loading
                 // Both fetched concurrently, and both consume the same forceRefresh flag - see
                 // this ViewModel's kdoc/CLAUDE.md for why leaderboards are fetched eagerly
                 // (the chip toggle needs a real leaderboard count immediately) and why one
                 // consume() call feeds both (so the kebab's "Refresh" bypasses both caches).
                 val refresh = forceRefresh.consume()
+                // Stale-while-revalidate: a cached summary (fresh or stale) shows immediately
+                // instead of a spinner - see RetroAchievementsFetchState.Loaded's kdoc for why
+                // this doesn't retrigger RetroAchievementsFetchBody's crossfade animation.
+                val peeked = if (refresh) null else detailUseCases.peekAchievementSummary(match.gameId)
+                _fetch.value =
+                    if (peeked != null) {
+                        RetroAchievementsFetchState.Loaded(peeked.summary, isRefreshing = peeked.isStale)
+                    } else {
+                        RetroAchievementsFetchState.Loading
+                    }
+                _leaderboardsFetch.value = LeaderboardsFetchState.Loading
                 coroutineScope {
-                    val achievementsDeferred = async { detailUseCases.getAchievementSummary(match.gameId, refresh) }
                     val leaderboardsDeferred = async { detailUseCases.getGameLeaderboards(match.gameId, refresh) }
-                    _fetch.value = achievementsDeferred.await().toFetchState()
+                    if (peeked == null || peeked.isStale) {
+                        _fetch.value = detailUseCases.getAchievementSummary(match.gameId, refresh).toFetchState()
+                    }
                     _leaderboardsFetch.value = leaderboardsDeferred.await().toFetchState()
                 }
             }

@@ -26,6 +26,7 @@ import com.esde.companion.domain.usecase.ObservePlaytimeStatsHardcoreModeEnabled
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.SetPlaytimeStatsHardcoreModeEnabledUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -88,6 +89,7 @@ class RetroAchievementsSystemGamesViewModel(
     private val setPlaytimeStatsHardcoreModeEnabled: SetPlaytimeStatsHardcoreModeEnabledUseCase,
     private val getSystemGames: GetRetroAchievementsSystemGamesUseCase,
     private val getAchievementSummary: GetGameAchievementSummaryUseCase,
+    private val peekAchievementSummary: PeekGameAchievementSummaryUseCase,
     private val getUserGameProgress: GetUserGameProgressUseCase,
     private val getAchievementComments: GetAchievementCommentsUseCase,
     private val getGameLeaderboards: GetGameLeaderboardsUseCase,
@@ -245,15 +247,23 @@ class RetroAchievementsSystemGamesViewModel(
             _selectedGameFetch.value = RetroAchievementsFetchState.Idle
             return
         }
-        _selectedGameFetch.value = RetroAchievementsFetchState.Loading
-        _selectedGameLeaderboardsFetch.value = LeaderboardsFetchState.Loading
         // Both fetched concurrently, and both consume the same forceRefresh flag - see
         // RetroAchievementsViewModel.resolveAndFetch's equivalent comment.
         val refresh = forceRefresh.consume()
+        // Stale-while-revalidate - see RetroAchievementsViewModel.resolveAndFetch's equivalent comment.
+        val peeked = if (refresh) null else peekAchievementSummary(game.gameId)
+        _selectedGameFetch.value =
+            if (peeked != null) {
+                RetroAchievementsFetchState.Loaded(peeked.summary, isRefreshing = peeked.isStale)
+            } else {
+                RetroAchievementsFetchState.Loading
+            }
+        _selectedGameLeaderboardsFetch.value = LeaderboardsFetchState.Loading
         coroutineScope {
-            val achievementsDeferred = async { getAchievementSummary(game.gameId, refresh) }
             val leaderboardsDeferred = async { getGameLeaderboards(game.gameId, refresh) }
-            _selectedGameFetch.value = achievementsDeferred.await().toFetchState()
+            if (peeked == null || peeked.isStale) {
+                _selectedGameFetch.value = getAchievementSummary(game.gameId, refresh).toFetchState()
+            }
             _selectedGameLeaderboardsFetch.value = leaderboardsDeferred.await().toFetchState()
         }
     }

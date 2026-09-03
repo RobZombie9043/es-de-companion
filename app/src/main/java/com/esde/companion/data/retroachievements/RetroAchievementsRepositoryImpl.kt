@@ -2,6 +2,7 @@ package com.esde.companion.data.retroachievements
 
 import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
+import com.esde.companion.domain.model.AchievementSummaryPeek
 import com.esde.companion.domain.model.LeaderboardEntriesFetchResult
 import com.esde.companion.domain.model.LeaderboardsFetchResult
 import com.esde.companion.domain.model.RetroAchievementsAuthState
@@ -59,6 +60,11 @@ class RetroAchievementsRepositoryImpl(
                 is RetroAchievementsApiResult.Error -> AchievementSummaryFetchResult.NetworkError(result.message)
             }
         }
+    }
+
+    override suspend fun peekAchievementSummary(gameId: Long): AchievementSummaryPeek? {
+        val credentials = currentCredentials() ?: return null
+        return caches.achievementSummary.peek(credentials.username, gameId)
     }
 
     override suspend fun getUserGameProgress(): Map<Long, UserGameProgress> {

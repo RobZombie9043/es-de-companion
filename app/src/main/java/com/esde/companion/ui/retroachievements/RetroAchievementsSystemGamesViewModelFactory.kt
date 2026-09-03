@@ -21,6 +21,7 @@ class RetroAchievementsSystemGamesViewModelFactory(
             setPlaytimeStatsHardcoreModeEnabled = appContainer.setPlaytimeStatsHardcoreModeEnabledUseCase,
             getSystemGames = appContainer.getRetroAchievementsSystemGamesUseCase,
             getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
+            peekAchievementSummary = appContainer.peekGameAchievementSummaryUseCase,
             getUserGameProgress = appContainer.getUserGameProgressUseCase,
             getAchievementComments = appContainer.getAchievementCommentsUseCase,
             getGameLeaderboards = appContainer.getGameLeaderboardsUseCase,

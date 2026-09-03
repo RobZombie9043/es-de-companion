@@ -36,7 +36,16 @@ sealed class RetroAchievementsFetchState {
 
     data object Loading : RetroAchievementsFetchState()
 
-    data class Loaded(val summary: GameAchievementSummary) : RetroAchievementsFetchState()
+    /**
+     * [isRefreshing] is true while [summary] is a stale cached value being shown immediately
+     * (stale-while-revalidate) with a real fetch running in the background to replace it -
+     * deliberately a flag on this same variant rather than a separate sealed state, so
+     * `RetroAchievementsFetchBody`'s `AnimatedContent` (keyed on `it::class`) never retriggers
+     * its crossfade going from a stale to a fresh [Loaded] value, only on a genuine transition
+     * to/from a different variant.
+     */
+    data class Loaded(val summary: GameAchievementSummary, val isRefreshing: Boolean = false) :
+        RetroAchievementsFetchState()
 
     data object NotFound : RetroAchievementsFetchState()
 

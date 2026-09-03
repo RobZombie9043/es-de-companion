@@ -43,6 +43,8 @@ class LeaderboardDisplayControllerTest {
             forceRefresh: Boolean,
         ): AchievementSummaryFetchResult = error("not used by this test")
 
+        override suspend fun peekAchievementSummary(gameId: Long) = error("not used by this test")
+
         override suspend fun getUserGameProgress(): Map<Long, UserGameProgress> = error("not used by this test")
 
         override suspend fun getAchievementComments(achievementId: Long): AchievementCommentsFetchResult {

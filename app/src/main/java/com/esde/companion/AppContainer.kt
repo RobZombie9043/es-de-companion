@@ -39,6 +39,7 @@ import com.esde.companion.data.retroachievements.DataStoreGameListCacheStore
 import com.esde.companion.data.retroachievements.DataStoreGameMatchOverrideRepository
 import com.esde.companion.data.retroachievements.DataStoreUserProgressCacheStore
 import com.esde.companion.data.retroachievements.EncryptedRetroAchievementsCredentialsRepository
+import com.esde.companion.data.retroachievements.FileAchievementSummaryCacheStore
 import com.esde.companion.data.retroachievements.GameLeaderboardsCache
 import com.esde.companion.data.retroachievements.GameListCache
 import com.esde.companion.data.retroachievements.LeaderboardEntriesCache
@@ -193,6 +194,7 @@ import com.esde.companion.domain.usecase.ObserveUpdateGameGuidesOnScreensaverEna
 import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
@@ -690,9 +692,13 @@ class AppContainer(context: Context) {
     // separate cache with its own 1h TTL and its own DataStore file - see UserProgressCache's
     // and DataStoreUserProgressCacheStore's kdocs for why it can't share GameListCache's TTL
     // or file. A third cache, AchievementSummaryCache, covers the per-game achievement summary
-    // (the achievement screen's data) - in-memory only, keyed by (username, gameId), 15-minute
-    // TTL, with a manual forceRefresh bypass wired to that screen's kebab "Refresh" entry - see
-    // its kdoc for why it isn't disk-backed like the other two. A fourth, AchievementCommentsCache,
+    // (the achievement screen's data) - disk (flat per-game JSON files, not DataStore - see
+    // FileAchievementSummaryCacheStore's kdoc) + memory, 15-minute TTL, pruned to the 2000
+    // most-recently-written games, with a manual forceRefresh bypass wired to that screen's
+    // kebab "Refresh" entry. A cached-but-stale summary is shown immediately while a background
+    // refresh runs (peekGameAchievementSummaryUseCase, consumed by both RetroAchievements
+    // ViewModels) rather than blocking on a spinner - see RetroAchievementsFetchState.Loaded's
+    // kdoc. A fourth, AchievementCommentsCache,
     // covers per-achievement wall comments (fetched on-demand when a row is expanded) - in-memory
     // only, keyed by achievementId alone (public data, not per-user), 30-minute TTL. A fifth,
     // GameLeaderboardsCache, covers the per-game leaderboard list (the same screen's Leaderboards
@@ -706,7 +712,7 @@ class AppContainer(context: Context) {
         EncryptedRetroAchievementsCredentialsRepository(appContext)
     private val gameListCache = GameListCache(store = DataStoreGameListCacheStore(appContext))
     private val userProgressCache = UserProgressCache(store = DataStoreUserProgressCacheStore(appContext))
-    private val achievementSummaryCache = AchievementSummaryCache()
+    private val achievementSummaryCache = AchievementSummaryCache(store = FileAchievementSummaryCacheStore(appContext))
     private val achievementCommentsCache = AchievementCommentsCache()
     private val gameLeaderboardsCache = GameLeaderboardsCache()
     private val leaderboardEntriesCache = LeaderboardEntriesCache()
@@ -740,6 +746,7 @@ class AppContainer(context: Context) {
             onResolved = { message -> debugFileLogger.logInfo("Cheevo", message) },
         )
     val getGameAchievementSummaryUseCase = GetGameAchievementSummaryUseCase(retroAchievementsRepository)
+    val peekGameAchievementSummaryUseCase = PeekGameAchievementSummaryUseCase(retroAchievementsRepository)
     val getGameHashSupportUseCase = GetGameHashSupportUseCase(gameRomHashRepository, retroAchievementsRepository)
     val setGameMatchOverrideUseCase = SetGameMatchOverrideUseCase(gameMatchOverrideRepository)
     val searchRetroAchievementsGamesUseCase = SearchRetroAchievementsGamesUseCase(retroAchievementsRepository)
