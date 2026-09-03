@@ -23,9 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GuideTocEntry
+import com.esde.companion.ui.theme.LocalIsDarkTheme
 
 /**
  * Keyed on [guideId] + [initialPageIndex], not a bare [remember] - this composable first
@@ -377,9 +379,16 @@ private fun GuideContentWithLoadingOverlay(
         )
         // A pure Compose overlay Box - never touches the WebView's own bounds/sizing, so
         // (unlike the chrome header/footer toggle) fading it carries none of that risk.
+        // Background matches the guide content's own pure black/white (GuideHtmlDocumentBuilder's
+        // DARK_BACKGROUND_HEX/LIGHT_BACKGROUND_HEX for Html, the equivalent Color.Black/White for
+        // PlainText - see GuideContentArea), not the ordinary MaterialTheme.colorScheme.background
+        // this used before - otherwise this spinner itself was the visible "flash of Material
+        // dark gray before pure black" the fix below exists to remove, confirmed on-device on
+        // both guide formats: the mismatch was here, not in either content renderer.
+        val loadingBackground = if (LocalIsDarkTheme.current) Color.Black else Color.White
         AnimatedVisibility(visible = indicators.showFullScreen, enter = fadeIn(), exit = fadeOut()) {
             Box(
-                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                modifier = Modifier.fillMaxSize().background(loadingBackground),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
