@@ -40,6 +40,57 @@ private const val TAP_TOGGLE_SCRIPT =
     </script>
     """
 
+// Only <img ...> tags, not the rest of the markup - a loose ">"-based regex is good enough here
+// since this is already best-effort scraped-content processing (same spirit as
+// GuidePageContentProcessor's MAX_EMBEDDED_IMAGES handling), not a real HTML parser.
+private val IMG_TAG_REGEX = Regex("""<img\b[^>]*>""", RegexOption.IGNORE_CASE)
+private val EXISTING_LOADING_ATTR_REGEX = Regex("""\s+loading\s*=\s*"[^"]*"""", RegexOption.IGNORE_CASE)
+private val IMG_OPEN_TAG_REGEX = Regex("<img", RegexOption.IGNORE_CASE)
+
+/**
+ * Marks every `<img>` in [bodyHtml] `loading="lazy"` (normalizing away any conflicting attribute
+ * a scraped source page already carried) so the very first paint only has to decode whatever is
+ * on-screen, not the whole page - [BACKGROUND_IMAGE_LOADER_SCRIPT] is what keeps every other
+ * image loading anyway, just without blocking that first paint. See this file's kdoc on
+ * [buildGuideHtmlDocument] for the full reasoning.
+ */
+internal fun applyLazyImageLoading(bodyHtml: String): String =
+    IMG_TAG_REGEX.replace(bodyHtml) { match ->
+        val stripped = match.value.replace(EXISTING_LOADING_ATTR_REGEX, "")
+        stripped.replaceFirst(IMG_OPEN_TAG_REGEX, "<img loading=\"lazy\"")
+    }
+
+// Placed AFTER bodyHtml (unlike TAP_TOGGLE_SCRIPT), same spot as CLASHING_INLINE_COLOR_FIX_SCRIPT
+// below - it needs every <img> already parsed into the DOM to select them, not just document.body
+// to exist.
+//
+// The promotion to eager is deliberately deferred to the window 'load' event, not run
+// immediately - a loading="lazy" image is specifically excluded from delaying that event (the
+// whole reason the attribute exists), but an ordinary eager <img> is NOT, so flipping every
+// image back to eager before 'load' fires undoes the deferral entirely: WebViewClient's
+// onPageFinished (what loadAndAwaitStarted used to await, back when it was called
+// loadAndAwaitFinished) fires at essentially the same point as 'load', so this app would end up
+// waiting for every image again regardless of the lazy attribute - confirmed on-device as page
+// turns still being slow to reveal despite it. Waiting for 'load' first means the page has
+// already finished loading (and this app has already revealed it) before this script starts
+// pulling every remaining image in - true background loading, not just a relabeled eager load.
+// No completion flag to report back here (an earlier version had one) - GameGuideHtmlViewer no
+// longer waits on decode completion for anything; see annotateImageDimensions'/
+// awaitStableScrollHeight's kdocs for why layout correctness no longer depends on it.
+private const val BACKGROUND_IMAGE_LOADER_SCRIPT =
+    """
+    <script>
+    (function() {
+        var imgs = document.querySelectorAll('img[loading="lazy"]');
+        window.addEventListener('load', function() {
+            for (var i = 0; i < imgs.length; i++) {
+                imgs[i].loading = 'eager';
+            }
+        });
+    })();
+    </script>
+    """
+
 /**
  * Wraps a saved in-line HTML guide's bare content markup (just the body of `#faqwrap`, no
  * `<html>`/`<head>`/stylesheet of its own - GameFAQs' own CSS never shipped with it) in a
@@ -47,6 +98,19 @@ private const val TAP_TOGGLE_SCRIPT =
  * unstyled browser-default markup - GameFAQs' own site classes on this content expect a
  * stylesheet this app never downloaded, so this targets plain tag selectors instead of
  * trying to reproduce their exact class names.
+ *
+ * Every `<img>` is also marked `loading="lazy"` ([applyLazyImageLoading]) and
+ * [BACKGROUND_IMAGE_LOADER_SCRIPT] is appended - confirmed on-device that an image-heavy guide
+ * page was slow to open when every image loaded eagerly upfront. First paint now only waits on
+ * whatever's on-screen; everything else keeps loading in the background regardless of scroll
+ * position (these are local files, not network fetches, so that's typically fast). [bodyHtml] is
+ * expected to already have real `width`/`height` attributes baked into its `<img>` tags where
+ * they could be resolved (see `data/gameguides/GuideImageDimensionAnnotator.kt`, applied by the
+ * caller before this function runs) - that, not waiting for images to decode, is what keeps a
+ * position-critical action (restoring a saved scroll position, a TOC jump) accurate despite
+ * images still loading in the background; see
+ * [com.esde.companion.ui.gameguides.GameGuideHtmlViewer]'s `awaitStableScrollHeight`/
+ * `awaitStableAnchorPosition`.
  */
 internal fun buildGuideHtmlDocument(
     bodyHtml: String,
@@ -73,8 +137,9 @@ internal fun buildGuideHtmlDocument(
         pre { white-space: pre-wrap; }
         """.trimIndent()
     val colorFixScript = buildClashingInlineColorFixScript(isDarkTheme, foreground)
-    return "<html><head><meta charset=\"utf-8\"><style>$css</style></head>" +
-        "<body>${TAP_TOGGLE_SCRIPT.trimIndent()}$bodyHtml$colorFixScript</body></html>"
+    val lazyBodyHtml = applyLazyImageLoading(bodyHtml)
+    val body = "${TAP_TOGGLE_SCRIPT.trimIndent()}$lazyBodyHtml$BACKGROUND_IMAGE_LOADER_SCRIPT$colorFixScript"
+    return "<html><head><meta charset=\"utf-8\"><style>$css</style></head><body>$body</body></html>"
 }
 
 private const val CLASH_PATTERN_BLACK = """^rgba?\(0,\s*0,\s*0(,\s*1)?\)$"""

@@ -13,7 +13,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -109,6 +112,7 @@ data class GuideContentActions(
     val onToggleChrome: () -> Unit,
     val onInternalAnchorTapped: (fragment: String) -> Unit,
     val onContentVisibleChanged: (Boolean) -> Unit = {},
+    val onAnchorJumpLoadingChanged: (Boolean) -> Unit = {},
 )
 
 internal fun buildGuideContentState(
@@ -117,8 +121,11 @@ internal fun buildGuideContentState(
 ): GuideContentState {
     // Only the page the guide was actually resumed on gets its saved scroll fraction - any
     // other page (reached via next/previous or a table-of-contents jump) starts at the top,
-    // the same way opening a different chapter of a book would.
-    val isResumedPage = uiState.currentPageIndex == state.initialPageIndex
+    // the same way opening a different chapter of a book would. !resumeConsumed matters here,
+    // not just the index match on its own - once the reader has navigated away at all, paging
+    // back to that same index later is an ordinary page visit, not a resume, and should land at
+    // the top like any other page - see GuideViewerUiState.resumeConsumed's kdoc.
+    val isResumedPage = uiState.currentPageIndex == state.initialPageIndex && !uiState.resumeConsumed
     val initialScrollFraction = if (isResumedPage) state.initialScrollFraction else 0f
     return GuideContentState(
         currentPage = state.currentPageContent,
@@ -139,6 +146,7 @@ internal fun buildGuideContentActions(
     onScrollFractionChanged: (pageIndex: Int, fraction: Float) -> Unit,
     onInternalAnchorTapped: (fragment: String) -> Unit,
     onContentVisibleChanged: (Boolean) -> Unit = {},
+    onAnchorJumpLoadingChanged: (Boolean) -> Unit = {},
 ): GuideContentActions =
     GuideContentActions(
         onScrollFractionChanged = { fraction -> onScrollFractionChanged(uiState.currentPageIndex, fraction) },
@@ -151,7 +159,56 @@ internal fun buildGuideContentActions(
         onToggleChrome = { uiState.chromeVisible = !uiState.chromeVisible },
         onInternalAnchorTapped = onInternalAnchorTapped,
         onContentVisibleChanged = onContentVisibleChanged,
+        onAnchorJumpLoadingChanged = onAnchorJumpLoadingChanged,
     )
+
+internal data class GuideContentLoadingState(
+    val contentActions: GuideContentActions,
+    val indicators: GuideLoadingIndicators,
+)
+
+/**
+ * Owns the two loading signals [GuideContentWithLoadingOverlay] renders - pulled out of
+ * [GameGuideViewerScreen] purely to keep that composable under detekt's length threshold, not
+ * for reuse elsewhere.
+ */
+@Composable
+internal fun rememberGuideContentLoadingState(
+    state: GameGuidesUiState.Viewing,
+    uiState: GuideViewerUiState,
+    derived: ViewerDerivedState,
+    onScrollFractionChanged: (pageIndex: Int, fraction: Float) -> Unit,
+    onInternalAnchorTapped: (fragment: String) -> Unit,
+): GuideContentLoadingState {
+    // Resets to "not yet visible" on every genuine page change (keyed on currentPageIndex),
+    // but survives a same-page font/theme reload - HtmlGuideContent itself never drops
+    // contentVisible for that case either (see its own kdoc), so there's nothing to hide.
+    var htmlContentVisible by remember(uiState.currentPageIndex) { mutableStateOf(false) }
+    // Not keyed on currentPageIndex like htmlContentVisible - a same-page jump never changes
+    // that, and this needs to reset to false regardless of which anchor wait it was tracking.
+    var anchorJumpLoading by remember { mutableStateOf(false) }
+    val contentActions =
+        buildGuideContentActions(
+            uiState = uiState,
+            onScrollFractionChanged = onScrollFractionChanged,
+            onInternalAnchorTapped = onInternalAnchorTapped,
+            onContentVisibleChanged = { htmlContentVisible = it },
+            onAnchorJumpLoadingChanged = { anchorJumpLoading = it },
+        )
+    // Covers both loading phases where nothing valid is on screen yet: the disk read
+    // (state.isLoadingContent) and, for an HTML guide, the WebView's own render phase (document
+    // write/load/scroll-restore) that follows it - previously that second phase showed nothing
+    // at all on an image-heavy page. anchorJumpLoading is deliberately NOT folded in here - a
+    // same-page TOC jump has a fully valid, already-visible page underneath it, so covering that
+    // with this opaque full-screen spinner (built for "nothing to show yet") would hide content
+    // the user was already reading; see the small corner indicator in
+    // GuideContentWithLoadingOverlay instead.
+    val showLoadingIndicator = state.isLoadingContent || (derived.isHtml && !htmlContentVisible)
+    return GuideContentLoadingState(
+        contentActions = contentActions,
+        indicators = GuideLoadingIndicators(showFullScreen = showLoadingIndicator, showAnchorJump = anchorJumpLoading),
+    )
+}
 
 @Composable
 fun GuideContentArea(
@@ -198,6 +255,7 @@ fun GuideContentArea(
                     onTap = actions.onToggleChrome,
                     onInternalAnchorTapped = actions.onInternalAnchorTapped,
                     onContentVisibleChanged = actions.onContentVisibleChanged,
+                    onAnchorJumpLoadingChanged = actions.onAnchorJumpLoadingChanged,
                 )
             HtmlGuideContent(config = htmlConfig, callbacks = htmlCallbacks)
         } else {

@@ -22,7 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import com.esde.companion.data.gameguides.annotateImageDimensions
 import com.esde.companion.data.gameguides.writeViewerDocument
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -30,6 +32,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.coroutines.resume
@@ -43,12 +46,22 @@ private const val SCROLL_REPORT_THRESHOLD = 0.01f
 private const val SCROLL_INITIAL_SETTLE_MILLIS = 1_800L
 
 // Bounds how long a cross-page TOC jump waits for its target page to finish loading before
-// giving up and scrolling anyway (a same-page jump never waits at all - see the
-// scrollToAnchorId effect's kdoc). Generous relative to a real page load's own worst case
-// (loadAndAwaitFinished + awaitScrollableLayout), same "degrade, don't hang forever" principle
+// giving up and scrolling anyway. Generous relative to a real page load's own worst case
+// (loadAndAwaitStarted + awaitScrollableLayout), same "degrade, don't hang forever" principle
 // used throughout this viewer.
 private const val ANCHOR_WAIT_POLL_ATTEMPTS = 40
 private const val ANCHOR_WAIT_POLL_INTERVAL_MILLIS = 100L
+
+// Bounds awaitStableValue - same degrade-and-proceed principle as the other polls in this file.
+// annotateImageDimensions means layout is usually already stable within the first check or two;
+// a page with an image that couldn't be annotated (missing file, decode failure) just proceeds
+// anyway once this bound is hit, same fallback as before.
+private const val LAYOUT_STABILITY_POLL_ATTEMPTS = 40
+private const val LAYOUT_STABILITY_POLL_INTERVAL_MILLIS = 100L
+
+// Sub-pixel tolerance for awaitStableValue's "two consecutive reads agree" check - guards
+// against harmless floating-point jitter between reads rather than requiring bit-exact equality.
+private const val STABILITY_EPSILON_PX = 0.5f
 
 private fun backgroundColorInt(isDarkTheme: Boolean): Int =
     android.graphics.Color.parseColor(if (isDarkTheme) DARK_BACKGROUND_HEX else LIGHT_BACKGROUND_HEX)
@@ -77,6 +90,11 @@ data class HtmlViewerCallbacks(
     // the real time goes, and it previously showed nothing at all: the WebView just sat at
     // alpha 0 with no feedback.
     val onContentVisibleChanged: (Boolean) -> Unit = {},
+    // Same idea as onContentVisibleChanged, for the other gap that used to show nothing: a TOC
+    // jump on a page whose images are still loading in the background waits (see
+    // scrollToAnchorWhenReady) before it actually scrolls, and without this the content just sat
+    // still with no feedback, indistinguishable from the tap having done nothing at all.
+    val onAnchorJumpLoadingChanged: (Boolean) -> Unit = {},
 )
 
 /**
@@ -193,13 +211,18 @@ fun HtmlGuideContent(
     val latestConfig = rememberUpdatedState(config)
     LaunchedEffect(config.scrollToAnchorId) {
         val id = config.scrollToAnchorId ?: return@LaunchedEffect
-        scrollToAnchorWhenReady(id, webView) { loadedHtml == latestConfig.value.html && contentVisible }
+        callbacks.onAnchorJumpLoadingChanged(true)
+        try {
+            scrollToAnchorWhenReady(id, webView) { loadedHtml == latestConfig.value.html && contentVisible }
+        } finally {
+            callbacks.onAnchorJumpLoadingChanged(false)
+        }
         callbacks.onScrollToAnchorHandled()
     }
 
     // Waits out SCROLL_INITIAL_SETTLE_MILLIS before its first evaluation - this effect starts
     // concurrently with the page effect above that loads the page and restores
-    // initialScrollFraction (loadAndAwaitFinished -> awaitScrollableLayout, up to
+    // initialScrollFraction (loadAndAwaitStarted -> awaitScrollableLayout, up to
     // SCROLL_LAYOUT_POLL_ATTEMPTS * SCROLL_LAYOUT_POLL_INTERVAL_MILLIS -> the actual restore
     // script). Evaluating immediately raced that restore: it read the still-loading (or
     // previous) page's near-zero scroll position and reported it right away, silently
@@ -248,15 +271,27 @@ private suspend fun loadPageIntoWebView(
     // rendered) so a theme change while a guide is already open doesn't itself produce the
     // same white-flash-before-the-real-background gap this is fixing.
     webView.setBackgroundColor(backgroundColorInt(config.isDarkTheme))
-    val document = buildGuideHtmlDocument(config.html, config.isDarkTheme, config.fontScale)
+    // Real file IO (a bounds-only decode per <img>, see annotateImageDimensions' kdoc) - kept
+    // off whatever dispatcher this coroutine is already running on.
+    val annotatedHtml =
+        withContext(Dispatchers.IO) { annotateImageDimensions(config.html, config.mediaDirectoryPath) }
+    val document = buildGuideHtmlDocument(annotatedHtml, config.isDarkTheme, config.fontScale)
     // Pointed at this guide's own directory (not a generic cache/temp location) before the
     // write, so its relative image references (see NativeImageDownloader's kdoc) resolve as
     // plain sibling files once served back out through mediaLoader.
     mediaLoader.updateDirectory(config.mediaDirectoryPath)
     writeViewerDocument(config.mediaDirectoryPath, document)
-    loadAndAwaitFinished(webView, GUIDE_MEDIA_DOCUMENT_URL, mediaLoader, callbacks)
+    loadAndAwaitStarted(webView, GUIDE_MEDIA_DOCUMENT_URL, mediaLoader, callbacks)
     awaitScrollableLayout(webView)
     val targetFraction = liveFraction ?: config.initialScrollFraction
+    // Only a genuine mid-page restore needs a settled scrollHeight to compute an accurate
+    // target - landing at the top (the common case: a fresh open, or any page reached via
+    // next/previous) doesn't care what the final height turns out to be. annotateImageDimensions
+    // means scrollHeight is usually already correct the moment layout runs (no reflow left to
+    // wait out), so this typically resolves in a single check now - awaitStableScrollHeight is
+    // what still protects a page with an unresolved image (missing file, decode failure) from
+    // restoring against a height that's still growing.
+    if (targetFraction > 0f) awaitStableScrollHeight(webView)
     restoreScrollFraction(webView, targetFraction)
 }
 
@@ -264,12 +299,21 @@ private suspend fun loadPageIntoWebView(
  * The body of [HtmlGuideContent]'s scroll-to-anchor effect - pulled out purely to keep that
  * composable under detekt's length/complexity thresholds, not for reuse elsewhere.
  *
- * A same-page entry (see [GameGuideViewerScreen.onEntrySelected]) never needs this wait at all -
- * [webView] already has the right page loaded, so [isReady] is already true. A cross-page entry,
- * by contrast, races the page effect that's still loading the new page's content - this wait is
+ * A same-page entry (see [GameGuideViewerScreen.onEntrySelected]) skips the [isReady] wait -
+ * [webView] already has the right page loaded, so it's already true. A cross-page entry, by
+ * contrast, races the page effect that's still loading the new page's content - this wait is
  * what keeps this effect from evaluating `getElementById` before that element exists in the DOM
  * yet. [isReady] is polled fresh (not captured once) so it correctly observes the page effect's
  * own state changes as they happen.
+ *
+ * Both cases then await [awaitStableAnchorPosition] before the actual `scrollIntoView` - jumping
+ * straight there while the target's own position is still shifting (something above it is still
+ * reflowing) would compute its position too early and land short, then visibly drift as that
+ * settles. Narrower than [awaitStableScrollHeight] (only the target's own offset matters for a
+ * jump, not the whole page's final height) - something reflowing below the target doesn't affect
+ * where it sits, so waiting on that would only slow the jump down for no accuracy benefit.
+ * [annotateImageDimensions] means this is usually already stable on the first check (nothing left
+ * to reflow once every image's space is pre-reserved).
  */
 private suspend fun scrollToAnchorWhenReady(
     id: String,
@@ -282,6 +326,7 @@ private suspend fun scrollToAnchorWhenReady(
         attempts++
     }
     val encodedId = Json.encodeToString(id)
+    awaitStableAnchorPosition(webView, encodedId)
     // Not every guide's anchor markers use id="..." - confirmed on a real guide (Ori and the
     // Blind Forest, GameFAQs FAQ id 71410) whose own section markers are legacy
     // <a name="section13">, never matched by getElementById at all. Falling back to
@@ -293,6 +338,50 @@ private suspend fun scrollToAnchorWhenReady(
             "?.scrollIntoView({block: 'start'});",
         null,
     )
+}
+
+/**
+ * Polls [expression] twice, [LAYOUT_STABILITY_POLL_INTERVAL_MILLIS] apart, until two consecutive
+ * reads agree (within [STABILITY_EPSILON_PX], guarding against harmless sub-pixel jitter) or
+ * [LAYOUT_STABILITY_POLL_ATTEMPTS] is exhausted - "nothing is still reflowing" rather than "every
+ * image has finished decoding," which [annotateImageDimensions] means these two usually coincide
+ * on the very first check anyway. Shared shape for [awaitStableScrollHeight] and
+ * [awaitStableAnchorPosition], just against a different JS expression.
+ */
+private suspend fun awaitStableValue(
+    webView: WebView,
+    expression: String,
+) {
+    var previous = evaluateNumber(webView, expression)
+    repeat(LAYOUT_STABILITY_POLL_ATTEMPTS) {
+        delay(LAYOUT_STABILITY_POLL_INTERVAL_MILLIS)
+        val current = evaluateNumber(webView, expression)
+        if (current != null && previous != null && abs(current - previous) < STABILITY_EPSILON_PX) return
+        previous = current
+    }
+}
+
+/** See [loadPageIntoWebView]'s call site for why this replaced waiting on every image to decode. */
+private suspend fun awaitStableScrollHeight(webView: WebView) {
+    awaitStableValue(webView, "document.documentElement.scrollHeight")
+}
+
+/**
+ * A target that can't be found (a stale/mistyped anchor id) reads a constant `-1` on every
+ * check, which is trivially "stable" on the first comparison - a safe no-op, same as the
+ * `scrollIntoView` call after it already is.
+ */
+private suspend fun awaitStableAnchorPosition(
+    webView: WebView,
+    encodedId: String,
+) {
+    val expression =
+        "(function(){" +
+            "var t=document.getElementById($encodedId)||document.getElementsByName($encodedId)[0];" +
+            "if(!t)return -1;" +
+            "return t.getBoundingClientRect().top+window.pageYOffset;" +
+            "})()"
+    awaitStableValue(webView, expression)
 }
 
 /**
@@ -398,15 +487,27 @@ private fun buildGuideWebView(
 
 /**
  * Loads [url] (always [GUIDE_MEDIA_DOCUMENT_URL] in practice - see [HtmlGuideContent]) and
- * suspends until the WebView's own [WebViewClient.onPageFinished] fires, rather than racing it
+ * suspends until the WebView's own [WebViewClient.onPageStarted] fires, rather than racing it
  * with an immediate `evaluateJavascript` check right after [WebView.loadUrl] returns (which is
- * fire-and-forget - the load hasn't actually started rendering yet). Confirmed on-device via
- * temporary logging: the very first `document.documentElement.scrollHeight` poll routinely read
- * back a near-empty, not-yet-laid-out page (e.g. 8px) which still passed a bare "> 0" check, so
- * the scroll-position restore ran against a document that hadn't actually rendered its real
- * (thousands-of-pixels) content yet and always landed at the top - the same
- * [onPageFinished]-based pattern `GameFaqsBrowserBridge.navigateAndAwaitLoad` already uses for
- * exactly this reason.
+ * fire-and-forget - the load hasn't actually started rendering yet, so an eval right then risks
+ * reading a stale/blank state), and rather than [WebViewClient.onPageFinished] (this function's
+ * previous gate). `onPageFinished` turned out to correspond to the WebView's underlying
+ * network-idle signal, not the DOM `load` event - it doesn't fire until *every* resource request
+ * the WebView is aware of has settled, images included, regardless of whether those images are
+ * marked `loading="lazy"` (a `loading="lazy"` image is specifically excluded from delaying the
+ * spec `load` event, but that exclusion doesn't extend to whatever WebViewClient's own idle
+ * tracking considers "still loading"). Confirmed on-device via temporary timing logs: page turns
+ * on an image-heavy guide were still taking 1.5-2.5s to reveal despite [GuideHtmlDocumentBuilder]
+ * marking every image lazy - `onPageFinished` was waiting on exactly the images
+ * `BACKGROUND_IMAGE_LOADER_SCRIPT` deliberately re-fetches once `load` fires, which is real
+ * background network activity from the WebView's point of view even though it's scoped, by
+ * design, to run *after* the page has already visually settled. Gating on `onPageStarted`
+ * instead - which fires as soon as navigation to the new document begins, well before any
+ * resource (lazy or otherwise) has loaded - avoids that entirely; [awaitScrollableLayout]'s
+ * existing bounded retry-poll (added for a similar not-yet-laid-out-page race, back when this
+ * function still gated on `onPageFinished`) is what absorbs the small remaining gap between
+ * "navigation started" and "text content has actually flowed into the DOM enough to have a
+ * real scrollHeight" - unaffected by images either way, since text layout doesn't wait on them.
  *
  * `loadUrl` against [mediaLoader]'s virtual origin, not [WebView.loadDataWithBaseURL] (this
  * viewer's previous mechanism) or a real `file://` path (briefly tried in between - see
@@ -418,11 +519,11 @@ private fun buildGuideWebView(
  * no such second encoding pass, and lets sibling image files under the same directory resolve
  * as plain relative paths instead of needing to be embedded as base64 text in the first place.
  * This temporary client must keep the same [shouldInterceptRequest] delegation as the permanent
- * one [buildGuideWebView] installs - it fully replaces that client for the duration of this one
- * load, and the document's own embedded images request through the same interceptor as the
- * document itself.
+ * one [buildGuideWebView] installs - it fully replaces that client for the (now much shorter)
+ * duration of this one load, and the document's own embedded images request through the same
+ * interceptor as the document itself.
  */
-private suspend fun loadAndAwaitFinished(
+private suspend fun loadAndAwaitStarted(
     webView: WebView,
     url: String,
     mediaLoader: GuideMediaLoader,
@@ -434,17 +535,17 @@ private suspend fun loadAndAwaitFinished(
             webView.webViewClient =
                 object : WebViewClient() {
                     // Every other navigation is still unconditionally blocked (this temporary
-                    // client's whole job while a page is mid-load), but TAP_TOGGLE_URL must be
-                    // recognized here too, the same way the permanent client does once loaded -
-                    // otherwise a chrome-toggle tap made while a large/slow page is still
-                    // loading gets silently swallowed by this client's own blanket "return
-                    // true" for the entire duration of that load, no matter how early the tap-
-                    // toggle script itself attaches in the document. Confirmed on-device as the
-                    // actual cause of "tap to toggle doesn't work while the page is still
-                    // loading" surviving an earlier fix that only moved the script earlier in
-                    // the document - the script attaching earlier never mattered, since this
-                    // client (not the permanent one with the real TAP_TOGGLE_URL handling) is
-                    // what's installed for the entire load regardless.
+                    // client's whole job while this one load is in flight), but TAP_TOGGLE_URL
+                    // must be recognized here too, the same way the permanent client does once
+                    // loaded - otherwise a chrome-toggle tap made in the brief window before this
+                    // client hands back to the permanent one gets silently swallowed by this
+                    // client's own blanket "return true", no matter how early the tap-toggle
+                    // script itself attaches in the document. Confirmed on-device (back when this
+                    // window spanned the whole page load) as the actual cause of "tap to toggle
+                    // doesn't work while the page is still loading" surviving an earlier fix that
+                    // only moved the script earlier in the document - the script attaching
+                    // earlier never mattered, since this client (not the permanent one with the
+                    // real TAP_TOGGLE_URL handling) is what's installed regardless.
                     override fun shouldOverrideUrlLoading(
                         view: WebView,
                         request: WebResourceRequest,
@@ -458,9 +559,10 @@ private suspend fun loadAndAwaitFinished(
                         request: WebResourceRequest,
                     ): WebResourceResponse? = mediaLoader.intercept(request)
 
-                    override fun onPageFinished(
+                    override fun onPageStarted(
                         view: WebView,
                         url: String?,
+                        favicon: android.graphics.Bitmap?,
                     ) {
                         webView.webViewClient = originalClient
                         if (continuation.isActive) continuation.resume(Unit)
@@ -474,10 +576,11 @@ private suspend fun loadAndAwaitFinished(
 }
 
 /**
- * A secondary safety net after [loadAndAwaitFinished] - `onPageFinished` corresponds to the
- * page's load event, which in the vast majority of cases means layout has already run too,
- * but this gives a freshly-loaded, still-reflowing page a few more short polls to settle
- * before the scroll-position restore reads its final `scrollHeight`.
+ * A secondary safety net after [loadAndAwaitStarted] - unlike when this function was written
+ * (see [loadAndAwaitStarted]'s kdoc for why it moved off `onPageFinished`), the page has often
+ * barely begun laying out by this point, not merely still reflowing - this is what actually
+ * absorbs that gap via its own bounded poll before the scroll-position restore reads a final
+ * `scrollHeight`.
  */
 private suspend fun awaitScrollableLayout(webView: WebView) {
     repeat(SCROLL_LAYOUT_POLL_ATTEMPTS) {
