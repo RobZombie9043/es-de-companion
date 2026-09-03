@@ -118,12 +118,24 @@ private fun DownloadAndInstallButton(
     onClick: () -> Unit,
 ) {
     val isDownloading = downloadState is DownloadState.Progress
+    // Captured here, not re-derived from the live downloadState inside AnimatedContent's content
+    // lambda below - that lambda keeps re-running for the outgoing "downloading" branch during
+    // AnimatedContent's own crossfade-out animation, by which point downloadState has often
+    // already moved on to DownloadState.Success (the download completing while this button is
+    // still mid-fade showing its old "downloading" content). A raw `downloadState as
+    // DownloadState.Progress` there threw ClassCastException: DownloadState.Success cannot be
+    // cast to DownloadState.Progress - confirmed via a release-build-only crash (R8's obfuscated
+    // class names in the trace resolved back to these two via mapping.txt). Remembering the last
+    // real percent instead means the fade-out finishes showing its last real value (typically
+    // ~100%, since the state just completed) rather than either crashing or jumping to 0%.
+    var lastKnownPercent by remember { mutableStateOf(0) }
+    if (downloadState is DownloadState.Progress) lastKnownPercent = downloadState.percent
     Button(onClick = onClick, enabled = !isDownloading) {
         // AnimatedContent (not a plain if/else) - the label<->progress swap otherwise cuts
         // abruptly, same reasoning as GameGuidesBrowserScreen's DownloadProgressDialog.
         AnimatedContent(targetState = isDownloading, label = "downloadButtonContent") { downloading ->
             if (downloading) {
-                val percent = (downloadState as DownloadState.Progress).percent
+                val percent = lastKnownPercent
                 val fraction = percent.toFloat() / DOWNLOAD_PERCENT_MAX
                 // LinearProgressIndicator + animateFloatAsState - the same determinate-progress
                 // pattern GameGuidesBrowserScreen's DownloadProgressDialog uses, since real
