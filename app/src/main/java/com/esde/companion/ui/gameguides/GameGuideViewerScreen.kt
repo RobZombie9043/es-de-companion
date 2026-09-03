@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
 import com.esde.companion.domain.model.GuideTocEntry
 
@@ -89,8 +94,14 @@ private fun buildHeaderActions(
         },
         onShowToc = { uiState.showToc = true },
         onClose = onClose,
-        onPreviousPage = { uiState.currentPageIndex = (uiState.currentPageIndex - 1).coerceAtLeast(0) },
-        onNextPage = { uiState.currentPageIndex = (uiState.currentPageIndex + 1).coerceAtMost(lastPageIndex) },
+        onPreviousPage = {
+            uiState.resumeConsumed = true
+            uiState.currentPageIndex = (uiState.currentPageIndex - 1).coerceAtLeast(0)
+        },
+        onNextPage = {
+            uiState.resumeConsumed = true
+            uiState.currentPageIndex = (uiState.currentPageIndex + 1).coerceAtMost(lastPageIndex)
+        },
     )
 }
 
@@ -117,6 +128,7 @@ private fun onInternalAnchorTapped(
         uiState.scrollToAnchorId = fragment
     } else {
         uiState.pendingAnchorId = fragment
+        uiState.resumeConsumed = true
         uiState.currentPageIndex = targetPageIndex
     }
 }
@@ -264,6 +276,7 @@ fun GameGuideViewerScreen(
                 entry.anchorId?.let { uiState.scrollToAnchorId = it }
             } else {
                 entry.anchorId?.let { uiState.pendingAnchorId = it }
+                uiState.resumeConsumed = true
                 uiState.currentPageIndex = targetPageIndex
             }
         } else {
@@ -275,21 +288,14 @@ fun GameGuideViewerScreen(
     val headerActions =
         buildHeaderActions(state, uiState, derived, actions.onDisplayPreferencesChanged, actions.onClose)
     val contentState = buildGuideContentState(state, uiState)
-    // Resets to "not yet visible" on every genuine page change (keyed on currentPageIndex),
-    // but survives a same-page font/theme reload - HtmlGuideContent itself never drops
-    // contentVisible for that case either (see its own kdoc), so there's nothing to hide.
-    var htmlContentVisible by remember(uiState.currentPageIndex) { mutableStateOf(false) }
-    val contentActions =
-        buildGuideContentActions(
+    val loadingState =
+        rememberGuideContentLoadingState(
+            state = state,
             uiState = uiState,
+            derived = derived,
             onScrollFractionChanged = actions.onScrollFractionChanged,
             onInternalAnchorTapped = { fragment -> onInternalAnchorTapped(fragment, state, uiState, lastPageIndex) },
-            onContentVisibleChanged = { htmlContentVisible = it },
         )
-    // Covers both loading phases: the disk read (state.isLoadingContent) and, for an HTML
-    // guide, the WebView's own render phase (document write/load/scroll-restore) that follows
-    // it - previously that second phase showed nothing at all on an image-heavy page.
-    val showLoadingIndicator = state.isLoadingContent || (derived.isHtml && !htmlContentVisible)
 
     // AnimatedVisibility, not a plain if - the underlying reliability issue that motivated
     // *not* animating this (see git history: overlay/layer-toggle attempts, all reverted) has
@@ -306,8 +312,8 @@ fun GameGuideViewerScreen(
             GuideContentWithLoadingOverlay(
                 derived = derived,
                 contentState = contentState,
-                contentActions = contentActions,
-                showLoadingIndicator = showLoadingIndicator,
+                contentActions = loadingState.contentActions,
+                indicators = loadingState.indicators,
                 modifier = Modifier.weight(1f),
             )
             AnimatedVisibility(
@@ -335,20 +341,31 @@ fun GameGuideViewerScreen(
 }
 
 /**
- * [GuideContentArea] stays mounted regardless of [showLoadingIndicator] (rather than being
- * swapped out while true) so [HtmlGuideContent]'s own content-visible effect can actually run
- * and report back once ready - see [GameGuideViewerScreen]'s `htmlContentVisible`/
- * `showLoadingIndicator` kdoc for why. The spinner overlay just covers whatever's underneath
- * (a blank first page, or the previous page for the one frame before its own `contentVisible`
- * drops back to false) with a solid background until then, extracted here purely to keep
- * [GameGuideViewerScreen] itself under detekt's length/complexity thresholds.
+ * The two independent loading signals [GuideContentWithLoadingOverlay] renders - bundled into
+ * one type purely to keep that composable's own parameter count under detekt's threshold, not
+ * because the two are conceptually linked (see their own call-site kdocs for why they're
+ * deliberately rendered differently).
+ */
+internal data class GuideLoadingIndicators(
+    val showFullScreen: Boolean,
+    val showAnchorJump: Boolean,
+)
+
+/**
+ * [GuideContentArea] stays mounted regardless of [GuideLoadingIndicators.showFullScreen]
+ * (rather than being swapped out while true) so [HtmlGuideContent]'s own content-visible effect
+ * can actually run and report back once ready - see [rememberGuideContentLoadingState]'s kdoc
+ * for why. The spinner overlay just covers whatever's underneath (a blank first page, or the
+ * previous page for the one frame before its own `contentVisible` drops back to false) with a
+ * solid background until then, extracted here purely to keep [GameGuideViewerScreen] itself
+ * under detekt's length/complexity thresholds.
  */
 @Composable
 private fun GuideContentWithLoadingOverlay(
     derived: ViewerDerivedState,
     contentState: GuideContentState,
     contentActions: GuideContentActions,
-    showLoadingIndicator: Boolean,
+    indicators: GuideLoadingIndicators,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -360,12 +377,33 @@ private fun GuideContentWithLoadingOverlay(
         )
         // A pure Compose overlay Box - never touches the WebView's own bounds/sizing, so
         // (unlike the chrome header/footer toggle) fading it carries none of that risk.
-        AnimatedVisibility(visible = showLoadingIndicator, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(visible = indicators.showFullScreen, enter = fadeIn(), exit = fadeOut()) {
             Box(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
+            }
+        }
+        // Deliberately small and non-obscuring, unlike showFullScreen's overlay above - a
+        // same-page TOC jump has a fully valid page already on screen (just about to scroll
+        // once its target's images finish loading), so covering it entirely would hide content
+        // the user was already reading instead of just signaling a wait.
+        AnimatedVisibility(
+            visible = indicators.showAnchorJump,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             }
         }
     }

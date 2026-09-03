@@ -45,4 +45,13 @@ internal class GuideViewerUiState(initialPageIndex: Int) {
     var pendingAnchorId: String? by mutableStateOf(null)
     var currentPageIndex: Int by mutableIntStateOf(initialPageIndex)
     var chromeVisible: Boolean by mutableStateOf(true)
+
+    // Set true by every real page navigation (next/previous, an in-content link, a TOC jump -
+    // see GameGuideViewerScreen's currentPageIndex mutation sites). buildGuideContentState's
+    // isResumedPage check needs this, not just "currentPageIndex == initialPageIndex" - without
+    // it, navigating away from the resumed page and later paging back to that same index looked
+    // indistinguishable from the original resume, and silently re-applied the old saved scroll
+    // fraction instead of landing at the top like any other page-turn (confirmed on-device: this
+    // is the actual bug, not a coincidence of which page happens to match).
+    var resumeConsumed: Boolean by mutableStateOf(false)
 }
