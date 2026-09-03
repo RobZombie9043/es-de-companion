@@ -28,8 +28,12 @@ import kotlin.time.Duration.Companion.seconds
  * heavy parallel Gradle test-worker contention (confirmed as the actual cause of an
  * intermittent "No value produced in 3s" failure, not a real bug in the repository) - a
  * generous fixed budget here, not a shorter one tuned to this machine's usual speed.
+ * Raised from 10s to 20s after a `does not invoke onFallbackPollCaughtUpdate` timeout
+ * confirmed reproducing (and passing cleanly in isolation) specifically when running
+ * `testDebugUnitTest` in the same Gradle invocation as two full `assemble*` APK builds -
+ * exactly the "heavy parallel contention" scenario this was already written to expect.
  */
-private val FLAKE_RESISTANT_TIMEOUT = 10.seconds
+private val FLAKE_RESISTANT_TIMEOUT = 20.seconds
 
 class EsdeLogFileRepositoryTest {
     @get:Rule
