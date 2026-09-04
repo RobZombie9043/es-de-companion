@@ -533,6 +533,41 @@ class WidgetsViewModelAchievementSummaryTest {
         }
 
     @Test
+    fun `a matched game with no cached data and a NetworkError fetch result stays Loading, not Unavailable`() =
+        runTest(testDispatcher) {
+            // A transient failure (offline, rate-limited, RA outage) must never render as a
+            // false "no achievements" claim for a game that might genuinely have some - see
+            // completedAchievementFetchGameId's kdoc in WidgetsViewModel.
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
+            val retroAchievementsRepository =
+                RecordingRetroAchievementsRepository(
+                    initialPeek = null,
+                    fetchResult = AchievementSummaryFetchResult.NetworkError("offline"),
+                )
+            val viewModel =
+                buildViewModel(
+                    esdeLogRepository,
+                    widgetLayoutRepository,
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
+                    retroAchievementsCredentialsRepository =
+                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
+                    retroAchievementsRepository = retroAchievementsRepository,
+                )
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(achievementsGameSelect)
+            advanceUntilIdle()
+
+            val state = viewModel.canvasState.value
+            check(state is WidgetCanvasState.Showing)
+            val content = state.contentByWidgetId["ra"]
+            check(content is WidgetContent.AchievementSummary)
+            assertEquals(AchievementSummaryWidgetState.Loading, content.state)
+        }
+
+    @Test
     fun `an unmatched game (no RetroAchievements entry) resolves to Unavailable, not Empty`() =
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()

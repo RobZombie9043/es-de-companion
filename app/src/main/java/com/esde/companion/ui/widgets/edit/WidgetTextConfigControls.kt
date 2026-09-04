@@ -111,8 +111,9 @@ internal fun GameDescriptionConfig(
     }
 }
 
-/** Same fields/layout as [GameDescriptionConfig] - [WidgetType.AchievementSummary] mirrors
- * [WidgetType.GameDescription]'s style fields exactly, see its kdoc. Uses [ColorSwatchPicker]
+/** No text-size control, unlike [GameDescriptionConfig] - the icon+text are sized to fit
+ * the widget's own placed bounds (see WidgetCanvas.kt's AchievementSummaryRow), the same
+ * "no configurable size" shape [RatingConfig] uses for its star row. Uses [ColorSwatchPicker]
  * (the shared swatch-row-plus-hex-input control [RatingConfig] already uses) rather than
  * duplicating [GameDescriptionConfig]'s own inlined swatch rows. */
 @Composable
@@ -121,14 +122,6 @@ internal fun AchievementSummaryConfig(
     onChange: (WidgetType.AchievementSummary) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
-            Slider(
-                value = current.fontSizeSp,
-                onValueChange = { onChange(current.copy(fontSizeSp = it)) },
-                valueRange = 10f..36f,
-            )
-        }
         ColorSwatchPicker(
             label = "Text Color",
             current = current.textColorArgb,

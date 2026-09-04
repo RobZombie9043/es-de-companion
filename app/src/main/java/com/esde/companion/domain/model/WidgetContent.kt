@@ -82,12 +82,13 @@ sealed class WidgetContent {
      * Loaded (see [AchievementSummaryWidgetState]'s kdoc) - raw numeric fields inside `Loaded`
      * rather than a pre-formatted string, formatting happens at render time, same layering as
      * `AchievementStatsHeader` in `ui/retroachievements/RetroAchievementsSummaryContent.kt`.
-     * Style fields mirror [WidgetType.AchievementSummary] exactly (this is a snapshot of that
-     * config plus the resolved [state]).
+     * Style fields mirror [WidgetType.AchievementSummary] except `fontSizeSp` - unlike that
+     * (persisted) type, this snapshot is rebuilt fresh on every resolve, never serialized, so
+     * there's no compatibility reason to carry a field nothing reads (icon/text are sized to
+     * fit the widget's own placed bounds instead, see WidgetCanvas.kt's AchievementSummaryRow).
      */
     data class AchievementSummary(
         val state: AchievementSummaryWidgetState,
-        val fontSizeSp: Float,
         val textColorArgb: Long,
         val backgroundColorArgb: Long,
         val backgroundAlpha: Float,

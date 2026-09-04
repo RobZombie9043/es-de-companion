@@ -481,7 +481,6 @@ class WidgetContentResolverTest {
     fun `AchievementSummary resolves to WidgetContent AchievementSummary when the lookup returns a state`() {
         val widgetType =
             WidgetType.AchievementSummary(
-                fontSizeSp = 20f,
                 textColorArgb = 0xFF00FF00,
                 backgroundColorArgb = 0xFF111111,
                 backgroundAlpha = 0.6f,
@@ -494,7 +493,6 @@ class WidgetContentResolverTest {
         assertEquals(
             WidgetContent.AchievementSummary(
                 state = state,
-                fontSizeSp = 20f,
                 textColorArgb = 0xFF00FF00,
                 backgroundColorArgb = 0xFF111111,
                 backgroundAlpha = 0.6f,

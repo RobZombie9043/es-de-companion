@@ -148,7 +148,6 @@ object WidgetContentResolver {
                 achievementSummaryLookup()?.let { state ->
                     WidgetContent.AchievementSummary(
                         state = state,
-                        fontSizeSp = widgetType.fontSizeSp,
                         textColorArgb = widgetType.textColorArgb,
                         backgroundColorArgb = widgetType.backgroundColorArgb,
                         backgroundAlpha = widgetType.backgroundAlpha,

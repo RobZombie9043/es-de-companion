@@ -218,6 +218,13 @@ sealed class WidgetType {
      * reasoning as GameDescription/Rating, which this mirrors field-for-field. Debug-only
      * for now - see `data/retroachievements/RetroAchievementsFeatureFlag.kt` and
      * `EditWidgetsOverlay.widgetCatalogFor`.
+     *
+     * [fontSizeSp] is no longer read anywhere - the icon/text are now sized to fit the
+     * widget's own placed bounds instead (see WidgetCanvas.kt's AchievementSummaryRow),
+     * same "no configurable size" shape [Rating] uses. Kept as a field (rather than removed)
+     * purely so a canvas saved before this change still deserializes - `Json` (no
+     * `ignoreUnknownKeys`) throws on an unrecognized key, which would break loading the
+     * *entire* canvas, not just this one widget.
      */
     data class AchievementSummary(
         val fontSizeSp: Float = 16f,

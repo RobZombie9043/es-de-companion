@@ -2,6 +2,7 @@ package com.esde.companion.ui.widgets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.AchievementSummaryPeek
 import com.esde.companion.domain.model.AchievementSummaryWidgetState
 import com.esde.companion.domain.model.AppState
@@ -126,11 +127,15 @@ class WidgetsViewModel(
     // deliberately simple, matching this session's "no periodic refresh" limitation.
     private var lastAchievementFetchGameId: Long? = null
 
-    // Set (to the same gameId) once that attempt actually finishes - peekAchievementSummary
-    // only ever returns non-null for a cached Success (see AchievementSummaryCache.peek's
-    // kdoc), so a NotFound/NetworkError fetch result leaves peek permanently null for that
-    // gameId. Without this, resolveAchievementSummary would read that as "still loading"
-    // forever instead of "tried, nothing there" - see toWidgetState.
+    // Set (to the same gameId) once that attempt actually finishes with a definitive result -
+    // peekAchievementSummary only ever returns non-null for a cached Success (see
+    // AchievementSummaryCache.peek's kdoc), so a NotFound fetch result leaves peek permanently
+    // null for that gameId. Without this, resolveAchievementSummary would read that as "still
+    // loading" forever instead of "tried, nothing there" - see toWidgetState. Deliberately NOT
+    // set for a NetworkError result (see peekAndMaybeFetchAchievementSummary) - a transient
+    // failure (offline, rate-limited, RA outage) shouldn't permanently claim "no achievements"
+    // for a game that genuinely has some, confirmed on-device as a stuck-Unavailable widget
+    // that only recovered once browsing to a different game and back reset lastAchievementFetchGameId.
     private var completedAchievementFetchGameId: Long? = null
 
     /**
@@ -182,8 +187,10 @@ class WidgetsViewModel(
         if ((peeked == null || peeked.isStale) && lastAchievementFetchGameId != gameId) {
             lastAchievementFetchGameId = gameId
             viewModelScope.launch {
-                getAchievementSummary(gameId)
-                completedAchievementFetchGameId = gameId
+                val result = getAchievementSummary(gameId)
+                if (result !is AchievementSummaryFetchResult.NetworkError) {
+                    completedAchievementFetchGameId = gameId
+                }
                 achievementRefreshTrigger.update { it + 1 }
             }
         }

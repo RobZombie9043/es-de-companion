@@ -4,14 +4,16 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,8 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -45,7 +51,6 @@ import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.video.VideoPlaybackEvent
 import java.io.File
-import kotlin.math.roundToInt
 
 /**
  * Renders [widgets] on a grid derived from the available space (see [gridDimensionsFor]),
@@ -315,65 +320,128 @@ internal fun WidgetContentView(
     }
 }
 
-/** [BoxScope] receiver so the refresh indicator below can [Modifier.align] itself within the
- * enclosing Box (see CLAUDE.md's Known Gotchas on align() needing a direct-child BoxScope). */
+private val ACHIEVEMENT_ICON_TEXT_SPACING = 8.dp
+
+/** The icon+text is deliberately sized to fill less than the widget's full bounds, so it
+ * reads as compact rather than stretching edge-to-edge - the remainder is left as margin,
+ * split around the centered content. */
+private const val ACHIEVEMENT_CONTENT_FILL_FRACTION = 0.6f
+
+/** An arbitrary reference size the icon/text are measured at, then uniformly scaled from -
+ * see [rememberAchievementContentScale]'s kdoc. Not a real rendered size on its own. */
+private const val ACHIEVEMENT_REFERENCE_SIZE_SP = 100f
+private val ACHIEVEMENT_MIN_ICON_SIZE = 8.dp
+private val ACHIEVEMENT_MAX_ICON_SIZE = 96.dp
+
 @Composable
-private fun BoxScope.AchievementSummaryWidgetBody(content: WidgetContent.AchievementSummary) {
+private fun AchievementSummaryWidgetBody(content: WidgetContent.AchievementSummary) {
     val textColor = Color(content.textColorArgb)
-    when (val state = content.state) {
-        AchievementSummaryWidgetState.Loading -> CircularProgressIndicator(color = textColor)
-
-        AchievementSummaryWidgetState.Unavailable ->
-            Text(
-                text = "No Achievements",
-                color = textColor,
-                fontSize = content.fontSizeSp.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(8.dp),
-            )
-
-        is AchievementSummaryWidgetState.Loaded -> {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(8.dp),
-            ) {
-                Text(
-                    text = "${state.unlockedCount} / ${state.totalCount} Achievements",
-                    color = textColor,
-                    fontSize = content.fontSizeSp.sp,
-                    textAlign = TextAlign.Center,
-                )
-                val statsText =
-                    "${state.earnedPoints} / ${state.totalPoints} pts · " +
-                        "${state.completionPercent.roundToInt()}%"
-                Text(
-                    text = statsText,
-                    color = textColor,
-                    fontSize = content.fontSizeSp.sp,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            // A stale cached value shown immediately while a background refresh runs - see
-            // WidgetContent.AchievementSummary's kdoc.
-            if (state.isRefreshing) {
-                val indicatorModifier =
-                    Modifier.align(Alignment.TopEnd).padding(4.dp).size(ACHIEVEMENT_REFRESH_INDICATOR_SIZE)
+    BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val availableWidth = maxWidth
+        val availableHeight = maxHeight
+        when (val state = content.state) {
+            AchievementSummaryWidgetState.Loading -> {
+                val spinnerSize = minOf(availableWidth, availableHeight) * ACHIEVEMENT_CONTENT_FILL_FRACTION
                 CircularProgressIndicator(
-                    modifier = indicatorModifier,
-                    strokeWidth = ACHIEVEMENT_REFRESH_INDICATOR_STROKE_WIDTH,
                     color = textColor,
+                    strokeWidth = (spinnerSize / 12).coerceAtLeast(2.dp),
+                    modifier = Modifier.size(spinnerSize),
                 )
             }
+
+            AchievementSummaryWidgetState.Unavailable ->
+                AchievementSummaryRow(
+                    text = "-",
+                    textColor = textColor,
+                    availableWidth = availableWidth,
+                    availableHeight = availableHeight,
+                )
+
+            is AchievementSummaryWidgetState.Loaded ->
+                AchievementSummaryRow(
+                    text = "${state.unlockedCount} / ${state.totalCount}",
+                    textColor = textColor,
+                    availableWidth = availableWidth,
+                    availableHeight = availableHeight,
+                )
         }
+    }
+}
+
+/**
+ * The icon+text row's size is derived from the space actually available (rather than a
+ * fixed/configured value), the same "measure once, scale uniformly" idea [RatingStars]
+ * uses for its star size - measuring [text] once at an arbitrary large reference font size
+ * gives its natural (unwrapped) width/height, and text metrics scale linearly with font
+ * size for a fixed string, so the single scale factor that makes that reference measurement
+ * fit [availableWidth]/[availableHeight] is the same factor the real, final font size needs.
+ * The icon is sized off the same factor (at 1:1 with the font size, in dp), so icon and text
+ * always grow/shrink together.
+ */
+@Composable
+private fun rememberAchievementContentScale(
+    text: String,
+    availableWidth: Dp,
+    availableHeight: Dp,
+): Float {
+    val density = LocalDensity.current
+    val textMeasurer = rememberTextMeasurer()
+    return remember(text, availableWidth, availableHeight, density) {
+        val measured =
+            textMeasurer.measure(
+                text = text,
+                style = TextStyle(fontSize = ACHIEVEMENT_REFERENCE_SIZE_SP.sp),
+                softWrap = false,
+                maxLines = 1,
+            )
+        val measuredWidth = with(density) { measured.size.width.toDp() }
+        val measuredHeight = with(density) { measured.size.height.toDp() }
+        val referenceIconSize = ACHIEVEMENT_REFERENCE_SIZE_SP.dp
+        val totalWidthAtReference = referenceIconSize + ACHIEVEMENT_ICON_TEXT_SPACING + measuredWidth
+        val totalHeightAtReference = maxOf(referenceIconSize, measuredHeight)
+        val scaleForWidth =
+            availableWidth.value * ACHIEVEMENT_CONTENT_FILL_FRACTION / totalWidthAtReference.value
+        val scaleForHeight =
+            availableHeight.value * ACHIEVEMENT_CONTENT_FILL_FRACTION / totalHeightAtReference.value
+        minOf(scaleForWidth, scaleForHeight).coerceAtLeast(0f)
+    }
+}
+
+@Composable
+private fun AchievementSummaryRow(
+    text: String,
+    textColor: Color,
+    availableWidth: Dp,
+    availableHeight: Dp,
+) {
+    val scale = rememberAchievementContentScale(text, availableWidth, availableHeight)
+    val iconSize =
+        (ACHIEVEMENT_REFERENCE_SIZE_SP * scale).dp
+            .coerceIn(ACHIEVEMENT_MIN_ICON_SIZE, ACHIEVEMENT_MAX_ICON_SIZE)
+    val fontSizeSp = iconSize.value
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(ACHIEVEMENT_ICON_TEXT_SPACING),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.EmojiEvents,
+            contentDescription = null,
+            tint = textColor,
+            modifier = Modifier.size(iconSize),
+        )
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = fontSizeSp.sp,
+            textAlign = TextAlign.Center,
+            softWrap = false,
+        )
     }
 }
 
 /** Max blur radius a fully-scaled-up (blurAmount = 1f) ImageEffects maps to. */
 private val IMAGE_EFFECTS_MAX_BLUR = 24.dp
-
-private val ACHIEVEMENT_REFRESH_INDICATOR_SIZE = 14.dp
-private val ACHIEVEMENT_REFRESH_INDICATOR_STROKE_WIDTH = 2.dp
 
 private fun Modifier.applyBlurEffect(effects: ImageEffects): Modifier =
     if (effects.blurAmount > 0f) blur(IMAGE_EFFECTS_MAX_BLUR * effects.blurAmount) else this
