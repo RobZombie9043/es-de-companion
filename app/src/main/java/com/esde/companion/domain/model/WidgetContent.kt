@@ -82,13 +82,29 @@ sealed class WidgetContent {
      * Loaded (see [AchievementSummaryWidgetState]'s kdoc) - raw numeric fields inside `Loaded`
      * rather than a pre-formatted string, formatting happens at render time, same layering as
      * `AchievementStatsHeader` in `ui/retroachievements/RetroAchievementsSummaryContent.kt`.
-     * Style fields mirror [WidgetType.AchievementSummary] except `fontSizeSp` - unlike that
-     * (persisted) type, this snapshot is rebuilt fresh on every resolve, never serialized, so
-     * there's no compatibility reason to carry a field nothing reads (icon/text are sized to
-     * fit the widget's own placed bounds instead, see WidgetCanvas.kt's AchievementSummaryRow).
+     * Style fields mirror [WidgetType.AchievementSummary] exactly.
      */
     data class AchievementSummary(
         val state: AchievementSummaryWidgetState,
+        val fontSizeSp: Float,
+        val textColorArgb: Long,
+        val backgroundColorArgb: Long,
+        val backgroundAlpha: Float,
+        val cornerRadius: CornerRadius,
+    ) : WidgetContent()
+
+    /**
+     * A resolved RetroAchievements time-to-beat/complete snapshot for the current game -
+     * see WidgetContentResolver's PlaytimeStats branch. [state] carries Loading/Unavailable/
+     * Loaded (see [PlaytimeStatsWidgetState]'s kdoc) - the raw [GamePlaytimeStats] rather
+     * than pre-formatted strings, since which two fields to show depends on [mode] and
+     * formatting happens at render time, same layering as [AchievementSummary]. Style
+     * fields mirror [WidgetType.PlaytimeStats] exactly.
+     */
+    data class PlaytimeStats(
+        val state: PlaytimeStatsWidgetState,
+        val mode: PlaytimeStatsMode,
+        val fontSizeSp: Float,
         val textColorArgb: Long,
         val backgroundColorArgb: Long,
         val backgroundAlpha: Float,
@@ -123,6 +139,7 @@ val WidgetType.isLogoStyle: Boolean
             is WidgetType.Rating,
             is WidgetType.Video,
             is WidgetType.AchievementSummary,
+            is WidgetType.PlaytimeStats,
             -> false
         }
 
@@ -157,6 +174,7 @@ val WidgetType.cornerRadius: CornerRadius
             is WidgetType.Rating -> cornerRadius
             is WidgetType.Video -> cornerRadius
             is WidgetType.AchievementSummary -> cornerRadius
+            is WidgetType.PlaytimeStats -> cornerRadius
         }
 
 /** Game-view box-art-style media where each new game's art should snap in instantly
@@ -246,6 +264,7 @@ val WidgetType.supportsImageTransition: Boolean
             is WidgetType.Rating,
             is WidgetType.Video,
             is WidgetType.AchievementSummary,
+            is WidgetType.PlaytimeStats,
             -> false
         }
 
@@ -306,6 +325,7 @@ val WidgetType.supportsPanZoom: Boolean
             is WidgetType.Rating,
             is WidgetType.Video,
             is WidgetType.AchievementSummary,
+            is WidgetType.PlaytimeStats,
             -> false
         }
 

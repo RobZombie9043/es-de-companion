@@ -63,6 +63,7 @@ private const val RA_SERVER_USERNAME = "Server"
 
 private typealias AchievementCommentsResult = RetroAchievementsApiResult<List<AchievementComment>>
 private typealias LeaderboardEntriesResult = RetroAchievementsApiResult<List<LeaderboardEntry>>
+private typealias RaNetworkResponse<T> = NetworkResponse<T, ErrorResponse>
 
 /**
  * Real [RetroAchievementsApi], wrapping api-kotlin's `RetroClient(credentials).api`. A
@@ -93,13 +94,19 @@ class RetroClientRetroAchievementsApi(
             // fetchAchievementTypesById's kdoc for the confirmed root cause - so achievement
             // type/classification (Missable/Progression/WinCondition) is fetched separately and
             // merged in below.
-            val progressDeferred = async { fetchGameInfoAndUserProgressWithRetry(username, gameId) }
+            val progressDeferred =
+                async { retryOnceOnError { api.getGameInfoAndUserProgress(username, gameId, includeUserAward = 1) } }
             val typesDeferred = async { fetchAchievementTypesById(gameId) }
             // Community-wide median beat/complete/master times (see GamePlaytimeStats' kdoc) -
             // a separate, unrelated-to-the-user endpoint, so a failure here degrades to "no
             // playtime stats line" rather than failing the whole achievement summary, same
-            // graceful-degradation shape getGameLeaderboards' userEntriesDeferred uses.
-            val playtimeDeferred = async { api.getGameProgression(gameId) }
+            // graceful-degradation shape getGameLeaderboards' userEntriesDeferred uses. Retried
+            // once on error for the same reason progressDeferred is (see retryOnceOnError's
+            // kdoc) - this call fires as part of the same concurrent burst, confirmed on-device
+            // as the cause of a widget intermittently showing "no time to beat data" for a game
+            // that has it, recovering as soon as anything (a manual refresh, or simply
+            // revisiting later) re-fetches outside that burst.
+            val playtimeDeferred = async { retryOnceOnError { api.getGameProgression(gameId) } }
             val progressResult = progressDeferred.await()
             val typesById = typesDeferred.await()
             val playtimeStats = (playtimeDeferred.await() as? NetworkResponse.Success)?.body?.toPlaytimeStats()
@@ -107,27 +114,23 @@ class RetroClientRetroAchievementsApi(
         }
 
     /**
-     * Retries the underlying `GetGameInfoAndUserProgress` call once on any [NetworkResponse.Error] -
-     * confirmed on-device as the fix for "Couldn't load achievements: ...Use
-     * JsonReader.setLenient(true) to accept malformed JSON..." surfacing after fast-scrolling
-     * ES-DE's game list and settling on a not-yet-cached game. That message is cnradapter's
-     * [NetworkResponse.Error] wrapping a genuine (not merely cancelled) response whose body
-     * failed to parse as JSON - i.e. a real, completed request got back a bad body, not a stale
-     * request racing a live one (the debounce in [RetroAchievementsViewModel] already handles
-     * that case). A single settle now fires several concurrent RA requests at once (this call,
-     * [fetchAchievementTypesById], [GamePlaytimeStats]' progression fetch, and - one level up -
-     * two leaderboard calls), and this symptom reads like an occasional connection-reuse/timing
-     * hiccup under that burst rather than a persistent failure - a debounced settle represents
-     * one deliberate user action, so it shouldn't read as "no achievements" when a second attempt
+     * Retries [call] once on any [NetworkResponse.Error] - confirmed on-device as the fix for
+     * "Couldn't load achievements: ...Use JsonReader.setLenient(true) to accept malformed
+     * JSON..." surfacing after fast-scrolling ES-DE's game list and settling on a not-yet-cached
+     * game. That message is cnradapter's [NetworkResponse.Error] wrapping a genuine (not merely
+     * cancelled) response whose body failed to parse as JSON - i.e. a real, completed request
+     * got back a bad body, not a stale request racing a live one (the debounce in
+     * [RetroAchievementsViewModel] already handles that case). A single settle now fires several
+     * concurrent RA requests at once (`GetGameInfoAndUserProgress`, [fetchAchievementTypesById],
+     * [GamePlaytimeStats]' progression fetch, and - one level up - two leaderboard calls), and
+     * this symptom reads like an occasional connection-reuse/timing hiccup under that burst
+     * rather than a persistent failure - a debounced settle represents one deliberate user
+     * action, so it shouldn't read as "no achievements"/"no playtime data" when a second attempt
      * reliably succeeds.
      */
-    private suspend fun fetchGameInfoAndUserProgressWithRetry(
-        username: String,
-        gameId: Long,
-    ): NetworkResponse<GetGameInfoAndUserProgress.Response, ErrorResponse> {
-        val first = api.getGameInfoAndUserProgress(username, gameId, includeUserAward = 1)
-        if (first !is NetworkResponse.Error) return first
-        return api.getGameInfoAndUserProgress(username, gameId, includeUserAward = 1)
+    private suspend fun <T> retryOnceOnError(call: suspend () -> RaNetworkResponse<T>): RaNetworkResponse<T> {
+        val first = call()
+        return if (first is NetworkResponse.Error) call() else first
     }
 
     /**

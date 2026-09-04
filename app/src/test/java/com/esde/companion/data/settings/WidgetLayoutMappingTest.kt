@@ -7,6 +7,7 @@ import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.NoRatingBehavior
 import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.PlaytimeStatsMode
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
 import kotlinx.serialization.json.Json
@@ -427,5 +428,35 @@ class WidgetLayoutMappingTest {
             )
         val domain = listOf(placed).toDomainList().single().widgetType as WidgetType.SystemImage
         assertEquals(CornerRadius.None, domain.cornerRadius)
+    }
+
+    @Test
+    fun `PlaytimeStats round-trips mode, fontSizeSp, colors, backgroundAlpha, and cornerRadius`() {
+        val widget =
+            WidgetType.PlaytimeStats(
+                mode = PlaytimeStatsMode.Hardcore,
+                fontSizeSp = 22f,
+                textColorArgb = 0xFF00FF00,
+                backgroundColorArgb = 0xFF111111,
+                backgroundAlpha = 0.7f,
+                cornerRadius = CornerRadius.Large,
+            )
+
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON for PlaytimeStats with no keys decodes to its defaults`() {
+        val decoded = Json.decodeFromString(WidgetTypeDto.PlaytimeStats.serializer(), "{}")
+        assertEquals(
+            WidgetTypeDto.PlaytimeStats(
+                mode = "Casual",
+                fontSizeSp = 16f,
+                textColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            decoded,
+        )
     }
 }

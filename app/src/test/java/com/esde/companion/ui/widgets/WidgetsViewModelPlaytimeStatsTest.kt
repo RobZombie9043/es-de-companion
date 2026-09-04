@@ -3,18 +3,19 @@ package com.esde.companion.ui.widgets
 import com.esde.companion.domain.model.AchievementItem
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.AchievementSummaryPeek
-import com.esde.companion.domain.model.AchievementSummaryWidgetState
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.GameDescription
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameMedia
+import com.esde.companion.domain.model.GamePlaytimeStats
 import com.esde.companion.domain.model.GameRating
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.GameRomHash
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.PlaytimeStatsWidgetState
 import com.esde.companion.domain.model.RetroAchievementsAuthState
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsConsole
@@ -51,7 +52,6 @@ import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,17 +69,15 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Split out of [WidgetsViewModelTest] (which tripped detekt's LargeClass once this grew) -
- * peek + background-fetch stale-while-revalidate behavior for the `WidgetType.AchievementSummary`
- * widget specifically. Deliberately self-contained (its own small fakes, not shared with
- * [WidgetsViewModelTest]) rather than exposing internal visibility across the two files -
- * same "each test file owns its small fakes" precedent as [com.esde.companion.data.retroachievements.RetroAchievementsRepositoryImplTest]
- * and [com.esde.companion.data.retroachievements.GameListCacheTest] each defining their own
- * `FakeGameListCacheStore` rather than sharing one.
+ * Sibling to [WidgetsViewModelAchievementSummaryTest] (its own small fakes, same "each test
+ * file owns its small fakes" precedent that file's kdoc cites) covering the
+ * `WidgetType.PlaytimeStats` widget - which shares its entire match/peek/fetch pipeline with
+ * `WidgetType.AchievementSummary` (see `WidgetsViewModel.AchievementDataResolution`'s kdoc),
+ * so most of the interesting behavior here is specifically about that sharing and about
+ * [GamePlaytimeStats] being a nullable field on the same [GameAchievementSummary], not a
+ * re-test of the whole Loading/Unavailable state machine (already covered there).
  */
-class WidgetsViewModelAchievementSummaryTest {
-    // --- Fakes -------------------------------------------------------------------------
-
+class WidgetsViewModelPlaytimeStatsTest {
     private class FakeEsdeLogRepository(
         private val fileExists: Flow<Boolean> = flowOf(true),
     ) : EsdeLogRepository {
@@ -114,9 +112,6 @@ class WidgetsViewModelAchievementSummaryTest {
         }
     }
 
-    // Trivial no-op fakes for WidgetsViewModel's other constructor dependencies - only the
-    // AchievementSummary widget is ever placed on the canvas in this file's tests, so none
-    // of these are actually invoked; they exist only to satisfy the constructor.
     private class NoOpGameMediaRepository : GameMediaRepository {
         override suspend fun resolveMedia(
             systemShortName: String,
@@ -171,8 +166,6 @@ class WidgetsViewModelAchievementSummaryTest {
         override fun observeCredentials(): Flow<RetroAchievementsCredentials?> = credentials
     }
 
-    /** [override] always wins in [ResolveRetroAchievementsGameUseCase], bypassing candidate-list/
-     * title matching entirely - the simplest deterministic way to get a fixed gameId in tests. */
     private class FakeGameMatchOverrideRepository(
         private val override: GameMatchOverride? = null,
     ) : GameMatchOverrideRepository {
@@ -192,13 +185,9 @@ class WidgetsViewModelAchievementSummaryTest {
         ): GameRomHash = GameRomHash(value = null)
     }
 
-    /** [initialPeek] is what [peekAchievementSummary] returns until [getAchievementSummary]
-     * has been called once, after which it switches to reflecting [fetchResult] - simulates
-     * a real cache's "peek sees whatever the last fetch wrote" behavior without a real
-     * AchievementSummaryCache. [candidates] backs [getCandidateGames] - only exercised when
-     * a test's [FakeGameMatchOverrideRepository] has no override, letting
-     * ResolveRetroAchievementsGameUseCase's real hash/title-matching tiers run (against an
-     * empty list by default, i.e. no match). */
+    /** Same "peek reflects the last fetch" fake shape as
+     * [WidgetsViewModelAchievementSummaryTest]'s equivalent, plus a call counter for the
+     * shared-fetch assertion below. */
     private class RecordingRetroAchievementsRepository(
         private val initialPeek: AchievementSummaryPeek? = null,
         private val fetchResult: AchievementSummaryFetchResult = AchievementSummaryFetchResult.NotFound,
@@ -249,10 +238,9 @@ class WidgetsViewModelAchievementSummaryTest {
     }
 
     /** Returns a different [AchievementSummaryFetchResult] on each successive
-     * [getAchievementSummary] call, per [results] (repeating the last entry once exhausted) -
-     * backs the retry tests below, where a fixed single result (like
-     * [RecordingRetroAchievementsRepository]'s) can't distinguish "failed every attempt" from
-     * "failed once, then recovered". */
+     * [getAchievementSummary] call (repeating the last entry once exhausted) - backs the
+     * self-heal test below, which needs the first call to succeed with a null playtimeStats
+     * and only the automatic force-refresh call after it to carry real stats. */
     private class SequencedFetchResultRepository(
         private val results: List<AchievementSummaryFetchResult>,
     ) : RetroAchievementsRepository {
@@ -279,61 +267,9 @@ class WidgetsViewModelAchievementSummaryTest {
             }
         }
 
-        override suspend fun validateCredentials(creds: RetroAchievementsCredentials) = error("not used in this test")
-
-        override suspend fun getCandidateGames(c: RetroAchievementsConsole): List<RetroAchievementsCandidateGame> {
-            return emptyList()
-        }
-
-        override suspend fun getUserGameProgress() = error("not used in this test")
-
-        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
-
-        override suspend fun getGameLeaderboards(
-            gameId: Long,
-            forceRefresh: Boolean,
-        ) = error("not used in this test")
-
-        override suspend fun peekGameLeaderboards(gameId: Long) = error("not used in this test")
-
-        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
-    }
-
-    /**
-     * [getAchievementSummary] suspends on a rendezvous [Channel] until the test explicitly
-     * completes it - same reasoning as [com.esde.companion.ui.retroachievements.AchievementDisplayControllerTest]'s
-     * equivalent fake: a plain immediately-returning fetch would let the Loading -> settled
-     * transition happen synchronously inside the same `advanceUntilIdle()` call that triggers
-     * it, so the test could never observe Loading on its own.
-     */
-    private class GatedRetroAchievementsRepository(
-        private val initialPeek: AchievementSummaryPeek?,
-    ) : RetroAchievementsRepository {
-        private val pendingFetch = Channel<AchievementSummaryFetchResult>()
-        private var fetchedResult: AchievementSummaryFetchResult? = null
-
-        suspend fun completeFetch(result: AchievementSummaryFetchResult) = pendingFetch.send(result)
-
-        override suspend fun getAchievementSummary(
-            gameId: Long,
-            forceRefresh: Boolean,
-        ): AchievementSummaryFetchResult {
-            val result = pendingFetch.receive()
-            fetchedResult = result
-            return result
-        }
-
-        override suspend fun peekAchievementSummary(gameId: Long): AchievementSummaryPeek? {
-            val result = fetchedResult
-            return if (result is AchievementSummaryFetchResult.Success) {
-                AchievementSummaryPeek(result.summary, isStale = false)
-            } else {
-                initialPeek
-            }
-        }
-
-        override suspend fun validateCredentials(creds: RetroAchievementsCredentials): RetroAchievementsAuthState =
+        override suspend fun validateCredentials(creds: RetroAchievementsCredentials): RetroAchievementsAuthState {
             error("not used in this test")
+        }
 
         override suspend fun getCandidateGames(c: RetroAchievementsConsole): List<RetroAchievementsCandidateGame> {
             return emptyList()
@@ -352,8 +288,6 @@ class WidgetsViewModelAchievementSummaryTest {
 
         override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
     }
-
-    // --- Setup ---------------------------------------------------------------------------
 
     private val testDispatcher = StandardTestDispatcher()
     private val grid = GridDimensions(columns = 10, rows = 10)
@@ -368,16 +302,18 @@ class WidgetsViewModelAchievementSummaryTest {
         Dispatchers.resetMain()
     }
 
-    private fun placedWidget(id: String) =
-        PlacedWidget(
-            id = id,
-            widgetType = WidgetType.AchievementSummary(),
-            gridColumn = 0,
-            gridRow = 0,
-            columnSpan = 2,
-            rowSpan = 2,
-            zIndex = 0,
-        )
+    private fun placedWidget(
+        id: String,
+        widgetType: WidgetType,
+    ) = PlacedWidget(
+        id = id,
+        widgetType = widgetType,
+        gridColumn = 0,
+        gridRow = 0,
+        columnSpan = 2,
+        rowSpan = 2,
+        zIndex = 0,
+    )
 
     @Suppress("LongParameterList")
     private fun TestScope.buildViewModel(
@@ -412,268 +348,122 @@ class WidgetsViewModelAchievementSummaryTest {
                 peekAchievementSummary = PeekGameAchievementSummaryUseCase(retroAchievementsRepository),
                 getAchievementSummary = GetGameAchievementSummaryUseCase(retroAchievementsRepository),
             )
-        // canvasState is WhileSubscribed - simulates the always-on UI collector
-        // (MainScreen's collectAsState()) so reading .value in tests reflects live updates -
-        // see WidgetsViewModelTest's equivalent setup for the full reasoning.
         backgroundScope.launch { viewModel.canvasState.collect {} }
         advanceUntilIdle()
         return viewModel
     }
 
-    // --- AchievementSummary widget: peek + background-fetch stale-while-revalidate ---------
+    private val gameSelect = EsdeEvent.GameSelect("/roms/snes/game.sfc", "Game", "snes", "SNES")
+    private val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 1L)
+    private val credentials = RetroAchievementsCredentials(username = "player1", webApiKey = "key")
 
-    private val achievementsGameSelect = EsdeEvent.GameSelect("/roms/snes/game.sfc", "Game", "snes", "SNES")
-    private val achievementsOverride =
-        GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 1L)
-    private val achievementsCredentials = RetroAchievementsCredentials(username = "player1", webApiKey = "key")
-
-    private fun achievementSummary(
-        title: String = "Game",
-        achievementCount: Int = 1,
-    ) = GameAchievementSummary(
-        gameId = 1L,
-        gameTitle = title,
-        totalPoints = 500,
-        earnedPoints = 150,
-        completionPercent = 30f,
-        achievements =
-            List(achievementCount) { index ->
-                AchievementItem(
-                    id = index.toLong(),
-                    title = "Achievement $index",
-                    description = "",
-                    points = 50,
-                    badgeUrl = null,
-                    unlocked = false,
-                    unlockedAt = null,
-                )
-            },
-    )
+    private fun summaryWithPlaytimeStats(playtimeStats: GamePlaytimeStats?) =
+        GameAchievementSummary(
+            gameId = 1L,
+            gameTitle = "Game",
+            totalPoints = 500,
+            earnedPoints = 150,
+            completionPercent = 30f,
+            achievements =
+                listOf(
+                    AchievementItem(
+                        id = 0,
+                        title = "A",
+                        description = "",
+                        points = 50,
+                        badgeUrl = null,
+                        unlocked = false,
+                        unlockedAt = null,
+                    ),
+                ),
+            playtimeStats = playtimeStats,
+        )
 
     @Test
-    fun `signed out, an AchievementSummary widget resolves to Empty and never fetches`() =
+    fun `a matched game with cached playtime stats resolves to Loaded carrying those stats`() =
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()
             val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("pt", WidgetType.PlaytimeStats())))
+            val stats =
+                GamePlaytimeStats(
+                    beatSeconds = 3600,
+                    beatHardcoreSeconds = 5400,
+                    completedSeconds = 7200,
+                    masteredSeconds = null,
+                )
             val retroAchievementsRepository =
                 RecordingRetroAchievementsRepository(
-                    initialPeek = AchievementSummaryPeek(achievementSummary(), isStale = false),
+                    initialPeek = AchievementSummaryPeek(summaryWithPlaytimeStats(stats), isStale = false),
                 )
             val viewModel =
                 buildViewModel(
                     esdeLogRepository,
                     widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = null),
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(override),
+                    retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository(credentials),
                     retroAchievementsRepository = retroAchievementsRepository,
                 )
             viewModel.setGridDimensions(grid)
 
-            esdeLogRepository.events.emit(achievementsGameSelect)
+            esdeLogRepository.events.emit(gameSelect)
             advanceUntilIdle()
 
             val state = viewModel.canvasState.value
             check(state is WidgetCanvasState.Showing)
-            assertEquals(WidgetContent.Empty, state.contentByWidgetId["ra"])
-            assertEquals(0, retroAchievementsRepository.getAchievementSummaryCallCount)
-        }
-
-    @Test
-    fun `signed in with a fresh cached peek, the widget shows it immediately with no background fetch`() =
-        runTest(testDispatcher) {
-            val esdeLogRepository = FakeEsdeLogRepository()
-            val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
-            val retroAchievementsRepository =
-                RecordingRetroAchievementsRepository(
-                    initialPeek = AchievementSummaryPeek(achievementSummary("Fresh"), isStale = false),
-                )
-            val viewModel =
-                buildViewModel(
-                    esdeLogRepository,
-                    widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
-                    retroAchievementsRepository = retroAchievementsRepository,
-                )
-            viewModel.setGridDimensions(grid)
-
-            esdeLogRepository.events.emit(achievementsGameSelect)
-            advanceUntilIdle()
-
-            val state = viewModel.canvasState.value
-            check(state is WidgetCanvasState.Showing)
-            val content = state.contentByWidgetId["ra"]
-            check(content is WidgetContent.AchievementSummary)
+            val content = state.contentByWidgetId["pt"]
+            check(content is WidgetContent.PlaytimeStats)
             val loaded = content.state
-            check(loaded is AchievementSummaryWidgetState.Loaded)
+            check(loaded is PlaytimeStatsWidgetState.Loaded)
+            assertEquals(stats, loaded.stats)
             assertEquals(false, loaded.isRefreshing)
             assertEquals(0, retroAchievementsRepository.getAchievementSummaryCallCount)
         }
 
     @Test
-    fun `signed in with nothing cached yet, the widget shows Loading, then settles once the fetch resolves`() =
+    fun `a matched game whose summary has no playtime stats resolves to Unavailable`() =
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()
             val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
-            val retroAchievementsRepository = GatedRetroAchievementsRepository(initialPeek = null)
-            val viewModel =
-                buildViewModel(
-                    esdeLogRepository,
-                    widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
-                    retroAchievementsRepository = retroAchievementsRepository,
-                )
-            viewModel.setGridDimensions(grid)
-
-            esdeLogRepository.events.emit(achievementsGameSelect)
-            advanceUntilIdle()
-
-            val loadingState = viewModel.canvasState.value
-            check(loadingState is WidgetCanvasState.Showing)
-            val loadingContent = loadingState.contentByWidgetId["ra"]
-            check(loadingContent is WidgetContent.AchievementSummary)
-            assertEquals(AchievementSummaryWidgetState.Loading, loadingContent.state)
-
-            retroAchievementsRepository.completeFetch(AchievementSummaryFetchResult.NotFound)
-            advanceUntilIdle()
-
-            val settledState = viewModel.canvasState.value
-            check(settledState is WidgetCanvasState.Showing)
-            val settledContent = settledState.contentByWidgetId["ra"]
-            check(settledContent is WidgetContent.AchievementSummary)
-            assertEquals(AchievementSummaryWidgetState.Unavailable, settledContent.state)
-        }
-
-    @Test
-    fun `a matched game with no cached data and a NotFound fetch result settles on Unavailable`() =
-        runTest(testDispatcher) {
-            val esdeLogRepository = FakeEsdeLogRepository()
-            val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("pt", WidgetType.PlaytimeStats())))
             val retroAchievementsRepository =
                 RecordingRetroAchievementsRepository(
-                    initialPeek = null,
-                    fetchResult = AchievementSummaryFetchResult.NotFound,
+                    initialPeek = AchievementSummaryPeek(summaryWithPlaytimeStats(null), isStale = false),
                 )
             val viewModel =
                 buildViewModel(
                     esdeLogRepository,
                     widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(override),
+                    retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository(credentials),
                     retroAchievementsRepository = retroAchievementsRepository,
                 )
             viewModel.setGridDimensions(grid)
 
-            esdeLogRepository.events.emit(achievementsGameSelect)
+            esdeLogRepository.events.emit(gameSelect)
             advanceUntilIdle()
 
             val state = viewModel.canvasState.value
             check(state is WidgetCanvasState.Showing)
-            val content = state.contentByWidgetId["ra"]
-            check(content is WidgetContent.AchievementSummary)
-            assertEquals(AchievementSummaryWidgetState.Unavailable, content.state)
+            val content = state.contentByWidgetId["pt"]
+            check(content is WidgetContent.PlaytimeStats)
+            assertEquals(PlaytimeStatsWidgetState.Unavailable, content.state)
         }
 
     @Test
-    fun `a transient NetworkError that succeeds on retry settles on Loaded, not Unavailable`() =
+    fun `an unmatched game resolves PlaytimeStats to Unavailable, not Empty`() =
         runTest(testDispatcher) {
-            // A transient failure (offline, rate-limited, RA outage) must never render as a
-            // false "no achievements" claim for a game that might genuinely have some - see
-            // completedAchievementFetchGameId's kdoc in WidgetsViewModel. Failing once then
-            // succeeding on the automatic retry is the common real-world case this covers.
             val esdeLogRepository = FakeEsdeLogRepository()
             val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
-            val retroAchievementsRepository =
-                SequencedFetchResultRepository(
-                    listOf(
-                        AchievementSummaryFetchResult.NetworkError("offline"),
-                        AchievementSummaryFetchResult.Success(achievementSummary("Recovered")),
-                    ),
-                )
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("pt", WidgetType.PlaytimeStats())))
             val viewModel =
                 buildViewModel(
                     esdeLogRepository,
                     widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
-                    retroAchievementsRepository = retroAchievementsRepository,
+                    retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository(credentials),
                 )
             viewModel.setGridDimensions(grid)
 
-            esdeLogRepository.events.emit(achievementsGameSelect)
-            advanceUntilIdle()
-
-            val state = viewModel.canvasState.value
-            check(state is WidgetCanvasState.Showing)
-            val content = state.contentByWidgetId["ra"]
-            check(content is WidgetContent.AchievementSummary)
-            check(content.state is AchievementSummaryWidgetState.Loaded)
-            assertEquals(2, retroAchievementsRepository.getAchievementSummaryCallCount)
-        }
-
-    @Test
-    fun `a persistent NetworkError retries a few times, then settles on Unavailable`() =
-        runTest(testDispatcher) {
-            val esdeLogRepository = FakeEsdeLogRepository()
-            val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
-            val retroAchievementsRepository =
-                SequencedFetchResultRepository(listOf(AchievementSummaryFetchResult.NetworkError("offline")))
-            val viewModel =
-                buildViewModel(
-                    esdeLogRepository,
-                    widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
-                    retroAchievementsRepository = retroAchievementsRepository,
-                )
-            viewModel.setGridDimensions(grid)
-
-            esdeLogRepository.events.emit(achievementsGameSelect)
-            advanceUntilIdle()
-
-            val state = viewModel.canvasState.value
-            check(state is WidgetCanvasState.Showing)
-            val content = state.contentByWidgetId["ra"]
-            check(content is WidgetContent.AchievementSummary)
-            assertEquals(AchievementSummaryWidgetState.Unavailable, content.state)
-            // 1 initial attempt + WidgetsViewModel's ACHIEVEMENT_FETCH_RETRY_COUNT retries -
-            // update this if that constant's value ever changes.
-            assertEquals(3, retroAchievementsRepository.getAchievementSummaryCallCount)
-        }
-
-    @Test
-    fun `an unmatched game (no RetroAchievements entry) resolves to Unavailable, not Empty`() =
-        runTest(testDispatcher) {
-            val esdeLogRepository = FakeEsdeLogRepository()
-            val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
-            val viewModel =
-                buildViewModel(
-                    esdeLogRepository,
-                    widgetLayoutRepository,
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
-                )
-            viewModel.setGridDimensions(grid)
-
-            // An unsupported system (no EsdeSystemToRaConsoleMapping entry) short-circuits
-            // ResolveRetroAchievementsGameUseCase to UnsupportedSystem before it ever touches
-            // the candidate list/title-matching - unlike a genuine NoMatch on a supported
-            // system, which would hop to the real (non-test-dispatcher-controlled)
-            // Dispatchers.Default for title/hash matching and race this test's advanceUntilIdle().
             val unsupportedSystemGameSelect =
                 EsdeEvent.GameSelect("/roms/windows/game.exe", "Game", "windows", "Windows")
             esdeLogRepository.events.emit(unsupportedSystemGameSelect)
@@ -681,81 +471,131 @@ class WidgetsViewModelAchievementSummaryTest {
 
             val state = viewModel.canvasState.value
             check(state is WidgetCanvasState.Showing)
-            val content = state.contentByWidgetId["ra"]
-            check(content is WidgetContent.AchievementSummary)
-            assertEquals(AchievementSummaryWidgetState.Unavailable, content.state)
+            val content = state.contentByWidgetId["pt"]
+            check(content is WidgetContent.PlaytimeStats)
+            assertEquals(PlaytimeStatsWidgetState.Unavailable, content.state)
         }
 
     @Test
-    fun `a matched game whose achievement set is empty resolves to Unavailable`() =
+    fun `both AchievementSummary and PlaytimeStats on the same canvas share one background fetch`() =
         runTest(testDispatcher) {
             val esdeLogRepository = FakeEsdeLogRepository()
             val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
-            val retroAchievementsRepository =
-                RecordingRetroAchievementsRepository(
-                    initialPeek = AchievementSummaryPeek(achievementSummary(achievementCount = 0), isStale = false),
+            widgetLayoutRepository.seed(
+                StateGroup.Playing,
+                listOf(
+                    placedWidget("ra", WidgetType.AchievementSummary()),
+                    placedWidget("pt", WidgetType.PlaytimeStats()),
+                ),
+            )
+            val stats =
+                GamePlaytimeStats(
+                    beatSeconds = 1800,
+                    beatHardcoreSeconds = null,
+                    completedSeconds = null,
+                    masteredSeconds = null,
                 )
-            val viewModel =
-                buildViewModel(
-                    esdeLogRepository,
-                    widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
-                    retroAchievementsRepository = retroAchievementsRepository,
-                )
-            viewModel.setGridDimensions(grid)
-
-            esdeLogRepository.events.emit(achievementsGameSelect)
-            advanceUntilIdle()
-
-            val state = viewModel.canvasState.value
-            check(state is WidgetCanvasState.Showing)
-            val content = state.contentByWidgetId["ra"]
-            check(content is WidgetContent.AchievementSummary)
-            assertEquals(AchievementSummaryWidgetState.Unavailable, content.state)
-        }
-
-    @Test
-    fun `signed in with no cached peek, the widget fetches once in the background and then shows the result`() =
-        runTest(testDispatcher) {
-            val esdeLogRepository = FakeEsdeLogRepository()
-            val widgetLayoutRepository = FakeWidgetLayoutRepository()
-            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra")))
             val retroAchievementsRepository =
                 RecordingRetroAchievementsRepository(
                     initialPeek = null,
-                    fetchResult = AchievementSummaryFetchResult.Success(achievementSummary("Fetched")),
+                    fetchResult = AchievementSummaryFetchResult.Success(summaryWithPlaytimeStats(stats)),
                 )
             val viewModel =
                 buildViewModel(
                     esdeLogRepository,
                     widgetLayoutRepository,
-                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(achievementsOverride),
-                    retroAchievementsCredentialsRepository =
-                        FakeRetroAchievementsCredentialsRepository(signedInAs = achievementsCredentials),
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(override),
+                    retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository(credentials),
                     retroAchievementsRepository = retroAchievementsRepository,
                 )
             viewModel.setGridDimensions(grid)
 
-            esdeLogRepository.events.emit(achievementsGameSelect)
+            esdeLogRepository.events.emit(gameSelect)
             advanceUntilIdle()
 
             val state = viewModel.canvasState.value
             check(state is WidgetCanvasState.Showing)
-            val content = state.contentByWidgetId["ra"]
-            check(content is WidgetContent.AchievementSummary)
-            val loaded = content.state
-            check(loaded is AchievementSummaryWidgetState.Loaded)
-            assertEquals(150, loaded.earnedPoints)
-            assertEquals(500, loaded.totalPoints)
-            assertEquals(30f, loaded.completionPercent)
+            val ptContent = state.contentByWidgetId["pt"]
+            check(ptContent is WidgetContent.PlaytimeStats)
+            val loaded = ptContent.state
+            check(loaded is PlaytimeStatsWidgetState.Loaded)
+            assertEquals(stats, loaded.stats)
+            // The whole point of sharing AchievementDataResolution - one fetch serves both
+            // widget types' lookups in the same resolve pass, not one per widget type.
             assertEquals(1, retroAchievementsRepository.getAchievementSummaryCallCount)
+        }
 
-            // Re-resolving for an unrelated reason (grid change) must not re-trigger a second
-            // fetch for the same gameId - lastAchievementFetchGameId's one-attempt guard.
-            viewModel.setGridDimensions(GridDimensions(columns = 20, rows = 10))
+    @Test
+    fun `a Success fetch with no playtime stats triggers one automatic force-refresh that recovers them`() =
+        runTest(testDispatcher) {
+            // Confirmed on-device: RA's GetGameProgression sub-call occasionally comes back
+            // empty even though the main achievement data in the same response loads fine -
+            // a plain NetworkError retry doesn't catch this since the overall result genuinely
+            // is a Success. A manual "Refresh" in the achievement screen reliably recovers it,
+            // so this covers the same self-heal happening automatically for the widget.
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("pt", WidgetType.PlaytimeStats())))
+            val stats =
+                GamePlaytimeStats(
+                    beatSeconds = 3600,
+                    beatHardcoreSeconds = null,
+                    completedSeconds = 7200,
+                    masteredSeconds = null,
+                )
+            val retroAchievementsRepository =
+                SequencedFetchResultRepository(
+                    listOf(
+                        AchievementSummaryFetchResult.Success(summaryWithPlaytimeStats(null)),
+                        AchievementSummaryFetchResult.Success(summaryWithPlaytimeStats(stats)),
+                    ),
+                )
+            val viewModel =
+                buildViewModel(
+                    esdeLogRepository,
+                    widgetLayoutRepository,
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(override),
+                    retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository(credentials),
+                    retroAchievementsRepository = retroAchievementsRepository,
+                )
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(gameSelect)
+            advanceUntilIdle()
+
+            val state = viewModel.canvasState.value
+            check(state is WidgetCanvasState.Showing)
+            val content = state.contentByWidgetId["pt"]
+            check(content is WidgetContent.PlaytimeStats)
+            val loaded = content.state
+            check(loaded is PlaytimeStatsWidgetState.Loaded)
+            assertEquals(stats, loaded.stats)
+            assertEquals(2, retroAchievementsRepository.getAchievementSummaryCallCount)
+        }
+
+    @Test
+    fun `an AchievementSummary-only canvas never force-refreshes for missing playtime stats`() =
+        runTest(testDispatcher) {
+            // needsPlaytimeStats gates the self-heal - an achievements-only canvas has no use
+            // for playtime data, so it must not pay for the extra network call.
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val widgetLayoutRepository = FakeWidgetLayoutRepository()
+            widgetLayoutRepository.seed(StateGroup.Playing, listOf(placedWidget("ra", WidgetType.AchievementSummary())))
+            val retroAchievementsRepository =
+                SequencedFetchResultRepository(
+                    listOf(AchievementSummaryFetchResult.Success(summaryWithPlaytimeStats(null))),
+                )
+            val viewModel =
+                buildViewModel(
+                    esdeLogRepository,
+                    widgetLayoutRepository,
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(override),
+                    retroAchievementsCredentialsRepository = FakeRetroAchievementsCredentialsRepository(credentials),
+                    retroAchievementsRepository = retroAchievementsRepository,
+                )
+            viewModel.setGridDimensions(grid)
+
+            esdeLogRepository.events.emit(gameSelect)
             advanceUntilIdle()
 
             assertEquals(1, retroAchievementsRepository.getAchievementSummaryCallCount)

@@ -130,7 +130,10 @@ internal fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
                 add(WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f))
                 add(WidgetType.Video())
                 // Debug-only until RetroAchievements ships - see retroAchievementsEnabled's kdoc.
-                if (retroAchievementsEnabled()) add(WidgetType.AchievementSummary())
+                if (retroAchievementsEnabled()) {
+                    add(WidgetType.AchievementSummary())
+                    add(WidgetType.PlaytimeStats())
+                }
             }
     }
 

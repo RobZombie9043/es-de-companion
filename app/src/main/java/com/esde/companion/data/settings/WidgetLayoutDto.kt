@@ -156,4 +156,16 @@ internal sealed class WidgetTypeDto {
         val backgroundAlpha: Float = 0.5f,
         val cornerRadius: String = "None",
     ) : WidgetTypeDto()
+
+    /** See WidgetType.PlaytimeStats's kdoc. `mode` defaults to "Casual" for the same
+     * no-migration reasoning as `cornerRadius` defaulting to "None". */
+    @Serializable
+    data class PlaytimeStats(
+        val mode: String = "Casual",
+        val fontSizeSp: Float = 16f,
+        val textColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: String = "None",
+    ) : WidgetTypeDto()
 }

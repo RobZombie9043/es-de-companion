@@ -3,6 +3,7 @@ package com.esde.companion.ui.widgets.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.APP_DRAWER_SHORTCUT_PACKAGE_NAME
+import com.esde.companion.domain.model.AchievementSummaryPeek
 import com.esde.companion.domain.model.AchievementSummaryWidgetState
 import com.esde.companion.domain.model.AppDrawerShortcut
 import com.esde.companion.domain.model.DockSize
@@ -11,6 +12,7 @@ import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.PlaytimeStatsWidgetState
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
@@ -416,12 +418,11 @@ class EditWidgetsViewModel(
                 null
             }
 
-        val achievementSummaryPeek =
-            if (widgets.any { it.widgetType is WidgetType.AchievementSummary }) {
-                resolveAchievementSummaryPreview(lastGameReference)
-            } else {
-                null
-            }
+        val needsAchievementData =
+            widgets.any { it.widgetType is WidgetType.AchievementSummary || it.widgetType is WidgetType.PlaytimeStats }
+        val achievementPeek = if (needsAchievementData) resolveAchievementPeekPreview(lastGameReference) else null
+        val achievementSummaryState = achievementPeek?.toAchievementSummaryWidgetState()
+        val playtimeStatsState = achievementPeek?.toPlaytimeStatsWidgetState()
 
         return widgets.associate { widget ->
             widget.id to
@@ -435,10 +436,18 @@ class EditWidgetsViewModel(
                     gameDescriptionLookup = { gameDescription?.text },
                     gameRatingLookup = { gameRating?.value },
                     fallbackBackgroundAssetPath = null,
-                    achievementSummaryLookup = { achievementSummaryPeek },
+                    achievementSummaryLookup = { achievementSummaryState },
+                    playtimeStatsLookup = { playtimeStatsState },
                 )
         }
     }
+
+    /** The shared match+peek both preview lookups below are built from - see
+     * `WidgetsViewModel.AchievementDataResolution`'s kdoc for why this is shared rather than
+     * each widget type resolving independently. `gameId` null means "matched to nothing" -
+     * distinct from `peeked` being null with a non-null `gameId` ("matched, nothing cached
+     * yet"). */
+    private data class AchievementPeekResolution(val gameId: Long?, val peeked: AchievementSummaryPeek?)
 
     /**
      * Cache-only peek for the edit-mode preview - never calls the network (never
@@ -451,36 +460,54 @@ class EditWidgetsViewModel(
      * the title tier finds nothing) still applies, so an empty query only means the preview
      * might use a slightly less precise match than the live screen would for the same game
      * - an acceptable tradeoff for a cache-only preview, not the live display.
-     *
-     * Unlike the live `WidgetsViewModel` counterpart, a cache miss here returns `null`
-     * (→ the placeholder box) rather than [AchievementSummaryWidgetState.Loading] - edit mode
-     * never triggers a real fetch, so a permanent "Loading" spinner would be misleading. A
-     * genuine "no RetroAchievements match" (or a matched entry with zero achievements) still
-     * resolves to [AchievementSummaryWidgetState.Unavailable], since that's a fact already
-     * known synchronously, not something waiting on a fetch.
      */
-    private suspend fun resolveAchievementSummaryPreview(gameRef: GameReference?): AchievementSummaryWidgetState? {
+    private suspend fun resolveAchievementPeekPreview(gameRef: GameReference?): AchievementPeekResolution? {
         val signedIn = gameRef != null && observeRetroAchievementsCredentials().first() != null
         if (!signedIn || gameRef == null) return null
 
         val match = resolveRetroAchievementsGame(gameRef, "")
         val gameId = (match as? RetroAchievementsGameMatch.Found)?.gameId
-        return if (gameId == null) {
-            AchievementSummaryWidgetState.Unavailable
-        } else {
-            peekAchievementSummary(gameId)?.let { peeked ->
-                if (peeked.summary.achievements.isEmpty()) {
-                    AchievementSummaryWidgetState.Unavailable
-                } else {
-                    AchievementSummaryWidgetState.Loaded(
-                        unlockedCount = peeked.summary.achievements.count { it.unlocked },
-                        totalCount = peeked.summary.achievements.size,
-                        earnedPoints = peeked.summary.earnedPoints,
-                        totalPoints = peeked.summary.totalPoints,
-                        completionPercent = peeked.summary.completionPercent,
-                        isRefreshing = peeked.isStale,
-                    )
-                }
+        val peeked = gameId?.let { peekAchievementSummary(it) }
+        return AchievementPeekResolution(gameId, peeked)
+    }
+
+    /**
+     * Unlike the live `WidgetsViewModel` counterpart, a cache miss here (`peeked` null with a
+     * non-null `gameId`) returns `null` (→ the placeholder box) rather than
+     * [AchievementSummaryWidgetState.Loading] - edit mode never triggers a real fetch, so a
+     * permanent "Loading" spinner would be misleading. A genuine "no RetroAchievements match"
+     * (or a matched entry with zero achievements) still resolves to
+     * [AchievementSummaryWidgetState.Unavailable], since that's a fact already known
+     * synchronously, not something waiting on a fetch.
+     */
+    private fun AchievementPeekResolution.toAchievementSummaryWidgetState(): AchievementSummaryWidgetState? {
+        if (gameId == null) return AchievementSummaryWidgetState.Unavailable
+        return peeked?.let {
+            if (it.summary.achievements.isEmpty()) {
+                AchievementSummaryWidgetState.Unavailable
+            } else {
+                AchievementSummaryWidgetState.Loaded(
+                    unlockedCount = it.summary.achievements.count { achievement -> achievement.unlocked },
+                    totalCount = it.summary.achievements.size,
+                    earnedPoints = it.summary.earnedPoints,
+                    totalPoints = it.summary.totalPoints,
+                    completionPercent = it.summary.completionPercent,
+                    isRefreshing = it.isStale,
+                )
+            }
+        }
+    }
+
+    /** Same "cache miss -> null (placeholder box), not Loading" reasoning as
+     * [toAchievementSummaryWidgetState]. */
+    private fun AchievementPeekResolution.toPlaytimeStatsWidgetState(): PlaytimeStatsWidgetState? {
+        if (gameId == null) return PlaytimeStatsWidgetState.Unavailable
+        return peeked?.let {
+            val stats = it.summary.playtimeStats
+            if (stats == null) {
+                PlaytimeStatsWidgetState.Unavailable
+            } else {
+                PlaytimeStatsWidgetState.Loaded(stats, it.isStale)
             }
         }
     }

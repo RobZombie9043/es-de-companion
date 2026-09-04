@@ -24,12 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -317,93 +313,44 @@ internal fun WidgetContentView(
             ) {
                 AchievementSummaryWidgetBody(content)
             }
+
+        is WidgetContent.PlaytimeStats ->
+            Box(
+                modifier =
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(
+                            Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                PlaytimeStatsWidgetBody(content)
+            }
     }
 }
 
 private val ACHIEVEMENT_ICON_TEXT_SPACING = 8.dp
 
-/** The icon+text is deliberately sized to fill less than the widget's full bounds, so it
- * reads as compact rather than stretching edge-to-edge - the remainder is left as margin,
- * split around the centered content. */
-private const val ACHIEVEMENT_CONTENT_FILL_FRACTION = 0.6f
-
-/** An arbitrary reference size the icon/text are measured at, then uniformly scaled from -
- * see [rememberAchievementContentScale]'s kdoc. Not a real rendered size on its own. */
-private const val ACHIEVEMENT_REFERENCE_SIZE_SP = 100f
-private val ACHIEVEMENT_MIN_ICON_SIZE = 8.dp
-private val ACHIEVEMENT_MAX_ICON_SIZE = 96.dp
-
 @Composable
 private fun AchievementSummaryWidgetBody(content: WidgetContent.AchievementSummary) {
     val textColor = Color(content.textColorArgb)
-    BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val availableWidth = maxWidth
-        val availableHeight = maxHeight
-        when (val state = content.state) {
-            AchievementSummaryWidgetState.Loading -> {
-                val spinnerSize = minOf(availableWidth, availableHeight) * ACHIEVEMENT_CONTENT_FILL_FRACTION
-                CircularProgressIndicator(
-                    color = textColor,
-                    strokeWidth = (spinnerSize / 12).coerceAtLeast(2.dp),
-                    modifier = Modifier.size(spinnerSize),
-                )
-            }
-
-            AchievementSummaryWidgetState.Unavailable ->
-                AchievementSummaryRow(
-                    text = "-",
-                    textColor = textColor,
-                    availableWidth = availableWidth,
-                    availableHeight = availableHeight,
-                )
-
-            is AchievementSummaryWidgetState.Loaded ->
-                AchievementSummaryRow(
-                    text = "${state.unlockedCount} / ${state.totalCount}",
-                    textColor = textColor,
-                    availableWidth = availableWidth,
-                    availableHeight = availableHeight,
-                )
-        }
-    }
-}
-
-/**
- * The icon+text row's size is derived from the space actually available (rather than a
- * fixed/configured value), the same "measure once, scale uniformly" idea [RatingStars]
- * uses for its star size - measuring [text] once at an arbitrary large reference font size
- * gives its natural (unwrapped) width/height, and text metrics scale linearly with font
- * size for a fixed string, so the single scale factor that makes that reference measurement
- * fit [availableWidth]/[availableHeight] is the same factor the real, final font size needs.
- * The icon is sized off the same factor (at 1:1 with the font size, in dp), so icon and text
- * always grow/shrink together.
- */
-@Composable
-private fun rememberAchievementContentScale(
-    text: String,
-    availableWidth: Dp,
-    availableHeight: Dp,
-): Float {
-    val density = LocalDensity.current
-    val textMeasurer = rememberTextMeasurer()
-    return remember(text, availableWidth, availableHeight, density) {
-        val measured =
-            textMeasurer.measure(
-                text = text,
-                style = TextStyle(fontSize = ACHIEVEMENT_REFERENCE_SIZE_SP.sp),
-                softWrap = false,
-                maxLines = 1,
+    when (val state = content.state) {
+        AchievementSummaryWidgetState.Loading ->
+            CircularProgressIndicator(
+                color = textColor,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(content.fontSizeSp.dp),
             )
-        val measuredWidth = with(density) { measured.size.width.toDp() }
-        val measuredHeight = with(density) { measured.size.height.toDp() }
-        val referenceIconSize = ACHIEVEMENT_REFERENCE_SIZE_SP.dp
-        val totalWidthAtReference = referenceIconSize + ACHIEVEMENT_ICON_TEXT_SPACING + measuredWidth
-        val totalHeightAtReference = maxOf(referenceIconSize, measuredHeight)
-        val scaleForWidth =
-            availableWidth.value * ACHIEVEMENT_CONTENT_FILL_FRACTION / totalWidthAtReference.value
-        val scaleForHeight =
-            availableHeight.value * ACHIEVEMENT_CONTENT_FILL_FRACTION / totalHeightAtReference.value
-        minOf(scaleForWidth, scaleForHeight).coerceAtLeast(0f)
+
+        AchievementSummaryWidgetState.Unavailable ->
+            AchievementSummaryRow(text = "-", textColor = textColor, fontSizeSp = content.fontSizeSp)
+
+        is AchievementSummaryWidgetState.Loaded ->
+            AchievementSummaryRow(
+                text = "${state.unlockedCount} / ${state.totalCount}",
+                textColor = textColor,
+                fontSizeSp = content.fontSizeSp,
+            )
     }
 }
 
@@ -411,24 +358,18 @@ private fun rememberAchievementContentScale(
 private fun AchievementSummaryRow(
     text: String,
     textColor: Color,
-    availableWidth: Dp,
-    availableHeight: Dp,
+    fontSizeSp: Float,
 ) {
-    val scale = rememberAchievementContentScale(text, availableWidth, availableHeight)
-    val iconSize =
-        (ACHIEVEMENT_REFERENCE_SIZE_SP * scale).dp
-            .coerceIn(ACHIEVEMENT_MIN_ICON_SIZE, ACHIEVEMENT_MAX_ICON_SIZE)
-    val fontSizeSp = iconSize.value
-
     Row(
         horizontalArrangement = Arrangement.spacedBy(ACHIEVEMENT_ICON_TEXT_SPACING),
         verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(8.dp),
     ) {
         Icon(
             imageVector = Icons.Filled.EmojiEvents,
             contentDescription = null,
             tint = textColor,
-            modifier = Modifier.size(iconSize),
+            modifier = Modifier.size(fontSizeSp.dp),
         )
         Text(
             text = text,

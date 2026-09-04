@@ -44,6 +44,7 @@ internal fun WidgetType.label(): String =
         is WidgetType.Rating -> "Rating"
         is WidgetType.Video -> "Video"
         is WidgetType.AchievementSummary -> "Achievements"
+        is WidgetType.PlaytimeStats -> "Time To Beat"
     }
 
 /** Display label for a MediaType-backed System-canvas widget - only FanArt/Screenshots
@@ -302,6 +303,13 @@ internal fun ConfigureWidgetDialog(
 
                     is WidgetType.AchievementSummary -> {
                         AchievementSummaryConfig(current = widgetType, onChange = onChange)
+                        CornerRadiusConfig(
+                            current = widgetType.cornerRadius,
+                        ) { onChange(widgetType.copy(cornerRadius = it)) }
+                    }
+
+                    is WidgetType.PlaytimeStats -> {
+                        PlaytimeStatsConfig(current = widgetType, onChange = onChange)
                         CornerRadiusConfig(
                             current = widgetType.cornerRadius,
                         ) { onChange(widgetType.copy(cornerRadius = it)) }

@@ -15,6 +15,7 @@ object WidgetContentResolver {
         gameNameLookup: () -> String? = { null },
         videoLookup: () -> String? = { null },
         achievementSummaryLookup: () -> AchievementSummaryWidgetState? = { null },
+        playtimeStatsLookup: () -> PlaytimeStatsWidgetState? = { null },
     ): WidgetContent =
         when (widgetType) {
             is WidgetType.SystemLogo ->
@@ -148,6 +149,20 @@ object WidgetContentResolver {
                 achievementSummaryLookup()?.let { state ->
                     WidgetContent.AchievementSummary(
                         state = state,
+                        fontSizeSp = widgetType.fontSizeSp,
+                        textColorArgb = widgetType.textColorArgb,
+                        backgroundColorArgb = widgetType.backgroundColorArgb,
+                        backgroundAlpha = widgetType.backgroundAlpha,
+                        cornerRadius = widgetType.cornerRadius,
+                    )
+                } ?: WidgetContent.Empty
+
+            is WidgetType.PlaytimeStats ->
+                playtimeStatsLookup()?.let { state ->
+                    WidgetContent.PlaytimeStats(
+                        state = state,
+                        mode = widgetType.mode,
+                        fontSizeSp = widgetType.fontSizeSp,
                         textColorArgb = widgetType.textColorArgb,
                         backgroundColorArgb = widgetType.backgroundColorArgb,
                         backgroundAlpha = widgetType.backgroundAlpha,

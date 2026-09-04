@@ -12,6 +12,7 @@ import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.PlaytimeStatsWidgetState
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
@@ -35,6 +36,7 @@ import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
 import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,6 +51,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** Extra attempts [WidgetsViewModel.peekAndMaybeFetchAchievementSummary] makes after an
+ * initial [AchievementSummaryFetchResult.NetworkError], before giving up for this gameId. */
+private const val ACHIEVEMENT_FETCH_RETRY_COUNT = 2
+
+/** Pause between retries - see [ACHIEVEMENT_FETCH_RETRY_COUNT]'s kdoc. */
+private const val ACHIEVEMENT_FETCH_RETRY_DELAY_MILLIS = 1_500L
+
+/** Pause before [WidgetsViewModel.peekAndMaybeFetchAchievementSummary]'s one playtime-stats
+ * force-refresh - see its kdoc. */
+private const val PLAYTIME_STATS_FORCE_REFRESH_DELAY_MILLIS = 1_500L
 
 /**
  * Resolves the live widget canvas: which StateGroup applies to the current AppState (if
@@ -123,46 +136,61 @@ class WidgetsViewModel(
     // for why a widget-specific side channel into WidgetCanvas isn't needed for this.
     private val achievementRefreshTrigger = MutableStateFlow(0)
 
-    // One background-fetch attempt per gameId per ViewModel lifetime, not a periodic poll -
-    // deliberately simple, matching this session's "no periodic refresh" limitation.
+    // One background-fetch *attempt burst* per gameId per ViewModel lifetime, not a periodic
+    // poll - deliberately simple, matching this session's "no periodic refresh" limitation.
+    // A NetworkError result is retried in place (see peekAndMaybeFetchAchievementSummary's
+    // ACHIEVEMENT_FETCH_RETRY_COUNT) rather than left to the pre-existing "browse to a
+    // different game and back" workaround for every transient blip - a real fetch normally
+    // settles in ~1s, so a couple of quick retries recovers from a momentary network hiccup
+    // without the widget ever needing to leave Loading.
     private var lastAchievementFetchGameId: Long? = null
 
-    // Set (to the same gameId) once that attempt actually finishes with a definitive result -
+    // One extra force-refresh per gameId, only ever attempted when a PlaytimeStats widget is
+    // actually on the canvas - see peekAndMaybeFetchAchievementSummary's kdoc for why a
+    // Success result with a null playtimeStats needs this on top of ACHIEVEMENT_FETCH_RETRY_COUNT.
+    private var playtimeForceRefreshAttemptedGameId: Long? = null
+
+    // Set (to the same gameId) once that burst finishes, successfully or not -
     // peekAchievementSummary only ever returns non-null for a cached Success (see
-    // AchievementSummaryCache.peek's kdoc), so a NotFound fetch result leaves peek permanently
-    // null for that gameId. Without this, resolveAchievementSummary would read that as "still
-    // loading" forever instead of "tried, nothing there" - see toWidgetState. Deliberately NOT
-    // set for a NetworkError result (see peekAndMaybeFetchAchievementSummary) - a transient
-    // failure (offline, rate-limited, RA outage) shouldn't permanently claim "no achievements"
-    // for a game that genuinely has some, confirmed on-device as a stuck-Unavailable widget
-    // that only recovered once browsing to a different game and back reset lastAchievementFetchGameId.
+    // AchievementSummaryCache.peek's kdoc), so a NotFound (or an exhausted-retries
+    // NetworkError) fetch result leaves peek permanently null for that gameId. Without this,
+    // resolveAchievementSummary would read that as "still loading" forever instead of "tried,
+    // nothing there" - see toWidgetState. A persistent NetworkError still settles on
+    // Unavailable once retries are exhausted, same as a confirmed no-match - by that point
+    // several real attempts (not just one) have already failed, so it's no longer a
+    // premature false negative the way giving up after a single try would be.
     private var completedAchievementFetchGameId: Long? = null
 
     /**
-     * Resolves what the AchievementSummary widget should show. `null` means "not eligible at
-     * all" (no such widget on this canvas, no current game, or signed out) - resolves to
-     * [WidgetContent.Empty] (hidden), see [WidgetContentResolver]'s AchievementSummary branch.
-     * Otherwise always returns a real [AchievementSummaryWidgetState] - [AchievementSummaryWidgetState.Loading]
-     * while a background fetch is in flight rather than hiding the widget until it resolves,
-     * and [AchievementSummaryWidgetState.Unavailable] for a game with no RetroAchievements
-     * match (or a matched entry with zero achievements, or a completed fetch that found
-     * nothing) rather than looking identical to "not eligible" or staying stuck on Loading.
+     * The shared resolution both the AchievementSummary and PlaytimeStats widgets are built
+     * from - both consume the exact same underlying [com.esde.companion.domain.model.GameAchievementSummary]
+     * fetch (RA's `GetGameInfoAndUserProgress` response already carries achievements and
+     * playtime stats together), so there's only ever one match/peek/fetch per resolve pass
+     * regardless of how many of the two widget types are on the canvas. `null` means "not
+     * eligible at all" (neither widget type on this canvas, no current game, or signed out).
+     * [gameId] is null for a game with no RetroAchievements match at all (as opposed to a
+     * match with nothing useful cached yet, which is [peeked] being null with a non-null
+     * [gameId]).
      */
-    private suspend fun resolveAchievementSummary(
+    private data class AchievementDataResolution(
+        val gameId: Long?,
+        val peeked: AchievementSummaryPeek?,
+        val fetchCompleted: Boolean,
+    )
+
+    private suspend fun resolveAchievementData(
         widgets: List<PlacedWidget>,
         identity: ContentIdentity,
-    ): AchievementSummaryWidgetState? {
+    ): AchievementDataResolution? {
         val match = resolveEligibleAchievementsMatch(widgets, identity) ?: return null
         val gameId = (match as? RetroAchievementsGameMatch.Found)?.gameId
-        return if (gameId == null) {
-            AchievementSummaryWidgetState.Unavailable
-        } else {
-            val peeked = peekAndMaybeFetchAchievementSummary(gameId)
-            peeked.toWidgetState(fetchCompleted = completedAchievementFetchGameId == gameId)
-        }
+        val needsPlaytimeStats = widgets.any { it.widgetType is WidgetType.PlaytimeStats }
+        val peeked = gameId?.let { peekAndMaybeFetchAchievementSummary(it, needsPlaytimeStats) }
+        val fetchCompleted = gameId != null && completedAchievementFetchGameId == gameId
+        return AchievementDataResolution(gameId, peeked, fetchCompleted)
     }
 
-    /** The `null`-returning eligibility gates for [resolveAchievementSummary], split out so
+    /** The `null`-returning eligibility gates for [resolveAchievementData], split out so
      * neither function trips detekt's ReturnCount limit. */
     private suspend fun resolveEligibleAchievementsMatch(
         widgets: List<PlacedWidget>,
@@ -171,7 +199,9 @@ class WidgetsViewModel(
         val gameRef = identity.gameRef
         val gameName = identity.gameName
         val eligible =
-            widgets.any { it.widgetType is WidgetType.AchievementSummary } &&
+            widgets.any {
+                it.widgetType is WidgetType.AchievementSummary || it.widgetType is WidgetType.PlaytimeStats
+            } &&
                 gameRef != null &&
                 gameName != null &&
                 observeRetroAchievementsCredentials().first() != null
@@ -180,44 +210,84 @@ class WidgetsViewModel(
         return resolveRetroAchievementsGameCached(gameRef, gameName)
     }
 
-    /** Cache-only peek, kicking off a background fetch (never blocking this function) when
-     * nothing useful is cached yet - see [resolveAchievementSummary]'s kdoc. */
-    private suspend fun peekAndMaybeFetchAchievementSummary(gameId: Long): AchievementSummaryPeek? {
+    /**
+     * Cache-only peek, kicking off a background fetch (never blocking this function) when
+     * nothing useful is cached yet - see [resolveAchievementData]'s kdoc. A
+     * [AchievementSummaryFetchResult.NetworkError] is retried in place, up to
+     * [ACHIEVEMENT_FETCH_RETRY_COUNT] additional times with a short
+     * [ACHIEVEMENT_FETCH_RETRY_DELAY_MILLIS] pause between attempts, before giving up - a real
+     * fetch normally settles in about a second, so a couple of quick retries is enough to ride
+     * out a momentary connectivity blip.
+     *
+     * A [AchievementSummaryFetchResult.Success] whose `playtimeStats` is null is a narrower,
+     * separate case worth its own one-shot recovery when [needsPlaytimeStats] (a PlaytimeStats
+     * widget is actually on the canvas): confirmed on-device as RA's own `GetGameProgression`
+     * sub-call (see `RetroClientRetroAchievementsApi.getGameInfoAndUserProgress`) occasionally
+     * degrading to nothing even after its own retry, while the main achievement data in the
+     * same response loads fine - a plain NetworkError retry doesn't catch this, since the
+     * overall result genuinely is a Success, just missing this one piece. A manual "Refresh"
+     * in the achievement screen reliably recovers it (a fresh, unburdened request), so one
+     * automatic force-refresh attempt here does the same thing without the user having to
+     * leave the game and do it by hand.
+     */
+    private suspend fun peekAndMaybeFetchAchievementSummary(
+        gameId: Long,
+        needsPlaytimeStats: Boolean,
+    ): AchievementSummaryPeek? {
         val peeked = peekAchievementSummary(gameId)
         if ((peeked == null || peeked.isStale) && lastAchievementFetchGameId != gameId) {
             lastAchievementFetchGameId = gameId
             viewModelScope.launch {
-                val result = getAchievementSummary(gameId)
-                if (result !is AchievementSummaryFetchResult.NetworkError) {
-                    completedAchievementFetchGameId = gameId
+                var result = getAchievementSummary(gameId)
+                var attempt = 0
+                while (result is AchievementSummaryFetchResult.NetworkError &&
+                    attempt < ACHIEVEMENT_FETCH_RETRY_COUNT
+                ) {
+                    delay(ACHIEVEMENT_FETCH_RETRY_DELAY_MILLIS)
+                    result = getAchievementSummary(gameId)
+                    attempt++
                 }
+                val successResult = result as? AchievementSummaryFetchResult.Success
+                val missingPlaytimeStats =
+                    needsPlaytimeStats && successResult != null && successResult.summary.playtimeStats == null
+                if (missingPlaytimeStats && playtimeForceRefreshAttemptedGameId != gameId) {
+                    playtimeForceRefreshAttemptedGameId = gameId
+                    delay(PLAYTIME_STATS_FORCE_REFRESH_DELAY_MILLIS)
+                    getAchievementSummary(gameId, forceRefresh = true)
+                }
+                completedAchievementFetchGameId = gameId
                 achievementRefreshTrigger.update { it + 1 }
             }
         }
         return peeked
     }
 
-    private fun AchievementSummaryPeek?.toWidgetState(fetchCompleted: Boolean): AchievementSummaryWidgetState {
-        if (this == null) {
-            return if (fetchCompleted) {
-                AchievementSummaryWidgetState.Unavailable
-            } else {
-                AchievementSummaryWidgetState.Loading
-            }
+    private fun AchievementDataResolution.toAchievementSummaryWidgetState(): AchievementSummaryWidgetState =
+        when {
+            gameId == null -> AchievementSummaryWidgetState.Unavailable
+            peeked == null ->
+                if (fetchCompleted) AchievementSummaryWidgetState.Unavailable else AchievementSummaryWidgetState.Loading
+            peeked.summary.achievements.isEmpty() -> AchievementSummaryWidgetState.Unavailable
+            else ->
+                AchievementSummaryWidgetState.Loaded(
+                    unlockedCount = peeked.summary.achievements.count { it.unlocked },
+                    totalCount = peeked.summary.achievements.size,
+                    earnedPoints = peeked.summary.earnedPoints,
+                    totalPoints = peeked.summary.totalPoints,
+                    completionPercent = peeked.summary.completionPercent,
+                    isRefreshing = peeked.isStale,
+                )
         }
-        return if (summary.achievements.isEmpty()) {
-            AchievementSummaryWidgetState.Unavailable
-        } else {
-            AchievementSummaryWidgetState.Loaded(
-                unlockedCount = summary.achievements.count { it.unlocked },
-                totalCount = summary.achievements.size,
-                earnedPoints = summary.earnedPoints,
-                totalPoints = summary.totalPoints,
-                completionPercent = summary.completionPercent,
-                isRefreshing = isStale,
-            )
+
+    private fun AchievementDataResolution.toPlaytimeStatsWidgetState(): PlaytimeStatsWidgetState =
+        when {
+            gameId == null -> PlaytimeStatsWidgetState.Unavailable
+            peeked == null ->
+                if (fetchCompleted) PlaytimeStatsWidgetState.Unavailable else PlaytimeStatsWidgetState.Loading
+            peeked.summary.playtimeStats == null -> PlaytimeStatsWidgetState.Unavailable
+            else ->
+                PlaytimeStatsWidgetState.Loaded(stats = peeked.summary.playtimeStats, isRefreshing = peeked.isStale)
         }
-    }
 
     private val gridDimensions = MutableStateFlow<GridDimensions?>(null)
 
@@ -368,7 +438,9 @@ class WidgetsViewModel(
                 null
             }
 
-        val achievementSummaryPeek = resolveAchievementSummary(widgets, identity)
+        val achievementData = resolveAchievementData(widgets, identity)
+        val achievementSummaryState = achievementData?.toAchievementSummaryWidgetState()
+        val playtimeStatsState = achievementData?.toPlaytimeStatsWidgetState()
 
         return widgets.associate { widget ->
             widget.id to
@@ -386,7 +458,8 @@ class WidgetsViewModel(
                     systemNameLookup = { identity.systemFullName },
                     gameNameLookup = { identity.gameName },
                     videoLookup = { gameMedia?.path(MediaType.Videos).takeIf { identity.isBrowsingGame } },
-                    achievementSummaryLookup = { achievementSummaryPeek },
+                    achievementSummaryLookup = { achievementSummaryState },
+                    playtimeStatsLookup = { playtimeStatsState },
                 )
         }
     }

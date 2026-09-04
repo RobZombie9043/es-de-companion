@@ -219,14 +219,30 @@ sealed class WidgetType {
      * for now - see `data/retroachievements/RetroAchievementsFeatureFlag.kt` and
      * `EditWidgetsOverlay.widgetCatalogFor`.
      *
-     * [fontSizeSp] is no longer read anywhere - the icon/text are now sized to fit the
-     * widget's own placed bounds instead (see WidgetCanvas.kt's AchievementSummaryRow),
-     * same "no configurable size" shape [Rating] uses. Kept as a field (rather than removed)
-     * purely so a canvas saved before this change still deserializes - `Json` (no
-     * `ignoreUnknownKeys`) throws on an unrecognized key, which would break loading the
-     * *entire* canvas, not just this one widget.
+     * [fontSizeSp] is a plain configured size (Configure Widget dialog), same as
+     * [GameDescription]'s - a prior auto-fit-to-bounds design was tried and reverted, see
+     * WidgetCanvas.kt's AchievementSummaryRow.
      */
     data class AchievementSummary(
+        val fontSizeSp: Float = 16f,
+        val textColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: CornerRadius = CornerRadius.None,
+    ) : WidgetType()
+
+    /**
+     * RetroAchievements' community median time-to-beat / time-to-complete-or-master for
+     * the currently identified game (see [GamePlaytimeStats]) - shares the exact same
+     * underlying fetch as [AchievementSummary] (RA's `GetGameInfoAndUserProgress` response
+     * already carries both), so this widget only ever resolves under the same conditions:
+     * signed in to RetroAchievements and a game identified, see WidgetContentResolver's
+     * PlaytimeStats branch. [mode] picks which of RA's two completion tracks to show -
+     * see [PlaytimeStatsMode]. No scaleMode/ImageEffects - not image-backed. [fontSizeSp] is
+     * a plain configured size (Configure Widget dialog), same as [AchievementSummary]'s.
+     */
+    data class PlaytimeStats(
+        val mode: PlaytimeStatsMode = PlaytimeStatsMode.Casual,
         val fontSizeSp: Float = 16f,
         val textColorArgb: Long = 0xFFFFFFFF,
         val backgroundColorArgb: Long = 0xFF000000,
@@ -240,6 +256,16 @@ sealed class WidgetType {
 enum class NoRatingBehavior {
     Hide,
     ShowEmptyStars,
+}
+
+/** Which of RetroAchievements' two completion tracks a [WidgetType.PlaytimeStats] widget
+ * shows median time-to-beat/complete for - RA tracks Casual (softcore) and Hardcore
+ * achievement completion as two separate tracks, each with its own "Beat" milestone and
+ * its own full-completion milestone ("Completed" for Casual, "Mastered" for Hardcore) -
+ * see [GamePlaytimeStats]'s kdoc for that Beaten/Completed/Mastered vocabulary. */
+enum class PlaytimeStatsMode {
+    Casual,
+    Hardcore,
 }
 
 /** How a [WidgetType.Video] widget fills the letterboxed space [ScaleMode.Fit] ("Contain")

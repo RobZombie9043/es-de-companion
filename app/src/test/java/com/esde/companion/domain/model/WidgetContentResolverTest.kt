@@ -18,6 +18,7 @@ class WidgetContentResolverTest {
         gameNameLookup: () -> String? = { null },
         videoLookup: () -> String? = { null },
         achievementSummaryLookup: () -> AchievementSummaryWidgetState? = { null },
+        playtimeStatsLookup: () -> PlaytimeStatsWidgetState? = { null },
     ): WidgetContent =
         WidgetContentResolver.resolve(
             widgetType = widgetType,
@@ -33,6 +34,7 @@ class WidgetContentResolverTest {
             gameNameLookup = gameNameLookup,
             videoLookup = videoLookup,
             achievementSummaryLookup = achievementSummaryLookup,
+            playtimeStatsLookup = playtimeStatsLookup,
         )
 
     // --- SystemImage: generic background fallback ---------------------------------------
@@ -481,6 +483,7 @@ class WidgetContentResolverTest {
     fun `AchievementSummary resolves to WidgetContent AchievementSummary when the lookup returns a state`() {
         val widgetType =
             WidgetType.AchievementSummary(
+                fontSizeSp = 20f,
                 textColorArgb = 0xFF00FF00,
                 backgroundColorArgb = 0xFF111111,
                 backgroundAlpha = 0.6f,
@@ -493,6 +496,7 @@ class WidgetContentResolverTest {
         assertEquals(
             WidgetContent.AchievementSummary(
                 state = state,
+                fontSizeSp = 20f,
                 textColorArgb = 0xFF00FF00,
                 backgroundColorArgb = 0xFF111111,
                 backgroundAlpha = 0.6f,
@@ -534,6 +538,85 @@ class WidgetContentResolverTest {
     @Test
     fun `AchievementSummary resolves to Empty by default when no achievementSummaryLookup is supplied`() {
         val content = resolve(widgetType = WidgetType.AchievementSummary())
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    // --- PlaytimeStats: same "eligibility lives in the caller's lookup" shape as AchievementSummary -
+    // the resolver only ever passes the state (and the widget's own mode) through unchanged.
+
+    private fun loadedPlaytimeStatsState(stats: GamePlaytimeStats): PlaytimeStatsWidgetState.Loaded {
+        return PlaytimeStatsWidgetState.Loaded(stats = stats, isRefreshing = false)
+    }
+
+    @Test
+    fun `PlaytimeStats resolves to WidgetContent PlaytimeStats when the lookup returns a state`() {
+        val widgetType =
+            WidgetType.PlaytimeStats(
+                mode = PlaytimeStatsMode.Hardcore,
+                fontSizeSp = 20f,
+                textColorArgb = 0xFF00FF00,
+                backgroundColorArgb = 0xFF111111,
+                backgroundAlpha = 0.6f,
+                cornerRadius = CornerRadius.Small,
+            )
+        val stats =
+            GamePlaytimeStats(
+                beatSeconds = 3600,
+                beatHardcoreSeconds = 5400,
+                completedSeconds = 7200,
+                masteredSeconds = null,
+            )
+        val state = loadedPlaytimeStatsState(stats)
+
+        val content = resolve(widgetType = widgetType, playtimeStatsLookup = { state })
+
+        assertEquals(
+            WidgetContent.PlaytimeStats(
+                state = state,
+                mode = PlaytimeStatsMode.Hardcore,
+                fontSizeSp = 20f,
+                textColorArgb = 0xFF00FF00,
+                backgroundColorArgb = 0xFF111111,
+                backgroundAlpha = 0.6f,
+                cornerRadius = CornerRadius.Small,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `PlaytimeStats passes a Loading state through unchanged`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.PlaytimeStats(),
+                playtimeStatsLookup = { PlaytimeStatsWidgetState.Loading },
+            )
+
+        assertEquals(PlaytimeStatsWidgetState.Loading, (content as WidgetContent.PlaytimeStats).state)
+    }
+
+    @Test
+    fun `PlaytimeStats passes an Unavailable state through unchanged`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.PlaytimeStats(),
+                playtimeStatsLookup = { PlaytimeStatsWidgetState.Unavailable },
+            )
+
+        assertEquals(PlaytimeStatsWidgetState.Unavailable, (content as WidgetContent.PlaytimeStats).state)
+    }
+
+    @Test
+    fun `PlaytimeStats resolves to Empty when the lookup returns null (not eligible at all)`() {
+        val content = resolve(widgetType = WidgetType.PlaytimeStats(), playtimeStatsLookup = { null })
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    @Test
+    fun `PlaytimeStats resolves to Empty by default when no playtimeStatsLookup is supplied`() {
+        val content = resolve(widgetType = WidgetType.PlaytimeStats())
 
         assertEquals(WidgetContent.Empty, content)
     }

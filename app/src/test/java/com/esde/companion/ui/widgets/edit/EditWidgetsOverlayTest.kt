@@ -72,6 +72,21 @@ class EditWidgetsOverlayTest {
     }
 
     @Test
+    fun `widgetCatalogFor(Playing) includes PlaytimeStats under the debug build unit tests run against`() {
+        // Same retroAchievementsEnabled() reasoning as the AchievementSummary test above.
+        val catalog = widgetCatalogFor(StateGroup.Playing)
+
+        assertTrue(catalog.any { it is WidgetType.PlaytimeStats })
+    }
+
+    @Test
+    fun `widgetCatalogFor(System) excludes PlaytimeStats`() {
+        val catalog = widgetCatalogFor(StateGroup.System)
+
+        assertTrue(catalog.none { it is WidgetType.PlaytimeStats })
+    }
+
+    @Test
     fun `widgetCatalogFor(System) and widgetCatalogFor(Playing) both include CustomImage and ColorBackground`() {
         val systemCatalog = widgetCatalogFor(StateGroup.System)
         val playingCatalog = widgetCatalogFor(StateGroup.Playing)

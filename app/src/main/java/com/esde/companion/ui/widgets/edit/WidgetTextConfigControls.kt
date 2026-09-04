@@ -26,6 +26,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.esde.companion.domain.model.NoRatingBehavior
+import com.esde.companion.domain.model.PlaytimeStatsMode
 import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.ui.SegmentedButtonLabel
 import kotlin.math.roundToInt
@@ -111,17 +112,81 @@ internal fun GameDescriptionConfig(
     }
 }
 
-/** No text-size control, unlike [GameDescriptionConfig] - the icon+text are sized to fit
- * the widget's own placed bounds (see WidgetCanvas.kt's AchievementSummaryRow), the same
- * "no configurable size" shape [RatingConfig] uses for its star row. Uses [ColorSwatchPicker]
- * (the shared swatch-row-plus-hex-input control [RatingConfig] already uses) rather than
- * duplicating [GameDescriptionConfig]'s own inlined swatch rows. */
+/** Same Text Size slider as [GameDescriptionConfig]'s. Uses [ColorSwatchPicker] (the shared
+ * swatch-row-plus-hex-input control [RatingConfig] already uses) rather than duplicating
+ * [GameDescriptionConfig]'s own inlined swatch rows. */
 @Composable
 internal fun AchievementSummaryConfig(
     current: WidgetType.AchievementSummary,
     onChange: (WidgetType.AchievementSummary) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = current.fontSizeSp,
+                onValueChange = { onChange(current.copy(fontSizeSp = it)) },
+                valueRange = 10f..36f,
+            )
+        }
+        ColorSwatchPicker(
+            label = "Text Color",
+            current = current.textColorArgb,
+        ) { onChange(current.copy(textColorArgb = it)) }
+        ColorSwatchPicker(
+            label = "Background Color",
+            current = current.backgroundColorArgb,
+        ) { onChange(current.copy(backgroundColorArgb = it)) }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Background Transparency: ${(current.backgroundAlpha * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Slider(
+                value = current.backgroundAlpha,
+                onValueChange = { onChange(current.copy(backgroundAlpha = it)) },
+                valueRange = 0f..1f,
+            )
+        }
+    }
+}
+
+private fun PlaytimeStatsMode.displayLabel(): String =
+    when (this) {
+        PlaytimeStatsMode.Casual -> "Casual"
+        PlaytimeStatsMode.Hardcore -> "Hardcore"
+    }
+
+/** Same Text Size slider as [GameDescriptionConfig]'s, plus [mode] picking Casual vs
+ * Hardcore (see [PlaytimeStatsMode]'s kdoc for what each shows). */
+@Composable
+internal fun PlaytimeStatsConfig(
+    current: WidgetType.PlaytimeStats,
+    onChange: (WidgetType.PlaytimeStats) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Mode", style = MaterialTheme.typography.titleSmall)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val modeCount = PlaytimeStatsMode.entries.size
+                PlaytimeStatsMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        selected = mode == current.mode,
+                        onClick = { onChange(current.copy(mode = mode)) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = modeCount),
+                        label = { SegmentedButtonLabel(mode.displayLabel()) },
+                    )
+                }
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = current.fontSizeSp,
+                onValueChange = { onChange(current.copy(fontSizeSp = it)) },
+                valueRange = 10f..36f,
+            )
+        }
         ColorSwatchPicker(
             label = "Text Color",
             current = current.textColorArgb,

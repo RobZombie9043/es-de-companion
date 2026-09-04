@@ -9,6 +9,7 @@ import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.NoRatingBehavior
 import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.PlaytimeStatsMode
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.WidgetType
@@ -37,6 +38,10 @@ private fun String.toPillarboxMode() = PillarboxMode.valueOf(this)
 private fun CornerRadius.toDto() = name
 
 private fun String.toCornerRadius() = CornerRadius.valueOf(this)
+
+private fun PlaytimeStatsMode.toDto() = name
+
+private fun String.toPlaytimeStatsMode() = PlaytimeStatsMode.valueOf(this)
 
 // See WidgetTypeDto's kdoc for the tri-state reasoning: null means "not present in the
 // JSON at all" (old data, or a widget never explicitly reconfigured), the literal string
@@ -143,6 +148,15 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 backgroundAlpha,
                 cornerRadius.toDto(),
             )
+        is WidgetType.PlaytimeStats ->
+            WidgetTypeDto.PlaytimeStats(
+                mode.toDto(),
+                fontSizeSp,
+                textColorArgb,
+                backgroundColorArgb,
+                backgroundAlpha,
+                cornerRadius.toDto(),
+            )
     }
 
 private fun WidgetTypeDto.toDomain(): WidgetType =
@@ -186,6 +200,15 @@ private fun WidgetTypeDto.toDomain(): WidgetType =
         is WidgetTypeDto.Video -> toDomainVideo()
         is WidgetTypeDto.AchievementSummary ->
             WidgetType.AchievementSummary(
+                fontSizeSp,
+                textColorArgb,
+                backgroundColorArgb,
+                backgroundAlpha,
+                cornerRadius.toCornerRadius(),
+            )
+        is WidgetTypeDto.PlaytimeStats ->
+            WidgetType.PlaytimeStats(
+                mode.toPlaytimeStatsMode(),
                 fontSizeSp,
                 textColorArgb,
                 backgroundColorArgb,
