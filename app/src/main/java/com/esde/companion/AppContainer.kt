@@ -195,6 +195,7 @@ import com.esde.companion.domain.usecase.ObserveVolumeSyncEnabledUseCase
 import com.esde.companion.domain.usecase.ObserveVolumeSyncModeUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
 import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
+import com.esde.companion.domain.usecase.PeekGameLeaderboardsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeEventScriptSettingsUseCase
 import com.esde.companion.domain.usecase.ReadEsdeMediaDirectoryUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
@@ -702,12 +703,15 @@ class AppContainer(context: Context) {
     // covers per-achievement wall comments (fetched on-demand when a row is expanded) - in-memory
     // only, keyed by achievementId alone (public data, not per-user), 30-minute TTL. A fifth,
     // GameLeaderboardsCache, covers the per-game leaderboard list (the same screen's Leaderboards
-    // tab) - in-memory only, keyed by (username, gameId) same as AchievementSummaryCache since
-    // each row's myEntry is per-user, 15-minute TTL, refreshed alongside the achievement summary
-    // by the same kebab "Refresh" entry. A sixth, LeaderboardEntriesCache, covers one leaderboard's
-    // entries (fetched on-demand when a row is expanded) - in-memory only, keyed by leaderboardId
-    // alone (public data), 15-minute TTL. None of the six caches are covered by Backup & Restore,
-    // same as the credentials.
+    // tab) - in-memory only (not disk-backed like AchievementSummaryCache, see its own kdoc for
+    // why), keyed by (username, gameId) same as AchievementSummaryCache since each row's myEntry
+    // is per-user, 15-minute TTL, refreshed alongside the achievement summary by the same kebab
+    // "Refresh" entry. Gets the same peekGameLeaderboardsUseCase stale-while-revalidate treatment
+    // as the achievement summary - both facets' mode-toggle chip counts and content now update
+    // in place instead of dropping through a dash/spinner mid-refresh. A sixth,
+    // LeaderboardEntriesCache, covers one leaderboard's entries (fetched on-demand when a row is
+    // expanded) - in-memory only, keyed by leaderboardId alone (public data), 15-minute TTL.
+    // None of the six caches are covered by Backup & Restore, same as the credentials.
     private val retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
         EncryptedRetroAchievementsCredentialsRepository(appContext)
     private val gameListCache = GameListCache(store = DataStoreGameListCacheStore(appContext))
@@ -754,6 +758,7 @@ class AppContainer(context: Context) {
     val getUserGameProgressUseCase = GetUserGameProgressUseCase(retroAchievementsRepository)
     val getAchievementCommentsUseCase = GetAchievementCommentsUseCase(retroAchievementsRepository)
     val getGameLeaderboardsUseCase = GetGameLeaderboardsUseCase(retroAchievementsRepository)
+    val peekGameLeaderboardsUseCase = PeekGameLeaderboardsUseCase(retroAchievementsRepository)
     val getLeaderboardEntriesUseCase = GetLeaderboardEntriesUseCase(retroAchievementsRepository)
 
     // Game Guides FAB.

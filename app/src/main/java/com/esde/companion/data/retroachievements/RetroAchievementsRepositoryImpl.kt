@@ -3,6 +3,7 @@ package com.esde.companion.data.retroachievements
 import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.AchievementSummaryPeek
+import com.esde.companion.domain.model.GameLeaderboardsPeek
 import com.esde.companion.domain.model.LeaderboardEntriesFetchResult
 import com.esde.companion.domain.model.LeaderboardsFetchResult
 import com.esde.companion.domain.model.RetroAchievementsAuthState
@@ -95,6 +96,11 @@ class RetroAchievementsRepositoryImpl(
                 is RetroAchievementsApiResult.Error -> LeaderboardsFetchResult.NetworkError(result.message)
             }
         }
+    }
+
+    override suspend fun peekGameLeaderboards(gameId: Long): GameLeaderboardsPeek? {
+        val credentials = currentCredentials() ?: return null
+        return caches.gameLeaderboards.peek(credentials.username, gameId)
     }
 
     override suspend fun getLeaderboardEntries(leaderboardId: Long): LeaderboardEntriesFetchResult {

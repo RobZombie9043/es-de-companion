@@ -212,12 +212,22 @@ internal fun LeaderboardsFetchBody(
         LeaderboardsFetchState.Idle, LeaderboardsFetchState.Loading ->
             Box(modifier = modifier, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         is LeaderboardsFetchState.Loaded ->
-            LeaderboardSummaryList(
-                summary = fetch.summary,
-                listControls = listControls,
-                expansion = expansion,
-                modifier = modifier,
-            )
+            Box(modifier = modifier) {
+                LeaderboardSummaryList(
+                    summary = fetch.summary,
+                    listControls = listControls,
+                    expansion = expansion,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                // A stale cached list shown immediately while a background refresh runs - see
+                // LeaderboardsFetchState.Loaded's kdoc.
+                if (fetch.isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).size(REFRESH_INDICATOR_SIZE),
+                        strokeWidth = REFRESH_INDICATOR_STROKE_WIDTH,
+                    )
+                }
+            }
         LeaderboardsFetchState.NotFound ->
             RetroAchievementsMessage("This game's RetroAchievements entry couldn't be found.", modifier)
         is LeaderboardsFetchState.NetworkError ->
@@ -383,6 +393,8 @@ private fun formatEntryDate(submittedAtMillis: Long): String {
 }
 
 private val ENTRY_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")
+private val REFRESH_INDICATOR_SIZE = 20.dp
+private val REFRESH_INDICATOR_STROKE_WIDTH = 2.dp
 private val LEADERBOARD_ICON_SIZE = 32.dp
 private val ENTRIES_PROGRESS_SIZE = 20.dp
 private const val UNLOCK_DATE_ALPHA = 0.6f

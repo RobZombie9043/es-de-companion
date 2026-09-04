@@ -20,7 +20,10 @@ sealed class LeaderboardsFetchState {
 
     data object Loading : LeaderboardsFetchState()
 
-    data class Loaded(val summary: GameLeaderboardsSummary) : LeaderboardsFetchState()
+    /** [isRefreshing] mirrors [RetroAchievementsFetchState.Loaded]'s field - see its kdoc for why
+     * this is a flag on [Loaded] rather than a separate sealed state. */
+    data class Loaded(val summary: GameLeaderboardsSummary, val isRefreshing: Boolean = false) :
+        LeaderboardsFetchState()
 
     data object NotFound : LeaderboardsFetchState()
 

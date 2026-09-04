@@ -56,6 +56,8 @@ class LeaderboardDisplayControllerTest {
             forceRefresh: Boolean,
         ): LeaderboardsFetchResult = error("not used by this test")
 
+        override suspend fun peekGameLeaderboards(gameId: Long) = error("not used by this test")
+
         override suspend fun getLeaderboardEntries(leaderboardId: Long): LeaderboardEntriesFetchResult {
             requestedLeaderboardIds += leaderboardId
             return pendingEntries.receive()

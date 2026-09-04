@@ -554,6 +554,41 @@ class RetroAchievementsRepositoryImplTest {
         }
 
     @Test
+    fun `peekGameLeaderboards returns null when nobody is signed in`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi(), signedInAs = null)
+
+            val result = repository.peekGameLeaderboards(gameId = 1L)
+
+            assertEquals(null, result)
+        }
+
+    @Test
+    fun `peekGameLeaderboards returns null when nothing has been fetched yet`() =
+        runTest {
+            val repository = repositoryWith(FakeRetroAchievementsApi())
+
+            val result = repository.peekGameLeaderboards(gameId = 1L)
+
+            assertEquals(null, result)
+        }
+
+    @Test
+    fun `peekGameLeaderboards returns a prior fetch without querying the api`() =
+        runTest {
+            val summary = GameLeaderboardsSummary(gameId = 1L, leaderboards = emptyList())
+            val fakeApi = FakeLeaderboardsApi(RetroAchievementsApiResult.Success(summary))
+            val repository = repositoryWith(fakeApi)
+            repository.getGameLeaderboards(gameId = 1L)
+
+            val result = repository.peekGameLeaderboards(gameId = 1L)
+
+            assertEquals(summary, result?.summary)
+            assertEquals(false, result?.isStale)
+            assertEquals(1, fakeApi.callCount)
+        }
+
+    @Test
     fun `getLeaderboardEntries reports an empty list when nobody is signed in`() =
         runTest {
             val repository = repositoryWith(FakeRetroAchievementsApi(), signedInAs = null)

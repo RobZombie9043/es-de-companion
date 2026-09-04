@@ -244,54 +244,83 @@ class RetroAchievementsViewModel(
         _hashSupport.value = HashSupportState.Hidden
         achievementDisplay.onTargetChanged()
         leaderboardDisplay.onTargetChanged()
-        _leaderboardsFetch.value = LeaderboardsFetchState.Idle
 
+        // _leaderboardsFetch is deliberately left untouched here, same as _fetch below - resetting
+        // either synchronously before the resolveGame() suspension point would flash Idle (a dash
+        // in the mode-toggle chip) for one frame even when a cached value already exists to show
+        // immediately. Both are only ever written once the actual outcome (including a cached
+        // peek) is known, in each branch below.
         if (!signedIn) {
             _resolution.value = RetroAchievementsResolutionState.NotSignedIn
             _fetch.value = RetroAchievementsFetchState.Idle
+            _leaderboardsFetch.value = LeaderboardsFetchState.Idle
             return
         }
         if (game == null) {
             _resolution.value = RetroAchievementsResolutionState.NoGame
             _fetch.value = RetroAchievementsFetchState.Idle
+            _leaderboardsFetch.value = LeaderboardsFetchState.Idle
             return
         }
         when (val match = resolveGame(game.reference, game.name)) {
             RetroAchievementsGameMatch.UnsupportedSystem -> {
                 _resolution.value = RetroAchievementsResolutionState.UnsupportedSystem
                 _fetch.value = RetroAchievementsFetchState.Idle
+                _leaderboardsFetch.value = LeaderboardsFetchState.Idle
             }
             RetroAchievementsGameMatch.NoMatch -> {
                 _resolution.value = RetroAchievementsResolutionState.NoMatch
                 _fetch.value = RetroAchievementsFetchState.Idle
+                _leaderboardsFetch.value = LeaderboardsFetchState.Idle
             }
             is RetroAchievementsGameMatch.Found -> {
                 lastGameId = match.gameId
                 _resolution.value = RetroAchievementsResolutionState.Found(match.method)
-                // Both fetched concurrently, and both consume the same forceRefresh flag - see
-                // this ViewModel's kdoc/CLAUDE.md for why leaderboards are fetched eagerly
-                // (the chip toggle needs a real leaderboard count immediately) and why one
-                // consume() call feeds both (so the kebab's "Refresh" bypasses both caches).
-                val refresh = forceRefresh.consume()
-                // Stale-while-revalidate: a cached summary (fresh or stale) shows immediately
-                // instead of a spinner - see RetroAchievementsFetchState.Loaded's kdoc for why
-                // this doesn't retrigger RetroAchievementsFetchBody's crossfade animation.
-                val peeked = if (refresh) null else detailUseCases.peekAchievementSummary(match.gameId)
-                _fetch.value =
-                    if (peeked != null) {
-                        RetroAchievementsFetchState.Loaded(peeked.summary, isRefreshing = peeked.isStale)
-                    } else {
-                        RetroAchievementsFetchState.Loading
-                    }
-                _leaderboardsFetch.value = LeaderboardsFetchState.Loading
-                coroutineScope {
-                    val leaderboardsDeferred = async { detailUseCases.getGameLeaderboards(match.gameId, refresh) }
-                    if (peeked == null || peeked.isStale) {
-                        _fetch.value = detailUseCases.getAchievementSummary(match.gameId, refresh).toFetchState()
-                    }
-                    _leaderboardsFetch.value = leaderboardsDeferred.await().toFetchState()
-                }
+                fetchGameDetails(match.gameId)
             }
+        }
+    }
+
+    /**
+     * Stale-while-revalidate, for both facets: a cached value (fresh or stale) shows immediately
+     * instead of a spinner - see [RetroAchievementsFetchState.Loaded]'s kdoc for why this doesn't
+     * retrigger [RetroAchievementsFetchBody]'s crossfade animation, and
+     * [LeaderboardsFetchState.Loaded]'s for the mirrored mode-toggle chip benefit (its item count
+     * no longer drops to a dash mid-refresh). Both fetched concurrently, and both consume the
+     * same [forceRefresh] flag - see this ViewModel's kdoc/CLAUDE.md for why leaderboards are
+     * fetched eagerly (the chip toggle needs a real leaderboard count immediately) and why one
+     * `consume()` call feeds both (so the kebab's "Refresh" bypasses both caches).
+     */
+    private suspend fun fetchGameDetails(gameId: Long) {
+        val refresh = forceRefresh.consume()
+        val peekedAchievements = if (refresh) null else detailUseCases.peekAchievementSummary(gameId)
+        val peekedLeaderboards = if (refresh) null else detailUseCases.peekGameLeaderboards(gameId)
+        _fetch.value =
+            if (peekedAchievements != null) {
+                RetroAchievementsFetchState.Loaded(
+                    peekedAchievements.summary,
+                    isRefreshing = peekedAchievements.isStale,
+                )
+            } else {
+                RetroAchievementsFetchState.Loading
+            }
+        _leaderboardsFetch.value =
+            if (peekedLeaderboards != null) {
+                LeaderboardsFetchState.Loaded(peekedLeaderboards.summary, isRefreshing = peekedLeaderboards.isStale)
+            } else {
+                LeaderboardsFetchState.Loading
+            }
+        coroutineScope {
+            val leaderboardsDeferred =
+                if (peekedLeaderboards == null || peekedLeaderboards.isStale) {
+                    async { detailUseCases.getGameLeaderboards(gameId, refresh) }
+                } else {
+                    null
+                }
+            if (peekedAchievements == null || peekedAchievements.isStale) {
+                _fetch.value = detailUseCases.getAchievementSummary(gameId, refresh).toFetchState()
+            }
+            leaderboardsDeferred?.let { _leaderboardsFetch.value = it.await().toFetchState() }
         }
     }
 }
