@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.AchievementDisplayField
 import com.esde.companion.domain.model.AchievementFilterOption
 import com.esde.companion.domain.model.AchievementSortOrder
+import com.esde.companion.domain.model.AchievementSummaryFetchResult
 import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameReference
 import com.esde.companion.domain.model.LeaderboardSortOrder
+import com.esde.companion.domain.model.LeaderboardsFetchResult
 import com.esde.companion.domain.model.RetroAchievementsCandidateGame
 import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.resolveScreensaverAwareGame
@@ -25,6 +27,7 @@ import com.esde.companion.domain.usecase.SetPlaytimeStatsHardcoreModeEnabledUseC
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +51,13 @@ private data class CurrentGame(val reference: GameReference, val name: String)
 // recovered from (consistent with an abandoned-but-still-executing request racing a live one).
 private const val RESOLVE_DEBOUNCE_MILLIS = 400L
 private const val STATE_STOP_TIMEOUT_MILLIS = 5_000L
+
+/** Extra attempts [fetchGameDetails] makes after an initial [AchievementSummaryFetchResult.NetworkError]/
+ * [LeaderboardsFetchResult.NetworkError], before surfacing it to the UI - see [retryOnNetworkError]'s
+ * kdoc. Same values as `WidgetsViewModel.ACHIEVEMENT_FETCH_RETRY_COUNT`, which covers the same
+ * underlying race for the widget's own copy of this fetch. */
+private const val ACHIEVEMENTS_FETCH_RETRY_COUNT = 2
+private const val ACHIEVEMENTS_FETCH_RETRY_DELAY_MILLIS = 1_500L
 
 /**
  * Drives the RetroAchievements FAB/summary view. Re-resolves whenever the signed-in state
@@ -313,14 +323,46 @@ class RetroAchievementsViewModel(
         coroutineScope {
             val leaderboardsDeferred =
                 if (peekedLeaderboards == null || peekedLeaderboards.isStale) {
-                    async { detailUseCases.getGameLeaderboards(gameId, refresh) }
+                    async {
+                        retryOnNetworkError({ it is LeaderboardsFetchResult.NetworkError }) {
+                            detailUseCases.getGameLeaderboards(gameId, refresh)
+                        }
+                    }
                 } else {
                     null
                 }
             if (peekedAchievements == null || peekedAchievements.isStale) {
-                _fetch.value = detailUseCases.getAchievementSummary(gameId, refresh).toFetchState()
+                val result =
+                    retryOnNetworkError({ it is AchievementSummaryFetchResult.NetworkError }) {
+                        detailUseCases.getAchievementSummary(gameId, refresh)
+                    }
+                _fetch.value = result.toFetchState()
             }
             leaderboardsDeferred?.let { _leaderboardsFetch.value = it.await().toFetchState() }
         }
     }
+}
+
+/**
+ * Retries [fetch] up to [ACHIEVEMENTS_FETCH_RETRY_COUNT] additional times, [ACHIEVEMENTS_FETCH_RETRY_DELAY_MILLIS]
+ * apart, as long as [isNetworkError] keeps reporting the result as one - the same connection-
+ * reuse/timing hiccup `RetroClientRetroAchievementsApi.retryOnceOnError` retries once for can
+ * still surface here as a user-visible "Couldn't load achievements: ...malformed JSON..." error
+ * if that single retry also loses the race (a heavier concurrent burst - achievements +
+ * leaderboards + comments all firing off the same debounced settle). A real fetch normally
+ * settles in about a second, so a couple of quick retries rides out the rest of that burst
+ * without the screen ever needing to show the error at all.
+ */
+private suspend fun <T> retryOnNetworkError(
+    isNetworkError: (T) -> Boolean,
+    fetch: suspend () -> T,
+): T {
+    var result = fetch()
+    var attempt = 0
+    while (isNetworkError(result) && attempt < ACHIEVEMENTS_FETCH_RETRY_COUNT) {
+        delay(ACHIEVEMENTS_FETCH_RETRY_DELAY_MILLIS)
+        result = fetch()
+        attempt++
+    }
+    return result
 }
