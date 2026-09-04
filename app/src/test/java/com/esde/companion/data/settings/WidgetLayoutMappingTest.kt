@@ -303,6 +303,34 @@ class WidgetLayoutMappingTest {
     }
 
     @Test
+    fun `AchievementSummary round-trips fontSizeSp, colors, backgroundAlpha, and cornerRadius`() {
+        val widget =
+            WidgetType.AchievementSummary(
+                fontSizeSp = 22f,
+                textColorArgb = 0xFF00FF00,
+                backgroundColorArgb = 0xFF111111,
+                backgroundAlpha = 0.7f,
+                cornerRadius = CornerRadius.Large,
+            )
+
+        assertEquals(widget, roundTrip(widget))
+    }
+
+    @Test
+    fun `raw JSON for AchievementSummary with no keys decodes to its defaults`() {
+        val decoded = Json.decodeFromString(WidgetTypeDto.AchievementSummary.serializer(), "{}")
+        assertEquals(
+            WidgetTypeDto.AchievementSummary(
+                fontSizeSp = 16f,
+                textColorArgb = 0xFFFFFFFF,
+                backgroundColorArgb = 0xFF000000,
+                backgroundAlpha = 0.5f,
+            ),
+            decoded,
+        )
+    }
+
+    @Test
     fun `Rating round-trips noRatingBehavior and colors`() {
         val widget =
             WidgetType.Rating(

@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.esde.companion.data.retroachievements.retroAchievementsEnabled
 import com.esde.companion.data.storage.SafPathResolver
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.MediaType
@@ -111,24 +112,26 @@ internal fun widgetCatalogFor(stateGroup: StateGroup): List<WidgetType> =
             )
 
         StateGroup.Playing ->
-            listOf(
-                WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit),
-                WidgetType.SystemLogo(ScaleMode.Fit),
-                WidgetType.SystemImage(ScaleMode.Fill),
-                WidgetType.GameDescription(),
-                WidgetType.Rating(),
-                WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit),
-                WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit),
-                WidgetType.GameMedia(MediaType.MixImages, ScaleMode.Fill),
-                WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill),
-                WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill),
-                WidgetType.GameMedia(MediaType.TitleScreens, ScaleMode.Fit),
-                WidgetType.GameMedia(MediaType.BackCovers, ScaleMode.Fit),
-                WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit),
-                WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill),
-                WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f),
-                WidgetType.Video(),
-            )
+            buildList {
+                add(WidgetType.GameMedia(MediaType.Marquees, ScaleMode.Fit))
+                add(WidgetType.SystemLogo(ScaleMode.Fit))
+                add(WidgetType.SystemImage(ScaleMode.Fill))
+                add(WidgetType.GameDescription())
+                add(WidgetType.Rating())
+                add(WidgetType.GameMedia(MediaType.Covers, ScaleMode.Fit))
+                add(WidgetType.GameMedia(MediaType.ThreeDBoxes, ScaleMode.Fit))
+                add(WidgetType.GameMedia(MediaType.MixImages, ScaleMode.Fill))
+                add(WidgetType.GameMedia(MediaType.Screenshots, ScaleMode.Fill))
+                add(WidgetType.GameMedia(MediaType.FanArt, ScaleMode.Fill))
+                add(WidgetType.GameMedia(MediaType.TitleScreens, ScaleMode.Fit))
+                add(WidgetType.GameMedia(MediaType.BackCovers, ScaleMode.Fit))
+                add(WidgetType.GameMedia(MediaType.PhysicalMedia, ScaleMode.Fit))
+                add(WidgetType.CustomImage(path = "", scaleMode = ScaleMode.Fill))
+                add(WidgetType.ColorBackground(colorArgb = 0xFF000000, alpha = 0.5f))
+                add(WidgetType.Video())
+                // Debug-only until RetroAchievements ships - see retroAchievementsEnabled's kdoc.
+                if (retroAchievementsEnabled()) add(WidgetType.AchievementSummary())
+            }
     }
 
 private fun StateGroup.displayLabel(): String =

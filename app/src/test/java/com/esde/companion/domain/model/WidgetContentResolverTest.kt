@@ -17,6 +17,7 @@ class WidgetContentResolverTest {
         systemNameLookup: () -> String? = { null },
         gameNameLookup: () -> String? = { null },
         videoLookup: () -> String? = { null },
+        achievementSummaryLookup: () -> AchievementSummaryWidgetState? = { null },
     ): WidgetContent =
         WidgetContentResolver.resolve(
             widgetType = widgetType,
@@ -31,6 +32,7 @@ class WidgetContentResolverTest {
             systemNameLookup = systemNameLookup,
             gameNameLookup = gameNameLookup,
             videoLookup = videoLookup,
+            achievementSummaryLookup = achievementSummaryLookup,
         )
 
     // --- SystemImage: generic background fallback ---------------------------------------
@@ -453,6 +455,87 @@ class WidgetContentResolverTest {
     @Test
     fun `Video resolves to Empty by default when the caller supplies no videoLookup at all`() {
         val content = resolve(widgetType = WidgetType.Video())
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    // --- AchievementSummary: same "eligibility lives in the caller's lookup" shape as Video -
+    // the resolver only ever passes the state through unchanged, attaching style fields; the
+    // Loading/Unavailable/Loaded decision itself is tested at WidgetsViewModel/EditWidgetsViewModel
+    // level, where it's actually computed.
+
+    private fun loadedAchievementSummaryState(
+        unlocked: Int = 3,
+        total: Int = 10,
+        isRefreshing: Boolean = false,
+    ) = AchievementSummaryWidgetState.Loaded(
+        unlockedCount = unlocked,
+        totalCount = total,
+        earnedPoints = 150,
+        totalPoints = 500,
+        completionPercent = 30f,
+        isRefreshing = isRefreshing,
+    )
+
+    @Test
+    fun `AchievementSummary resolves to WidgetContent AchievementSummary when the lookup returns a state`() {
+        val widgetType =
+            WidgetType.AchievementSummary(
+                fontSizeSp = 20f,
+                textColorArgb = 0xFF00FF00,
+                backgroundColorArgb = 0xFF111111,
+                backgroundAlpha = 0.6f,
+                cornerRadius = CornerRadius.Small,
+            )
+        val state = loadedAchievementSummaryState(unlocked = 3, total = 10)
+
+        val content = resolve(widgetType = widgetType, achievementSummaryLookup = { state })
+
+        assertEquals(
+            WidgetContent.AchievementSummary(
+                state = state,
+                fontSizeSp = 20f,
+                textColorArgb = 0xFF00FF00,
+                backgroundColorArgb = 0xFF111111,
+                backgroundAlpha = 0.6f,
+                cornerRadius = CornerRadius.Small,
+            ),
+            content,
+        )
+    }
+
+    @Test
+    fun `AchievementSummary passes a Loading state through unchanged`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.AchievementSummary(),
+                achievementSummaryLookup = { AchievementSummaryWidgetState.Loading },
+            )
+
+        assertEquals(AchievementSummaryWidgetState.Loading, (content as WidgetContent.AchievementSummary).state)
+    }
+
+    @Test
+    fun `AchievementSummary passes an Unavailable state through unchanged`() {
+        val content =
+            resolve(
+                widgetType = WidgetType.AchievementSummary(),
+                achievementSummaryLookup = { AchievementSummaryWidgetState.Unavailable },
+            )
+
+        assertEquals(AchievementSummaryWidgetState.Unavailable, (content as WidgetContent.AchievementSummary).state)
+    }
+
+    @Test
+    fun `AchievementSummary resolves to Empty when the lookup returns null (not eligible at all)`() {
+        val content = resolve(widgetType = WidgetType.AchievementSummary(), achievementSummaryLookup = { null })
+
+        assertEquals(WidgetContent.Empty, content)
+    }
+
+    @Test
+    fun `AchievementSummary resolves to Empty by default when no achievementSummaryLookup is supplied`() {
+        val content = resolve(widgetType = WidgetType.AchievementSummary())
 
         assertEquals(WidgetContent.Empty, content)
     }

@@ -2,12 +2,16 @@ package com.esde.companion.ui.widgets
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.esde.companion.domain.model.AchievementSummaryWidgetState
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.ImageTransitionMode
 import com.esde.companion.domain.model.NavigationDirection
@@ -40,6 +45,7 @@ import com.esde.companion.ui.main.CrossfadeAsyncImage
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.video.VideoPlaybackEvent
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * Renders [widgets] on a grid derived from the available space (see [gridDimensionsFor]),
@@ -293,11 +299,81 @@ internal fun WidgetContentView(
                     modifier = modifier,
                 )
             }
+
+        is WidgetContent.AchievementSummary ->
+            Box(
+                modifier =
+                    modifier
+                        .applyCornerRadius(widgetType.cornerRadius)
+                        .background(
+                            Color(content.backgroundColorArgb).copy(alpha = content.backgroundAlpha),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                AchievementSummaryWidgetBody(content)
+            }
+    }
+}
+
+/** [BoxScope] receiver so the refresh indicator below can [Modifier.align] itself within the
+ * enclosing Box (see CLAUDE.md's Known Gotchas on align() needing a direct-child BoxScope). */
+@Composable
+private fun BoxScope.AchievementSummaryWidgetBody(content: WidgetContent.AchievementSummary) {
+    val textColor = Color(content.textColorArgb)
+    when (val state = content.state) {
+        AchievementSummaryWidgetState.Loading -> CircularProgressIndicator(color = textColor)
+
+        AchievementSummaryWidgetState.Unavailable ->
+            Text(
+                text = "No Achievements",
+                color = textColor,
+                fontSize = content.fontSizeSp.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(8.dp),
+            )
+
+        is AchievementSummaryWidgetState.Loaded -> {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(8.dp),
+            ) {
+                Text(
+                    text = "${state.unlockedCount} / ${state.totalCount} Achievements",
+                    color = textColor,
+                    fontSize = content.fontSizeSp.sp,
+                    textAlign = TextAlign.Center,
+                )
+                val statsText =
+                    "${state.earnedPoints} / ${state.totalPoints} pts · " +
+                        "${state.completionPercent.roundToInt()}%"
+                Text(
+                    text = statsText,
+                    color = textColor,
+                    fontSize = content.fontSizeSp.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            // A stale cached value shown immediately while a background refresh runs - see
+            // WidgetContent.AchievementSummary's kdoc.
+            if (state.isRefreshing) {
+                val indicatorModifier =
+                    Modifier.align(Alignment.TopEnd).padding(4.dp).size(ACHIEVEMENT_REFRESH_INDICATOR_SIZE)
+                CircularProgressIndicator(
+                    modifier = indicatorModifier,
+                    strokeWidth = ACHIEVEMENT_REFRESH_INDICATOR_STROKE_WIDTH,
+                    color = textColor,
+                )
+            }
+        }
     }
 }
 
 /** Max blur radius a fully-scaled-up (blurAmount = 1f) ImageEffects maps to. */
 private val IMAGE_EFFECTS_MAX_BLUR = 24.dp
+
+private val ACHIEVEMENT_REFRESH_INDICATOR_SIZE = 14.dp
+private val ACHIEVEMENT_REFRESH_INDICATOR_STROKE_WIDTH = 2.dp
 
 private fun Modifier.applyBlurEffect(effects: ImageEffects): Modifier =
     if (effects.blurAmount > 0f) blur(IMAGE_EFFECTS_MAX_BLUR * effects.blurAmount) else this

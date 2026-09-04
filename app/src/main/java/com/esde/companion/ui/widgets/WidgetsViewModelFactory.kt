@@ -22,6 +22,10 @@ class WidgetsViewModelFactory(
             resolveCustomSystemImage = appContainer.resolveCustomSystemImageUseCase,
             resolveCustomSystemLogo = appContainer.resolveCustomSystemLogoUseCase,
             resolveBundledSystemLogo = appContainer.resolveBundledSystemLogoUseCase,
+            resolveRetroAchievementsGame = appContainer.resolveRetroAchievementsGameUseCase,
+            observeRetroAchievementsCredentials = appContainer.observeRetroAchievementsCredentialsUseCase,
+            peekAchievementSummary = appContainer.peekGameAchievementSummaryUseCase,
+            getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
         ) as T
     }
 }

@@ -52,6 +52,26 @@ class EditWidgetsOverlayTest {
     }
 
     @Test
+    fun `widgetCatalogFor(Playing) includes AchievementSummary under the debug build unit tests run against`() {
+        // retroAchievementsEnabled() is a hardcoded BuildConfig.DEBUG check with no
+        // injection seam (see its kdoc) - unit tests run against the debug variant's
+        // generated BuildConfig, so DEBUG is always true here. This confirms the catalog
+        // entry exists and is gated by that same flag, not that it's hidden in release
+        // builds (BuildConfig.DEBUG's real value there isn't something a JVM unit test
+        // can flip).
+        val catalog = widgetCatalogFor(StateGroup.Playing)
+
+        assertTrue(catalog.any { it is WidgetType.AchievementSummary })
+    }
+
+    @Test
+    fun `widgetCatalogFor(System) excludes AchievementSummary`() {
+        val catalog = widgetCatalogFor(StateGroup.System)
+
+        assertTrue(catalog.none { it is WidgetType.AchievementSummary })
+    }
+
+    @Test
     fun `widgetCatalogFor(System) and widgetCatalogFor(Playing) both include CustomImage and ColorBackground`() {
         val systemCatalog = widgetCatalogFor(StateGroup.System)
         val playingCatalog = widgetCatalogFor(StateGroup.Playing)
