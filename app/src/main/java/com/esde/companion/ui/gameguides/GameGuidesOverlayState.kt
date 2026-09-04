@@ -84,6 +84,7 @@ fun rememberGameGuidesOverlayState(
 ): GameGuidesOverlayState {
     val viewModel: GameGuidesViewModel = viewModel(factory = GameGuidesViewModelFactory(appContainer))
     val hasCurrentGame by viewModel.hasCurrentGame.collectAsStateWithLifecycle()
+    val isBrowsingSystem by viewModel.isBrowsingSystem.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // "Exit" dismissal for the auto-trigger below - separate from the FAB-driven
@@ -113,6 +114,16 @@ fun rememberGameGuidesOverlayState(
     val guideOpenedDirectly = rememberSaveable { mutableStateOf(false) }
 
     val showOverlay = rememberSaveable { mutableStateOf(false) }
+
+    // Closes an open overlay outright when the user backs out to system browsing, rather than
+    // leaving it stuck showing whatever game it last resolved for - see
+    // GameGuidesViewModel.isBrowsingSystem's kdoc for why this specific signal (not a plain
+    // "no current game" check) is what's safe to react to here. Split into its own function
+    // (rather than an inline LaunchedEffect body here) purely to keep this composable under
+    // detekt's CyclomaticComplexMethod threshold.
+    LaunchedEffect(isBrowsingSystem) {
+        closeOverlayIfBrowsingSystem(isBrowsingSystem, showOverlay, guideAutoOpened, guideOpenedDirectly)
+    }
 
     // Reopening (tapping the FAB) always re-resolves Library-vs-Browser for
     // whichever game is current, rather than resuming whatever sub-state was
@@ -169,6 +180,22 @@ fun rememberGameGuidesOverlayState(
         openedDirectly = guideOpenedDirectly.value,
         actions = buildOverlayActions(viewModel, showOverlay, guideAutoOpened, guideOpenedDirectly, guideDismissed),
     )
+}
+
+/** See [rememberGameGuidesOverlayState]'s call site kdoc - skipped for a directly-opened
+ * overlay (Settings > Game Guides), which is deliberately independent of ES-DE's live state
+ * (see [GameGuidesOverlayActions.onOpenDirectly]'s kdoc), so it shouldn't be closed by a
+ * live-state change that has nothing to do with why it was opened. */
+private fun closeOverlayIfBrowsingSystem(
+    isBrowsingSystem: Boolean,
+    showOverlay: MutableState<Boolean>,
+    guideAutoOpened: MutableState<Boolean>,
+    guideOpenedDirectly: MutableState<Boolean>,
+) {
+    if (isBrowsingSystem && showOverlay.value && !guideOpenedDirectly.value) {
+        guideAutoOpened.value = false
+        showOverlay.value = false
+    }
 }
 
 private fun buildOverlayActions(

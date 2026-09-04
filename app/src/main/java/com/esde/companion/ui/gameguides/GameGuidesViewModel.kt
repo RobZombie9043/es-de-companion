@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.data.gameguides.GameFaqsBrowserBridge
 import com.esde.companion.domain.gameguides.GuideDownloadProgress
+import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameGuideDisplayPreferences
@@ -92,6 +93,22 @@ class GameGuidesViewModel(
     val hasCurrentGame: StateFlow<Boolean> =
         currentGame
             .map { it != null }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /**
+     * True only for [AppState.BrowsingSystem] specifically - unlike [hasCurrentGame], this is
+     * deliberately not "no current game" in general, since that would also be briefly true for
+     * a legitimate reason during [AppState.Screensaver]'s own startup (ES-DE fires
+     * screensaver-start before screensaver-game-select - see the `init` block's collector kdoc
+     * below for the regression that caused). [AppState.BrowsingSystem] carries no such
+     * transient-null case - it's a stable state the user stays in until picking a game again -
+     * so [GameGuidesOverlayState] uses this specifically to auto-close an open overlay when the
+     * user backs out to system browsing, rather than leaving it stuck showing the last game.
+     */
+    val isBrowsingSystem: StateFlow<Boolean> =
+        observeConnectionState()
+            .map { connection -> (connection as? EsdeConnectionState.Connected)?.appState is AppState.BrowsingSystem }
+            .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _uiState = MutableStateFlow<GameGuidesUiState>(GameGuidesUiState.NoGame)

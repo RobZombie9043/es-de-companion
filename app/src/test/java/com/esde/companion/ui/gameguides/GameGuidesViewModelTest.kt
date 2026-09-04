@@ -275,6 +275,25 @@ class GameGuidesViewModelTest {
             assertFalse(viewModel.hasCurrentGame.value)
         }
 
+    // --- isBrowsingSystem --------------------------------------------------------------------
+
+    @Test
+    fun `isBrowsingSystem is true only for AppState BrowsingSystem, not other no-game states`() =
+        runTest(testDispatcher) {
+            val esdeLogRepository = FakeEsdeLogRepository()
+            val viewModel = buildViewModel(esdeLogRepository)
+
+            assertFalse(viewModel.isBrowsingSystem.value)
+
+            esdeLogRepository.events.emit(EsdeEvent.SystemSelect("snes", "SNES", "/roms/snes"))
+            advanceUntilIdle()
+            assertTrue(viewModel.isBrowsingSystem.value)
+
+            esdeLogRepository.events.emit(EsdeEvent.GameStart("/roms/snes/a.sfc", "A", "snes", "SNES"))
+            advanceUntilIdle()
+            assertFalse(viewModel.isBrowsingSystem.value)
+        }
+
     // --- open() ------------------------------------------------------------------------
 
     @Test
