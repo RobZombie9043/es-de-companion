@@ -75,6 +75,24 @@ sealed class WidgetContent {
         val loopEnabled: Boolean,
         val cornerRadius: CornerRadius,
     ) : WidgetContent()
+
+    /**
+     * A resolved RetroAchievements progress snapshot for the current game - see
+     * WidgetContentResolver's AchievementSummary branch. [state] carries Loading/Unavailable/
+     * Loaded (see [AchievementSummaryWidgetState]'s kdoc) - raw numeric fields inside `Loaded`
+     * rather than a pre-formatted string, formatting happens at render time, same layering as
+     * `AchievementStatsHeader` in `ui/retroachievements/RetroAchievementsSummaryContent.kt`.
+     * Style fields mirror [WidgetType.AchievementSummary] exactly (this is a snapshot of that
+     * config plus the resolved [state]).
+     */
+    data class AchievementSummary(
+        val state: AchievementSummaryWidgetState,
+        val fontSizeSp: Float,
+        val textColorArgb: Long,
+        val backgroundColorArgb: Long,
+        val backgroundAlpha: Float,
+        val cornerRadius: CornerRadius,
+    ) : WidgetContent()
 }
 
 /** Media types that are transparent overlay-style content rather than an opaque
@@ -103,6 +121,7 @@ val WidgetType.isLogoStyle: Boolean
             is WidgetType.GameDescription,
             is WidgetType.Rating,
             is WidgetType.Video,
+            is WidgetType.AchievementSummary,
             -> false
         }
 
@@ -136,6 +155,7 @@ val WidgetType.cornerRadius: CornerRadius
             is WidgetType.GameDescription -> cornerRadius
             is WidgetType.Rating -> cornerRadius
             is WidgetType.Video -> cornerRadius
+            is WidgetType.AchievementSummary -> cornerRadius
         }
 
 /** Game-view box-art-style media where each new game's art should snap in instantly
@@ -224,6 +244,7 @@ val WidgetType.supportsImageTransition: Boolean
             is WidgetType.GameDescription,
             is WidgetType.Rating,
             is WidgetType.Video,
+            is WidgetType.AchievementSummary,
             -> false
         }
 
@@ -283,6 +304,7 @@ val WidgetType.supportsPanZoom: Boolean
             is WidgetType.GameDescription,
             is WidgetType.Rating,
             is WidgetType.Video,
+            is WidgetType.AchievementSummary,
             -> false
         }
 

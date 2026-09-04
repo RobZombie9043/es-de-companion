@@ -43,6 +43,7 @@ internal fun WidgetType.label(): String =
         is WidgetType.GameDescription -> "Description"
         is WidgetType.Rating -> "Rating"
         is WidgetType.Video -> "Video"
+        is WidgetType.AchievementSummary -> "Achievements"
     }
 
 /** Display label for a MediaType-backed System-canvas widget - only FanArt/Screenshots
@@ -294,6 +295,13 @@ internal fun ConfigureWidgetDialog(
                         RenderAboveUiConfig(
                             enabled = widgetType.renderAboveUi,
                         ) { onChange(widgetType.copy(renderAboveUi = it)) }
+                        CornerRadiusConfig(
+                            current = widgetType.cornerRadius,
+                        ) { onChange(widgetType.copy(cornerRadius = it)) }
+                    }
+
+                    is WidgetType.AchievementSummary -> {
+                        AchievementSummaryConfig(current = widgetType, onChange = onChange)
                         CornerRadiusConfig(
                             current = widgetType.cornerRadius,
                         ) { onChange(widgetType.copy(cornerRadius = it)) }

@@ -111,6 +111,46 @@ internal fun GameDescriptionConfig(
     }
 }
 
+/** Same fields/layout as [GameDescriptionConfig] - [WidgetType.AchievementSummary] mirrors
+ * [WidgetType.GameDescription]'s style fields exactly, see its kdoc. Uses [ColorSwatchPicker]
+ * (the shared swatch-row-plus-hex-input control [RatingConfig] already uses) rather than
+ * duplicating [GameDescriptionConfig]'s own inlined swatch rows. */
+@Composable
+internal fun AchievementSummaryConfig(
+    current: WidgetType.AchievementSummary,
+    onChange: (WidgetType.AchievementSummary) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Text Size: ${current.fontSizeSp.roundToInt()}sp", style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = current.fontSizeSp,
+                onValueChange = { onChange(current.copy(fontSizeSp = it)) },
+                valueRange = 10f..36f,
+            )
+        }
+        ColorSwatchPicker(
+            label = "Text Color",
+            current = current.textColorArgb,
+        ) { onChange(current.copy(textColorArgb = it)) }
+        ColorSwatchPicker(
+            label = "Background Color",
+            current = current.backgroundColorArgb,
+        ) { onChange(current.copy(backgroundColorArgb = it)) }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Background Transparency: ${(current.backgroundAlpha * 100).roundToInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Slider(
+                value = current.backgroundAlpha,
+                onValueChange = { onChange(current.copy(backgroundAlpha = it)) },
+                valueRange = 0f..1f,
+            )
+        }
+    }
+}
+
 /**
  * What a Rating widget shows for a game with no <rating> at all in gamelist.xml - see
  * [WidgetType.Rating.noRatingBehavior]'s kdoc for why this is distinct from a rating of

@@ -3,6 +3,7 @@ package com.esde.companion.ui.widgets.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.esde.companion.domain.model.APP_DRAWER_SHORTCUT_PACKAGE_NAME
+import com.esde.companion.domain.model.AchievementSummaryWidgetState
 import com.esde.companion.domain.model.AppDrawerShortcut
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.GameReference
@@ -10,6 +11,7 @@ import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetContentResolver
@@ -22,7 +24,9 @@ import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
@@ -30,6 +34,7 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
 import kotlinx.coroutines.Job
@@ -93,6 +98,9 @@ class EditWidgetsViewModel(
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
     private val observeLastSystemShortName: ObserveLastSystemShortNameUseCase,
     private val observeLastGameReference: ObserveLastGameReferenceUseCase,
+    private val resolveRetroAchievementsGame: ResolveRetroAchievementsGameUseCase,
+    private val observeRetroAchievementsCredentials: ObserveRetroAchievementsCredentialsUseCase,
+    private val peekAchievementSummary: PeekGameAchievementSummaryUseCase,
     observeDockEnabled: ObserveDockEnabledUseCase,
     observeDockSize: ObserveDockSizeUseCase,
     observeOverlayOpacity: ObserveOverlayOpacityUseCase,
@@ -408,6 +416,13 @@ class EditWidgetsViewModel(
                 null
             }
 
+        val achievementSummaryPeek =
+            if (widgets.any { it.widgetType is WidgetType.AchievementSummary }) {
+                resolveAchievementSummaryPreview(lastGameReference)
+            } else {
+                null
+            }
+
         return widgets.associate { widget ->
             widget.id to
                 WidgetContentResolver.resolve(
@@ -420,7 +435,53 @@ class EditWidgetsViewModel(
                     gameDescriptionLookup = { gameDescription?.text },
                     gameRatingLookup = { gameRating?.value },
                     fallbackBackgroundAssetPath = null,
+                    achievementSummaryLookup = { achievementSummaryPeek },
                 )
+        }
+    }
+
+    /**
+     * Cache-only peek for the edit-mode preview - never calls the network (never
+     * [com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase]), same reasoning
+     * as [WidgetContentResolver]'s live counterpart in `WidgetsViewModel`, but simpler here
+     * since edit mode isn't a continuous reactive loop - no memoization or background
+     * refresh needed. `gameName` is passed as an empty string:
+     * [ResolveRetroAchievementsGameUseCase] has no display title to compare against from
+     * [GameReference] alone, but its own filename-fallback tier (tried automatically when
+     * the title tier finds nothing) still applies, so an empty query only means the preview
+     * might use a slightly less precise match than the live screen would for the same game
+     * - an acceptable tradeoff for a cache-only preview, not the live display.
+     *
+     * Unlike the live `WidgetsViewModel` counterpart, a cache miss here returns `null`
+     * (→ the placeholder box) rather than [AchievementSummaryWidgetState.Loading] - edit mode
+     * never triggers a real fetch, so a permanent "Loading" spinner would be misleading. A
+     * genuine "no RetroAchievements match" (or a matched entry with zero achievements) still
+     * resolves to [AchievementSummaryWidgetState.Unavailable], since that's a fact already
+     * known synchronously, not something waiting on a fetch.
+     */
+    private suspend fun resolveAchievementSummaryPreview(gameRef: GameReference?): AchievementSummaryWidgetState? {
+        val signedIn = gameRef != null && observeRetroAchievementsCredentials().first() != null
+        if (!signedIn || gameRef == null) return null
+
+        val match = resolveRetroAchievementsGame(gameRef, "")
+        val gameId = (match as? RetroAchievementsGameMatch.Found)?.gameId
+        return if (gameId == null) {
+            AchievementSummaryWidgetState.Unavailable
+        } else {
+            peekAchievementSummary(gameId)?.let { peeked ->
+                if (peeked.summary.achievements.isEmpty()) {
+                    AchievementSummaryWidgetState.Unavailable
+                } else {
+                    AchievementSummaryWidgetState.Loaded(
+                        unlockedCount = peeked.summary.achievements.count { it.unlocked },
+                        totalCount = peeked.summary.achievements.size,
+                        earnedPoints = peeked.summary.earnedPoints,
+                        totalPoints = peeked.summary.totalPoints,
+                        completionPercent = peeked.summary.completionPercent,
+                        isRefreshing = peeked.isStale,
+                    )
+                }
+            }
         }
     }
 

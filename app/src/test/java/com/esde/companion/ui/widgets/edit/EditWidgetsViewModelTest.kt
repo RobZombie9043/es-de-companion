@@ -1,11 +1,17 @@
 package com.esde.companion.ui.widgets.edit
 
+import com.esde.companion.domain.model.AchievementItem
+import com.esde.companion.domain.model.AchievementSummaryPeek
+import com.esde.companion.domain.model.AchievementSummaryWidgetState
 import com.esde.companion.domain.model.DockSize
 import com.esde.companion.domain.model.FabAssignments
+import com.esde.companion.domain.model.GameAchievementSummary
 import com.esde.companion.domain.model.GameDescription
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameRating
 import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.GameRomHash
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.InstalledApp
 import com.esde.companion.domain.model.LogFolderValidation
@@ -13,6 +19,10 @@ import com.esde.companion.domain.model.MediaFolderValidation
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.MusicDuckingMode
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.RetroAchievementsAuthState
+import com.esde.companion.domain.model.RetroAchievementsCandidateGame
+import com.esde.companion.domain.model.RetroAchievementsConsole
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.ScreenBehavior
@@ -25,11 +35,15 @@ import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.DockSettingsRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.GameRatingRepository
+import com.esde.companion.domain.repository.GameRomHashRepository
 import com.esde.companion.domain.repository.InstalledAppsRepository
 import com.esde.companion.domain.repository.LastKnownContextRepository
 import com.esde.companion.domain.repository.OnboardingRepository
+import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
+import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
 import com.esde.companion.domain.usecase.ObserveDockAppsUseCase
@@ -40,7 +54,9 @@ import com.esde.companion.domain.usecase.ObserveInstalledAppsUseCase
 import com.esde.companion.domain.usecase.ObserveLastGameReferenceUseCase
 import com.esde.companion.domain.usecase.ObserveLastSystemShortNameUseCase
 import com.esde.companion.domain.usecase.ObserveOverlayOpacityUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
@@ -48,6 +64,7 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.domain.usecase.SaveWidgetCanvasUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -190,6 +207,80 @@ class EditWidgetsViewModelTest {
         private val assetPathsByName: Map<String, String> = emptyMap(),
     ) : BundledSystemLogoRepository {
         override suspend fun findLogoAssetPath(assetName: String): String? = assetPathsByName[assetName]
+    }
+
+    /** No test here places a WidgetType.AchievementSummary widget, so
+     * EditWidgetsViewModel.resolveAchievementSummaryPreview short-circuits on its own
+     * `widgets.any { ... }` check before ever touching credentials/resolution - the
+     * RetroAchievements fakes below exist only to satisfy the constructor and are never
+     * actually invoked unless a test explicitly places one. */
+    private class FakeRetroAchievementsCredentialsRepository(
+        signedInAs: RetroAchievementsCredentials? = null,
+    ) : RetroAchievementsCredentialsRepository {
+        private val credentials = MutableStateFlow(signedInAs)
+
+        override suspend fun setCredentials(credentials: RetroAchievementsCredentials) = error("not used in this test")
+
+        override suspend fun clearCredentials() = error("not used in this test")
+
+        override fun observeCredentials(): Flow<RetroAchievementsCredentials?> = credentials
+    }
+
+    private class FakeGameMatchOverrideRepository(
+        private val override: GameMatchOverride? = null,
+    ) : GameMatchOverrideRepository {
+        override suspend fun setOverride(override: GameMatchOverride) = error("not used in this test")
+
+        override suspend fun clearOverride(gameReference: GameReference) = error("not used in this test")
+
+        override suspend fun getOverride(gameReference: GameReference): GameMatchOverride? = override
+
+        override fun observeAllOverrides() = error("not used in this test")
+    }
+
+    private class FakeGameRomHashRepository : GameRomHashRepository {
+        override suspend fun resolveRomHash(
+            systemShortName: String,
+            romPath: String,
+        ): GameRomHash = error("not used in this test")
+    }
+
+    /** [getAchievementSummary] fails loudly if ever called - the edit-mode preview must
+     * only ever peek the cache, never trigger a real (network-capable) fetch. [candidates]
+     * backs [getCandidateGames] - only exercised when a test's [FakeGameMatchOverrideRepository]
+     * has no override, letting ResolveRetroAchievementsGameUseCase's real hash/title-matching
+     * tiers run (against an empty list by default, i.e. no match). */
+    private class RecordingRetroAchievementsRepository(
+        private val peekResult: AchievementSummaryPeek? = null,
+        private val candidates: List<RetroAchievementsCandidateGame> = emptyList(),
+    ) : RetroAchievementsRepository {
+        override suspend fun validateCredentials(creds: RetroAchievementsCredentials): RetroAchievementsAuthState {
+            error("not used in this test")
+        }
+
+        override suspend fun getCandidateGames(c: RetroAchievementsConsole): List<RetroAchievementsCandidateGame> {
+            return candidates
+        }
+
+        override suspend fun getAchievementSummary(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("edit-mode preview must never call the real fetch")
+
+        override suspend fun peekAchievementSummary(gameId: Long): AchievementSummaryPeek? = peekResult
+
+        override suspend fun getUserGameProgress() = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("not used in this test")
+
+        override suspend fun peekGameLeaderboards(gameId: Long) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
     }
 
     private class FakeLastKnownContextRepository(
@@ -415,6 +506,10 @@ class EditWidgetsViewModelTest {
         onboardingRepository: FakeOnboardingRepository = FakeOnboardingRepository(),
         dockSettingsRepository: FakeDockSettingsRepository = FakeDockSettingsRepository(),
         installedAppsRepository: FakeInstalledAppsRepository = FakeInstalledAppsRepository(),
+        gameMatchOverrideRepository: GameMatchOverrideRepository = FakeGameMatchOverrideRepository(),
+        retroAchievementsCredentialsRepository: RetroAchievementsCredentialsRepository =
+            FakeRetroAchievementsCredentialsRepository(),
+        retroAchievementsRepository: RetroAchievementsRepository = RecordingRetroAchievementsRepository(),
     ) = EditWidgetsViewModel(
         observeWidgetCanvas = ObserveWidgetCanvasUseCase(widgetLayoutRepository),
         saveWidgetCanvas = SaveWidgetCanvasUseCase(widgetLayoutRepository),
@@ -427,6 +522,15 @@ class EditWidgetsViewModelTest {
         resolveBundledSystemLogo = ResolveBundledSystemLogoUseCase(bundledSystemLogoRepository),
         observeLastSystemShortName = ObserveLastSystemShortNameUseCase(lastKnownContextRepository),
         observeLastGameReference = ObserveLastGameReferenceUseCase(lastKnownContextRepository),
+        resolveRetroAchievementsGame =
+            ResolveRetroAchievementsGameUseCase(
+                gameMatchOverrideRepository,
+                retroAchievementsRepository,
+                FakeGameRomHashRepository(),
+            ),
+        observeRetroAchievementsCredentials =
+            ObserveRetroAchievementsCredentialsUseCase(retroAchievementsCredentialsRepository),
+        peekAchievementSummary = PeekGameAchievementSummaryUseCase(retroAchievementsRepository),
         observeDockEnabled = ObserveDockEnabledUseCase(dockSettingsRepository),
         observeDockSize = ObserveDockSizeUseCase(dockSettingsRepository),
         observeOverlayOpacity = ObserveOverlayOpacityUseCase(onboardingRepository),
@@ -911,5 +1015,132 @@ class EditWidgetsViewModelTest {
 
             assertEquals(firstPick, secondPick)
             assertEquals(1, systemMediaRepository.callCount)
+        }
+
+    // --- AchievementSummary widget preview: cache-only peek, never a real fetch -----------
+
+    @Test
+    fun `previewContent shows a cached achievement summary via a cache-only peek`() =
+        runTest(testDispatcher) {
+            val gameReference = GameReference(systemShortName = "snes", romPath = "/roms/snes/game.sfc")
+            val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 1L)
+            val summary =
+                GameAchievementSummary(
+                    gameId = 1L,
+                    gameTitle = "Game",
+                    totalPoints = 500,
+                    earnedPoints = 150,
+                    completionPercent = 30f,
+                    achievements =
+                        listOf(
+                            AchievementItem(
+                                id = 1L,
+                                title = "First",
+                                description = "",
+                                points = 50,
+                                badgeUrl = null,
+                                unlocked = false,
+                                unlockedAt = null,
+                            ),
+                        ),
+                )
+            val repository =
+                FakeWidgetLayoutRepository().apply {
+                    seed(
+                        StateGroup.Playing,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.AchievementSummary())),
+                    )
+                }
+            val retroAchievementsRepository =
+                RecordingRetroAchievementsRepository(peekResult = AchievementSummaryPeek(summary, isStale = false))
+            val viewModel =
+                buildViewModel(
+                    widgetLayoutRepository = repository,
+                    lastKnownContextRepository = FakeLastKnownContextRepository(initialGameReference = gameReference),
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(override),
+                    retroAchievementsCredentialsRepository =
+                        FakeRetroAchievementsCredentialsRepository(
+                            signedInAs = RetroAchievementsCredentials(username = "player1", webApiKey = "key"),
+                        ),
+                    retroAchievementsRepository = retroAchievementsRepository,
+                )
+            viewModel.selectCanvas(StateGroup.Playing)
+            viewModel.setGridDimensions(grid)
+            advanceUntilIdle()
+
+            val content = viewModel.previewContent.value["widget-a"]
+            check(content is WidgetContent.AchievementSummary)
+            val loaded = content.state
+            check(loaded is AchievementSummaryWidgetState.Loaded)
+            assertEquals(150, loaded.earnedPoints)
+            assertEquals(500, loaded.totalPoints)
+        }
+
+    @Test
+    fun `previewContent resolves to Unavailable for AchievementSummary when the game has no RetroAchievements match`() =
+        runTest(testDispatcher) {
+            // An unsupported system (no EsdeSystemToRaConsoleMapping entry) short-circuits
+            // ResolveRetroAchievementsGameUseCase to UnsupportedSystem before it ever touches
+            // the candidate list/title-matching - unlike a genuine NoMatch on a supported
+            // system, which would hop to the real (non-test-dispatcher-controlled)
+            // Dispatchers.Default for title/hash matching and race this test's advanceUntilIdle().
+            val gameReference = GameReference(systemShortName = "windows", romPath = "/roms/windows/game.exe")
+            val repository =
+                FakeWidgetLayoutRepository().apply {
+                    seed(
+                        StateGroup.Playing,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.AchievementSummary())),
+                    )
+                }
+            val viewModel =
+                buildViewModel(
+                    widgetLayoutRepository = repository,
+                    lastKnownContextRepository = FakeLastKnownContextRepository(initialGameReference = gameReference),
+                    // No override configured - resolution falls through to NoMatch/UnsupportedSystem.
+                    retroAchievementsCredentialsRepository =
+                        FakeRetroAchievementsCredentialsRepository(
+                            signedInAs = RetroAchievementsCredentials(username = "player1", webApiKey = "key"),
+                        ),
+                )
+            viewModel.selectCanvas(StateGroup.Playing)
+            viewModel.setGridDimensions(grid)
+            advanceUntilIdle()
+
+            val content = viewModel.previewContent.value["widget-a"]
+            check(content is WidgetContent.AchievementSummary)
+            assertEquals(AchievementSummaryWidgetState.Unavailable, content.state)
+        }
+
+    @Test
+    fun `previewContent resolves to Empty for AchievementSummary when nothing is cached, without a real fetch`() =
+        runTest(testDispatcher) {
+            val gameReference = GameReference(systemShortName = "snes", romPath = "/roms/snes/game.sfc")
+            val override = GameMatchOverride(systemShortName = "snes", romPath = "/roms/snes/game.sfc", raGameId = 1L)
+            val repository =
+                FakeWidgetLayoutRepository().apply {
+                    seed(
+                        StateGroup.Playing,
+                        listOf(placedWidget(id = "widget-a", zIndex = 0, widgetType = WidgetType.AchievementSummary())),
+                    )
+                }
+            val viewModel =
+                buildViewModel(
+                    widgetLayoutRepository = repository,
+                    lastKnownContextRepository = FakeLastKnownContextRepository(initialGameReference = gameReference),
+                    gameMatchOverrideRepository = FakeGameMatchOverrideRepository(override),
+                    retroAchievementsCredentialsRepository =
+                        FakeRetroAchievementsCredentialsRepository(
+                            signedInAs = RetroAchievementsCredentials(username = "player1", webApiKey = "key"),
+                        ),
+                    retroAchievementsRepository = RecordingRetroAchievementsRepository(peekResult = null),
+                )
+            viewModel.selectCanvas(StateGroup.Playing)
+            viewModel.setGridDimensions(grid)
+            advanceUntilIdle()
+
+            // RecordingRetroAchievementsRepository.getAchievementSummary throws if called at
+            // all - reaching this assertion without a test failure already proves no real
+            // fetch happened.
+            assertEquals(WidgetContent.Empty, viewModel.previewContent.value["widget-a"])
         }
 }

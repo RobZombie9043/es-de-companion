@@ -146,4 +146,14 @@ internal sealed class WidgetTypeDto {
         val loopEnabled: Boolean = true,
         val cornerRadius: String = "None",
     ) : WidgetTypeDto()
+
+    /** Fields mirror [GameDescription]'s exactly - see WidgetType.AchievementSummary's kdoc. */
+    @Serializable
+    data class AchievementSummary(
+        val fontSizeSp: Float = 16f,
+        val textColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: String = "None",
+    ) : WidgetTypeDto()
 }

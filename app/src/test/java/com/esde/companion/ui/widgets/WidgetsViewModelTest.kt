@@ -1,15 +1,23 @@
 package com.esde.companion.ui.widgets
 
+import com.esde.companion.domain.model.AchievementSummaryPeek
 import com.esde.companion.domain.model.CornerRadius
 import com.esde.companion.domain.model.EsdeEvent
 import com.esde.companion.domain.model.GameDescription
+import com.esde.companion.domain.model.GameMatchOverride
 import com.esde.companion.domain.model.GameMedia
 import com.esde.companion.domain.model.GameRating
+import com.esde.companion.domain.model.GameReference
+import com.esde.companion.domain.model.GameRomHash
 import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.ImageEffects
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.PillarboxMode
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.RetroAchievementsAuthState
+import com.esde.companion.domain.model.RetroAchievementsCandidateGame
+import com.esde.companion.domain.model.RetroAchievementsConsole
+import com.esde.companion.domain.model.RetroAchievementsCredentials
 import com.esde.companion.domain.model.SavedWidgetCanvas
 import com.esde.companion.domain.model.ScaleMode
 import com.esde.companion.domain.model.StateGroup
@@ -20,13 +28,20 @@ import com.esde.companion.domain.repository.CustomSystemImageRepository
 import com.esde.companion.domain.repository.CustomSystemLogoRepository
 import com.esde.companion.domain.repository.EsdeLogRepository
 import com.esde.companion.domain.repository.GameDescriptionRepository
+import com.esde.companion.domain.repository.GameMatchOverrideRepository
 import com.esde.companion.domain.repository.GameMediaRepository
 import com.esde.companion.domain.repository.GameRatingRepository
+import com.esde.companion.domain.repository.GameRomHashRepository
+import com.esde.companion.domain.repository.RetroAchievementsCredentialsRepository
+import com.esde.companion.domain.repository.RetroAchievementsRepository
 import com.esde.companion.domain.repository.SystemMediaRepository
 import com.esde.companion.domain.repository.WidgetLayoutRepository
+import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ObserveAppStateUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
@@ -34,6 +49,7 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -183,6 +199,68 @@ class WidgetsViewModelTest {
         override suspend fun findLogoAssetPath(assetName: String): String? = null
     }
 
+    /** No test here places a WidgetType.AchievementSummary widget (see
+     * [WidgetsViewModelAchievementSummaryTest] for those), so
+     * WidgetsViewModel.resolveAchievementSummary short-circuits on its own `widgets.none {
+     * ... }` check before ever touching credentials/resolution - these RetroAchievements
+     * fakes exist only to satisfy the constructor and are never actually invoked. */
+    private class FakeRetroAchievementsRepository : RetroAchievementsRepository {
+        override suspend fun validateCredentials(creds: RetroAchievementsCredentials): RetroAchievementsAuthState {
+            error("not used in this test")
+        }
+
+        override suspend fun getCandidateGames(c: RetroAchievementsConsole): List<RetroAchievementsCandidateGame> {
+            error("not used in this test")
+        }
+
+        override suspend fun getAchievementSummary(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("not used in this test")
+
+        override suspend fun peekAchievementSummary(id: Long): AchievementSummaryPeek? = error("not used in this test")
+
+        override suspend fun getUserGameProgress() = error("not used in this test")
+
+        override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
+
+        override suspend fun getGameLeaderboards(
+            gameId: Long,
+            forceRefresh: Boolean,
+        ) = error("not used in this test")
+
+        override suspend fun peekGameLeaderboards(gameId: Long) = error("not used in this test")
+
+        override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
+    }
+
+    private class FakeRetroAchievementsCredentialsRepository : RetroAchievementsCredentialsRepository {
+        private val credentials = MutableStateFlow<RetroAchievementsCredentials?>(null)
+
+        override suspend fun setCredentials(credentials: RetroAchievementsCredentials) = error("not used in this test")
+
+        override suspend fun clearCredentials() = error("not used in this test")
+
+        override fun observeCredentials(): Flow<RetroAchievementsCredentials?> = credentials
+    }
+
+    private class FakeGameMatchOverrideRepository : GameMatchOverrideRepository {
+        override suspend fun setOverride(override: GameMatchOverride) = error("not used in this test")
+
+        override suspend fun clearOverride(gameReference: GameReference) = error("not used in this test")
+
+        override suspend fun getOverride(gameReference: GameReference): GameMatchOverride? = null
+
+        override fun observeAllOverrides() = error("not used in this test")
+    }
+
+    private class FakeGameRomHashRepository : GameRomHashRepository {
+        override suspend fun resolveRomHash(
+            systemShortName: String,
+            romPath: String,
+        ): GameRomHash = GameRomHash(value = null)
+    }
+
     // --- Setup ---------------------------------------------------------------------------
 
     private val testDispatcher = StandardTestDispatcher()
@@ -225,6 +303,7 @@ class WidgetsViewModelTest {
     ): WidgetsViewModel {
         val observeAppState = ObserveAppStateUseCase(esdeLogRepository, backgroundScope)
         val observeConnectionState = ObserveConnectionStateUseCase(esdeLogRepository, observeAppState)
+        val retroAchievementsRepository = FakeRetroAchievementsRepository()
         val viewModel =
             WidgetsViewModel(
                 observeConnectionState = observeConnectionState,
@@ -236,6 +315,16 @@ class WidgetsViewModelTest {
                 resolveCustomSystemImage = ResolveCustomSystemImageUseCase(customSystemImageRepository),
                 resolveCustomSystemLogo = ResolveCustomSystemLogoUseCase(customSystemLogoRepository),
                 resolveBundledSystemLogo = ResolveBundledSystemLogoUseCase(bundledSystemLogoRepository),
+                resolveRetroAchievementsGame =
+                    ResolveRetroAchievementsGameUseCase(
+                        FakeGameMatchOverrideRepository(),
+                        retroAchievementsRepository,
+                        FakeGameRomHashRepository(),
+                    ),
+                observeRetroAchievementsCredentials =
+                    ObserveRetroAchievementsCredentialsUseCase(FakeRetroAchievementsCredentialsRepository()),
+                peekAchievementSummary = PeekGameAchievementSummaryUseCase(retroAchievementsRepository),
+                getAchievementSummary = GetGameAchievementSummaryUseCase(retroAchievementsRepository),
             )
         // canvasState is WhileSubscribed - simulates the always-on UI collector
         // (MainScreen's collectAsState()) so reading .value in tests reflects live updates,

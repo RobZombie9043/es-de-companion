@@ -2,6 +2,8 @@ package com.esde.companion.ui.widgets
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.esde.companion.domain.model.AchievementSummaryPeek
+import com.esde.companion.domain.model.AchievementSummaryWidgetState
 import com.esde.companion.domain.model.AppState
 import com.esde.companion.domain.model.EsdeConnectionState
 import com.esde.companion.domain.model.GameReference
@@ -9,6 +11,7 @@ import com.esde.companion.domain.model.GridDimensions
 import com.esde.companion.domain.model.MediaType
 import com.esde.companion.domain.model.NavigationDirection
 import com.esde.companion.domain.model.PlacedWidget
+import com.esde.companion.domain.model.RetroAchievementsGameMatch
 import com.esde.companion.domain.model.StateGroup
 import com.esde.companion.domain.model.WidgetContent
 import com.esde.companion.domain.model.WidgetContentResolver
@@ -16,8 +19,11 @@ import com.esde.companion.domain.model.WidgetType
 import com.esde.companion.domain.model.currentGameReference
 import com.esde.companion.domain.model.navigationDirection
 import com.esde.companion.domain.model.stateGroup
+import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ObserveConnectionStateUseCase
+import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveWidgetCanvasUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.ResolveBundledSystemLogoUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemImageUseCase
 import com.esde.companion.domain.usecase.ResolveCustomSystemLogoUseCase
@@ -25,6 +31,7 @@ import com.esde.companion.domain.usecase.ResolveGameDescriptionUseCase
 import com.esde.companion.domain.usecase.ResolveGameMediaUseCase
 import com.esde.companion.domain.usecase.ResolveGameRatingUseCase
 import com.esde.companion.domain.usecase.ResolveRandomSystemMediaUseCase
+import com.esde.companion.domain.usecase.ResolveRetroAchievementsGameUseCase
 import com.esde.companion.ui.main.systemLogoAssetName
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -34,10 +41,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * Resolves the live widget canvas: which StateGroup applies to the current AppState (if
@@ -56,6 +66,10 @@ class WidgetsViewModel(
     private val resolveCustomSystemImage: ResolveCustomSystemImageUseCase,
     private val resolveCustomSystemLogo: ResolveCustomSystemLogoUseCase,
     private val resolveBundledSystemLogo: ResolveBundledSystemLogoUseCase,
+    private val resolveRetroAchievementsGame: ResolveRetroAchievementsGameUseCase,
+    private val observeRetroAchievementsCredentials: ObserveRetroAchievementsCredentialsUseCase,
+    private val peekAchievementSummary: PeekGameAchievementSummaryUseCase,
+    private val getAchievementSummary: GetGameAchievementSummaryUseCase,
 ) : ViewModel() {
     /** Caches the current system's random picks (per media type), reused as long as
      * [randomSystemMediaCacheSystem] still matches the system being resolved for - so a
@@ -79,6 +93,123 @@ class WidgetsViewModel(
             randomSystemMediaCacheSystem = systemShortName
         }
         return randomSystemMediaCache.getOrPut(mediaType) { resolveRandomSystemMedia(systemShortName, mediaType) }
+    }
+
+    // Same per-key memoization shape as randomSystemMediaCacheSystem/randomSystemMediaCache
+    // above - resolveContent can re-run for reasons unrelated to the game actually changing
+    // (grid resize, achievementRefreshTrigger bumps below), and ResolveRetroAchievementsGameUseCase's
+    // title-matching is real CPU work that shouldn't redo for an unchanged GameReference.
+    private var lastResolvedAchievementsGameRef: GameReference? = null
+    private var lastResolvedAchievementsGameMatch: RetroAchievementsGameMatch? = null
+
+    private suspend fun resolveRetroAchievementsGameCached(
+        gameRef: GameReference,
+        gameName: String,
+    ): RetroAchievementsGameMatch {
+        val cached = lastResolvedAchievementsGameMatch
+        if (lastResolvedAchievementsGameRef == gameRef && cached != null) {
+            return cached
+        }
+        val match = resolveRetroAchievementsGame(gameRef, gameName)
+        lastResolvedAchievementsGameRef = gameRef
+        lastResolvedAchievementsGameMatch = match
+        return match
+    }
+
+    // Bumped after a background achievement-summary fetch completes (see
+    // resolveAchievementSummary), re-triggering canvasState's flatMapLatest so the newly
+    // (or freshly) cached value gets peeked and shown - see this ViewModel's class kdoc
+    // for why a widget-specific side channel into WidgetCanvas isn't needed for this.
+    private val achievementRefreshTrigger = MutableStateFlow(0)
+
+    // One background-fetch attempt per gameId per ViewModel lifetime, not a periodic poll -
+    // deliberately simple, matching this session's "no periodic refresh" limitation.
+    private var lastAchievementFetchGameId: Long? = null
+
+    // Set (to the same gameId) once that attempt actually finishes - peekAchievementSummary
+    // only ever returns non-null for a cached Success (see AchievementSummaryCache.peek's
+    // kdoc), so a NotFound/NetworkError fetch result leaves peek permanently null for that
+    // gameId. Without this, resolveAchievementSummary would read that as "still loading"
+    // forever instead of "tried, nothing there" - see toWidgetState.
+    private var completedAchievementFetchGameId: Long? = null
+
+    /**
+     * Resolves what the AchievementSummary widget should show. `null` means "not eligible at
+     * all" (no such widget on this canvas, no current game, or signed out) - resolves to
+     * [WidgetContent.Empty] (hidden), see [WidgetContentResolver]'s AchievementSummary branch.
+     * Otherwise always returns a real [AchievementSummaryWidgetState] - [AchievementSummaryWidgetState.Loading]
+     * while a background fetch is in flight rather than hiding the widget until it resolves,
+     * and [AchievementSummaryWidgetState.Unavailable] for a game with no RetroAchievements
+     * match (or a matched entry with zero achievements, or a completed fetch that found
+     * nothing) rather than looking identical to "not eligible" or staying stuck on Loading.
+     */
+    private suspend fun resolveAchievementSummary(
+        widgets: List<PlacedWidget>,
+        identity: ContentIdentity,
+    ): AchievementSummaryWidgetState? {
+        val match = resolveEligibleAchievementsMatch(widgets, identity) ?: return null
+        val gameId = (match as? RetroAchievementsGameMatch.Found)?.gameId
+        return if (gameId == null) {
+            AchievementSummaryWidgetState.Unavailable
+        } else {
+            val peeked = peekAndMaybeFetchAchievementSummary(gameId)
+            peeked.toWidgetState(fetchCompleted = completedAchievementFetchGameId == gameId)
+        }
+    }
+
+    /** The `null`-returning eligibility gates for [resolveAchievementSummary], split out so
+     * neither function trips detekt's ReturnCount limit. */
+    private suspend fun resolveEligibleAchievementsMatch(
+        widgets: List<PlacedWidget>,
+        identity: ContentIdentity,
+    ): RetroAchievementsGameMatch? {
+        val gameRef = identity.gameRef
+        val gameName = identity.gameName
+        val eligible =
+            widgets.any { it.widgetType is WidgetType.AchievementSummary } &&
+                gameRef != null &&
+                gameName != null &&
+                observeRetroAchievementsCredentials().first() != null
+        if (!eligible || gameRef == null || gameName == null) return null
+
+        return resolveRetroAchievementsGameCached(gameRef, gameName)
+    }
+
+    /** Cache-only peek, kicking off a background fetch (never blocking this function) when
+     * nothing useful is cached yet - see [resolveAchievementSummary]'s kdoc. */
+    private suspend fun peekAndMaybeFetchAchievementSummary(gameId: Long): AchievementSummaryPeek? {
+        val peeked = peekAchievementSummary(gameId)
+        if ((peeked == null || peeked.isStale) && lastAchievementFetchGameId != gameId) {
+            lastAchievementFetchGameId = gameId
+            viewModelScope.launch {
+                getAchievementSummary(gameId)
+                completedAchievementFetchGameId = gameId
+                achievementRefreshTrigger.update { it + 1 }
+            }
+        }
+        return peeked
+    }
+
+    private fun AchievementSummaryPeek?.toWidgetState(fetchCompleted: Boolean): AchievementSummaryWidgetState {
+        if (this == null) {
+            return if (fetchCompleted) {
+                AchievementSummaryWidgetState.Unavailable
+            } else {
+                AchievementSummaryWidgetState.Loading
+            }
+        }
+        return if (summary.achievements.isEmpty()) {
+            AchievementSummaryWidgetState.Unavailable
+        } else {
+            AchievementSummaryWidgetState.Loaded(
+                unlockedCount = summary.achievements.count { it.unlocked },
+                totalCount = summary.achievements.size,
+                earnedPoints = summary.earnedPoints,
+                totalPoints = summary.totalPoints,
+                completionPercent = summary.completionPercent,
+                isRefreshing = isStale,
+            )
+        }
     }
 
     private val gridDimensions = MutableStateFlow<GridDimensions?>(null)
@@ -137,7 +268,9 @@ class WidgetsViewModel(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val canvasState: StateFlow<WidgetCanvasState> =
-        combine(contentIdentity, gridDimensions.filterNotNull()) { identity, grid -> identity to grid }
+        combine(contentIdentity, gridDimensions.filterNotNull(), achievementRefreshTrigger) { identity, grid, _ ->
+            identity to grid
+        }
             .flatMapLatest { (identity, grid) ->
                 if (identity == null) {
                     flowOf(WidgetCanvasState.Disconnected)
@@ -228,6 +361,8 @@ class WidgetsViewModel(
                 null
             }
 
+        val achievementSummaryPeek = resolveAchievementSummary(widgets, identity)
+
         return widgets.associate { widget ->
             widget.id to
                 WidgetContentResolver.resolve(
@@ -244,6 +379,7 @@ class WidgetsViewModel(
                     systemNameLookup = { identity.systemFullName },
                     gameNameLookup = { identity.gameName },
                     videoLookup = { gameMedia?.path(MediaType.Videos).takeIf { identity.isBrowsingGame } },
+                    achievementSummaryLookup = { achievementSummaryPeek },
                 )
         }
     }

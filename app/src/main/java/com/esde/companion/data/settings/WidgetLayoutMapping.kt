@@ -135,6 +135,14 @@ private fun WidgetType.toDto(): WidgetTypeDto =
                 loopEnabled,
                 cornerRadius.toDto(),
             )
+        is WidgetType.AchievementSummary ->
+            WidgetTypeDto.AchievementSummary(
+                fontSizeSp,
+                textColorArgb,
+                backgroundColorArgb,
+                backgroundAlpha,
+                cornerRadius.toDto(),
+            )
     }
 
 private fun WidgetTypeDto.toDomain(): WidgetType =
@@ -176,6 +184,14 @@ private fun WidgetTypeDto.toDomain(): WidgetType =
             )
         is WidgetTypeDto.Rating -> toDomainRating()
         is WidgetTypeDto.Video -> toDomainVideo()
+        is WidgetTypeDto.AchievementSummary ->
+            WidgetType.AchievementSummary(
+                fontSizeSp,
+                textColorArgb,
+                backgroundColorArgb,
+                backgroundAlpha,
+                cornerRadius.toCornerRadius(),
+            )
     }
 
 private fun WidgetTypeDto.SystemMedia.toDomainSystemMedia(): WidgetType.SystemMedia {

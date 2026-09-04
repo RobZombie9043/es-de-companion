@@ -209,6 +209,23 @@ sealed class WidgetType {
         val loopEnabled: Boolean = true,
         val cornerRadius: CornerRadius = CornerRadius.None,
     ) : WidgetType()
+
+    /**
+     * A compact RetroAchievements progress summary (unlocked/total, points, completion %)
+     * for the currently identified game - only ever resolves while signed in to
+     * RetroAchievements and a game is identified, see WidgetContentResolver's
+     * AchievementSummary branch. No scaleMode/ImageEffects - not image-backed, same
+     * reasoning as GameDescription/Rating, which this mirrors field-for-field. Debug-only
+     * for now - see `data/retroachievements/RetroAchievementsFeatureFlag.kt` and
+     * `EditWidgetsOverlay.widgetCatalogFor`.
+     */
+    data class AchievementSummary(
+        val fontSizeSp: Float = 16f,
+        val textColorArgb: Long = 0xFFFFFFFF,
+        val backgroundColorArgb: Long = 0xFF000000,
+        val backgroundAlpha: Float = 0.5f,
+        val cornerRadius: CornerRadius = CornerRadius.None,
+    ) : WidgetType()
 }
 
 /** What a Rating widget shows for a game with no <rating> in gamelist.xml at all. See
