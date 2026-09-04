@@ -110,12 +110,22 @@ internal fun RetroAchievementsFetchBody(
                     CircularProgressIndicator()
                 }
             is RetroAchievementsFetchState.Loaded ->
-                AchievementSummaryList(
-                    summary = targetFetch.summary,
-                    listControls = listControls,
-                    expansion = expansion,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AchievementSummaryList(
+                        summary = targetFetch.summary,
+                        listControls = listControls,
+                        expansion = expansion,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    // A stale cached summary shown immediately while a background refresh runs
+                    // (stale-while-revalidate) - see RetroAchievementsFetchState.Loaded's kdoc.
+                    if (targetFetch.isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp).size(REFRESH_INDICATOR_SIZE),
+                            strokeWidth = REFRESH_INDICATOR_STROKE_WIDTH,
+                        )
+                    }
+                }
             RetroAchievementsFetchState.NotFound ->
                 RetroAchievementsMessage(
                     "This game's RetroAchievements entry couldn't be found.",
@@ -347,6 +357,8 @@ private fun formatCommentDate(submittedAtMillis: Long): String {
     return date.format(UNLOCK_DATE_FORMAT)
 }
 
+private val REFRESH_INDICATOR_SIZE = 20.dp
+private val REFRESH_INDICATOR_STROKE_WIDTH = 2.dp
 private val ACHIEVEMENT_BADGE_SIZE = 48.dp
 private val COMMENTS_PROGRESS_SIZE = 20.dp
 private val UNLOCK_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")

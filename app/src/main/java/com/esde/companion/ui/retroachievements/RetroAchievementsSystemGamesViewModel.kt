@@ -26,6 +26,8 @@ import com.esde.companion.domain.usecase.ObservePlaytimeStatsHardcoreModeEnabled
 import com.esde.companion.domain.usecase.ObserveRetroAchievementsCredentialsUseCase
 import com.esde.companion.domain.usecase.ObserveScreensaverAwareContextUseCase
 import com.esde.companion.domain.usecase.ObserveUpdateAchievementsOnScreensaverEnabledUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
+import com.esde.companion.domain.usecase.PeekGameLeaderboardsUseCase
 import com.esde.companion.domain.usecase.SetPlaytimeStatsHardcoreModeEnabledUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -88,9 +90,11 @@ class RetroAchievementsSystemGamesViewModel(
     private val setPlaytimeStatsHardcoreModeEnabled: SetPlaytimeStatsHardcoreModeEnabledUseCase,
     private val getSystemGames: GetRetroAchievementsSystemGamesUseCase,
     private val getAchievementSummary: GetGameAchievementSummaryUseCase,
+    private val peekAchievementSummary: PeekGameAchievementSummaryUseCase,
     private val getUserGameProgress: GetUserGameProgressUseCase,
     private val getAchievementComments: GetAchievementCommentsUseCase,
     private val getGameLeaderboards: GetGameLeaderboardsUseCase,
+    private val peekGameLeaderboards: PeekGameLeaderboardsUseCase,
     private val getLeaderboardEntries: GetLeaderboardEntriesUseCase,
 ) : ViewModel() {
     // Set by MainActivity via onOverlayVisibilityChanged - see resolveAchievementsSystem's kdoc
@@ -240,21 +244,48 @@ class RetroAchievementsSystemGamesViewModel(
     private suspend fun loadSelectedGame(game: RetroAchievementsCandidateGame?) {
         achievementDisplay.onTargetChanged()
         leaderboardDisplay.onTargetChanged()
-        _selectedGameLeaderboardsFetch.value = LeaderboardsFetchState.Idle
+        // _selectedGameLeaderboardsFetch is deliberately left untouched until the outcome
+        // (including a cached peek) is known below - see RetroAchievementsViewModel.resolveAndFetch's
+        // equivalent comment for why resetting it to Idle here would flash a dash in the mode-toggle
+        // chip even when a cached value already exists to show immediately.
         if (game == null) {
             _selectedGameFetch.value = RetroAchievementsFetchState.Idle
+            _selectedGameLeaderboardsFetch.value = LeaderboardsFetchState.Idle
             return
         }
-        _selectedGameFetch.value = RetroAchievementsFetchState.Loading
-        _selectedGameLeaderboardsFetch.value = LeaderboardsFetchState.Loading
         // Both fetched concurrently, and both consume the same forceRefresh flag - see
         // RetroAchievementsViewModel.resolveAndFetch's equivalent comment.
         val refresh = forceRefresh.consume()
+        // Stale-while-revalidate, for both facets - see RetroAchievementsViewModel.resolveAndFetch's
+        // equivalent comment.
+        val peekedAchievements = if (refresh) null else peekAchievementSummary(game.gameId)
+        val peekedLeaderboards = if (refresh) null else peekGameLeaderboards(game.gameId)
+        _selectedGameFetch.value =
+            if (peekedAchievements != null) {
+                RetroAchievementsFetchState.Loaded(
+                    peekedAchievements.summary,
+                    isRefreshing = peekedAchievements.isStale,
+                )
+            } else {
+                RetroAchievementsFetchState.Loading
+            }
+        _selectedGameLeaderboardsFetch.value =
+            if (peekedLeaderboards != null) {
+                LeaderboardsFetchState.Loaded(peekedLeaderboards.summary, isRefreshing = peekedLeaderboards.isStale)
+            } else {
+                LeaderboardsFetchState.Loading
+            }
         coroutineScope {
-            val achievementsDeferred = async { getAchievementSummary(game.gameId, refresh) }
-            val leaderboardsDeferred = async { getGameLeaderboards(game.gameId, refresh) }
-            _selectedGameFetch.value = achievementsDeferred.await().toFetchState()
-            _selectedGameLeaderboardsFetch.value = leaderboardsDeferred.await().toFetchState()
+            val leaderboardsDeferred =
+                if (peekedLeaderboards == null || peekedLeaderboards.isStale) {
+                    async { getGameLeaderboards(game.gameId, refresh) }
+                } else {
+                    null
+                }
+            if (peekedAchievements == null || peekedAchievements.isStale) {
+                _selectedGameFetch.value = getAchievementSummary(game.gameId, refresh).toFetchState()
+            }
+            leaderboardsDeferred?.let { _selectedGameLeaderboardsFetch.value = it.await().toFetchState() }
         }
     }
 

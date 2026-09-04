@@ -4,6 +4,8 @@ import com.esde.companion.domain.model.GameLeaderboardsSummary
 import com.esde.companion.domain.model.LeaderboardsFetchResult
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Clock
 import java.time.Instant
@@ -127,5 +129,39 @@ class GameLeaderboardsCacheTest {
 
             assertEquals(leaderboards(), result)
             assertEquals(1, callCount)
+        }
+
+    @Test
+    fun `peek returns null when nothing is cached`() =
+        runTest {
+            val cache = GameLeaderboardsCache(fixedClock)
+
+            assertNull(cache.peek("player1", 1L))
+        }
+
+    @Test
+    fun `peek returns a fresh in-memory hit as not stale`() =
+        runTest {
+            val cache = GameLeaderboardsCache(fixedClock)
+            cache.getLeaderboards("player1", 1L) { leaderboards() }
+
+            val peeked = cache.peek("player1", 1L)
+
+            assertEquals(1L, peeked?.summary?.gameId)
+            assertEquals(false, peeked?.isStale)
+        }
+
+    @Test
+    fun `peek reports a TTL-expired entry as stale without triggering a fetch`() =
+        runTest {
+            val clock = MutableClock(now)
+            val cache = GameLeaderboardsCache(clock)
+            cache.getLeaderboards("player1", 1L) { leaderboards() }
+            clock.advanceBy(fifteenMinutes + 1)
+
+            val peeked = cache.peek("player1", 1L)
+
+            assertEquals(1L, peeked?.summary?.gameId)
+            assertTrue(peeked?.isStale == true)
         }
 }

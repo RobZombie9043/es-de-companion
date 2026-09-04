@@ -2,6 +2,8 @@ package com.esde.companion.domain.repository
 
 import com.esde.companion.domain.model.AchievementCommentsFetchResult
 import com.esde.companion.domain.model.AchievementSummaryFetchResult
+import com.esde.companion.domain.model.AchievementSummaryPeek
+import com.esde.companion.domain.model.GameLeaderboardsPeek
 import com.esde.companion.domain.model.LeaderboardEntriesFetchResult
 import com.esde.companion.domain.model.LeaderboardsFetchResult
 import com.esde.companion.domain.model.RetroAchievementsAuthState
@@ -40,6 +42,13 @@ interface RetroAchievementsRepository {
     ): AchievementSummaryFetchResult
 
     /**
+     * A cache-only peek at [gameId]'s achievement summary - never triggers a network fetch,
+     * `null` if nothing is cached (signed out, or never fetched/persisted). See
+     * [AchievementSummaryPeek]'s kdoc.
+     */
+    suspend fun peekAchievementSummary(gameId: Long): AchievementSummaryPeek?
+
+    /**
      * The signed-in user's cross-console completion progress, keyed by RA gameId. Returns
      * `emptyMap()` when signed out or on total failure, mirroring [getCandidateGames]'s
      * `emptyList()` contract - a game absent from the map has no recorded progress, not
@@ -58,6 +67,12 @@ interface RetroAchievementsRepository {
         gameId: Long,
         forceRefresh: Boolean = false,
     ): LeaderboardsFetchResult
+
+    /**
+     * A cache-only peek at [gameId]'s leaderboard list - never triggers a network fetch, `null`
+     * if nothing is cached. See [GameLeaderboardsPeek]'s kdoc.
+     */
+    suspend fun peekGameLeaderboards(gameId: Long): GameLeaderboardsPeek?
 
     /** [leaderboardId]'s entries, already resolved through whatever caching the implementation applies. */
     suspend fun getLeaderboardEntries(leaderboardId: Long): LeaderboardEntriesFetchResult

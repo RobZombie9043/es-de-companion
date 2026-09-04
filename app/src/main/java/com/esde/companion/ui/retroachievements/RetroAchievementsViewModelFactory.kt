@@ -15,7 +15,9 @@ class RetroAchievementsViewModelFactory(
         val detailUseCases =
             RetroAchievementsDetailUseCases(
                 getAchievementSummary = appContainer.getGameAchievementSummaryUseCase,
+                peekAchievementSummary = appContainer.peekGameAchievementSummaryUseCase,
                 getGameLeaderboards = appContainer.getGameLeaderboardsUseCase,
+                peekGameLeaderboards = appContainer.peekGameLeaderboardsUseCase,
                 getHashSupport = appContainer.getGameHashSupportUseCase,
             )
         val observeUpdateOnScreensaver = appContainer.observeUpdateAchievementsOnScreensaverEnabledUseCase

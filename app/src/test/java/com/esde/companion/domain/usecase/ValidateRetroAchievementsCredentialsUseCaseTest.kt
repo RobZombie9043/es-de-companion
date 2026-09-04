@@ -33,6 +33,8 @@ class ValidateRetroAchievementsCredentialsUseCaseTest {
             error("not used in this test")
         }
 
+        override suspend fun peekAchievementSummary(gameId: Long) = error("not used in this test")
+
         override suspend fun getUserGameProgress() = error("not used in this test")
 
         override suspend fun getAchievementComments(achievementId: Long) = error("not used in this test")
@@ -41,6 +43,8 @@ class ValidateRetroAchievementsCredentialsUseCaseTest {
             gameId: Long,
             forceRefresh: Boolean,
         ) = error("not used in this test")
+
+        override suspend fun peekGameLeaderboards(gameId: Long) = error("not used in this test")
 
         override suspend fun getLeaderboardEntries(leaderboardId: Long) = error("not used in this test")
     }

@@ -3,6 +3,8 @@ package com.esde.companion.ui.retroachievements
 import com.esde.companion.domain.usecase.GetGameAchievementSummaryUseCase
 import com.esde.companion.domain.usecase.GetGameHashSupportUseCase
 import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
+import com.esde.companion.domain.usecase.PeekGameAchievementSummaryUseCase
+import com.esde.companion.domain.usecase.PeekGameLeaderboardsUseCase
 
 /**
  * Bundles the use cases [RetroAchievementsViewModel] calls once a game has already resolved to
@@ -13,11 +15,13 @@ import com.esde.companion.domain.usecase.GetGameLeaderboardsUseCase
  * Scoped to callers that need these fetches together - today, only [RetroAchievementsViewModel].
  * [RetroAchievementsSystemGamesViewModel] never needs hash support (its game is explicitly
  * picked, not automatically resolved, so there's nothing to correct), so it takes
- * [GetGameAchievementSummaryUseCase]/[GetGameLeaderboardsUseCase] directly instead of depending
- * on this bundle.
+ * [GetGameAchievementSummaryUseCase]/[GetGameLeaderboardsUseCase]/[PeekGameAchievementSummaryUseCase]/
+ * [PeekGameLeaderboardsUseCase] directly instead of depending on this bundle.
  */
 class RetroAchievementsDetailUseCases(
     val getAchievementSummary: GetGameAchievementSummaryUseCase,
+    val peekAchievementSummary: PeekGameAchievementSummaryUseCase,
     val getGameLeaderboards: GetGameLeaderboardsUseCase,
+    val peekGameLeaderboards: PeekGameLeaderboardsUseCase,
     val getHashSupport: GetGameHashSupportUseCase,
 )
