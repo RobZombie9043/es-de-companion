@@ -14,9 +14,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -34,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.esde.companion.domain.model.DownloadedGameGuide
 import com.esde.companion.domain.model.GameGuideFormat
+import com.esde.companion.ui.settings.SettingsLabel
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.widgets.fallbackBackgroundAssetPath
 import java.util.Locale
@@ -155,7 +159,7 @@ private fun GuideLibraryList(
         modifier = Modifier.fillMaxSize().padding(top = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { SectionHeader("Guides") }
+        item { SectionHeader(icon = Icons.Filled.LibraryBooks, title = "Guides") }
         if (state.guides.isEmpty()) {
             item { GuideSectionEmptyNote("No guides, tap + to add a guide") }
         } else {
@@ -169,7 +173,7 @@ private fun GuideLibraryList(
                 )
             }
         }
-        item { SectionHeader("Game Manual") }
+        item { SectionHeader(icon = Icons.AutoMirrored.Filled.MenuBook, title = "Game Manual") }
         if (state.manualPdfPath != null) {
             item { ManualRow(pdfPath = state.manualPdfPath, onOpen = actions.onOpenManual) }
         } else {
@@ -178,9 +182,16 @@ private fun GuideLibraryList(
     }
 }
 
+/** Same icon-in-accent-square + label style as the main long-press menu's category rows
+ * (see [SettingsLabel]) - a "Guides"/"Game Manual" section reads as the same kind of named
+ * group as a Settings category, rather than a plain unadorned heading. */
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
+private fun SectionHeader(
+    icon: ImageVector,
+    title: String,
+) {
+    SettingsLabel(
+        icon = icon,
         text = title,
         style = MaterialTheme.typography.titleSmall,
         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
