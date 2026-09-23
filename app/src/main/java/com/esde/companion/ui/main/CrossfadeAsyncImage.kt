@@ -29,6 +29,39 @@ import coil3.request.SuccessResult
 private val DecelerateEasing = Easing { fraction -> 1f - (1f - fraction) * (1f - fraction) }
 
 /**
+ * Per-layer modifiers for [CrossfadeAsyncImage]'s outgoing ([previous]) and incoming
+ * ([current]) `Image`s.
+ */
+data class CrossfadeLayerModifiers(
+    val previous: Modifier = Modifier,
+    val current: Modifier = Modifier,
+)
+
+/**
+ * [durationMillis]/[layerModifiers]/[onModelPromoted] bundled into one type purely to keep
+ * [CrossfadeAsyncImage]'s own parameter count under this project's `LongParameterList` limit,
+ * same reasoning as e.g. `SelfHealConfig`/`WidgetContentDisplayOptions` - not a single
+ * logically-related trio otherwise.
+ *
+ * [onModelPromoted] fires with the new model exactly when [CrossfadeAsyncImage] promotes it
+ * to the visible "current" layer and starts its fade-in - i.e. only once the pre-decode
+ * described in [CrossfadeAsyncImage]'s own kdoc has actually succeeded, not merely when the
+ * caller's `model` argument changes. It fires synchronously, inline in the same coroutine
+ * that does the promotion - never suspended/deferred to a later frame - so a caller whose
+ * per-layer transform needs to reset in lockstep with the *visual* transition (see
+ * `PanZoomImage.kt`'s `rememberPanZoomHandle`) can do so with zero lag. Reacting instead to
+ * the caller's own `model` argument changing doesn't work: for an uncached image there's a
+ * real decode delay between "model requested" and "model promoted," so resetting on the raw
+ * `model` change would reset the transform on the *still-displayed outgoing* image well
+ * before the fade actually begins.
+ */
+data class CrossfadeTransitionOptions(
+    val durationMillis: Int = 250,
+    val layerModifiers: CrossfadeLayerModifiers = CrossfadeLayerModifiers(),
+    val onModelPromoted: (Any?) -> Unit = {},
+)
+
+/**
  * Crossfades from whatever model was previously shown to [model], never showing a
  * blank/partial frame.
  *
@@ -55,13 +88,21 @@ private val DecelerateEasing = Easing { fraction -> 1f - (1f - fraction) * (1f -
  * cache entry. Non-File models (bundled asset path strings) are never mutated at a
  * fixed path, so they keep using their own value as-is.
  *
- * When [durationMillis] is 0 or less (ImageTransitionMode.None), alpha snaps straight to
- * its end value instead of animating - this still goes through the pre-decode-then-swap
- * path above, so "no visible transition" doesn't reopen the blank-frame flash the whole
- * mechanism exists to prevent.
+ * When [CrossfadeTransitionOptions.durationMillis] is 0 or less (ImageTransitionMode.None),
+ * alpha snaps straight to its end value instead of animating - this still goes through the
+ * pre-decode-then-swap path above, so "no visible transition" doesn't reopen the blank-frame
+ * flash the whole mechanism exists to prevent.
  *
  * The outgoing (previous) layer stays fully opaque - since both layers are the same size,
  * a static backdrop plus a fading-in foreground already looks like a clean crossfade.
+ *
+ * [CrossfadeTransitionOptions.layerModifiers] are applied to the outgoing/incoming `Image`
+ * individually, in addition to [modifier] (which stays on the wrapping `Box` and so still
+ * applies equally to both layers - sizing/blur/etc.). Defaults to a no-op
+ * [CrossfadeLayerModifiers], so every call site that doesn't pass it renders exactly as
+ * before. This exists for callers (see `PanZoomImage.kt`'s `rememberPanZoomLayerModifiers`)
+ * that need the two layers to carry genuinely independent transforms rather than one shared
+ * one - e.g. an outgoing layer frozen at its last look while the incoming layer starts fresh.
  */
 @Composable
 fun CrossfadeAsyncImage(
@@ -69,8 +110,11 @@ fun CrossfadeAsyncImage(
     contentDescription: String?,
     contentScale: ContentScale,
     modifier: Modifier = Modifier,
-    durationMillis: Int = 250,
+    transitionOptions: CrossfadeTransitionOptions = CrossfadeTransitionOptions(),
 ) {
+    val durationMillis = transitionOptions.durationMillis
+    val layerModifiers = transitionOptions.layerModifiers
+    val onModelPromoted = transitionOptions.onModelPromoted
     val context = LocalContext.current
     var previousModel by remember { mutableStateOf<Any?>(null) }
     var currentModel by remember { mutableStateOf(model) }
@@ -91,6 +135,7 @@ fun CrossfadeAsyncImage(
         if (model == null) {
             previousModel = currentModel
             currentModel = null
+            onModelPromoted(null)
             animateIn()
             previousModel = null
             return@LaunchedEffect
@@ -105,44 +150,50 @@ fun CrossfadeAsyncImage(
 
         previousModel = currentModel
         currentModel = model
+        onModelPromoted(model)
         animateIn()
         previousModel = null
     }
 
     Box(modifier = modifier) {
         previousModel?.let { prevModel ->
-            key(identityKeyOf(prevModel)) {
-                val painter =
-                    rememberAsyncImagePainter(
-                        model = requestFor(context, prevModel),
-                        contentScale = contentScale,
-                    )
-                Image(
-                    painter = painter,
-                    contentDescription = null,
-                    contentScale = contentScale,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            CrossfadeLayer(
+                model = prevModel,
+                contentDescription = null,
+                contentScale = contentScale,
+                modifier = Modifier.fillMaxSize().then(layerModifiers.previous),
+            )
         }
 
         currentModel?.let { curModel ->
-            key(identityKeyOf(curModel)) {
-                val painter =
-                    rememberAsyncImagePainter(
-                        model = requestFor(context, curModel),
-                        contentScale = contentScale,
-                    )
-                Image(
-                    painter = painter,
-                    contentDescription = contentDescription,
-                    contentScale = contentScale,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .alpha(alpha.value),
-                )
-            }
+            CrossfadeLayer(
+                model = curModel,
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                modifier = Modifier.fillMaxSize().alpha(alpha.value).then(layerModifiers.current),
+            )
         }
+    }
+}
+
+@Composable
+private fun CrossfadeLayer(
+    model: Any,
+    contentDescription: String?,
+    contentScale: ContentScale,
+    modifier: Modifier,
+) {
+    key(identityKeyOf(model)) {
+        val painter =
+            rememberAsyncImagePainter(
+                model = requestFor(LocalContext.current, model),
+                contentScale = contentScale,
+            )
+        Image(
+            painter = painter,
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = modifier,
+        )
     }
 }

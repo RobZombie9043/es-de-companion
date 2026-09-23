@@ -44,6 +44,8 @@ import com.esde.companion.domain.model.isLogoStyle
 import com.esde.companion.domain.model.logoTransitionMode
 import com.esde.companion.domain.model.panZoomActive
 import com.esde.companion.ui.main.CrossfadeAsyncImage
+import com.esde.companion.ui.main.CrossfadeLayerModifiers
+import com.esde.companion.ui.main.CrossfadeTransitionOptions
 import com.esde.companion.ui.theme.LocalIsDarkTheme
 import com.esde.companion.ui.video.VideoPlaybackEvent
 import java.io.File
@@ -136,9 +138,14 @@ data class WidgetContentDisplayOptions(
  *
  * [WidgetType.panZoomActive] (per-widget Configure dialog toggle, see
  * [WidgetType.supportsPanZoom]) drives a continuous ambient zoom/pan on top of the same
- * opaque [WidgetContent.Image] rendering - see PanZoomImage.kt's `rememberPanZoomModifier`.
- * It composes with the crossfade above it in the same Modifier chain rather than as a
- * separate layer, so a fading-in/out image pans/zooms as a single rigid unit.
+ * opaque [WidgetContent.Image] rendering - see PanZoomImage.kt's `rememberPanZoomHandle`. Its
+ * `current`/`previous` modifiers are wired into `CrossfadeAsyncImage`'s
+ * `currentLayerModifier`/`previousLayerModifier` rather than its shared outer `modifier`, so
+ * the outgoing and incoming layers carry independent transforms during a crossfade: the
+ * outgoing layer freezes at its last pan/zoom look while the incoming layer always starts
+ * from a clean, unzoomed frame. Its `onImagePromoted` is wired into
+ * `CrossfadeTransitionOptions.onModelPromoted` so that handoff happens in perfect lockstep
+ * with the crossfade's own visual start, regardless of image decode latency.
  *
  * [WidgetType.glintEnabled] only reaches logo-style content, since it's read solely at
  * the single AnimatedLogoImage call site below; the non-logo-style `is WidgetContent.Image`
@@ -233,15 +240,19 @@ internal fun WidgetContentView(
             Box(modifier = modifier.applyCornerRadius(widgetType.cornerRadius)) {
                 val isDarkTheme = LocalIsDarkTheme.current
                 val model = if (content.isAsset) fallbackBackgroundAssetPath(isDarkTheme) else File(content.path)
+                val panZoom = rememberPanZoomHandle(enabled = widgetType.panZoomActive)
                 CrossfadeAsyncImage(
                     model = model,
                     contentDescription = null,
                     contentScale = content.scaleMode.toContentScale(),
-                    durationMillis = widgetType.imageTransitionActive.toDurationMillis(),
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .applyBlurEffect(content.effects)
-                            .then(rememberPanZoomModifier(enabled = widgetType.panZoomActive, model = model)),
+                    modifier = Modifier.fillMaxSize().applyBlurEffect(content.effects),
+                    transitionOptions =
+                        CrossfadeTransitionOptions(
+                            durationMillis = widgetType.imageTransitionActive.toDurationMillis(),
+                            layerModifiers =
+                                CrossfadeLayerModifiers(previous = panZoom.previous, current = panZoom.current),
+                            onModelPromoted = { panZoom.onImagePromoted() },
+                        ),
                 )
                 DarkenOverlay(effects = content.effects)
             }
